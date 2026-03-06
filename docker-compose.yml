@@ -1,0 +1,20 @@
+services:
+  experiment-platform-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: experiment-platform-frontend
+    ports:
+      - "8081:80"
+    restart: always
+
+  experiment-platform-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: experiment-platform-backend
+    ports:
+      - "8000:8000"
+    restart: always
+    env_file:
+      - ./backend/.env

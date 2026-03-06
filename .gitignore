@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.sample
+
+# Python/Backend
+__pycache__/
+venv/
+.pytest_cache/
+*.pyc
+
+# Agent/System Generated
+.pi/
+memory/
+.openclaw/
+setup/
+*.DS_Store
+AGENTS.md
+HEARTBEAT.md
+IDENTITY.md
+PROGRESS.md
+SOUL.md
+TOOLS.md
+USER.md
+bug-report*.html
+create_notion_page.py

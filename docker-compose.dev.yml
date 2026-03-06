@@ -1,0 +1,28 @@
+services:
+  experiment-platform-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: build
+    container_name: experiment-platform-frontend-dev
+    ports:
+      - "8081:5173" # Vite default port mapped to host 8081
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Prevents host node_modules from overriding container's
+    command: npm run dev -- --host 0.0.0.0 # Run development server with host binding
+    restart: always
+
+  experiment-platform-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: experiment-platform-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app # Mount Python source code
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload # Enable hot reload for FastAPI
+    restart: always
+    env_file:
+      - ./backend/.env
