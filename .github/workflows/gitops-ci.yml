@@ -1,0 +1,158 @@
+name: gitops-ci
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: gitops-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FRONTEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-frontend
+  BACKEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-backend
+  OPS_REPO: pseudo-lab/DevFactory-Ops
+  OPS_KUSTOMIZATION_FILE: services/experiment-platform/overlays/prod/kustomization.yaml
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout application repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run frontend tests
+        run: npm run test -- --run
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+        working-directory: backend
+
+      - name: Validate backend source
+        run: python -m compileall app
+        working-directory: backend
+
+  build-and-push:
+    if: github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout application repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.FRONTEND_IMAGE }}:latest
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.BACKEND_IMAGE }}:latest
+
+  update-ops-repo:
+    if: github.ref == 'refs/heads/main'
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout DevFactory-Ops repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.OPS_REPO }}
+          token: ${{ secrets.OPS_REPO_TOKEN }}
+          path: devfactory-ops
+          fetch-depth: 0
+
+      - name: Update image tags in production kustomization
+        uses: mikefarah/yq@v4.44.5
+        with:
+          cmd: |
+            yq -i '(.images[] | select(.name == "${{ env.FRONTEND_IMAGE }}").newTag) = "${{ env.IMAGE_TAG }}"' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }}
+            yq -i '(.images[] | select(.name == "${{ env.BACKEND_IMAGE }}").newTag) = "${{ env.IMAGE_TAG }}"' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }}
+
+      - name: Verify production image tags were updated
+        uses: mikefarah/yq@v4.44.5
+        with:
+          cmd: |
+            FRONTEND_TAG=$(yq -r '.images[] | select(.name == "${{ env.FRONTEND_IMAGE }}") | .newTag // ""' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }})
+            BACKEND_TAG=$(yq -r '.images[] | select(.name == "${{ env.BACKEND_IMAGE }}") | .newTag // ""' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }})
+
+            if [ -z "$FRONTEND_TAG" ] || [ "$FRONTEND_TAG" != "${{ env.IMAGE_TAG }}" ]; then
+              echo "Frontend image entry missing or newTag mismatch. Expected ${{ env.IMAGE_TAG }}, got '$FRONTEND_TAG'"
+              exit 1
+            fi
+
+            if [ -z "$BACKEND_TAG" ] || [ "$BACKEND_TAG" != "${{ env.IMAGE_TAG }}" ]; then
+              echo "Backend image entry missing or newTag mismatch. Expected ${{ env.IMAGE_TAG }}, got '$BACKEND_TAG'"
+              exit 1
+            fi
+
+      - name: Create pull request in DevFactory-Ops
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.OPS_REPO_TOKEN }}
+          path: devfactory-ops
+          branch: ci/experiment-platform-image-update
+          base: main
+          commit-message: "chore(experiment-platform): bump frontend/backend image tags to ${{ env.IMAGE_TAG }}"
+          title: "chore(experiment-platform): update image tags to ${{ env.IMAGE_TAG }}"
+          body: |
+            Update production overlay image tags for Experiment Platform.
+
+            - Frontend: `${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}`
+            - Backend: `${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}`
+
+            This change is generated by the application CI workflow.
+          add-paths: |
+            ${{ env.OPS_KUSTOMIZATION_FILE }}
