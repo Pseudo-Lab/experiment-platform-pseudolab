@@ -13,11 +13,11 @@ export default defineConfig({
   server: {
     allowedHosts: [
       "sub.pseudolab-devfactory.com",
-      "sub.pseudolab-experiment-platform.com"
+      "sub.pseudolab-experiment-platform-pseudolab.com"
     ],
     proxy: {
       '/api': {
-        target: 'http://experiment-platform-backend:8000',
+        target: 'http://experiment-platform-pseudolab-backend:8000',
         changeOrigin: true,
       },
     },

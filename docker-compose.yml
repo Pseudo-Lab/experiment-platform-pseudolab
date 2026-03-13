@@ -1,18 +1,18 @@
 services:
-  experiment-platform-frontend:
+  experiment-platform-pseudolab-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: experiment-platform-frontend
+    container_name: experiment-platform-pseudolab-frontend
     ports:
       - "8081:80"
     restart: always
 
-  experiment-platform-backend:
+  experiment-platform-pseudolab-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: experiment-platform-backend
+    container_name: experiment-platform-pseudolab-backend
     ports:
       - "8000:8000"
     restart: always

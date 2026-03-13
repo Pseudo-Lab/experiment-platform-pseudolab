@@ -11,11 +11,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FRONTEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-frontend
-  BACKEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-backend
+  FRONTEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-pseudolab-frontend
+  BACKEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-pseudolab-backend
   IMAGE_PLATFORMS: linux/amd64,linux/arm64
   OPS_REPO: pseudo-lab/DevFactory-Ops
-  OPS_KUSTOMIZATION_FILE: services/experiment-platform/overlays/prod/kustomization.yaml
+  OPS_KUSTOMIZATION_FILE: services/experiment-platform-pseudolab/overlays/prod/kustomization.yaml
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
@@ -146,8 +146,8 @@ jobs:
 
       - name: Configure git for DevFactory-Ops update
         run: |
-          git config user.name "experiment-platform-ci[bot]"
-          git config user.email "experiment-platform-ci[bot]@users.noreply.github.com"
+          git config user.name "experiment-platform-pseudolab-ci[bot]"
+          git config user.email "experiment-platform-pseudolab-ci[bot]@users.noreply.github.com"
         working-directory: devfactory-ops
 
       - name: Commit and push kustomization update to DevFactory-Ops main
@@ -159,6 +159,6 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore(experiment-platform): bump frontend/backend image tags to ${{ env.IMAGE_TAG }}"
+          git commit -m "chore(experiment-platform-pseudolab): bump frontend/backend image tags to ${{ env.IMAGE_TAG }}"
           git push origin HEAD:main
         working-directory: devfactory-ops

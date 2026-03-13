@@ -3,11 +3,11 @@
 <div align="center">
   <a href="https://pseudo-lab.com"><img src="https://img.shields.io/badge/PseudoLab-S12-3776AB" alt="PseudoLab"/></a>
   <a href="https://discord.gg/EPurkHVtp2"><img src="https://img.shields.io/badge/Discord-BF40BF" alt="Discord Community"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform/stargazers"><img src="https://img.shields.io/github/stars/Pseudo-Lab/experiment-platform" alt="Stars Badge"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform/network/members"><img src="https://img.shields.io/github/forks/Pseudo-Lab/experiment-platform" alt="Forks Badge"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform/pulls"><img src="https://img.shields.io/github/issues-pr/Pseudo-Lab/experiment-platform" alt="Pull Requests Badge"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform/issues"><img src="https://img.shields.io/github/issues/Pseudo-Lab/experiment-platform" alt="Issues Badge"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/Pseudo-Lab/experiment-platform?color=2b9348"></a>
+  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/stargazers"><img src="https://img.shields.io/github/stars/Pseudo-Lab/experiment-platform-pseudolab" alt="Stars Badge"/></a>
+  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/network/members"><img src="https://img.shields.io/github/forks/Pseudo-Lab/experiment-platform-pseudolab" alt="Forks Badge"/></a>
+  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pulls"><img src="https://img.shields.io/github/issues-pr/Pseudo-Lab/experiment-platform-pseudolab" alt="Pull Requests Badge"/></a>
+  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues"><img src="https://img.shields.io/github/issues/Pseudo-Lab/experiment-platform-pseudolab" alt="Issues Badge"/></a>
+  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/Pseudo-Lab/experiment-platform-pseudolab?color=2b9348"></a>
 </div>
 <br>
 

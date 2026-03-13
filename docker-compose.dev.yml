@@ -1,10 +1,10 @@
 services:
-  experiment-platform-frontend:
+  experiment-platform-pseudolab-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: build
-    container_name: experiment-platform-frontend-dev
+    container_name: experiment-platform-pseudolab-frontend-dev
     ports:
       - "8081:5173" # Vite default port mapped to host 8081
     volumes:
@@ -13,11 +13,11 @@ services:
     command: npm run dev -- --host 0.0.0.0 # Run development server with host binding
     restart: always
 
-  experiment-platform-backend:
+  experiment-platform-pseudolab-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: experiment-platform-backend-dev
+    container_name: experiment-platform-pseudolab-backend-dev
     ports:
       - "8000:8000"
     volumes:

@@ -13,7 +13,7 @@
 - Account: `${CLOUDFLARE_ACCOUNT_NAME:-unknown}`
 - `CLOUDFLARE_ACCOUNT_ID`: `${CLOUDFLARE_ACCOUNT_ID}`
 - 인증: `${CLOUDFLARE_API_TOKEN}` (환경변수 참조만 표기, 값 미기록)
-- 작업 경로: `/home/ubuntu/.openclaw/workspace-experiment`
+- 작업 경로: `/home/ubuntu/.openclaw/experiment-platform-pseudolab`
 
 ## 3) 현재 확인된 리소스
 
