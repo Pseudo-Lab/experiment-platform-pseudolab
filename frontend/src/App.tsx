@@ -4,7 +4,8 @@ import { MainLayout } from './layouts/MainLayout';
 import { Dashboard } from './features/dashboard/components/Dashboard';
 import { BugReport } from './features/dashboard/components/BugReport';
 import { Experiments } from './features/dashboard/components/Experiments';
-import { Metrics } from './features/dashboard/components/Metrics';
+import { GitHubDashboard } from './features/dashboard/components/GitHubDashboard';
+import { DiscordDashboard } from './features/dashboard/components/DiscordDashboard';
 
 export default function App() {
   const [lang, setLang] = useState<'en' | 'ko'>(() => {
@@ -24,7 +25,9 @@ export default function App() {
   const [backendStatus, setBackendStatus] = useState<string>("connecting...");
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/v1/status/')
+    const apiBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL || '/api/v1';
+
+    fetch(`${apiBaseUrl}/status/`)
       .then(res => res.json())
       .then(data => setBackendStatus(data.status === 'connected' ? 'Online' : 'Error'))
       .catch(() => setBackendStatus('Offline'));
@@ -55,7 +58,9 @@ export default function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard lang={lang} />} />
         <Route path="/experiments" element={<Experiments lang={lang} />} />
-        <Route path="/metrics" element={<Metrics lang={lang} />} />
+        <Route path="/metrics" element={<Navigate to="/metrics/github" replace />} />
+        <Route path="/metrics/github" element={<GitHubDashboard lang={lang} />} />
+        <Route path="/metrics/discord" element={<DiscordDashboard lang={lang} />} />
         <Route path="/bug-report" element={<BugReport lang={lang} />} />
       </Routes>
     </MainLayout>

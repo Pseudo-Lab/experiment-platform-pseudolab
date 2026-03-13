@@ -1,139 +1,191 @@
-import React from 'react';
-import { Button } from '../../../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, BarChart3, Plus, RefreshCcw } from 'lucide-react';
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
 } from 'recharts';
-import { Plus, TrendingUp, TrendingDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { experimentApi, type Experiment } from '@/services/api';
 
 interface MetricsProps {
   lang: 'en' | 'ko';
 }
 
-const conversionData = [
-  { name: '1주차', value: 42 },
-  { name: '2주차', value: 45 },
-  { name: '3주차', value: 48 },
-  { name: '4주차', value: 52 },
-  { name: '5주차', value: 49 },
-  { name: '6주차', value: 55 },
-];
+type StatusKey = 'active' | 'draft' | 'completed';
 
-const retentionData = [
-  { day: 'D1', rate: 78 },
-  { day: 'D3', rate: 62 },
-  { day: 'D7', rate: 45 },
-  { day: 'D14', rate: 38 },
-  { day: 'D30', rate: 28 },
-];
+const translations = {
+  en: {
+    title: 'Metrics',
+    description: 'Data-driven metrics and charts based on experiment records.',
+    newMetric: 'Define Metric',
+    chartCreation: 'Experiment Creation Trend (7d)',
+    chartCreationDesc: 'How many experiments were created per day in the last 7 days.',
+    chartStatus: 'Experiment Status Distribution',
+    chartStatusDesc: 'Current status count across all tracked experiments.',
+    definedMetrics: 'Derived Metrics',
+    errorTitle: 'Failed to load metrics data',
+    errorSub: 'Please check network/API status and retry.',
+    retry: 'Retry',
+    noData: 'No experiment data found',
+    noDataSub: 'Create experiments first to visualize metrics.',
+    statusActive: 'Active',
+    statusDraft: 'Draft',
+    statusCompleted: 'Completed',
+    totalExperiments: 'Total Experiments',
+    activeRate: 'Active Rate',
+    completionRate: 'Completion Rate',
+    latestCreatedAt: 'Latest Created Date',
+    unitPercent: '%',
+    unitCount: 'count',
+    unitDate: 'date',
+  },
+  ko: {
+    title: '지표 설정',
+    description: '실험 데이터 기반 지표와 그래프를 확인하세요.',
+    newMetric: '새 메트릭 정의',
+    chartCreation: '실험 생성 추이 (7일)',
+    chartCreationDesc: '최근 7일간 일자별 실험 생성 건수입니다.',
+    chartStatus: '실험 상태 분포',
+    chartStatusDesc: '전체 실험의 현재 상태별 건수입니다.',
+    definedMetrics: '파생 지표',
+    errorTitle: '지표 데이터를 불러오지 못했습니다',
+    errorSub: '네트워크/API 상태를 확인한 후 다시 시도해주세요.',
+    retry: '다시 시도',
+    noData: '실험 데이터가 없습니다',
+    noDataSub: '실험을 생성하면 지표 그래프를 확인할 수 있습니다.',
+    statusActive: '활성',
+    statusDraft: '초안',
+    statusCompleted: '완료',
+    totalExperiments: '총 실험 수',
+    activeRate: '활성 비율',
+    completionRate: '완료 비율',
+    latestCreatedAt: '최근 생성일',
+    unitPercent: '%',
+    unitCount: '건',
+    unitDate: '일자',
+  },
+} as const;
 
-interface Metric {
-  id: string;
-  name: string;
-  description: string;
-  type: 'conversion' | 'retention' | 'engagement' | 'revenue';
-  value: number;
-  unit: string;
-  change: number;
-  experiments: number;
-}
-
-const metricsList: Metric[] = [
-  {
-    id: "1",
-    name: "가입 완료율",
-    description: "Discord 서버 가입 후 인증 완료까지의 비율",
-    type: "conversion",
-    value: 68.5,
-    unit: "%",
-    change: 5.2,
-    experiments: 3,
-  },
-  {
-    id: "2",
-    name: "일일 활성 사용자",
-    description: "하루 동안 최소 1개 이상의 활동을 한 사용자 수",
-    type: "engagement",
-    value: 486,
-    unit: "명",
-    change: 12.1,
-    experiments: 2,
-  },
-  {
-    id: "3",
-    name: "7일 리텐션",
-    description: "첫 가입 후 7일 뒤 재방문한 사용자 비율",
-    type: "retention",
-    value: 45.3,
-    unit: "%",
-    change: -2.4,
-    experiments: 1,
-  },
-  {
-    id: "4",
-    name: "채널 참여율",
-    description: "특정 채널에서 메시지를 작성한 사용자 비율",
-    type: "engagement",
-    value: 32.8,
-    unit: "%",
-    change: 8.7,
-    experiments: 2,
-  },
-];
+const formatDate = (value: string) => value.slice(0, 10);
 
 export const Metrics: React.FC<MetricsProps> = ({ lang }) => {
-  const translations = {
-    en: {
-      title: "Metrics",
-      description: "Define and track key metrics for experiment valuation.",
-      newMetric: "Define Metric",
-      chartConversion: "Weekly Conversion Trend",
-      chartConversionDesc: "Sign-up completion rate over time",
-      chartRetention: "Retention Curve",
-      chartRetentionDesc: "Daily return rate after sign-up",
-      definedMetrics: "Defined Metrics",
-      experimentsUsing: "experiments using this",
-      noExperiments: "Not used in any experiments",
-      typeConversion: "Conversion",
-      typeRetention: "Retention",
-      typeEngagement: "Engagement",
-      typeRevenue: "Revenue"
-    },
-    ko: {
-      title: "지표 설정",
-      description: "실험 성과를 측정하기 위한 핵심 지표를 정의하고 추적하세요.",
-      newMetric: "새 메트릭 정의",
-      chartConversion: "주간 전환율 추이",
-      chartConversionDesc: "가입 완료율 변화",
-      chartRetention: "리텐션 곡선",
-      chartRetentionDesc: "가입 후 일별 재방문율",
-      definedMetrics: "정의된 메트릭",
-      experimentsUsing: "개 실험에서 사용 중",
-      noExperiments: "사용 중인 실험 없음",
-      typeConversion: "전환",
-      typeRetention: "리텐션",
-      typeEngagement: "참여",
-      typeRevenue: "수익"
+  const t = translations[lang];
+  const [experiments, setExperiments] = useState<Experiment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMetricsData = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const data = await experimentApi.list();
+      setExperiments(data);
+    } catch (err) {
+      console.error(err);
+      setError(t.errorTitle);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const t = translations[lang];
+  useEffect(() => {
+    void fetchMetricsData();
+  }, []);
 
-  const typeConfig = {
-    conversion: { label: t.typeConversion, color: "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" },
-    retention: { label: t.typeRetention, color: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
-    engagement: { label: t.typeEngagement, color: "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" },
-    revenue: { label: t.typeRevenue, color: "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" },
-  };
+  const statusMap = useMemo(() => ({
+    active: t.statusActive,
+    draft: t.statusDraft,
+    completed: t.statusCompleted,
+  }), [t.statusActive, t.statusDraft, t.statusCompleted]);
+
+  const creationTrendData = useMemo(() => {
+    const today = new Date();
+    const buckets = Array.from({ length: 7 }, (_, idx) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - idx));
+      return {
+        key: d.toISOString().slice(0, 10),
+        date: d.toISOString().slice(5, 10),
+        count: 0,
+      };
+    });
+
+    for (const experiment of experiments) {
+      const createdDay = experiment.created_at?.slice(0, 10);
+      const bucket = buckets.find((item) => item.key === createdDay);
+      if (bucket) bucket.count += 1;
+    }
+
+    return buckets.map(({ date, count }) => ({ date, count }));
+  }, [experiments]);
+
+  const statusDistributionData = useMemo(() => {
+    const baseCount: Record<StatusKey, number> = {
+      active: 0,
+      draft: 0,
+      completed: 0,
+    };
+
+    for (const experiment of experiments) {
+      if (experiment.status in baseCount) {
+        baseCount[experiment.status as StatusKey] += 1;
+      }
+    }
+
+    return (Object.keys(baseCount) as StatusKey[]).map((key) => ({
+      status: statusMap[key],
+      count: baseCount[key],
+    }));
+  }, [experiments, statusMap]);
+
+  const derivedMetrics = useMemo(() => {
+    const total = experiments.length;
+    const activeCount = experiments.filter((item) => item.status === 'active').length;
+    const completedCount = experiments.filter((item) => item.status === 'completed').length;
+
+    const activeRate = total === 0 ? 0 : Math.round((activeCount / total) * 100);
+    const completionRate = total === 0 ? 0 : Math.round((completedCount / total) * 100);
+
+    const latestExperiment = [...experiments]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+
+    return [
+      {
+        id: 'total',
+        label: t.totalExperiments,
+        value: String(total),
+        unit: t.unitCount,
+      },
+      {
+        id: 'active_rate',
+        label: t.activeRate,
+        value: String(activeRate),
+        unit: t.unitPercent,
+      },
+      {
+        id: 'completion_rate',
+        label: t.completionRate,
+        value: String(completionRate),
+        unit: t.unitPercent,
+      },
+      {
+        id: 'latest_created_at',
+        label: t.latestCreatedAt,
+        value: latestExperiment ? formatDate(latestExperiment.created_at) : '-',
+        unit: t.unitDate,
+      },
+    ];
+  }, [experiments, t.totalExperiments, t.activeRate, t.completionRate, t.latestCreatedAt, t.unitCount, t.unitPercent, t.unitDate]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -148,96 +200,103 @@ export const Metrics: React.FC<MetricsProps> = ({ lang }) => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-800 dark:text-slate-200">{t.chartConversion}</CardTitle>
-            <CardDescription className="text-slate-500">{t.chartConversionDesc}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[240px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={conversionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke="currentColor" className="text-slate-400" />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => `${val}%`} stroke="currentColor" className="text-slate-400" />
-                  <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+      {isLoading ? (
+        <div className="space-y-4" aria-live="polite" aria-busy="true">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div role="progressbar" className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600" />
+            {t.definedMetrics}
+          </div>
+        </div>
+      ) : error ? (
+        <Card className="rounded-2xl border-rose-200 dark:border-rose-900/50">
+          <CardContent className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3" role="alert">
+              <AlertCircle className="text-rose-500 mt-0.5" size={18} />
+              <div>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{t.errorTitle}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t.errorSub}</p>
+              </div>
             </div>
+            <Button variant="outline" className="gap-2" onClick={() => void fetchMetricsData()}>
+              <RefreshCcw size={16} />
+              {t.retry}
+            </Button>
           </CardContent>
         </Card>
-
-        <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-800 dark:text-slate-200">{t.chartRetention}</CardTitle>
-            <CardDescription className="text-slate-500">{t.chartRetentionDesc}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[240px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={retentionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke="currentColor" className="text-slate-400" />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => `${val}%`} stroke="currentColor" className="text-slate-400" />
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Line type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={3} dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
+      ) : experiments.length === 0 ? (
+        <div className="p-8 border border-dashed border-slate-300 dark:border-slate-700 rounded-3xl bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center py-20">
+          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center mb-4">
+            <BarChart3 className="text-indigo-600 dark:text-indigo-400" size={32} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{t.noData}</h3>
+          <p className="text-slate-500 dark:text-slate-400 max-w-xs mt-2">{t.noDataSub}</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 px-1">{t.definedMetrics}</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              {derivedMetrics.map((metric) => (
+                <Card key={metric.id} className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{metric.label}</p>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          <p className="text-3xl font-black text-slate-800 dark:text-slate-100">{metric.value}</p>
+                          <Badge variant="outline" className="text-xs">{metric.unit}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 px-1">{t.definedMetrics}</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          {metricsList.map((metric) => (
-            <Card key={metric.id} className="rounded-2xl border-slate-200 dark:border-slate-800 hover:shadow-md transition-all group">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h4 className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{metric.name}</h4>
-                      <Badge variant="secondary" className={`text-[10px] uppercase font-bold px-2 py-0.5 ${typeConfig[metric.type].color}`}>
-                        {typeConfig[metric.type].label}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
-                      {metric.description}
-                    </p>
-                    <div className="mt-4 text-xs font-medium text-slate-400 dark:text-slate-500">
-                      {metric.experiments > 0
-                        ? `${metric.experiments}${t.experimentsUsing}`
-                        : t.noExperiments}
-                    </div>
-                  </div>
-                  <div className="text-right ml-4">
-                    <div className="flex items-baseline justify-end gap-1">
-                      <span className="text-3xl font-black text-slate-800 dark:text-slate-100">{metric.value}</span>
-                      <span className="text-sm font-bold text-slate-400">{metric.unit}</span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-end gap-1">
-                      {metric.change > 0 ? (
-                        <div className="flex items-center text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg">
-                          <TrendingUp className="h-3.5 w-3.5 mr-1" />
-                          <span className="text-xs font-bold">+{metric.change}%</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-lg">
-                          <TrendingDown className="h-3.5 w-3.5 mr-1" />
-                          <span className="text-xs font-bold">{metric.change}%</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base font-bold text-slate-800 dark:text-slate-200">{t.chartCreation}</CardTitle>
+                <CardDescription className="text-slate-500">{t.chartCreationDesc}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[240px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={creationTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke="currentColor" className="text-slate-400" />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke="currentColor" className="text-slate-400" allowDecimals={false} />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={3} dot={{ fill: '#6366f1', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      </div>
+
+            <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base font-bold text-slate-800 dark:text-slate-200">{t.chartStatus}</CardTitle>
+                <CardDescription className="text-slate-500">{t.chartStatusDesc}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[240px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={statusDistributionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
+                      <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke="currentColor" className="text-slate-400" />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke="currentColor" className="text-slate-400" allowDecimals={false} />
+                      <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 };

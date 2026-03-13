@@ -1,79 +1,61 @@
 import { render, screen, act, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Dashboard } from '@/features/dashboard/components/Dashboard';
-import { experimentApi } from '@/services/api'; // Import the actual API service
+import { dashboardApi } from '@/services/dashboardApi';
 
-// Mock the entire api service module
-vi.mock('@/services/api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/services/api')>();
-  return {
-    ...actual,
-    experimentApi: {
-      list: vi.fn(), // Mock the list method
+vi.mock('@/services/dashboardApi', () => ({
+  dashboardApi: {
+    overview: vi.fn(),
+  },
+}));
+
+describe('Dashboard Overview Component', () => {
+  const mockOverview = {
+    generated_at: '2026-03-10T00:00:00Z',
+    window: { from: '2026-02-09', to: '2026-03-10', timezone: 'Asia/Seoul' as const },
+    summary: {
+      active_projects_count: 7,
+      weekly_active_contributors: 12,
+      weekly_collab_events: 88,
+      pr_merge_rate_28d: 0.62,
+      pipeline_freshness_hours: 3.2,
     },
+    timeseries: [{ date: '03-10', core_activity: 10, communication: 13, merge_rate: 0.6 }],
+    distribution: { top_repos_by_activity: [{ repo_name: 'repo-a', events: 30, ratio: 0.4 }], activity_concentration_top3: 0.7 },
+    health: { coverage_score: 0.85, missing_day_ratio_30d: 0.03, schema_violation_count: 0 },
+    alerts: [{ code: 'merge-drop', severity: 'medium' as const, message: 'Merge rate dropped' }],
   };
-});
-
-describe('Dashboard Component', () => {
-  const mockExperiments = [
-    { id: '1', name: 'Experiment A', status: 'active', created_at: '2026-03-01T10:00:00Z' },
-    { id: '2', name: 'Experiment B', status: 'draft', created_at: '2026-03-02T10:00:00Z' },
-  ];
 
   beforeEach(() => {
-    (experimentApi.list as any).mockClear();
-    // Default mock implementation for list API
-    (experimentApi.list as any).mockResolvedValue(mockExperiments);
+    (dashboardApi.overview as any).mockClear();
+    (dashboardApi.overview as any).mockResolvedValue(mockOverview);
   });
 
   afterEach(cleanup);
 
-  const renderDashboard = (lang: 'en' | 'ko' = 'ko') => {
-    return render(
-      <MemoryRouter>
-        <Dashboard lang={lang} />
-      </MemoryRouter>
-    );
-  };
-
-  it('renders welcome message and subtitle', async () => {
+  it('renders overview title and summary after data load', async () => {
     await act(async () => {
-      renderDashboard('ko');
+      render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);
     });
-    expect(screen.getByText('실험플랫폼에 오신 것을 환영합니다')).toBeInTheDocument();
-    expect(screen.getByText('데이터 밸류에이션 실험의 최신 현황을 확인하세요.')).toBeInTheDocument();
+
+    expect(screen.getByText('전체 현황판')).toBeInTheDocument();
+    expect(screen.getByText('활성 프로젝트')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
   });
 
-  it('displays loading state initially', async () => {
-    (experimentApi.list as any).mockImplementationOnce(() => new Promise(() => { })); // Never resolve list API
+  it('shows loading state', async () => {
+    (dashboardApi.overview as any).mockImplementationOnce(() => new Promise(() => {}));
     await act(async () => {
-      renderDashboard();
+      render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);
     });
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
-  it('displays experiment cards after data loads', async () => {
+  it('shows error state when api fails', async () => {
+    (dashboardApi.overview as any).mockRejectedValueOnce(new Error('boom'));
     await act(async () => {
-      renderDashboard();
+      render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);
     });
-    expect(screen.getByText('Experiment A')).toBeInTheDocument();
-    expect(screen.getByText('Experiment B')).toBeInTheDocument();
-    expect(screen.getByText('활성 실험')).toBeInTheDocument(); // Stat card
-  });
-
-  it('displays no data message when no experiments are found', async () => {
-    (experimentApi.list as any).mockResolvedValueOnce([]); // Mock an empty array for no data
-    await act(async () => {
-      renderDashboard();
-    });
-    expect(screen.getByText('최근 실험 데이터가 없습니다')).toBeInTheDocument();
-    expect(screen.getByText('실시간 데이터 가치 지표를 확인하려면 새로운 실험을 시작하세요.')).toBeInTheDocument();
-  });
-
-  it('calls experimentApi.list to get experiment data', async () => {
-    await act(async () => {
-      renderDashboard();
-    });
-    expect(experimentApi.list).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('현황 데이터를 불러오지 못했습니다.')).toBeInTheDocument();
   });
 });

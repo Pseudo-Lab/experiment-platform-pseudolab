@@ -34,16 +34,36 @@ global.fetch = vi.fn(() =>
   })
 ) as any;
 
-// Mock the entire api service module for experimentApi.list
+// Mock api service modules
 vi.mock('@/services/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/api')>();
   return {
     ...actual,
     experimentApi: {
-      list: vi.fn(() => Promise.resolve([])), // Mock the list method to return an empty array
+      list: vi.fn(() => Promise.resolve([])),
     },
   };
 });
+
+vi.mock('@/services/dashboardApi', () => ({
+  dashboardApi: {
+    overview: vi.fn(() => Promise.resolve({
+      generated_at: '2026-03-10T00:00:00Z',
+      window: { from: '2026-02-09', to: '2026-03-10', timezone: 'Asia/Seoul' },
+      summary: {
+        active_projects_count: 1,
+        weekly_active_contributors: 1,
+        weekly_collab_events: 1,
+        pr_merge_rate_28d: 0.5,
+        pipeline_freshness_hours: 1,
+      },
+      timeseries: [{ date: '03-10', core_activity: 1, communication: 1, merge_rate: 0.5 }],
+      distribution: { top_repos_by_activity: [], activity_concentration_top3: 0 },
+      health: { coverage_score: 1, missing_day_ratio_30d: 0, schema_violation_count: 0 },
+      alerts: [],
+    })),
+  },
+}));
 
 describe('App Component', () => {
   beforeEach(() => {
@@ -67,7 +87,7 @@ describe('App Component', () => {
       renderApp(['/']); // Start from root
     });
     expect(screen.getByText('ExperiBase')).toBeInTheDocument(); // Checks if App/MainLayout renders
-    expect(screen.getByText('데이터 밸류에이션 실험의 최신 현황을 확인하세요.')).toBeInTheDocument(); // Checks if Dashboard content renders
+    expect(screen.getByText('보유 데이터 규모와 최근 활동 흐름을 한 번에 확인하는 요약 화면입니다.')).toBeInTheDocument(); // Checks if Overview content renders
     // expect(window.location.pathname).toBe('/dashboard'); // Removed due to MemoryRouter behavior
   });
 

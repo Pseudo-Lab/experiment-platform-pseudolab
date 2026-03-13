@@ -135,7 +135,7 @@ describe('MainLayout Component', () => {
       renderMainLayout(['/dashboard']);
     });
 
-    const dashboardLink = screen.getByRole('button', { name: '대시보드' }); // Find Dashboard button
+    const dashboardLink = screen.getByRole('button', { name: '개요' }); // Find Overview button
     expect(dashboardLink).toBeInTheDocument(); // Ensure Dashboard link is found
 
     const experimentsLink = screen.getByRole('button', { name: '실험 관리' });

@@ -5,11 +5,11 @@ import {
     ChevronLeft,
     LayoutDashboard,
     FlaskConical,
-    BarChart3,
+    GitBranch,
+    MessageSquare,
     Bug,
     Settings,
     Menu,
-    Search,
     Bell,
     User,
     Sun,
@@ -19,7 +19,6 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -83,20 +82,37 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     const location = useLocation();
     const navigate = useNavigate();
 
-    const activeTab = location.pathname.substring(1) || 'dashboard';
+    const activePath = location.pathname;
 
     const translations = {
-        en: { dashboard: "Dashboard", experiments: "Experiments", metrics: "Metrics", bugReport: "Bug Report", settings: "Settings" },
-        ko: { dashboard: "대시보드", experiments: "실험 관리", metrics: "지표 설정", bugReport: "버그 리포트", settings: "설정" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Reports & Issues", settings: "Settings" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "리포트/이슈", settings: "설정" }
     };
 
     const t = translations[lang];
 
     const minSwipeDistance = 50;
+    const edgeSwipeZone = 48;
+
+    const currentSectionLabel =
+        activePath === '/dashboard' ? t.dashboard :
+        activePath === '/experiments' ? t.experiments :
+        activePath === '/metrics/github' ? t.githubMetrics :
+        activePath === '/metrics/discord' ? t.discordMetrics :
+        activePath === '/bug-report' ? t.bugReport :
+        t.dashboard;
 
     const onTouchStart = (e: React.TouchEvent) => {
         setTouchEnd(null);
-        setTouchStart(e.targetTouches[0].clientX);
+        const startX = e.targetTouches[0].clientX;
+
+        // 모바일에서 사이드바가 닫힌 상태일 때는 왼쪽 엣지 영역에서 시작한 스와이프만 열기 허용
+        if (window.innerWidth < 1024 && !isSidebarOpen && startX > edgeSwipeZone) {
+            setTouchStart(null);
+            return;
+        }
+
+        setTouchStart(startX);
     };
 
     const onTouchMove = (e: React.TouchEvent) => {
@@ -162,10 +178,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 </div>
 
                 <nav className="flex-1 px-3 py-6 space-y-2">
-                    <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activeTab === 'dashboard'} expanded={isSidebarOpen} onClick={() => navigate('/dashboard')} />
-                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activeTab === 'experiments'} expanded={isSidebarOpen} onClick={() => navigate('/experiments')} />
-                    <SidebarItem icon={BarChart3} label={t.metrics} active={activeTab === 'metrics'} expanded={isSidebarOpen} onClick={() => navigate('/metrics')} />
-                    <SidebarItem icon={Bug} label={t.bugReport} active={activeTab === 'bug-report'} expanded={isSidebarOpen} onClick={() => navigate('/bug-report')} />
+                    <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => navigate('/dashboard')} />
+                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments'} expanded={isSidebarOpen} onClick={() => navigate('/experiments')} />
+                    <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => navigate('/metrics/github')} />
+                    <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => navigate('/metrics/discord')} />
+                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => navigate('/bug-report')} />
                 </nav>
 
                 <div className="p-3 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
@@ -181,16 +198,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!isSidebarOpen)} className="lg:hidden rounded-lg text-slate-500" aria-label="Open sidebar menu">
                             <Menu size={20} />
                         </Button>
-                        <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden sm:block">
-                            {t[activeTab as keyof typeof t] || activeTab}
+                        <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 hidden sm:block">
+                            {currentSectionLabel}
                         </h2>
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-4">
-                        <div className="relative hidden lg:block">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                            <Input type="text" placeholder="Search..." className="pl-10 pr-4 py-2 w-40 md:w-64 rounded-full bg-slate-100 dark:bg-slate-800 border-none" />
-                        </div>
 
                         <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="text-slate-500 rounded-lg" aria-label="Toggle theme">
                             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
