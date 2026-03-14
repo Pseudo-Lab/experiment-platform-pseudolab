@@ -65,6 +65,10 @@ jobs:
         run: python -m compileall app
         working-directory: backend
 
+      - name: Run backend tests
+        run: pytest -q
+        working-directory: backend
+
   build-and-push:
     if: github.ref == 'refs/heads/main'
     needs: validate
