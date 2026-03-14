@@ -77,4 +77,30 @@ describe('Dashboard Overview Component', () => {
     expect(screen.getByText('추세 패널 (30일)')).toBeInTheDocument();
     expect(screen.getByText('이 화면은 지난 30일 기준으로 프로젝트 활성도, 협업 이벤트, 데이터 최신성, 저장소 집중도를 보여줍니다. 각 카드는 “현재 상태를 얼마나 신뢰할 수 있는지” 판단하는 기준입니다.')).toBeInTheDocument();
   });
+
+  it('opens overview tooltip on tap and closes it on outside pointerdown', async () => {
+    await act(async () => {
+      render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);
+    });
+
+    const tooltipText = '프로젝트 status 값이 active 인 항목 수 (draft/completed 제외)';
+    const descriptionButton = screen.getByRole('button', { name: '활성 프로젝트 description' });
+
+    expect(screen.getAllByText(tooltipText)).toHaveLength(1);
+    expect(descriptionButton).toHaveAttribute('aria-expanded', 'false');
+
+    await act(async () => {
+      fireEvent.click(descriptionButton);
+    });
+
+    expect(screen.getAllByText(tooltipText)).toHaveLength(2);
+    expect(descriptionButton).toHaveAttribute('aria-expanded', 'true');
+
+    await act(async () => {
+      fireEvent.pointerDown(document.body);
+    });
+
+    expect(screen.getAllByText(tooltipText)).toHaveLength(1);
+    expect(descriptionButton).toHaveAttribute('aria-expanded', 'false');
+  });
 });

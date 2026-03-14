@@ -33,6 +33,7 @@ export const KpiStrip = ({ items }: KpiStripProps) => {
                     onClick={() => setOpenTooltipIndex(openTooltipIndex === index ? null : index)}
                     className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-[10px] text-slate-500 cursor-pointer sm:cursor-help"
                     aria-label={`${item.label} description`}
+                    aria-expanded={openTooltipIndex === index}
                   >
                     ?
                   </button>

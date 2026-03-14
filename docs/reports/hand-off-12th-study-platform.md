@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-03-14
+Last-Validated: 2026-03-15
 
 # Hand-off: 가짜연구소 12기 스터디 실험 플랫폼 진행 요약
 
@@ -33,6 +33,7 @@ Last-Validated: 2026-03-14
 
 ### C. UI/UX
 - Overview/GitHub/Discord 모두 7일/30일 토글 반영
+- Overview 7d/30d 선택 시 안내 문구/추세 타이틀/요약 라벨 정합성 보정
 - 툴팁 동작 분기:
   - PC: hover
   - 모바일: tap open/close + 바깥 영역 터치 시 닫힘
@@ -52,6 +53,15 @@ Last-Validated: 2026-03-14
 - 문서/백엔드/프론트 분리 커밋 완료
 - main 최신 pull 완료 (`4fe56fe`)
 
+### G. 테스트/CI 안정화
+- frontend 자동 검증 보강:
+  - Overview/GitHub/Discord의 loading/error/empty/success 및 7d/30d 전환 테스트 추가
+  - Overview/GitHub/Discord 툴팁의 모바일 tap open/close + 외부 클릭 닫기 테스트 추가
+  - Overview/GitHub/Discord KO/EN 라벨 검증 테스트 추가
+- backend validate 강화:
+  - `pytest -q`를 CI validate 단계에 포함
+- docs-only 변경 비배포 path filter 동작 확인
+
 ---
 
 ## 2) 현재 오픈 이슈 / 확인 필요
@@ -63,10 +73,15 @@ Last-Validated: 2026-03-14
 2. **UI 일관성 최종 QA**
    - Overview vs GitHub vs Discord 타이틀/그리드/문구 톤 최종 점검
    - PC 헤더와 액션 버튼 배치 최종 확인
+   - PC hover 툴팁은 자동 테스트보다 수동 브라우저 QA가 적합
 
 3. **머지율 API 계약 정리**
    - 계산은 window 연동(7d/30d)으로 변경
    - 키명 `merge_rate_28d`는 호환 목적 유지 여부 정책 확정 필요
+
+4. **프론트 테스트 로그 노이즈 정리**
+   - Recharts가 jsdom 환경에서 차트 크기 warning을 출력함
+   - 테스트는 통과하지만 추후 mock 또는 chart wrapper 개선으로 로그 정리 가능
 
 ---
 
@@ -96,8 +111,9 @@ Last-Validated: 2026-03-14
 1. `/dashboard`, `/metrics/github`, `/metrics/discord` UI 비교 점검
 2. 7d/30d 전환 시 라벨/지표/설명 정합성 확인
 3. D1/R2 재검증 + 다른 경로(계정/버킷/파이프라인) 가능성 확인
-4. `.github/workflows/gitops-ci.yml` + ops kustomization 변경 포인트 문서화
-5. 결과를 체크리스트 형태로 제출
+4. PC hover 툴팁 수동 QA
+5. `.github/workflows/gitops-ci.yml` + ops kustomization 변경 포인트 문서화
+6. 결과를 체크리스트 형태로 제출
 
 ### 완료 기준
 - KO/EN 동기화 확인

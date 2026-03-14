@@ -12,13 +12,13 @@ Last-Validated: 2026-03-15
 ## Phase 1 — Pseudolab 안정화 (현재 스프린트)
 
 ### 1) 기능 안정
-- [ ] Overview / GitHub / Discord 핵심 플로우 점검
-- [ ] 7d/30d 전환 시 지표/라벨/설명 문구 일치 확인
-- [ ] loading / error / empty / success 상태 점검
+- [x] Overview / GitHub / Discord 핵심 플로우 점검
+- [x] 7d/30d 전환 시 지표/라벨/설명 문구 일치 확인
+- [x] loading / error / empty / success 상태 점검
 - [ ] 툴팁 동작 최종 QA
-  - PC: hover
-  - 모바일: tap open/close + 외부 터치 닫기
-- [ ] KO/EN 텍스트 동기화 확인
+  - [ ] PC: hover
+  - [x] 모바일: tap open/close + 외부 터치 닫기
+- [x] KO/EN 텍스트 동기화 확인
 
 ### 2) 데이터/지표 안정
 - [ ] KPI 설명 문구와 실제 계산식 정합성 재검증
@@ -30,15 +30,15 @@ Last-Validated: 2026-03-15
 
 ### 3) 배포 안정
 - [ ] CI green 유지 기준 명문화 (frontend test/build, backend smoke test, image build)
-- [ ] backend smoke/API test를 CI validate 단계에 포함
+- [x] backend smoke/API test를 CI validate 단계에 포함
 - [ ] 이미지 푸시 → ops 반영 → 롤백 1회 리허설
-- [ ] docs-only 변경 비배포 path filter 적용 및 검증
+- [x] docs-only 변경 비배포 path filter 적용 및 검증
 
 ### 4) 문서 안정
 - [ ] `AGENTS.md` 최신 규칙 반영 확인
 - [ ] `docs/README.md` 구조 규칙과 문서 상태 메타 준수 확인
-- [ ] `docs/reports/hand-off-12th-study-platform.md` 최신화
-- [ ] `docs/reports/docs-inventory-final.md`에 신규 active 문서 반영
+- [x] `docs/reports/hand-off-12th-study-platform.md` 최신화
+- [x] `docs/reports/docs-inventory-final.md`에 신규 active 문서 반영
 
 ### Phase 1 완료 기준 (Exit Criteria)
 - 주요 기능 회귀 버그 없음

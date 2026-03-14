@@ -102,6 +102,8 @@ export const GitHubDashboard: React.FC<GitHubDashboardProps> = ({ lang }) => {
         type="button"
         onClick={() => setOpenHint(openHint === key ? null : key)}
         className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-[10px] text-slate-500 cursor-help"
+        aria-label={`${label} description`}
+        aria-expanded={openHint === key}
       >
         ?
       </button>
