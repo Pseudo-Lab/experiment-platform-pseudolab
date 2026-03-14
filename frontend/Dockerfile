@@ -1,11 +1,11 @@
 # Docker Multi-stage build for React (Vite)
 # 1. Build stage
-FROM node:22-alpine AS build
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy source files and build
 COPY . .
