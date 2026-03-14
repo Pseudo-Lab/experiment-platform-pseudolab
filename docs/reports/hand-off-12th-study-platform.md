@@ -60,6 +60,7 @@ Last-Validated: 2026-03-15
   - Overview/GitHub/Discord KO/EN 라벨 검증 테스트 추가
 - backend validate 강화:
   - `pytest -q`를 CI validate 단계에 포함
+  - dashboard API 계약 회귀 테스트 추가 (`window`, `merge_rate null`, overview 합성 규칙)
 - docs-only 변경 비배포 path filter 동작 확인
 
 ---
@@ -75,9 +76,9 @@ Last-Validated: 2026-03-15
    - PC 헤더와 액션 버튼 배치 최종 확인
    - PC hover 툴팁은 자동 테스트보다 수동 브라우저 QA가 적합
 
-3. **머지율 API 계약 정리**
-   - 계산은 window 연동(7d/30d)으로 변경
-   - 키명 `merge_rate_28d`는 호환 목적 유지 여부 정책 확정 필요
+3. **데이터 제약사항 문서화**
+   - Discord 닉네임 필드(`nickname/global_name`) 미확인 범위와 fallback 규칙 문서화 필요
+   - partial source / SOURCE_UNAVAILABLE 정책은 아직 문서 보강 필요
 
 4. **프론트 테스트 로그 노이즈 정리**
    - Recharts가 jsdom 환경에서 차트 크기 warning을 출력함

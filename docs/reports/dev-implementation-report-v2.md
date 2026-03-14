@@ -40,6 +40,8 @@ Last-Validated: 2026-03-15
 - `frontend/src/__tests__/Dashboard.test.tsx`
 
 ### C. 테스트 추가
+- `backend/tests/test_dashboard.py`
+  - GitHub/Overview API의 window 연동, merge_rate null, overview 합성 규칙 회귀 검증
 - `frontend/src/__tests__/DashboardI18n.test.tsx`
   - Overview/GitHub/Discord 화면의 KO/EN 라벨 렌더 검증
 - `frontend/src/__tests__/DetailDashboards.test.tsx`
@@ -110,7 +112,19 @@ Last-Validated: 2026-03-15
 | `top_authors[].messages` | number | - |
 | `UI Empty 판정` | boolean 식 | `summary.message_count===0 && top_channels.length===0` |
 
-### 3-4. FE 타입 1:1 매핑 증적
+### 3-4. 현재 데이터 제약/정책
+- Discord 작성자 표시는 아래 fallback 순서를 사용:
+  - `nickname` -> `global_name` -> `author_nickname` -> `author_global_name` -> `author_username` -> `author` -> `username` -> `author_id`
+- Discord 채널 표시는 `channel_name`만 사용:
+  - `channel_id` fallback은 사용하지 않음
+- 소스 미연결/테이블 부재 시 현재 API 정책:
+  - 예외 대신 empty payload(0/빈 배열) 반환
+  - `partial_sources`, `SOURCE_UNAVAILABLE`, `reason_code`는 아직 응답 계약에 포함되지 않음
+- merge rate 키 정책:
+  - `merge_rate_28d`, `pr_merge_rate_28d` 키명은 호환 유지
+  - 실제 값은 선택된 `window=7d|30d` 기준으로 계산
+
+### 3-5. FE 타입 1:1 매핑 증적
 - 타입 정의 파일: `frontend/src/features/dashboard/types/metrics.ts`
   - `GitHubOverviewResponse` ↔ `GET /dashboard/github/overview` 응답 본문 1:1
   - `DiscordOverviewResponse` ↔ `GET /dashboard/discord/overview` 응답 본문 1:1
@@ -122,7 +136,7 @@ Last-Validated: 2026-03-15
     - `/dashboard/github/overview?window=...`
     - `/dashboard/discord/overview?window=...`
 
-### 3-5. KO/EN i18n 매핑표 (대시보드 UI)
+### 3-6. KO/EN i18n 매핑표 (대시보드 UI)
 | 화면 | 키(의미) | EN | KO |
 |---|---|---|---|
 | Overview | summaryActiveProjects | Active Projects | 활성 프로젝트 |
@@ -170,7 +184,7 @@ Last-Validated: 2026-03-15
 ### 4-2. 테스트
 - Backend
   - 실행: `PYTHONPATH=. ./venv/bin/pytest -q`
-  - 결과: **1 passed (warnings 4)**
+  - 결과: **4 passed (warnings 4)**
 - Frontend
   - 실행: `npm test -- --run`
   - 결과: **8 files / 41 tests passed**

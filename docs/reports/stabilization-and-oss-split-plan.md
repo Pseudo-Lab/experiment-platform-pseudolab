@@ -22,21 +22,21 @@ Last-Validated: 2026-03-15
 
 ### 2) 데이터/지표 안정
 - [ ] KPI 설명 문구와 실제 계산식 정합성 재검증
-- [ ] 머지율/활성지표 라벨 최종 확정
-- [ ] API 계약 freeze
+- [x] 머지율/활성지표 라벨 최종 확정
+- [x] API 계약 freeze
   - 예: `pr_merge_rate_28d` 호환 유지 여부와 window 연동 정책 명시
-- [ ] 데이터 제약사항 명시
+- [x] 데이터 제약사항 명시
   - 예: Discord 닉네임 필드 미확인 범위 / partial source 처리 기준
 
 ### 3) 배포 안정
-- [ ] CI green 유지 기준 명문화 (frontend test/build, backend smoke test, image build)
+- [x] CI green 유지 기준 명문화 (frontend test/build, backend smoke test, image build)
 - [x] backend smoke/API test를 CI validate 단계에 포함
 - [ ] 이미지 푸시 → ops 반영 → 롤백 1회 리허설
 - [x] docs-only 변경 비배포 path filter 적용 및 검증
 
 ### 4) 문서 안정
-- [ ] `AGENTS.md` 최신 규칙 반영 확인
-- [ ] `docs/README.md` 구조 규칙과 문서 상태 메타 준수 확인
+- [x] `AGENTS.md` 최신 규칙 반영 확인
+- [x] `docs/README.md` 구조 규칙과 문서 상태 메타 준수 확인
 - [x] `docs/reports/hand-off-12th-study-platform.md` 최신화
 - [x] `docs/reports/docs-inventory-final.md`에 신규 active 문서 반영
 
