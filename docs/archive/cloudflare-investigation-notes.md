@@ -1,3 +1,6 @@
+Status: archive
+Last-Validated: 2026-03-14
+
 # Cloudflare 조사 노트 (실험플랫폼)
 
 > 목적: Cloudflare 계정/리소스 현황을 READ ONLY로 조사하고, 향후 실험플랫폼 개발 시 참고할 수 있는 기준 문서를 유지한다.

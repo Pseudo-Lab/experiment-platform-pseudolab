@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # Initiative Project: Design System & UI Consistency Guide
 
 This document outlines the core design principles, typography, colors, and layout structures for the Initiative project to ensure a consistent user experience across all web pages.

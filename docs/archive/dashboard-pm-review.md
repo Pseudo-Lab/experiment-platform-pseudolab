@@ -1,3 +1,6 @@
+Status: archive
+Last-Validated: 2026-03-14
+
 # Dashboard PM Review (MVP)
 
 작성일: 2026-03-10  

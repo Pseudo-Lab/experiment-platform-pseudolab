@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # Dataset Validation v2 (READ ONLY)
 
 작성일: 2026-03-10 (KST)  

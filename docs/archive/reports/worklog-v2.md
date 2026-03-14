@@ -1,3 +1,6 @@
+Status: archive
+Last-Validated: 2026-03-14
+
 # Worklog v2 (작업 관리 로그)
 
 작성일: 2026-03-11 (KST)  

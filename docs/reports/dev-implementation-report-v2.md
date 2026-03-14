@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # Dev Implementation Report v2
 
 작성일: 2026-03-11 (KST)

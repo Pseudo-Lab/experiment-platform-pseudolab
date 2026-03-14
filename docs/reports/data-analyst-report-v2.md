@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # 가짜연구소 전체 현황 KPI 재정의 분석 리포트 v2
 
 작성일: 2026-03-10 (KST)  

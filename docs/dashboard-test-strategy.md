@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # Dashboard Test Strategy
 
 ## 1) 현재 테스트 현황 요약

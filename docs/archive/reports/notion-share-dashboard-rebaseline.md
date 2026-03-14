@@ -1,3 +1,6 @@
+Status: archive
+Last-Validated: 2026-03-14
+
 # [Notion 공유용] 가짜연구소 전체 현황 대시보드 재정렬 계획 (v2)
 
 ## 1) 배경

@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # KPI Definition v2 (Phase 1 Freeze)
 
 작성일: 2026-03-11 (KST)  

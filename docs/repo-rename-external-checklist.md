@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # Repository Rename External Impact Checklist
 
 대상 레포: `Pseudo-Lab/experiment-platform-pseudolab`

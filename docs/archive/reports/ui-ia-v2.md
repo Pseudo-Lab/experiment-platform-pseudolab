@@ -1,3 +1,6 @@
+Status: archive
+Last-Validated: 2026-03-14
+
 # UI IA v2 — 전체 현황판 중심 재구성
 
 작성일: 2026-03-10 (KST)

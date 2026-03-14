@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # Dashboard Execution Plan (MVP v1)
 
 ## Goal

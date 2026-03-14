@@ -1,3 +1,7 @@
+Status: superseded
+Last-Validated: 2026-03-14
+Replaced-By: docs/reports/data-analyst-report-v2.md
+
 # 가짜연구소 활동률/협업지표 데이터 분석 리포트 v1
 
 작성일: 2026-03-10 (KST)  

@@ -1,3 +1,6 @@
+Status: archive
+Last-Validated: 2026-03-14
+
 # R2 AS-IS 구조 문서 (READ ONLY)
 
 > 기준: Cloudflare R2 API 조회 결과 기반 현행 구조 기록

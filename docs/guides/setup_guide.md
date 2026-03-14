@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # 🚀 개발 환경 세팅 가이드 (Docker Setup Guide)
 
 이 문서는 가짜연구소 실험 플랫폼 프로젝트의 로컬 개발 환경을 구축하기 위한 공식 가이드입니다. 

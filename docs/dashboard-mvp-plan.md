@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # Dashboard MVP 구현 계획
 
 ## 1) 현행 구조 분석 (frontend/src/features/dashboard/components/Dashboard.tsx 중심)

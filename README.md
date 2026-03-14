@@ -33,7 +33,7 @@ _"직관에서 데이터로, 수동에서 자율(AI)로"_
 | 역할 | 이름 | 주요 담당 업무 |
 |------|------|----------------|
 | **Project Lead<BR>Infra & Full Stack** | 김수현 | 기술 아키텍처 설계, 인프라 구축, 외부 소통 및 풀스택 개발 총괄 |
-| **Data Scientist** | 김가경 | 실험 설계 구조화, A/B 테스트 지표 정의, AI Agent 평가 프레임워크 구축 |
+| **Data Scientist** | 김가경, 최지환 | 실험 설계 구조화, A/B 테스트 지표 정의, AI Agent 평가 프레임워크 구축 |
 | **Data Engineer** | 이동욱 | Cloudflare/Supabase 기반 데이터 파이프라인 구축 및 실시간 로그 적재 |
 | **Data Engineer (DW/ETL)** | 장지연 | 다원화된 데이터 통합, Data Warehouse 설계 및 분석 최적화 |
 | **Full Stack Developer** | 조성동 | 실험 관리 대시보드 UI 및 백엔드 지표 엔진(Metric Engine) 풀스택 개발 |
@@ -46,7 +46,7 @@ gantt
     title 18주 지능형 실험 플랫폼 로드맵
     dateFormat  YYYY-MM-DD
     section Cycle 1 (1-4주)
-    데이터 인사이트 & MVP 관측 :a1, 2026-03-01, 28d
+    데이터 인사이트 & MVP 관측 :a1, 2026-03-16, 28d
     section Cycle 2 (5-8주)
     수동 실험 실행 & 트래픽 제어 :a2, after a1, 28d
     section Cycle 3 (9-12주)
@@ -56,6 +56,12 @@ gantt
     section Cycle 5 (17-18주)
     안정화, 오픈소스화 & 문서화 :a5, after a4, 14d
 ```
+
+## 📚 문서 가이드
+- 상태 체계: `active / superseded / archive`
+- 구조 체계: `docs/guides / docs/reports / docs/archive / docs/superseded`
+- 상세 규칙: [docs/README.md](./docs/README.md)
+
 
 ## 🌱 참여 및 기여 안내 (Contributing)
 이 프로젝트는 가짜연구소(Pseudo-Lab)의 Value-Driven Initiative로 진행되며, 향후 글로벌 오픈소스 플랫폼으로 성장하는 것을 목표로 합니다.  

@@ -1,3 +1,7 @@
+Status: superseded
+Last-Validated: 2026-03-14
+Replaced-By: docs/reports/team-lead-review-v2.md
+
 # Team Lead Review v1
 
 작성일: 2026-03-10  

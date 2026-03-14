@@ -1,3 +1,6 @@
+Status: archive
+Last-Validated: 2026-03-14
+
 # Cloudflare D1/R2 데이터 요약 리포트 (READ ONLY)
 
 > 작성 기준: 조회 전용 API/SELECT 결과

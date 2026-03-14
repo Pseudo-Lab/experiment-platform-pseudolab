@@ -1,3 +1,7 @@
+Status: superseded
+Last-Validated: 2026-03-14
+Replaced-By: docs/reports/dev-implementation-report-v2.md
+
 # Dev Implementation Report v1
 
 ## 1) 작업 요약

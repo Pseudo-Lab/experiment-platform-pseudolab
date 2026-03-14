@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-14
+
 # Repo Rename Progress Log
 
 Last updated: 2026-03-14 (Asia/Seoul)

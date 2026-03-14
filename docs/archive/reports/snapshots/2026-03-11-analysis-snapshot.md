@@ -1,3 +1,6 @@
+Status: archive
+Last-Validated: 2026-03-14
+
 # 2026-03-11 분석 스냅샷 (READ ONLY)
 
 작성일: 2026-03-11 (KST)  
