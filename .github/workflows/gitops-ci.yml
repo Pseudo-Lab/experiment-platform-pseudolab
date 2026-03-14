@@ -17,6 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Forward-compat for GitHub Actions JS runtime migration (Node 24)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   FRONTEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-pseudolab-frontend
   BACKEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-pseudolab-backend
   IMAGE_PLATFORMS: linux/amd64,linux/arm64

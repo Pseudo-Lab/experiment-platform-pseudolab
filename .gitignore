@@ -18,7 +18,6 @@ memory/
 .openclaw/
 setup/
 *.DS_Store
-AGENTS.md
 HEARTBEAT.md
 IDENTITY.md
 PROGRESS.md
