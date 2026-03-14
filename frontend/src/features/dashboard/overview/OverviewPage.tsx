@@ -121,8 +121,8 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
         label: t.summaryContributors,
         value: String(data.summary.weekly_active_contributors),
         tooltip: lang === 'ko'
-          ? `선택 기간(${selectedPeriodLabel.replace('선택 기간: ', '')}) 동안 GitHub/Discord에서 활동한 기여자 수`
-          : `Contributors active in GitHub/Discord during the ${windowSize === '7d' ? 'last 7 days' : 'last 30 days'}.`,
+          ? `선택 기간(${selectedPeriodLabel.replace('선택 기간: ', '')})의 GitHub 활성 기여자 수 + Discord 활성 작성자 수 합계`
+          : `Sum of GitHub active contributors and Discord active authors during the ${windowSize === '7d' ? 'last 7 days' : 'last 30 days'}.`,
       },
       {
         label: t.summaryCollabEvents,

@@ -62,7 +62,7 @@ Last-Validated: 2026-03-15
 | `generated_at` | string(datetime) | 필수 |
 | `window.{from,to,timezone}` | object | `timezone='Asia/Seoul'` |
 | `summary.active_projects_count` | number | 0 허용 |
-| `summary.weekly_active_contributors` | number | 선택 기간 기준 GitHub actor + Discord author unique 합 |
+| `summary.weekly_active_contributors` | number | 선택 기간 기준 GitHub `active_contributors` + Discord `active_authors` 단순 합 |
 | `summary.weekly_collab_events` | number | 선택 기간 기준 GitHub core + Discord message 합 |
 | `summary.pr_merge_rate_28d` | number \| null | 키명은 호환 유지, 값은 선택 기간 기준 / 분모 0이면 null |
 | `summary.pipeline_freshness_hours` | number | 최신 이벤트 기준 시간차(없으면 0) |

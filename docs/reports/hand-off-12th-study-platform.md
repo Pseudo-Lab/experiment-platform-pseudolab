@@ -76,9 +76,9 @@ Last-Validated: 2026-03-15
    - PC 헤더와 액션 버튼 배치 최종 확인
    - PC hover 툴팁은 자동 테스트보다 수동 브라우저 QA가 적합
 
-3. **데이터 제약사항 문서화**
-   - Discord 닉네임 필드(`nickname/global_name`) 미확인 범위와 fallback 규칙 문서화 필요
-   - partial source / SOURCE_UNAVAILABLE 정책은 아직 문서 보강 필요
+3. **지표 정의 후속 정리**
+   - 현재 Overview `weekly_active_contributors`는 cross-source dedup가 아니라 GitHub `active_contributors` + Discord `active_authors` 단순 합
+   - cross-source dedup KPI가 필요하면 별도 지표 정의와 백엔드 계약 변경이 필요
 
 4. **프론트 테스트 로그 노이즈 정리**
    - Recharts가 jsdom 환경에서 차트 크기 warning을 출력함

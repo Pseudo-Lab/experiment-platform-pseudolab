@@ -78,6 +78,20 @@ describe('Dashboard Overview Component', () => {
     expect(screen.getByText('이 화면은 지난 30일 기준으로 프로젝트 활성도, 협업 이벤트, 데이터 최신성, 저장소 집중도를 보여줍니다. 각 카드는 “현재 상태를 얼마나 신뢰할 수 있는지” 판단하는 기준입니다.')).toBeInTheDocument();
   });
 
+  it('keeps contributor tooltip copy aligned with the implemented sum formula', async () => {
+    await act(async () => {
+      render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);
+    });
+
+    expect(screen.getByText('선택 기간(최근 7일 (Asia/Seoul))의 GitHub 활성 기여자 수 + Discord 활성 작성자 수 합계')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '30일' }));
+    });
+
+    expect(screen.getByText('선택 기간(최근 30일 (Asia/Seoul))의 GitHub 활성 기여자 수 + Discord 활성 작성자 수 합계')).toBeInTheDocument();
+  });
+
   it('opens overview tooltip on tap and closes it on outside pointerdown', async () => {
     await act(async () => {
       render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);

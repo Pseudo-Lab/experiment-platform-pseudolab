@@ -136,7 +136,7 @@ GROUP BY 1;
 | KPI | 데이터 소스 | 확정 상태 | 비고 |
 |---|---|---|---|
 | active_projects_count | `experiments` 계열(존재 시) | 조건부 확정 | 현재 저장소 내 실측 스냅샷 부재 |
-| weekly_active_contributors | `dl_*` actor + `discord_messages` author | 확정(정의) / 검증 필요(값) | 교집합 중복제거 규칙 필요 |
+| weekly_active_contributors | GitHub `active_contributors` + Discord `active_authors` | 확정(구현) | 현재 구현은 교집합 중복제거 없이 도메인 요약값 단순 합 |
 | weekly_collab_events | PR/Review/IssueComment/Discord | 확정 | 계산 가능 |
 | pr_merge_rate_28d | `dl_pull_request_events` | 확정 | 분모 0 null 처리 |
 | pipeline_freshness_hours | 각 소스 max timestamp | 확정 | R2 객체메타 미관측 한계 |
