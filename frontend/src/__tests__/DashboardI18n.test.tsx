@@ -39,6 +39,7 @@ describe('Dashboard KO/EN text sync', () => {
 
     expect(screen.getByText('전체 현황판')).toBeInTheDocument();
     expect(screen.getByText('활성 프로젝트')).toBeInTheDocument();
+    expect(screen.getByText('활성 기여자')).toBeInTheDocument();
     expect(screen.getByText('추세 패널 (7일)')).toBeInTheDocument();
     expect(screen.getByText('상위 저장소')).toBeInTheDocument();
     expect(screen.getByText('액션 큐')).toBeInTheDocument();
