@@ -10,6 +10,15 @@ on:
       - 'backend/**'
       - 'docker-compose.yml'
       - 'docker-compose.dev.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/gitops-ci.yml'
+      - 'frontend/**'
+      - 'backend/**'
+      - 'docker-compose.yml'
+      - 'docker-compose.dev.yml'
   workflow_dispatch:
 
 concurrency:
