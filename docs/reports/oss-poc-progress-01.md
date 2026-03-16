@@ -15,6 +15,7 @@ Last-Validated: 2026-03-16
   - `frontend/src/components/ui/badge.tsx` → `import { cn } from '@core/ui/cn'`
   - `frontend/src/components/ui/card.tsx` → `import { cn } from '@core/ui/cn'`
   - `frontend/src/components/ui/textarea.tsx` → `import { cn } from '@core/ui/cn'`
+  - `frontend/src/components/ui/table.tsx` → `import { cn } from '@core/ui/cn'`
 - Verified build passes after the change (`npm run build`).
 
 ## Why this PoC
