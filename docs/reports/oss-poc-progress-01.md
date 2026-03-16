@@ -6,7 +6,12 @@ Last-Validated: 2026-03-16
 ## What was done
 - Created local core PoC path: `packages/core/`
 - Added candidate utility: `packages/core/src/ui/cn.ts`
-- Kept existing app utility intact (`frontend/src/lib/utils.ts`) to avoid runtime risk.
+- Added alias wiring for PoC import:
+  - `frontend/vite.config.ts` (`@core`)
+  - `frontend/tsconfig.json` (`@core/*`)
+- Switched one usage site to core utility import:
+  - `frontend/src/components/ui/button.tsx` → `import { cn } from '@core/ui/cn'`
+- Verified build passes after the change (`npm run build`).
 
 ## Why this PoC
 - Very low-risk utility

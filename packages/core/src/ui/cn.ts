@@ -1,10 +1,9 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
 /**
  * Core UI utility candidate extracted for OSS split PoC.
- * NOTE: Not wired yet. Kept in parallel to avoid behavior change.
+ * NOTE: dependency-free implementation for cross-package compile stability.
  */
+export type ClassValue = string | number | null | undefined | false;
+
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return inputs.filter(Boolean).join(' ');
 }
