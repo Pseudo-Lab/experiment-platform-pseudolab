@@ -25,20 +25,23 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
       retry: 'Retry',
       openGitHub: 'Open GitHub analytics',
       openDiscord: 'Open Discord analytics',
-      period7d: 'Default period: 7 days (Asia/Seoul)',
-      period30d: 'Default period: 30 days (Asia/Seoul)',
+      period7d: 'Selected period: last 7 days (Asia/Seoul)',
+      period30d: 'Selected period: last 30 days (Asia/Seoul)',
       window7d: '7 days',
       window30d: '30 days',
       windowLabel: 'Window',
       loading: 'Loading overview data...',
       error: 'Failed to load overview data.',
       summaryActiveProjects: 'Active Projects',
-      summaryWauContributors: 'WAU Contributors',
-      summaryWeeklyEvents: 'Weekly Collaboration Events',
+      summaryContributors: 'Active Contributors',
+      summaryCollabEvents: 'Collaboration Events',
       summaryMergeRate: 'PR Merge Rate',
       summaryPipelineFreshness: 'Pipeline Freshness',
-      trendTitle: 'Trend Panel (7d)',
+      trendTitle7d: 'Trend Panel (7d)',
+      trendTitle30d: 'Trend Panel (30d)',
       trendDescription: 'Core activity / communication / merge rate',
+      guide7d: 'This page summarizes the last 7 days: project activity, collaboration events, data freshness, and repository concentration. Use these cards as a quick reliability check before deep analysis.',
+      guide30d: 'This page summarizes the last 30 days: project activity, collaboration events, data freshness, and repository concentration. Use these cards as a quick reliability check before deep analysis.',
       healthCoverage: 'Coverage',
       healthMissingDayRatio: 'Missing Day Ratio (30d)',
       healthSchemaViolations: 'Schema Violations',
@@ -55,19 +58,22 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
       retry: '다시 시도',
       openGitHub: 'GitHub 활동 분석 열기',
       openDiscord: 'Discord 활동 분석 열기',
-      period7d: '기본 기간: 최근 7일 (Asia/Seoul)',
-      period30d: '기본 기간: 최근 30일 (Asia/Seoul)',
+      period7d: '선택 기간: 최근 7일 (Asia/Seoul)',
+      period30d: '선택 기간: 최근 30일 (Asia/Seoul)',
       window7d: '7일',
       window30d: '30일',
       loading: '현황 데이터를 불러오는 중...',
       error: '현황 데이터를 불러오지 못했습니다.',
       summaryActiveProjects: '활성 프로젝트',
-      summaryWauContributors: '주간 활성 기여자',
-      summaryWeeklyEvents: '주간 협업 이벤트',
+      summaryContributors: '활성 기여자',
+      summaryCollabEvents: '협업 이벤트',
       summaryMergeRate: 'PR 머지율',
       summaryPipelineFreshness: '파이프라인 최신성',
-      trendTitle: '추세 패널 (7일)',
+      trendTitle7d: '추세 패널 (7일)',
+      trendTitle30d: '추세 패널 (30일)',
       trendDescription: '핵심 활동 / 커뮤니케이션 / 머지율',
+      guide7d: '이 화면은 지난 7일 기준으로 프로젝트 활성도, 협업 이벤트, 데이터 최신성, 저장소 집중도를 보여줍니다. 각 카드는 “현재 상태를 얼마나 신뢰할 수 있는지” 판단하는 기준입니다.',
+      guide30d: '이 화면은 지난 30일 기준으로 프로젝트 활성도, 협업 이벤트, 데이터 최신성, 저장소 집중도를 보여줍니다. 각 카드는 “현재 상태를 얼마나 신뢰할 수 있는지” 판단하는 기준입니다.',
       healthCoverage: '커버리지',
       healthMissingDayRatio: '결측 일 비율 (30일)',
       healthSchemaViolations: '스키마 위반',
@@ -81,6 +87,9 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
   } as const;
 
   const t = texts[lang];
+  const selectedPeriodLabel = windowSize === '7d' ? t.period7d : t.period30d;
+  const trendTitle = windowSize === '7d' ? t.trendTitle7d : t.trendTitle30d;
+  const guideText = windowSize === '7d' ? t.guide7d : t.guide30d;
 
   const fetchOverview = async (windowArg: '7d' | '30d' = windowSize) => {
     setIsLoading(true);
@@ -109,18 +118,18 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
           : 'Count of projects where status is active (excluding draft/completed).',
       },
       {
-        label: t.summaryWauContributors,
+        label: t.summaryContributors,
         value: String(data.summary.weekly_active_contributors),
         tooltip: lang === 'ko'
-          ? '최근 7일 동안 GitHub/Discord에서 활동한 기여자 수'
-          : 'Contributors active in GitHub/Discord during the last 7 days.',
+          ? `선택 기간(${selectedPeriodLabel.replace('선택 기간: ', '')})의 GitHub 활성 기여자 수 + Discord 활성 작성자 수 합계`
+          : `Sum of GitHub active contributors and Discord active authors during the ${windowSize === '7d' ? 'last 7 days' : 'last 30 days'}.`,
       },
       {
-        label: t.summaryWeeklyEvents,
+        label: t.summaryCollabEvents,
         value: String(data.summary.weekly_collab_events),
         tooltip: lang === 'ko'
-          ? '최근 7일 GitHub 핵심 이벤트 + Discord 메시지 합계'
-          : 'Sum of core GitHub events and Discord messages in the last 7 days.',
+          ? `선택 기간(${selectedPeriodLabel.replace('선택 기간: ', '')})의 GitHub 핵심 이벤트 + Discord 메시지 합계`
+          : `Sum of core GitHub events and Discord messages during the ${windowSize === '7d' ? 'last 7 days' : 'last 30 days'}.`,
       },
       {
         label: t.summaryMergeRate,
@@ -137,7 +146,7 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
           : 'Hours elapsed since the latest valid data update.',
       },
     ];
-  }, [data, lang, windowSize, t.summaryActiveProjects, t.summaryWauContributors, t.summaryWeeklyEvents, t.summaryMergeRate, t.summaryPipelineFreshness]);
+  }, [data, lang, selectedPeriodLabel, windowSize, t.summaryActiveProjects, t.summaryContributors, t.summaryCollabEvents, t.summaryMergeRate, t.summaryPipelineFreshness]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -145,7 +154,7 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
         <div>
           <h1 className="text-2xl font-bold">{t.title}</h1>
           <p className="text-sm text-slate-500 mt-1">{t.sub}</p>
-          <p className="text-xs text-slate-400 mt-1">{windowSize === '7d' ? t.period7d : t.period30d}</p>
+          <p className="text-xs text-slate-400 mt-1">{selectedPeriodLabel}</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -172,9 +181,7 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
 
         <Card>
           <CardContent className="p-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            {lang === 'ko'
-              ? '이 화면은 지난 7일 기준으로 프로젝트 활성도, 협업 이벤트, 데이터 최신성, 저장소 집중도를 보여줍니다. 각 카드는 “현재 상태를 얼마나 신뢰할 수 있는지” 판단하는 기준입니다.'
-              : 'This page summarizes the last 7 days: project activity, collaboration events, data freshness, and repository concentration. Use these cards as a quick reliability check before deep analysis.'}
+            {guideText}
           </CardContent>
         </Card>
       </div>
@@ -193,7 +200,7 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
       {!isLoading && !error && data ? (
         <>
           <KpiStrip items={summaryItems} />
-          <TrendCompositeChart title={t.trendTitle} description={t.trendDescription} data={data.timeseries} />
+          <TrendCompositeChart title={trendTitle} description={t.trendDescription} data={data.timeseries} />
           <HealthCards
             coverageLabel={t.healthCoverage}
             missingDayRatioLabel={t.healthMissingDayRatio}

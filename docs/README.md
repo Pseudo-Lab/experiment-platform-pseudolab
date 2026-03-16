@@ -1,3 +1,6 @@
+Status: active
+Last-Validated: 2026-03-15
+
 # Docs Guide
 
 실험플랫폼 문서 운영 규칙입니다. 

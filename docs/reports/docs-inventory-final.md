@@ -1,6 +1,6 @@
 # Docs Final Inventory
 
-Last-Validated: 2026-03-14
+Last-Validated: 2026-03-15
 
 ## Active
 - docs/README.md
@@ -19,6 +19,7 @@ Last-Validated: 2026-03-14
 - docs/reports/docs-inventory-final.md
 - docs/reports/hand-off-12th-study-platform.md
 - docs/reports/kpi-definition-v2.md
+- docs/reports/stabilization-and-oss-split-plan.md
 - docs/reports/team-lead-rebaseline-plan.md
 - docs/reports/team-lead-review-v2.md
 

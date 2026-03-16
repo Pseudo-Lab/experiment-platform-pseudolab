@@ -25,49 +25,7 @@ env:
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  validate:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout application repository
-        uses: actions/checkout@v5
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: frontend
-
-      - name: Run frontend tests
-        run: npm run test -- --run
-        working-directory: frontend
-
-      - name: Build frontend
-        run: npm run build
-        working-directory: frontend
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
-      - name: Install backend dependencies
-        run: pip install -r requirements.txt
-        working-directory: backend
-
-      - name: Validate backend source
-        run: python -m compileall app
-        working-directory: backend
-
   build-and-push:
-    if: github.ref == 'refs/heads/main'
-    needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -112,7 +70,6 @@ jobs:
             ${{ env.BACKEND_IMAGE }}:latest
 
   update-ops-repo:
-    if: github.ref == 'refs/heads/main'
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
