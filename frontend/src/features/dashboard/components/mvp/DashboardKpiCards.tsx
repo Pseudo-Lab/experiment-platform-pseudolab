@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn } from '@core/ui/cn';
 import type { DashboardKpiItem } from '@/features/dashboard/types/dashboard';
 
 interface DashboardKpiCardsProps {

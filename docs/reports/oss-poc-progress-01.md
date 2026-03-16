@@ -18,6 +18,7 @@ Last-Validated: 2026-03-16
   - `frontend/src/components/ui/table.tsx` → `import { cn } from '@core/ui/cn'`
   - `frontend/src/components/ui/select.tsx` → `import { cn } from '@core/ui/cn'`
   - `frontend/src/components/ui/dropdown-menu.tsx` → `import { cn } from '@core/ui/cn'`
+  - `frontend/src/features/dashboard/components/mvp/DashboardKpiCards.tsx` → `import { cn } from '@core/ui/cn'`
 - Verified build passes after the change (`npm run build`).
 
 ## Why this PoC
