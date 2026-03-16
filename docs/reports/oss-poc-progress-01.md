@@ -9,8 +9,9 @@ Last-Validated: 2026-03-16
 - Added alias wiring for PoC import:
   - `frontend/vite.config.ts` (`@core`)
   - `frontend/tsconfig.json` (`@core/*`)
-- Switched one usage site to core utility import:
+- Switched usage sites to core utility import:
   - `frontend/src/components/ui/button.tsx` → `import { cn } from '@core/ui/cn'`
+  - `frontend/src/components/ui/input.tsx` → `import { cn } from '@core/ui/cn'`
 - Verified build passes after the change (`npm run build`).
 
 ## Why this PoC
