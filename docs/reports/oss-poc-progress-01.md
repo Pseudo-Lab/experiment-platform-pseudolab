@@ -22,3 +22,8 @@ Last-Validated: 2026-03-16
 1. Add import-boundary lint rule draft (`core -> overlay` deny)
 2. Add tiny unit test for `cn` in core path
 3. Replace one usage site behind a reversible commit (no push yet)
+
+## Progress Update — Guardrail Added
+- Added boundary guard script: `scripts/check-core-boundary.sh`
+- Rule: fail if `packages/core/src` imports overlay app paths (`@/`, `frontend/src`, feature/service/layout aliases)
+- Current result: PASS (no violation)
