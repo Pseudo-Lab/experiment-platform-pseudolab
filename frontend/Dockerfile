@@ -1,5 +1,13 @@
 # Docker Multi-stage build for React (Vite)
 # 1. Build stage
+FROM node:22-bookworm-slim AS dev
+WORKDIR /app
+
+# Dev deps only (source is mounted by docker-compose.dev)
+COPY package*.json ./
+RUN npm ci
+
+# Build stage
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
