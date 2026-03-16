@@ -35,3 +35,13 @@ Last-Validated: 2026-03-16
 - Added boundary guard script: `scripts/check-core-boundary.sh`
 - Rule: fail if `packages/core/src` imports overlay app paths (`@/`, `frontend/src`, feature/service/layout aliases)
 - Current result: PASS (no violation)
+
+## Pre-split Preparation Update
+- Added `packages/core` package scaffold for OSS handoff preparation (without physical repo split yet):
+  - `packages/core/package.json` (`@pseudo-lab/core`, exports, build/typecheck scripts)
+  - `packages/core/tsconfig.build.json`
+  - `packages/core/src/index.ts`
+  - `packages/core/src/ui/cn.ts` aligned with existing app behavior (`clsx` + `tailwind-merge`)
+- Validation:
+  - `cd packages/core && npm run build` PASS
+  - frontend button test/build PASS after scaffold (`vitest`, `vite build`)
