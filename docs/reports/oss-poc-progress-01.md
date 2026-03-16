@@ -12,6 +12,7 @@ Last-Validated: 2026-03-16
 - Switched usage sites to core utility import:
   - `frontend/src/components/ui/button.tsx` → `import { cn } from '@core/ui/cn'`
   - `frontend/src/components/ui/input.tsx` → `import { cn } from '@core/ui/cn'`
+  - `frontend/src/components/ui/badge.tsx` → `import { cn } from '@core/ui/cn'`
 - Verified build passes after the change (`npm run build`).
 
 ## Why this PoC
