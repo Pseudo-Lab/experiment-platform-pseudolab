@@ -3,19 +3,20 @@
 # publishes do not need to emulate Node.js just to produce static assets.
 ARG BUILDPLATFORM
 FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS build
-WORKDIR /app
+WORKDIR /app/frontend
 
 # Copy package files and install dependencies
-COPY package*.json ./
+COPY frontend/package*.json ./
 RUN npm ci
 
-# Copy source files and build
-COPY . .
+# Copy frontend sources plus shared core utilities used by the frontend build.
+COPY frontend/ ./
+COPY packages/core ../packages/core
 RUN npm run build
 
 # 2. Production stage (Nginx)
 FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/frontend/dist /usr/share/nginx/html
 
 # Default nginx config for SPA (Single Page Application) routing
 RUN echo 'server { \
