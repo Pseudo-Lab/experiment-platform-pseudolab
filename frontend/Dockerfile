@@ -1,6 +1,8 @@
 # Docker Multi-stage build for React (Vite)
-# 1. Build stage
-FROM node:22-bookworm-slim AS build
+# Use the builder's native platform for the Vite build so multi-arch image
+# publishes do not need to emulate Node.js just to produce static assets.
+ARG BUILDPLATFORM
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS build
 WORKDIR /app
 
 # Copy package files and install dependencies
