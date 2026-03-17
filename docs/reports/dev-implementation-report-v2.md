@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-03-14
+Last-Validated: 2026-03-15
 
 # Dev Implementation Report v2
 
@@ -40,8 +40,12 @@ Last-Validated: 2026-03-14
 - `frontend/src/__tests__/Dashboard.test.tsx`
 
 ### C. 테스트 추가
+- `backend/tests/test_dashboard.py`
+  - GitHub/Overview API의 window 연동, merge_rate null, overview 합성 규칙 회귀 검증
 - `frontend/src/__tests__/DashboardI18n.test.tsx`
-  - Overview/GitHub/Discord 화면의 KO 라벨 렌더 검증
+  - Overview/GitHub/Discord 화면의 KO/EN 라벨 렌더 검증
+- `frontend/src/__tests__/DetailDashboards.test.tsx`
+  - GitHub/Discord loading/error/empty/success, 7d/30d 전환, 모바일 툴팁 상호작용 검증
 
 ---
 
@@ -58,9 +62,9 @@ Last-Validated: 2026-03-14
 | `generated_at` | string(datetime) | 필수 |
 | `window.{from,to,timezone}` | object | `timezone='Asia/Seoul'` |
 | `summary.active_projects_count` | number | 0 허용 |
-| `summary.weekly_active_contributors` | number | GitHub actor + Discord author unique 합 |
-| `summary.weekly_collab_events` | number | GitHub core + Discord message 합 |
-| `summary.pr_merge_rate_28d` | number \| null | 분모 0이면 null |
+| `summary.weekly_active_contributors` | number | 선택 기간 기준 GitHub `active_contributors` + Discord `active_authors` 단순 합 |
+| `summary.weekly_collab_events` | number | 선택 기간 기준 GitHub core + Discord message 합 |
+| `summary.pr_merge_rate_28d` | number \| null | 키명은 호환 유지, 값은 선택 기간 기준 / 분모 0이면 null |
 | `summary.pipeline_freshness_hours` | number | 최신 이벤트 기준 시간차(없으면 0) |
 | `timeseries[].core_activity` | number | GitHub 일별 합계 |
 | `timeseries[].communication` | number | Discord 일별 메시지 |
@@ -81,7 +85,7 @@ Last-Validated: 2026-03-14
 | `summary.pr_merged` | number | 0 허용 |
 | `summary.issue_comments` | number | 0 허용 |
 | `summary.pr_reviews` | number | 0 허용 |
-| `summary.merge_rate_28d` | number \| null | `pr_opened===0`이면 null |
+| `summary.merge_rate_28d` | number \| null | 키명은 호환 유지, 값은 선택 기간 기준 / `pr_opened===0`이면 null |
 | `summary.total_core_events` | number | 0 허용 |
 | `summary.active_contributors` | number | 0 허용 |
 | `timeseries[].date` | string(YYYY-MM-DD) | 조회 기간 day spine 고정 |
@@ -108,7 +112,19 @@ Last-Validated: 2026-03-14
 | `top_authors[].messages` | number | - |
 | `UI Empty 판정` | boolean 식 | `summary.message_count===0 && top_channels.length===0` |
 
-### 3-4. FE 타입 1:1 매핑 증적
+### 3-4. 현재 데이터 제약/정책
+- Discord 작성자 표시는 아래 fallback 순서를 사용:
+  - `nickname` -> `global_name` -> `author_nickname` -> `author_global_name` -> `author_username` -> `author` -> `username` -> `author_id`
+- Discord 채널 표시는 `channel_name`만 사용:
+  - `channel_id` fallback은 사용하지 않음
+- 소스 미연결/테이블 부재 시 현재 API 정책:
+  - 예외 대신 empty payload(0/빈 배열) 반환
+  - `partial_sources`, `SOURCE_UNAVAILABLE`, `reason_code`는 아직 응답 계약에 포함되지 않음
+- merge rate 키 정책:
+  - `merge_rate_28d`, `pr_merge_rate_28d` 키명은 호환 유지
+  - 실제 값은 선택된 `window=7d|30d` 기준으로 계산
+
+### 3-5. FE 타입 1:1 매핑 증적
 - 타입 정의 파일: `frontend/src/features/dashboard/types/metrics.ts`
   - `GitHubOverviewResponse` ↔ `GET /dashboard/github/overview` 응답 본문 1:1
   - `DiscordOverviewResponse` ↔ `GET /dashboard/discord/overview` 응답 본문 1:1
@@ -120,21 +136,21 @@ Last-Validated: 2026-03-14
     - `/dashboard/github/overview?window=...`
     - `/dashboard/discord/overview?window=...`
 
-### 3-5. KO/EN i18n 매핑표 (대시보드 UI)
+### 3-6. KO/EN i18n 매핑표 (대시보드 UI)
 | 화면 | 키(의미) | EN | KO |
 |---|---|---|---|
 | Overview | summaryActiveProjects | Active Projects | 활성 프로젝트 |
-| Overview | summaryWauContributors | WAU Contributors | 주간 활성 기여자 |
-| Overview | summaryWeeklyEvents | Weekly Collaboration Events | 주간 협업 이벤트 |
-| Overview | summaryMergeRate | PR Merge Rate (28d) | PR 머지율 (28일) |
+| Overview | summaryContributors | Active Contributors | 활성 기여자 |
+| Overview | summaryCollabEvents | Collaboration Events | 협업 이벤트 |
+| Overview | summaryMergeRate | PR Merge Rate | PR 머지율 |
 | Overview | summaryPipelineFreshness | Pipeline Freshness | 파이프라인 최신성 |
-| Overview | trendTitle / trendDescription | Trend Panel (30d) / Core activity / communication / merge rate | 추세 패널 (30일) / 핵심 활동 / 커뮤니케이션 / 머지율 |
+| Overview | trendTitle7d / trendTitle30d / trendDescription | Trend Panel (7d/30d) / Core activity / communication / merge rate | 추세 패널 (7일/30일) / 핵심 활동 / 커뮤니케이션 / 머지율 |
 | Overview | topRepoTitle / topRepoConcentration | Top Repositories / Top3 concentration | 상위 저장소 / 상위 3개 집중도 |
 | Overview | alertTitle / alertEmpty | Action Queue / No active alerts. | 액션 큐 / 활성 알림이 없습니다. |
 | GitHub 상세 | totalCoreEvents | Total Core Events | 핵심 이벤트 수 |
 | GitHub 상세 | pushEvents | Push Events | 푸시 이벤트 |
 | GitHub 상세 | prOpenedMerged | PR Opened / Merged | PR 오픈 / 머지 |
-| GitHub 상세 | mergeRate | Merge Rate (28d) | 머지율 (28일) |
+| GitHub 상세 | mergeRate | Merge Rate | 머지율 |
 | GitHub 상세 | topRepositories / repoShare | Top Repositories / Activity share by repository | 상위 저장소 / 저장소별 활동 비중 |
 | Discord 상세 | messages | Messages | 메시지 수 |
 | Discord 상세 | activeAuthors | Active Authors | 활성 작성자 |
@@ -168,10 +184,10 @@ Last-Validated: 2026-03-14
 ### 4-2. 테스트
 - Backend
   - 실행: `PYTHONPATH=. ./venv/bin/pytest -q`
-  - 결과: **1 passed (warnings 4)**
+  - 결과: **4 passed (warnings 4)**
 - Frontend
   - 실행: `npm test -- --run`
-  - 결과: **7 files / 32 tests passed**
+  - 결과: **8 files / 41 tests passed**
 - 비고: recharts container size 경고(stderr) 존재하나 실패 아님
 
 ### 4-3. 빌드

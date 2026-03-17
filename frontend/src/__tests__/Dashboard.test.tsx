@@ -1,4 +1,4 @@
-import { render, screen, act, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Dashboard } from '@/features/dashboard/components/Dashboard';
 import { dashboardApi } from '@/services/dashboardApi';
@@ -57,5 +57,64 @@ describe('Dashboard Overview Component', () => {
       render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);
     });
     expect(screen.getByText('현황 데이터를 불러오지 못했습니다.')).toBeInTheDocument();
+  });
+
+  it('updates selected-period copy and refetches when window changes to 30d', async () => {
+    await act(async () => {
+      render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);
+    });
+
+    expect(dashboardApi.overview).toHaveBeenNthCalledWith(1, '7d');
+    expect(screen.getByText('선택 기간: 최근 7일 (Asia/Seoul)')).toBeInTheDocument();
+    expect(screen.getByText('추세 패널 (7일)')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '30일' }));
+    });
+
+    expect(dashboardApi.overview).toHaveBeenNthCalledWith(2, '30d');
+    expect(screen.getByText('선택 기간: 최근 30일 (Asia/Seoul)')).toBeInTheDocument();
+    expect(screen.getByText('추세 패널 (30일)')).toBeInTheDocument();
+    expect(screen.getByText('이 화면은 지난 30일 기준으로 프로젝트 활성도, 협업 이벤트, 데이터 최신성, 저장소 집중도를 보여줍니다. 각 카드는 “현재 상태를 얼마나 신뢰할 수 있는지” 판단하는 기준입니다.')).toBeInTheDocument();
+  });
+
+  it('keeps contributor tooltip copy aligned with the implemented sum formula', async () => {
+    await act(async () => {
+      render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);
+    });
+
+    expect(screen.getByText('선택 기간(최근 7일 (Asia/Seoul))의 GitHub 활성 기여자 수 + Discord 활성 작성자 수 합계')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '30일' }));
+    });
+
+    expect(screen.getByText('선택 기간(최근 30일 (Asia/Seoul))의 GitHub 활성 기여자 수 + Discord 활성 작성자 수 합계')).toBeInTheDocument();
+  });
+
+  it('opens overview tooltip on tap and closes it on outside pointerdown', async () => {
+    await act(async () => {
+      render(<MemoryRouter><Dashboard lang="ko" /></MemoryRouter>);
+    });
+
+    const tooltipText = '프로젝트 status 값이 active 인 항목 수 (draft/completed 제외)';
+    const descriptionButton = screen.getByRole('button', { name: '활성 프로젝트 description' });
+
+    expect(screen.getAllByText(tooltipText)).toHaveLength(1);
+    expect(descriptionButton).toHaveAttribute('aria-expanded', 'false');
+
+    await act(async () => {
+      fireEvent.click(descriptionButton);
+    });
+
+    expect(screen.getAllByText(tooltipText)).toHaveLength(2);
+    expect(descriptionButton).toHaveAttribute('aria-expanded', 'true');
+
+    await act(async () => {
+      fireEvent.pointerDown(document.body);
+    });
+
+    expect(screen.getAllByText(tooltipText)).toHaveLength(1);
+    expect(descriptionButton).toHaveAttribute('aria-expanded', 'false');
   });
 });
