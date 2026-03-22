@@ -23,7 +23,7 @@ export const KpiStrip = ({ items }: KpiStripProps) => {
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
       {items.map((item, index) => (
         <Card key={item.label} className="rounded-2xl">
-          <CardContent className="p-4 relative">
+          <CardContent className="p-4 pt-4 relative">
             <p data-tooltip-root="kpi" className="text-xs text-slate-500 inline-flex items-center gap-1 group relative">
               <span>{item.label}</span>
               {item.tooltip ? (
