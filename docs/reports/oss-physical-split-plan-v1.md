@@ -1,8 +1,10 @@
 Status: archived
 Last-Updated: 2026-03-22
-Archived-Reason: physical split strategy superseded — current repo is OSS directly, PL-specific config isolated to devfactory-ops
+Archived-Reason: physical split execution is paused pending product-value decision (including GrowthBook adoption review)
 
 # OSS Physical Split Plan v1
+
+> Note (2026-03-22): kept for reference only. Current direction is MVP-first process simplification and value validation before physical OSS split execution.
 
 ## 목적
 

@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-03-17
+Last-Validated: 2026-03-22
 
 # OSS PoC Progress 01 — `cn` Utility Parallel Extraction
 
@@ -53,3 +53,9 @@ Last-Validated: 2026-03-17
 - Validation:
   - `cd packages/core && npm run build` PASS
   - frontend button test/build PASS after scaffold (`vitest`, `vite build`)
+
+## Direction Sync Update (2026-03-22)
+- This document remains a technical PoC record (core extraction/alias/build readiness).
+- Execution priority is currently shifted to MVP operating templates and fast feedback loops.
+- Physical OSS split is paused pending product-value decision, including GrowthBook adoption review.
+- Reference for decision input: `docs/reports/growthbook-go-no-go-scorecard.md`.
