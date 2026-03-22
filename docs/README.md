@@ -60,6 +60,10 @@ Replaced-By: <path>   # 해당 시만
 ---
 
 ## 5) 추천 진입 문서
+- 액티브 인덱스(읽기 시작점): `docs/reports/_index.md`
+- 현재 작업 기준: `docs/reports/current-working-agreement.md`
+- 의사결정 로그(append-only): `docs/reports/decision-log.md`
+- 작업별 문서 매핑: `docs/reports/task-to-doc-map.md`
 - 운영 핸드오프: `docs/reports/hand-off-12th-study-platform.md`
 - 실행 계획: `docs/reports/dashboard-execution-plan-v1.md`
 - 팀장 기준 계획: `docs/reports/team-lead-rebaseline-plan.md`

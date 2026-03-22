@@ -28,7 +28,7 @@ pseudolab 레포가 로컬 경로 대신 패키지를 참조하도록 cutover한
 
 > pseudolab 레포와 독립적으로 진행 가능
 
-### Step 1 — GitHub 레포 생성 (KiSH 직접)
+### Step 1 — GitHub 레포 생성 (soo 직접)
 
 - `Pseudo-Lab/experiment-platform` 생성 (Public, MIT License)
 - `main` 브랜치 보호 규칙 설정 (PR 필수)

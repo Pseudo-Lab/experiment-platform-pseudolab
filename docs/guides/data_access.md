@@ -54,4 +54,4 @@ Last-Validated: 2026-03-14
 3. **Mocking**: 타겟 데이터 파이프라인(Cloudflare 등)이 준비되지 않았을 때는 `backend/app/services/experiment.py`와 같이 Mock 데이터를 임시 활용합니다.
 
 ---
-*추가 접근 권한이 필요할 경우 KiSH(Head)에게 요청해주세요.*
+*추가 접근 권한이 필요할 경우 soo(Head)에게 요청해주세요.*

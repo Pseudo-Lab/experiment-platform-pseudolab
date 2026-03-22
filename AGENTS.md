@@ -1,7 +1,7 @@
 # AGENTS.md — Team Working Rules
 
 Status: ratified
-Owner: KiSH
+Owner: soo
 Last-Updated: 2026-03-14
 
 이 문서는 다양한 에이전트/기여자가 공통으로 따르는 **팀 규칙**입니다.
