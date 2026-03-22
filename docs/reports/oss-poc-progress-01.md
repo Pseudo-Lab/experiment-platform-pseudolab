@@ -38,8 +38,18 @@ Last-Validated: 2026-03-17
 - Rule: fail if `packages/core/src` imports overlay app paths (`@/`, `frontend/src`, feature/service/layout aliases)
 - Current result: PASS (no violation)
 
-## Progress Update ??Container Build Alignment
+## Progress Update — Container Build Alignment
 - Frontend Docker and CI builds now use the repository root as the build
   context so `@core/ui/cn` resolves inside containerized builds.
 - Dev compose mounts `packages/core` alongside `frontend` to preserve the same
   alias behavior during Vite development in the container.
+
+## Core Package Scaffold Update
+- Added `packages/core` package scaffold for monorepo internal package:
+  - `packages/core/package.json` (`@pseudo-lab/core`, exports, build/typecheck scripts)
+  - `packages/core/tsconfig.build.json`
+  - `packages/core/src/index.ts`
+  - `packages/core/src/ui/cn.ts` dependency-free Tailwind conflict handler
+- Validation:
+  - `cd packages/core && npm run build` PASS
+  - frontend button test/build PASS after scaffold (`vitest`, `vite build`)

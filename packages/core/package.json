@@ -1,0 +1,33 @@
+{
+  "name": "@pseudo-lab/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pseudo-Lab OSS core package (pre-split scaffold)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui/cn": {
+      "types": "./dist/ui/cn.d.ts",
+      "default": "./dist/ui/cn.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

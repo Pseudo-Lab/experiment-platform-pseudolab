@@ -1,16 +1,16 @@
 services:
   experiment-platform-pseudolab-frontend:
     build:
-      context: .
-      dockerfile: ./frontend/Dockerfile
-      target: build
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
     container_name: experiment-platform-pseudolab-frontend-dev
     ports:
       - "8081:5173" # Vite default port mapped to host 8081
     volumes:
-      - ./frontend:/app/frontend
-      - ./packages/core:/app/packages/core
-      - /app/frontend/node_modules # Prevents host node_modules from overriding container's
+      - ./frontend:/app
+      - ./packages/core:/packages/core
+      - /app/node_modules # Prevents host node_modules from overriding container's
     command: npm run dev -- --host 0.0.0.0 # Run development server with host binding
     restart: always
 

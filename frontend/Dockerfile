@@ -1,4 +1,12 @@
 # Docker Multi-stage build for React (Vite)
+
+# 1. Dev stage (used by docker-compose.dev.yml; source is mounted at runtime)
+FROM node:22-bookworm-slim AS dev
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+# 2. Build stage (used by production CI; context is repo root)
 # Use the builder's native platform for the Vite build so multi-arch image
 # publishes do not need to emulate Node.js just to produce static assets.
 ARG BUILDPLATFORM
