@@ -180,7 +180,7 @@ export const OverviewPage = ({ lang }: { lang: DashboardLang }) => {
         </div>
 
         <Card>
-          <CardContent className="p-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          <CardContent className="p-4 pt-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
             {guideText}
           </CardContent>
         </Card>

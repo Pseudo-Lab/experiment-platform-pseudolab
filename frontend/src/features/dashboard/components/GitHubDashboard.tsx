@@ -124,7 +124,7 @@ export const GitHubDashboard: React.FC<GitHubDashboardProps> = ({ lang }) => {
     <div className="max-w-7xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">{t.title}</h1>
       <Card>
-        <CardContent className="p-4 text-sm text-slate-600 dark:text-slate-300 space-y-2">
+        <CardContent className="p-4 pt-4 text-sm text-slate-600 dark:text-slate-300 space-y-2">
           <div>{t.guide}</div>
           <div className="text-xs text-slate-400">{windowSize === '7d' ? t.period7d : t.period30d}</div>
           <div className="inline-flex w-fit items-center gap-1 rounded-xl border bg-slate-50 p-1 dark:bg-slate-900">
