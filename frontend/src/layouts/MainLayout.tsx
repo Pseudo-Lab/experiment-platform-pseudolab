@@ -84,6 +84,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
     const activePath = location.pathname;
 
+    const handleNav = (path: string) => {
+        navigate(path);
+        if (window.innerWidth < 1024) setSidebarOpen(false);
+    };
+
     const translations = {
         en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Reports & Issues", settings: "Settings" },
         ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "리포트/이슈", settings: "설정" }
@@ -178,11 +183,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 </div>
 
                 <nav className="flex-1 px-3 py-6 space-y-2">
-                    <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => navigate('/dashboard')} />
-                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments'} expanded={isSidebarOpen} onClick={() => navigate('/experiments')} />
-                    <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => navigate('/metrics/github')} />
-                    <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => navigate('/metrics/discord')} />
-                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => navigate('/bug-report')} />
+                    <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => handleNav('/dashboard')} />
+                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments'} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
+                    <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/github')} />
+                    <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/discord')} />
+                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} />
                 </nav>
 
                 <div className="p-3 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">

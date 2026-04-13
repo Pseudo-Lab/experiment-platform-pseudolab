@@ -150,7 +150,7 @@ export const Metrics: React.FC<MetricsProps> = ({ lang }) => {
 
   const derivedMetrics = useMemo(() => {
     const total = experiments.length;
-    const activeCount = experiments.filter((item) => item.status === 'active').length;
+    const activeCount = experiments.filter((item) => item.status === 'running').length;
     const completedCount = experiments.filter((item) => item.status === 'completed').length;
 
     const activeRate = total === 0 ? 0 : Math.round((activeCount / total) * 100);
