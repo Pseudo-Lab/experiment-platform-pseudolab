@@ -351,7 +351,7 @@ async def get_dashboard_overview(window: str = Query('30d', pattern='^(7d|30d)$'
     day_keys = [(start + timedelta(days=i)).date().isoformat() for i in range(days)]
 
     experiments = await experiment_service.get_all()
-    active_count = sum(1 for e in experiments if str(e.status) == 'active' or getattr(e.status, 'value', None) == 'active')
+    active_count = sum(1 for e in experiments if e.status == 'running' or getattr(e.status, 'value', None) == 'running')
 
     github = await get_github_overview(window)
     discord = await get_discord_overview(window)

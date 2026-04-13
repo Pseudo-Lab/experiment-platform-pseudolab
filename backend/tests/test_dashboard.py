@@ -109,14 +109,16 @@ def test_overview_combines_domain_summaries_using_selected_window(monkeypatch):
             Experiment(
                 id="exp-1",
                 name="Alpha",
-                status=ExperimentStatus.ACTIVE,
+                status=ExperimentStatus.RUNNING,
                 created_at=datetime.fromisoformat("2026-03-10T00:00:00+09:00"),
+                updated_at=datetime.fromisoformat("2026-03-10T00:00:00+09:00"),
             ),
             Experiment(
                 id="exp-2",
                 name="Beta",
                 status=ExperimentStatus.DRAFT,
                 created_at=datetime.fromisoformat("2026-03-09T00:00:00+09:00"),
+                updated_at=datetime.fromisoformat("2026-03-09T00:00:00+09:00"),
             ),
         ]
 
