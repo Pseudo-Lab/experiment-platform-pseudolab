@@ -1,15 +1,10 @@
 name: gitops-ci
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/gitops-ci.yml'
-      - 'frontend/**'
-      - 'backend/**'
-      - 'docker-compose.yml'
-      - 'docker-compose.dev.yml'
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -26,6 +21,7 @@ env:
 
 jobs:
   build-and-push:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
