@@ -6,5 +6,7 @@ supabase==2.5.0
 pandas==2.2.2
 scipy==1.13.1
 python-dotenv==1.0.1
+boto3
+python-multipart
 pytest
 httpx
