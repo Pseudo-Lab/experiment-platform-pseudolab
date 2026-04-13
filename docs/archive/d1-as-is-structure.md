@@ -11,7 +11,7 @@ Last-Validated: 2026-03-14
 
 - 대상 계정: `${CLOUDFLARE_ACCOUNT_ID}`
 - 실험 DB: `${D1_DATABASE_ID}` (`pseudolab-exp`)
-- 메인 DB: `${D1_MAIN_DATABASE_ID:-e7f4cab0-3293-4942-988f-38d9e97e14b2}` (`pseudolab-main`)
+- 메인 DB: `${D1_MAIN_DATABASE_ID}` (`pseudolab-main`)
 
 ## 2) DB 목록 현황
 
