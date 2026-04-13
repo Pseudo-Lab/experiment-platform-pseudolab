@@ -3,7 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
 import { Dashboard } from './features/dashboard/components/Dashboard';
 import { BugReport } from './features/dashboard/components/BugReport';
+import { BugReportDetail } from './features/dashboard/components/BugReportDetail';
 import { Experiments } from './features/dashboard/components/Experiments';
+import { ExperimentDetail } from './features/dashboard/components/ExperimentDetail';
 import { GitHubDashboard } from './features/dashboard/components/GitHubDashboard';
 import { DiscordDashboard } from './features/dashboard/components/DiscordDashboard';
 
@@ -58,10 +60,12 @@ export default function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard lang={lang} />} />
         <Route path="/experiments" element={<Experiments lang={lang} />} />
+        <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} />} />
         <Route path="/metrics" element={<Navigate to="/metrics/github" replace />} />
         <Route path="/metrics/github" element={<GitHubDashboard lang={lang} />} />
         <Route path="/metrics/discord" element={<DiscordDashboard lang={lang} />} />
         <Route path="/bug-report" element={<BugReport lang={lang} />} />
+        <Route path="/bug-report/:id" element={<BugReportDetail lang={lang} />} />
       </Routes>
     </MainLayout>
   );
