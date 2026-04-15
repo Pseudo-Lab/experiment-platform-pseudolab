@@ -91,7 +91,7 @@ class TestCreateBugReport:
         assert resp.status_code == 422
 
     def test_all_categories_accepted(self):
-        for cat in ["ui", "functional", "performance", "other"]:
+        for cat in ["ui", "functional", "performance", "feature_request", "other"]:
             resp = client.post(BASE + "/", json={"title": f"{cat} 버그", "category": cat, "attachment_keys": []})
             assert resp.status_code == 201, f"category={cat} failed"
             client.delete(f"{BASE}/{resp.json()['id']}")

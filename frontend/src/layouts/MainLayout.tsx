@@ -90,8 +90,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Reports & Issues", settings: "Settings" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "리포트/이슈", settings: "설정" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", settings: "Settings" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", settings: "설정" }
     };
 
     const t = translations[lang];

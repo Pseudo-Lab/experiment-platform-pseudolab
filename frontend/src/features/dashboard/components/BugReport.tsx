@@ -16,25 +16,25 @@ interface BugReportProps {
 
 const translations = {
     en: {
-        issueList: "Issue Tracker", newIssue: "New Issue", issueId: "ID", issueTitle: "Issue Title",
+        issueList: "Bugs & Requests", newIssue: "New Report", issueId: "ID", issueTitle: "Issue Title",
         issueDate: "Date", issueStatus: "Status", issueSeverity: "Severity",
         statusReported: "Open", statusInProgress: "In Progress", statusResolved: "Resolved",
         sevMinor: "Minor", sevMajor: "Major", sevCritical: "Critical",
         title: "Title", category: "Category", severity: "Severity", description: "Description", submit: "Submit",
         placeholderTitle: "Short description", placeholderDesc: "What happened?",
-        catUI: "UI/UX", catFunc: "Functional", catPerf: "Performance", catOther: "Other",
+        catUI: "UI/UX", catFunc: "Functional", catPerf: "Performance", catFeature: "Feature Request", catOther: "Other",
         pasteImage: "Paste, drag & drop, or click to upload", attachments: "Attachments",
         loading: "Loading...", error: "Failed to load reports.", submitting: "Submitting...",
         uploadingFile: "Uploading...", noReports: "No reports yet.",
     },
     ko: {
-        issueList: "이슈 게시판", newIssue: "버그 제보하기", issueId: "번호", issueTitle: "이슈 제목",
+        issueList: "버그 & 기능 요청", newIssue: "제보/요청하기", issueId: "번호", issueTitle: "이슈 제목",
         issueDate: "등록일", issueStatus: "상태", issueSeverity: "심각도",
         statusReported: "Open", statusInProgress: "In Progress", statusResolved: "Resolved",
         sevMinor: "Minor", sevMajor: "Major", sevCritical: "Critical",
         title: "제목", category: "유형", severity: "심각도", description: "상세 내용", submit: "제출하기",
         placeholderTitle: "문제에 대한 짧은 설명", placeholderDesc: "발생한 상황에 대해 자세히 알려주세요...",
-        catUI: "UI/UX 디자인", catFunc: "기능 오류", catPerf: "성능 이슈", catOther: "기타",
+        catUI: "UI/UX 디자인", catFunc: "기능 오류", catPerf: "성능 이슈", catFeature: "기능 요청", catOther: "기타",
         pasteImage: "붙여넣기 · 드래그 앤 드롭 · 클릭하여 업로드", attachments: "첨부 파일",
         loading: "불러오는 중...", error: "목록을 불러오지 못했습니다.", submitting: "제출 중...",
         uploadingFile: "업로드 중...", noReports: "등록된 이슈가 없습니다.",
@@ -273,6 +273,7 @@ export const BugReport: React.FC<BugReportProps> = ({ lang }) => {
                                             <SelectItem value="ui">{t.catUI}</SelectItem>
                                             <SelectItem value="functional">{t.catFunc}</SelectItem>
                                             <SelectItem value="performance">{t.catPerf}</SelectItem>
+                                            <SelectItem value="feature_request">{t.catFeature}</SelectItem>
                                             <SelectItem value="other">{t.catOther}</SelectItem>
                                         </SelectContent>
                                     </Select>

@@ -8,6 +8,7 @@ class BugCategory(str, Enum):
     UI = "ui"
     FUNCTIONAL = "functional"
     PERFORMANCE = "performance"
+    FEATURE_REQUEST = "feature_request"
     OTHER = "other"
 
 
