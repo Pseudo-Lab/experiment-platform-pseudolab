@@ -127,6 +127,83 @@ class TestUpdateExperiment:
         assert resp.status_code == 404
 
 
+class TestStatusTransition:
+    def _make(self, name="전환 테스트"):
+        payload = {
+            "name": name,
+            "variants": [
+                {"name": "A", "traffic_ratio": 0.5},
+                {"name": "B", "traffic_ratio": 0.5},
+            ],
+        }
+        return client.post(BASE + "/", json=payload).json()["id"]
+
+    def _patch_status(self, exp_id, status):
+        return client.patch(f"{BASE}/{exp_id}", json={"status": status})
+
+    # 허용 전환
+    def test_draft_to_running(self):
+        exp_id = self._make()
+        assert self._patch_status(exp_id, "running").status_code == 200
+        client.delete(f"{BASE}/{exp_id}")
+
+    def test_draft_to_archived(self):
+        exp_id = self._make()
+        assert self._patch_status(exp_id, "archived").status_code == 200
+        client.delete(f"{BASE}/{exp_id}")
+
+    def test_running_to_paused(self):
+        exp_id = self._make()
+        self._patch_status(exp_id, "running")
+        assert self._patch_status(exp_id, "paused").status_code == 200
+        client.delete(f"{BASE}/{exp_id}")
+
+    def test_running_to_completed(self):
+        exp_id = self._make()
+        self._patch_status(exp_id, "running")
+        assert self._patch_status(exp_id, "completed").status_code == 200
+        client.delete(f"{BASE}/{exp_id}")
+
+    def test_running_to_archived(self):
+        exp_id = self._make()
+        self._patch_status(exp_id, "running")
+        assert self._patch_status(exp_id, "archived").status_code == 200
+        client.delete(f"{BASE}/{exp_id}")
+
+    def test_paused_to_running(self):
+        exp_id = self._make()
+        self._patch_status(exp_id, "running")
+        self._patch_status(exp_id, "paused")
+        assert self._patch_status(exp_id, "running").status_code == 200
+        client.delete(f"{BASE}/{exp_id}")
+
+    def test_paused_to_archived(self):
+        exp_id = self._make()
+        self._patch_status(exp_id, "running")
+        self._patch_status(exp_id, "paused")
+        assert self._patch_status(exp_id, "archived").status_code == 200
+        client.delete(f"{BASE}/{exp_id}")
+
+    # 차단 전환
+    def test_completed_to_running_blocked(self):
+        exp_id = self._make()
+        self._patch_status(exp_id, "running")
+        self._patch_status(exp_id, "completed")
+        assert self._patch_status(exp_id, "running").status_code == 422
+        client.delete(f"{BASE}/{exp_id}")
+
+    def test_archived_to_running_blocked(self):
+        exp_id = self._make()
+        self._patch_status(exp_id, "archived")
+        assert self._patch_status(exp_id, "running").status_code == 422
+        client.delete(f"{BASE}/{exp_id}")
+
+    def test_draft_to_paused_blocked(self):
+        exp_id = self._make()
+        assert self._patch_status(exp_id, "paused").status_code == 422
+        client.delete(f"{BASE}/{exp_id}")
+
+
 class TestDeleteExperiment:
     def test_delete_existing(self):
         payload = {

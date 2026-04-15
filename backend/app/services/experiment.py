@@ -2,9 +2,10 @@ import hashlib
 import uuid
 from typing import List, Optional
 from datetime import datetime, timezone
+from fastapi import HTTPException
 from app.schemas.experiment import (
     Experiment, ExperimentCreate, ExperimentUpdate,
-    Variant, AssignmentResponse
+    Variant, AssignmentResponse, VALID_TRANSITIONS
 )
 from app.db import d1
 
@@ -16,21 +17,39 @@ def _now() -> str:
 class ExperimentService:
 
     async def get_all(self, status: str | None = None) -> List[Experiment]:
+        sql = """
+            SELECT e.*,
+                   v.id          AS v_id,
+                   v.name        AS v_name,
+                   v.traffic_ratio,
+                   v.description AS v_description,
+                   v.created_at  AS v_created_at
+            FROM experiments e
+            LEFT JOIN experiment_variants v ON v.experiment_id = e.id
+            {where}
+            ORDER BY e.created_at DESC
+        """
         if status:
-            rows = d1.query(
-                "SELECT * FROM experiments WHERE status = ? ORDER BY created_at DESC",
-                [status]
-            )
+            rows = d1.query(sql.format(where="WHERE e.status = ?"), [status])
         else:
-            rows = d1.query("SELECT * FROM experiments ORDER BY created_at DESC")
-        result = []
+            rows = d1.query(sql.format(where=""))
+
+        # JOIN 결과를 실험별로 그룹핑
+        experiments: dict[str, dict] = {}
         for row in rows:
-            row["experiment_variants"] = d1.query(
-                "SELECT * FROM experiment_variants WHERE experiment_id = ?",
-                [row["id"]]
-            )
-            result.append(self._to_experiment(row))
-        return result
+            exp_id = row["id"]
+            if exp_id not in experiments:
+                experiments[exp_id] = {**row, "experiment_variants": []}
+            if row["v_id"]:
+                experiments[exp_id]["experiment_variants"].append({
+                    "id": row["v_id"],
+                    "experiment_id": exp_id,
+                    "name": row["v_name"],
+                    "traffic_ratio": row["traffic_ratio"],
+                    "description": row["v_description"],
+                    "created_at": row["v_created_at"],
+                })
+        return [self._to_experiment(exp) for exp in experiments.values()]
 
     async def get(self, experiment_id: str) -> Optional[Experiment]:
         rows = d1.query("SELECT * FROM experiments WHERE id = ?", [experiment_id])
@@ -71,6 +90,18 @@ class ExperimentService:
         patch = {k: v for k, v in data.model_dump().items() if v is not None}
         if not patch:
             return await self.get(experiment_id)
+
+        if "status" in patch:
+            current = await self.get(experiment_id)
+            if not current:
+                return None
+            allowed = VALID_TRANSITIONS.get(current.status, set())
+            if patch["status"] not in allowed:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"'{current.status}' → '{patch['status']}' 전환은 허용되지 않습니다."
+                )
+
         patch["updated_at"] = _now()
 
         set_clause = ", ".join(f"{k} = ?" for k in patch)

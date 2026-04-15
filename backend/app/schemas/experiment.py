@@ -9,6 +9,16 @@ class ExperimentStatus(str, Enum):
     RUNNING = "running"
     PAUSED = "paused"
     COMPLETED = "completed"
+    ARCHIVED = "archived"
+
+
+VALID_TRANSITIONS: dict[str, set[str]] = {
+    ExperimentStatus.DRAFT:     {ExperimentStatus.RUNNING, ExperimentStatus.ARCHIVED},
+    ExperimentStatus.RUNNING:   {ExperimentStatus.PAUSED, ExperimentStatus.COMPLETED, ExperimentStatus.ARCHIVED},
+    ExperimentStatus.PAUSED:    {ExperimentStatus.RUNNING, ExperimentStatus.COMPLETED, ExperimentStatus.ARCHIVED},
+    ExperimentStatus.COMPLETED: set(),
+    ExperimentStatus.ARCHIVED:  set(),
+}
 
 
 # Variant schemas
