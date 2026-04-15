@@ -1,17 +1,22 @@
 import os
 import boto3
-from botocore.exceptions import ClientError
+
+_client = None
 
 
 def _get_client():
+    global _client
+    if _client is not None:
+        return _client
     account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID")
-    return boto3.client(
+    _client = boto3.client(
         "s3",
         endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
         aws_access_key_id=os.getenv("R2_ACCESS_KEY_ID"),
         aws_secret_access_key=os.getenv("R2_SECRET_ACCESS_KEY"),
         region_name="auto",
     )
+    return _client
 
 
 def _bucket() -> str:
