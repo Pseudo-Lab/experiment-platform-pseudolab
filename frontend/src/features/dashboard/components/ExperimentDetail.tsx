@@ -5,8 +5,8 @@ import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { ArrowLeft, Pencil, Trash2, X, Check } from 'lucide-react';
-import { experimentApi, type Experiment } from '../../../services/api';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive } from 'lucide-react';
+import { experimentApi, type Experiment, type ExperimentStatus } from '../../../services/api';
 
 interface ExperimentDetailProps {
   lang: 'en' | 'ko';
@@ -34,6 +34,12 @@ const translations = {
     saving: 'Saving...',
     labelName: 'Name',
     none: '-',
+    actionStart: 'Start',
+    actionPause: 'Pause',
+    actionResume: 'Resume',
+    actionComplete: 'Complete',
+    actionArchive: 'Archive',
+    statusChangeConfirm: (to: string) => `Change status to "${to}"?`,
   },
   ko: {
     back: '목록으로',
@@ -56,6 +62,12 @@ const translations = {
     saving: '저장 중...',
     labelName: '실험 이름',
     none: '-',
+    actionStart: '시작',
+    actionPause: '일시정지',
+    actionResume: '재개',
+    actionComplete: '완료',
+    actionArchive: '보관',
+    statusChangeConfirm: (to: string) => `상태를 "${to}"(으)로 변경하시겠습니까?`,
   },
 };
 
@@ -64,6 +76,33 @@ const statusConfig = {
   draft: { en: 'Draft', ko: '초안', color: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400' },
   paused: { en: 'Paused', ko: '일시정지', color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' },
   completed: { en: 'Completed', ko: '완료', color: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
+  archived: { en: 'Archived', ko: '보관', color: 'bg-rose-50 text-rose-400 dark:bg-rose-900/20 dark:text-rose-400' },
+};
+
+type TransitionButton = {
+  to: ExperimentStatus;
+  labelKey: 'actionStart' | 'actionPause' | 'actionResume' | 'actionComplete' | 'actionArchive';
+  icon: React.ReactNode;
+  variant: 'default' | 'outline' | 'destructive';
+};
+
+const transitionButtons: Record<ExperimentStatus, TransitionButton[]> = {
+  draft: [
+    { to: 'running', labelKey: 'actionStart', icon: <Play className="h-3.5 w-3.5" />, variant: 'default' },
+    { to: 'archived', labelKey: 'actionArchive', icon: <Archive className="h-3.5 w-3.5" />, variant: 'outline' },
+  ],
+  running: [
+    { to: 'paused', labelKey: 'actionPause', icon: <Pause className="h-3.5 w-3.5" />, variant: 'outline' },
+    { to: 'completed', labelKey: 'actionComplete', icon: <CheckCircle className="h-3.5 w-3.5" />, variant: 'outline' },
+    { to: 'archived', labelKey: 'actionArchive', icon: <Archive className="h-3.5 w-3.5" />, variant: 'outline' },
+  ],
+  paused: [
+    { to: 'running', labelKey: 'actionResume', icon: <Play className="h-3.5 w-3.5" />, variant: 'default' },
+    { to: 'completed', labelKey: 'actionComplete', icon: <CheckCircle className="h-3.5 w-3.5" />, variant: 'outline' },
+    { to: 'archived', labelKey: 'actionArchive', icon: <Archive className="h-3.5 w-3.5" />, variant: 'outline' },
+  ],
+  completed: [],
+  archived: [],
 };
 
 export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
@@ -79,6 +118,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [editName, setEditName] = useState('');
   const [editHypothesis, setEditHypothesis] = useState('');
   const [saving, setSaving] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -112,6 +152,21 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     }
   };
 
+  const handleStatusChange = async (to: ExperimentStatus) => {
+    if (!experiment) return;
+    const label = statusConfig[to][lang];
+    if (!window.confirm(t.statusChangeConfirm(label))) return;
+    setTransitioning(true);
+    try {
+      const updated = await experimentApi.update(experiment.id, { status: to });
+      setExperiment(updated);
+    } catch {
+      // silent — status badge reflects current state
+    } finally {
+      setTransitioning(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!experiment || !window.confirm(t.deleteConfirm)) return;
     await experimentApi.delete(experiment.id);
@@ -123,6 +178,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   if (!experiment) return <p className="text-slate-500 text-sm p-8">{t.notFound}</p>;
 
   const status = statusConfig[experiment.status];
+  const buttons = transitionButtons[experiment.status] ?? [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -184,9 +240,24 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
           <div className="flex flex-wrap gap-6">
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelStatus}</p>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${status.color}`}>
-                {status[lang]}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${status.color}`}>
+                  {status[lang]}
+                </span>
+                {buttons.map((btn) => (
+                  <Button
+                    key={btn.to}
+                    size="sm"
+                    variant={btn.variant}
+                    className="gap-1.5 rounded-xl h-7 text-xs"
+                    disabled={transitioning}
+                    onClick={() => handleStatusChange(btn.to)}
+                  >
+                    {btn.icon}
+                    {t[btn.labelKey]}
+                  </Button>
+                ))}
+              </div>
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelCreated}</p>

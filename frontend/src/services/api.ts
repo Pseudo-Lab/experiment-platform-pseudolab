@@ -1,6 +1,6 @@
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api/v1';
 
-export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed';
+export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed' | 'archived';
 
 export interface Variant {
   id: string;
@@ -80,7 +80,7 @@ export const experimentApi = {
   },
 };
 
-export type BugCategory = 'ui' | 'functional' | 'performance' | 'other';
+export type BugCategory = 'ui' | 'functional' | 'performance' | 'feature_request' | 'other';
 export type BugStatus = 'reported' | 'in_progress' | 'resolved';
 export type BugSeverity = 'minor' | 'major' | 'critical';
 

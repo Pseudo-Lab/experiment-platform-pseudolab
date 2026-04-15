@@ -43,6 +43,7 @@ const translations = {
     statusDraft: 'Draft',
     statusPaused: 'Paused',
     statusCompleted: 'Completed',
+    statusArchived: 'Archived',
     colName: 'Experiment Name',
     colStatus: 'Status',
     colVariants: 'Variants',
@@ -64,6 +65,7 @@ const translations = {
     statusDraft: '초안',
     statusPaused: '일시정지',
     statusCompleted: '완료',
+    statusArchived: '보관',
     colName: '실험명',
     colStatus: '상태',
     colVariants: 'Variants',
@@ -82,6 +84,7 @@ const statusConfig = {
   draft: { en: 'Draft', ko: '초안', color: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400' },
   paused: { en: 'Paused', ko: '일시정지', color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' },
   completed: { en: 'Completed', ko: '완료', color: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
+  archived: { en: 'Archived', ko: '보관', color: 'bg-rose-50 text-rose-400 dark:bg-rose-900/20 dark:text-rose-400' },
 };
 
 export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
@@ -160,6 +163,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
             <SelectItem value="draft">{t.statusDraft}</SelectItem>
             <SelectItem value="paused">{t.statusPaused}</SelectItem>
             <SelectItem value="completed">{t.statusCompleted}</SelectItem>
+            <SelectItem value="archived">{t.statusArchived}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -171,71 +175,101 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
       ) : filteredExperiments.length === 0 ? (
         <p className="text-slate-500 dark:text-slate-400 text-sm">{t.empty}</p>
       ) : (
-        <Card className="rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
-          <Table>
-            <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
-              <TableRow>
-                <TableHead className="font-bold text-slate-500">{t.colName}</TableHead>
-                <TableHead className="font-bold text-slate-500">{t.colStatus}</TableHead>
-                <TableHead className="font-bold text-slate-500">{t.colVariants}</TableHead>
-                <TableHead className="font-bold text-slate-500">{t.colCreatedAt}</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredExperiments.map((exp) => (
-                <TableRow
-                  key={exp.id}
-                  className="group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                  onClick={() => navigate(`/experiments/${exp.id}`)}
-                >
-                  <TableCell>
-                    <p className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                      {exp.name}
-                    </p>
-                    {exp.hypothesis && (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{exp.hypothesis}</p>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${statusConfig[exp.status].color}`}>
-                      {statusConfig[exp.status][lang]}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-slate-600 dark:text-slate-300 font-medium">
-                    {exp.variants.length}
-                  </TableCell>
-                  <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
-                    {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate(`/experiments/${exp.id}`)}>
-                          <Eye className="h-4 w-4 text-slate-400" />
-                          <span className="font-medium">{t.actionView}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => handleDelete(exp.id)}>
-                          <Trash2 className="h-4 w-4" />
-                          <span className="font-medium">{t.actionDelete}</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+        <>
+          {/* 데스크탑 테이블 */}
+          <Card className="hidden md:block rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
+            <Table>
+              <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
+                <TableRow>
+                  <TableHead className="font-bold text-slate-500">{t.colName}</TableHead>
+                  <TableHead className="font-bold text-slate-500">{t.colStatus}</TableHead>
+                  <TableHead className="font-bold text-slate-500">{t.colVariants}</TableHead>
+                  <TableHead className="font-bold text-slate-500">{t.colCreatedAt}</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+              </TableHeader>
+              <TableBody>
+                {filteredExperiments.map((exp) => (
+                  <TableRow
+                    key={exp.id}
+                    className="group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    onClick={() => navigate(`/experiments/${exp.id}`)}
+                  >
+                    <TableCell>
+                      <p className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {exp.name}
+                      </p>
+                      {exp.hypothesis && (
+                        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{exp.hypothesis}</p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${statusConfig[exp.status].color}`}>
+                        {statusConfig[exp.status][lang]}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-300 font-medium">
+                      {exp.variants.length}
+                    </TableCell>
+                    <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
+                      {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate(`/experiments/${exp.id}`)}>
+                            <Eye className="h-4 w-4 text-slate-400" />
+                            <span className="font-medium">{t.actionView}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => handleDelete(exp.id)}>
+                            <Trash2 className="h-4 w-4" />
+                            <span className="font-medium">{t.actionDelete}</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {/* 모바일 카드 */}
+          <div className="md:hidden space-y-3">
+            {filteredExperiments.map((exp) => (
+              <div
+                key={exp.id}
+                onClick={() => navigate(`/experiments/${exp.id}`)}
+                className="bg-white dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <p className="font-bold text-slate-800 dark:text-slate-100 text-sm flex-1">{exp.name}</p>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${statusConfig[exp.status].color}`}>
+                    {statusConfig[exp.status][lang]}
+                  </span>
+                </div>
+                {exp.hypothesis && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mb-2">{exp.hypothesis}</p>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400">{t.colVariants}: {exp.variants.length}</span>
+                  <span className="text-xs text-slate-400">
+                    {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {showCreateModal && (
