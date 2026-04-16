@@ -28,7 +28,7 @@ cd experiment-platform-pseudolab
 # 서버 환경변수 템플릿 복사
 cp backend/.env.sample backend/.env
 
-# 이후 backend/.env 파일을 열어 SUPABASE 관련 키 등을 입력합니다.
+# 이후 backend/.env 파일을 열어 Cloudflare 관련 키 등을 입력합니다.
 ```
 
 ### 3단계: Docker Compose 빌드 및 실행

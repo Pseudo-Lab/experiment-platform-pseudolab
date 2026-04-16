@@ -9,7 +9,6 @@ import os
 import httpx
 from fastapi import APIRouter, Query
 
-from app.db.supabase import supabase
 from app.services.experiment import experiment_service
 
 router = APIRouter()
@@ -128,12 +127,10 @@ def _pick_datetime(row: dict[str, Any], keys: list[str]) -> datetime | None:
 
 
 def _fetch_rows(table: str, window_days: int) -> list[dict[str, Any]]:
-    """Best-effort fetch from Cloudflare D1 first, then Supabase fallback."""
+    """Fetch rows from Cloudflare D1."""
     start_dt = datetime.now(KST) - timedelta(days=window_days + 2)
     start_day = start_dt.date().isoformat()
-    start_iso = start_dt.isoformat()
 
-    # 1) Cloudflare D1 path (preferred for this project)
     for ts_col in ["base_date", "timestamp", "created_at", "event_ts", "occurred_at"]:
         sql = (
             f'SELECT * FROM "{table}" '
@@ -144,26 +141,6 @@ def _fetch_rows(table: str, window_days: int) -> list[dict[str, Any]]:
         if rows:
             return rows
 
-    # 2) Supabase fallback
-    if supabase is None:
-        return []
-
-    try:
-        for ts_col in ["base_date", "timestamp", "created_at", "event_ts", "occurred_at"]:
-            try:
-                result = (
-                    supabase.table(table)
-                    .select("*")
-                    .gte(ts_col, start_iso)
-                    .limit(10000)
-                    .execute()
-                )
-                if isinstance(getattr(result, "data", None), list) and result.data:
-                    return result.data
-            except Exception:
-                continue
-    except Exception:
-        return []
     return []
 
 

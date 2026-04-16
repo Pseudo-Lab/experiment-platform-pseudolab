@@ -10,10 +10,6 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["*"] # 실제 운영 시 구체화 필요
 
-    # Supabase
-    SUPABASE_URL: str = ""
-    SUPABASE_KEY: str = ""
-
     class Config:
         env_file = ".env"
         case_sensitive = True
