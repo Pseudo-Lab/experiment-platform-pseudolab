@@ -66,11 +66,11 @@ def mock_d1(monkeypatch):
     conn.executescript(_SCHEMA)
     conn.commit()
 
-    def _query(sql: str, params=None):
+    async def _query(sql: str, params=None):
         cursor = conn.execute(sql, params or [])
         return [dict(row) for row in cursor.fetchall()]
 
-    def _execute(sql: str, params=None):
+    async def _execute(sql: str, params=None):
         conn.execute(sql, params or [])
         conn.commit()
         return True

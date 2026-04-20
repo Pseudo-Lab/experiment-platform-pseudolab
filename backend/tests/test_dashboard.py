@@ -16,7 +16,7 @@ def _clear_dashboard_cache():
 def test_github_overview_keeps_backward_compatible_merge_rate_key_per_selected_window(monkeypatch):
     _clear_dashboard_cache()
 
-    def fake_fetch_rows(table: str, window_days: int):
+    async def fake_fetch_rows(table: str, window_days: int):
         if table == "dl_push_events":
             return []
         if table == "dl_pull_request_review_events":
@@ -76,7 +76,7 @@ def test_github_overview_keeps_backward_compatible_merge_rate_key_per_selected_w
 def test_github_overview_returns_null_merge_rate_when_opened_count_is_zero(monkeypatch):
     _clear_dashboard_cache()
 
-    def fake_fetch_rows(table: str, window_days: int):
+    async def fake_fetch_rows(table: str, window_days: int):
         if table == "dl_pull_request_events":
             return [
                 {
@@ -165,7 +165,7 @@ def test_overview_combines_domain_summaries_using_selected_window(monkeypatch):
             "top_authors": [{"author": "alice", "messages": 3}, {"author": "bob", "messages": 2}],
         }
 
-    monkeypatch.setattr(dashboard_module.experiment_service, "get_all", fake_get_all)
+    monkeypatch.setattr("app.services.experiment.experiment_service.get_all", fake_get_all)
     monkeypatch.setattr(dashboard_module, "get_github_overview", fake_github)
     monkeypatch.setattr(dashboard_module, "get_discord_overview", fake_discord)
 
