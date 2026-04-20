@@ -9,7 +9,7 @@ import os
 import httpx
 from fastapi import APIRouter, Query
 
-from app.services.experiment import experiment_service
+from app.db import d1
 
 router = APIRouter()
 KST = ZoneInfo("Asia/Seoul")
@@ -17,70 +17,8 @@ CACHE_TTL_SECONDS = 60
 _CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
 
 
-_D1_ENDPOINT_CACHE: tuple[str, str] | None = None
-
-
-def _get_d1_endpoint() -> tuple[str, str] | None:
-    global _D1_ENDPOINT_CACHE
-    if _D1_ENDPOINT_CACHE is not None:
-        return _D1_ENDPOINT_CACHE
-
-    account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID")
-    api_token = os.getenv("CLOUDFLARE_API_TOKEN")
-    database_id = os.getenv("D1_MAIN_DATABASE_ID") or os.getenv("D1_DATABASE_ID")
-    if not account_id or not api_token:
-        return None
-
-    # If main DB id is not explicitly set, try to discover pseudolab-main automatically.
-    if not os.getenv("D1_MAIN_DATABASE_ID"):
-        try:
-            with httpx.Client(timeout=10.0) as client:
-                resp = client.get(
-                    f"https://api.cloudflare.com/client/v4/accounts/{account_id}/d1/database",
-                    headers={"Authorization": f"Bearer {api_token}"},
-                )
-            payload = resp.json()
-            if payload.get("success"):
-                for row in payload.get("result", []):
-                    if str(row.get("name", "")).strip() == "pseudolab-main":
-                        database_id = row.get("uuid")
-                        break
-        except Exception:
-            pass
-
-    if not database_id:
-        return None
-
-    endpoint = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/d1/database/{database_id}/query"
-    _D1_ENDPOINT_CACHE = (endpoint, api_token)
-    return _D1_ENDPOINT_CACHE
-
-
-def _d1_query(sql: str) -> list[dict[str, Any]]:
-    cfg = _get_d1_endpoint()
-    if cfg is None:
-        return []
-
-    endpoint, api_token = cfg
-    try:
-        with httpx.Client(timeout=20.0) as client:
-            resp = client.post(
-                endpoint,
-                headers={
-                    "Authorization": f"Bearer {api_token}",
-                    "Content-Type": "application/json",
-                },
-                json={"sql": sql},
-            )
-        payload = resp.json()
-        if not payload.get("success"):
-            return []
-        result = payload.get("result") or []
-        if not result:
-            return []
-        return result[0].get("results") or []
-    except Exception:
-        return []
+async def _d1_query(sql: str) -> list[dict[str, Any]]:
+    return await d1.query(sql)
 
 
 def _cache_get(key: str) -> dict[str, Any] | None:
@@ -126,7 +64,7 @@ def _pick_datetime(row: dict[str, Any], keys: list[str]) -> datetime | None:
     return None
 
 
-def _fetch_rows(table: str, window_days: int) -> list[dict[str, Any]]:
+async def _fetch_rows(table: str, window_days: int) -> list[dict[str, Any]]:
     """Fetch rows from Cloudflare D1."""
     start_dt = datetime.now(KST) - timedelta(days=window_days + 2)
     start_day = start_dt.date().isoformat()
@@ -137,7 +75,7 @@ def _fetch_rows(table: str, window_days: int) -> list[dict[str, Any]]:
             f"WHERE {ts_col} >= '{start_day}' "
             f"ORDER BY {ts_col} DESC LIMIT 10000;"
         )
-        rows = _d1_query(sql)
+        rows = await _d1_query(sql)
         if rows:
             return rows
 
@@ -169,10 +107,10 @@ async def get_github_overview(window: str = Query('30d', pattern='^(7d|30d)$')):
     start = now - timedelta(days=days - 1)
     day_keys = [(start + timedelta(days=i)).date().isoformat() for i in range(days)]
 
-    push_rows = _fetch_rows('dl_push_events', days)
-    pr_rows = _fetch_rows('dl_pull_request_events', days)
-    review_rows = _fetch_rows('dl_pull_request_review_events', days)
-    issue_comment_rows = _fetch_rows('dl_issue_comment_events', days)
+    push_rows = await _fetch_rows('dl_push_events', days)
+    pr_rows = await _fetch_rows('dl_pull_request_events', days)
+    review_rows = await _fetch_rows('dl_pull_request_review_events', days)
+    issue_comment_rows = await _fetch_rows('dl_issue_comment_events', days)
 
     push_daily = _calc_daily_counts(push_rows, day_keys, ['base_date', 'timestamp', 'created_at'])
     pr_daily = _calc_daily_counts(pr_rows, day_keys, ['base_date', 'timestamp', 'created_at'])
@@ -267,7 +205,7 @@ async def get_discord_overview(window: str = Query('30d', pattern='^(7d|30d)$'))
     start = now - timedelta(days=days - 1)
     day_keys = [(start + timedelta(days=i)).date().isoformat() for i in range(days)]
 
-    rows = _fetch_rows('discord_messages', days)
+    rows = await _fetch_rows('discord_messages', days)
     daily = _calc_daily_counts(rows, day_keys, ['timestamp', 'created_at', 'base_date'])
 
     author_counter: Counter[str] = Counter()
@@ -327,6 +265,7 @@ async def get_dashboard_overview(window: str = Query('30d', pattern='^(7d|30d)$'
     start = now - timedelta(days=days - 1)
     day_keys = [(start + timedelta(days=i)).date().isoformat() for i in range(days)]
 
+    from app.services.experiment import experiment_service
     experiments = await experiment_service.get_all()
     active_count = sum(1 for e in experiments if e.status == 'running' or getattr(e.status, 'value', None) == 'running')
 

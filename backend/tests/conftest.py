@@ -80,3 +80,20 @@ def mock_d1(monkeypatch):
 
     yield conn
     conn.close()
+
+
+@pytest.fixture(autouse=True)
+def mock_r2(monkeypatch):
+    """테스트 시 실제 R2 스토리지를 사용하지 않고 Mocking한다."""
+    def _upload(key, data, content_type):
+        return True
+
+    def _presigned_url(key, expires_in=3600):
+        return f"https://mock-r2.com/{key}?expires={expires_in}"
+
+    def _delete(key):
+        return True
+
+    monkeypatch.setattr("app.db.r2.upload", _upload)
+    monkeypatch.setattr("app.db.r2.presigned_url", _presigned_url)
+    monkeypatch.setattr("app.db.r2.delete", _delete)

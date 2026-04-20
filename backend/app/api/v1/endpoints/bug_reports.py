@@ -1,3 +1,4 @@
+import os
 import uuid
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query
 from typing import List, Optional
@@ -55,12 +56,17 @@ async def add_comment(report_id: str, data: CommentCreate):
 @router.post("/upload", response_model=AttachmentUploadResponse)
 async def upload_attachment(file: UploadFile = File(...)):
     content = await file.read()
-    key = f"bug-reports/{uuid.uuid4()}/{file.filename}"
+    # 파일 확장자 추출 및 안전한 UUID 기반 키 생성
+    _, ext = os.path.splitext(file.filename or "")
+    key = f"bug-reports/{uuid.uuid4()}{ext}"
+    
     success = r2.upload(key, content, file.content_type or "application/octet-stream")
     if not success:
         raise HTTPException(status_code=500, detail="File upload failed")
+    
     return AttachmentUploadResponse(
-        name=file.filename,
+        name=file.filename or "unnamed",
         key=key,
         type=file.content_type or "application/octet-stream",
+        url=r2.presigned_url(key)
     )
