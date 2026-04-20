@@ -30,9 +30,9 @@ class ExperimentService:
             ORDER BY e.created_at DESC
         """
         if status:
-            rows = d1.query(sql.format(where="WHERE e.status = ?"), [status])
+            rows = await d1.query(sql.format(where="WHERE e.status = ?"), [status])
         else:
-            rows = d1.query(sql.format(where=""))
+            rows = await d1.query(sql.format(where=""))
 
         # JOIN 결과를 실험별로 그룹핑
         experiments: dict[str, dict] = {}
@@ -52,11 +52,11 @@ class ExperimentService:
         return [self._to_experiment(exp) for exp in experiments.values()]
 
     async def get(self, experiment_id: str) -> Optional[Experiment]:
-        rows = d1.query("SELECT * FROM experiments WHERE id = ?", [experiment_id])
+        rows = await d1.query("SELECT * FROM experiments WHERE id = ?", [experiment_id])
         if not rows:
             return None
         row = rows[0]
-        row["experiment_variants"] = d1.query(
+        row["experiment_variants"] = await d1.query(
             "SELECT * FROM experiment_variants WHERE experiment_id = ?",
             [experiment_id]
         )
@@ -65,7 +65,7 @@ class ExperimentService:
     async def create(self, data: ExperimentCreate) -> Experiment:
         exp_id = str(uuid.uuid4())
         now = _now()
-        d1.execute(
+        await d1.execute(
             """INSERT INTO experiments
                (id, name, hypothesis, status, owner_id, start_at, end_at, created_at, updated_at)
                VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
@@ -78,7 +78,7 @@ class ExperimentService:
         )
         for v in data.variants:
             v_id = str(uuid.uuid4())
-            d1.execute(
+            await d1.execute(
                 """INSERT INTO experiment_variants
                    (id, experiment_id, name, traffic_ratio, description, created_at)
                    VALUES (?, ?, ?, ?, ?, ?)""",
@@ -106,18 +106,18 @@ class ExperimentService:
 
         set_clause = ", ".join(f"{k} = ?" for k in patch)
         values = list(patch.values()) + [experiment_id]
-        d1.execute(
+        await d1.execute(
             f"UPDATE experiments SET {set_clause} WHERE id = ?",
             values
         )
         return await self.get(experiment_id)
 
     async def delete(self, experiment_id: str) -> bool:
-        return d1.execute("DELETE FROM experiments WHERE id = ?", [experiment_id])
+        return await d1.execute("DELETE FROM experiments WHERE id = ?", [experiment_id])
 
     async def assign(self, experiment_id: str, user_id: str) -> Optional[AssignmentResponse]:
         # 이미 할당된 경우 기존 결과 반환
-        existing = d1.query(
+        existing = await d1.query(
             """SELECT a.*, v.name as variant_name
                FROM experiment_assignments a
                JOIN experiment_variants v ON a.variant_id = v.id
@@ -134,7 +134,7 @@ class ExperimentService:
                 assigned_at=row["assigned_at"],
             )
 
-        variants = d1.query(
+        variants = await d1.query(
             "SELECT * FROM experiment_variants WHERE experiment_id = ?",
             [experiment_id]
         )
@@ -153,7 +153,7 @@ class ExperimentService:
                 break
 
         now = _now()
-        d1.execute(
+        await d1.execute(
             """INSERT INTO experiment_assignments
                (experiment_id, variant_id, user_id, assigned_at)
                VALUES (?, ?, ?, ?)""",

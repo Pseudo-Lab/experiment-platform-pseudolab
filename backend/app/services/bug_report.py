@@ -25,15 +25,20 @@ class BugReportService:
             created_at=row["created_at"],
         )
 
-    def _to_bug_report(self, row: dict, with_comments: bool = False) -> BugReport:
+    async def _to_bug_report(self, row: dict, with_comments: bool = False, with_urls: bool = False) -> BugReport:
         raw = json.loads(row.get("attachments") or "[]")
         attachments = [
-            Attachment(name=a["name"], key=a["key"], type=a["type"], url=r2.presigned_url(a["key"]))
+            Attachment(
+                name=a["name"], 
+                key=a["key"], 
+                type=a["type"], 
+                url=r2.presigned_url(a["key"]) if with_urls else None
+            )
             for a in raw
         ]
         comments = []
         if with_comments:
-            rows = d1.query(
+            rows = await d1.query(
                 "SELECT * FROM bug_report_comments WHERE report_id = ? ORDER BY created_at ASC",
                 [row["id"]]
             )
@@ -54,18 +59,20 @@ class BugReportService:
 
     async def get_all(self, status: Optional[BugStatus] = None) -> List[BugReport]:
         if status:
-            rows = d1.query(
+            rows = await d1.query(
                 "SELECT * FROM bug_reports WHERE status = ? ORDER BY created_at DESC", [status]
             )
         else:
-            rows = d1.query("SELECT * FROM bug_reports ORDER BY created_at DESC")
-        return [self._to_bug_report(r) for r in rows]
+            rows = await d1.query("SELECT * FROM bug_reports ORDER BY created_at DESC")
+        # 리스트 조회 시에는 URL 생성을 제외하여 성능 최적화
+        return [await self._to_bug_report(r, with_urls=False) for r in rows]
 
     async def get(self, report_id: str) -> Optional[BugReport]:
-        rows = d1.query("SELECT * FROM bug_reports WHERE id = ?", [report_id])
+        rows = await d1.query("SELECT * FROM bug_reports WHERE id = ?", [report_id])
         if not rows:
             return None
-        return self._to_bug_report(rows[0], with_comments=True)
+        # 상세 조회 시에만 URL과 댓글 포함
+        return await self._to_bug_report(rows[0], with_comments=True, with_urls=True)
 
     async def create(self, data: BugReportCreate) -> BugReport:
         report_id = str(uuid.uuid4())
@@ -73,7 +80,7 @@ class BugReportService:
         attachments_json = json.dumps([
             {"name": a.name, "key": a.key, "type": a.type} for a in data.attachment_keys
         ])
-        d1.execute(
+        await d1.execute(
             """INSERT INTO bug_reports
                (id, title, category, severity, description, status, attachments, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, 'reported', ?, ?, ?)""",
@@ -88,22 +95,28 @@ class BugReportService:
         patch["updated_at"] = _now()
         set_clause = ", ".join(f"{k} = ?" for k in patch)
         values = list(patch.values()) + [report_id]
-        d1.execute(f"UPDATE bug_reports SET {set_clause} WHERE id = ?", values)
+        await d1.execute(f"UPDATE bug_reports SET {set_clause} WHERE id = ?", values)
         return await self.get(report_id)
 
     async def delete(self, report_id: str) -> bool:
-        rows = d1.query("SELECT id FROM bug_reports WHERE id = ?", [report_id])
-        if not rows:
+        report = await self.get(report_id)
+        if not report:
             return False
-        d1.execute("DELETE FROM bug_reports WHERE id = ?", [report_id])
+        
+        # 1. R2에서 첨부 파일 삭제
+        for attachment in report.attachments:
+            r2.delete(attachment.key)
+            
+        # 2. DB에서 리포트 삭제 (댓글은 CASCADE DELETE로 자동 삭제됨)
+        await d1.execute("DELETE FROM bug_reports WHERE id = ?", [report_id])
         return True
 
     async def add_comment(self, report_id: str, data: CommentCreate) -> Optional[BugReport]:
-        rows = d1.query("SELECT id FROM bug_reports WHERE id = ?", [report_id])
+        rows = await d1.query("SELECT id FROM bug_reports WHERE id = ?", [report_id])
         if not rows:
             return None
         comment_id = str(uuid.uuid4())
-        d1.execute(
+        await d1.execute(
             "INSERT INTO bug_report_comments (id, report_id, author, content, created_at) VALUES (?, ?, ?, ?, ?)",
             [comment_id, report_id, data.author, data.content, _now()]
         )
