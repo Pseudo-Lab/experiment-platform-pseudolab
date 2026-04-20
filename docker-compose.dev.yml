@@ -9,7 +9,6 @@ services:
       - "8081:5173" # Vite default port mapped to host 8081
     volumes:
       - ./frontend:/app
-      - ./packages/core:/packages/core
       - /app/node_modules # Prevents host node_modules from overriding container's
     command: npm run dev -- --host 0.0.0.0 # Run development server with host binding
     restart: always

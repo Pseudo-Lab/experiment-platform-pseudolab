@@ -29,9 +29,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@core/*": [
-        "../packages/core/src/*"
       ]
     }
   },

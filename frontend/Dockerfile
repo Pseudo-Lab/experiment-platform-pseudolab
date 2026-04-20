@@ -17,9 +17,8 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 
-# Copy frontend sources plus shared core utilities used by the frontend build.
+# Copy frontend sources
 COPY frontend/ ./
-COPY packages/core ../packages/core
 RUN npm run build
 
 # 2. Production stage (Nginx)
