@@ -1,11 +1,12 @@
 import os
 import httpx
-from typing import Any
+from typing import Any, Optional
 
-_CACHE: tuple[str, str] | None = None
+_ASYNC_CLIENT: Optional[httpx.AsyncClient] = None
+_CACHE: Optional[tuple[str, str]] = None
 
 
-def _get_endpoint() -> tuple[str, str] | None:
+def _get_endpoint() -> Optional[tuple[str, str]]:
     global _CACHE
     if _CACHE is not None:
         return _CACHE
@@ -25,9 +26,20 @@ def _get_endpoint() -> tuple[str, str] | None:
     return _CACHE
 
 
-def query(sql: str, params: list[Any] | None = None) -> list[dict[str, Any]]:
+async def get_client() -> httpx.AsyncClient:
+    global _ASYNC_CLIENT
+    if _ASYNC_CLIENT is None:
+        _ASYNC_CLIENT = httpx.AsyncClient(
+            timeout=20.0,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
+        )
+    return _ASYNC_CLIENT
+
+
+async def query(sql: str, params: list[Any] | None = None) -> list[dict[str, Any]]:
     cfg = _get_endpoint()
     if cfg is None:
+        print("D1 Config missing: CLOUDFLARE_ACCOUNT_ID, API_TOKEN, or D1_DATABASE_ID")
         return []
 
     endpoint, api_token = cfg
@@ -36,29 +48,33 @@ def query(sql: str, params: list[Any] | None = None) -> list[dict[str, Any]]:
         body["params"] = params
 
     try:
-        with httpx.Client(timeout=20.0) as client:
-            resp = client.post(
-                endpoint,
-                headers={
-                    "Authorization": f"Bearer {api_token}",
-                    "Content-Type": "application/json",
-                },
-                json=body,
-            )
+        client = await get_client()
+        resp = await client.post(
+            endpoint,
+            headers={
+                "Authorization": f"Bearer {api_token}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+        )
+        resp.raise_for_status()
         payload = resp.json()
         if not payload.get("success"):
+            print(f"D1 Query Error: {payload.get('errors')}")
             return []
         result = payload.get("result") or []
         if not result:
             return []
         return result[0].get("results") or []
-    except Exception:
+    except Exception as e:
+        print(f"D1 Exception: {e}")
         return []
 
 
-def execute(sql: str, params: list[Any] | None = None) -> bool:
+async def execute(sql: str, params: list[Any] | None = None) -> bool:
     cfg = _get_endpoint()
     if cfg is None:
+        print("D1 Config missing: CLOUDFLARE_ACCOUNT_ID, API_TOKEN, or D1_DATABASE_ID")
         return False
 
     endpoint, api_token = cfg
@@ -67,16 +83,20 @@ def execute(sql: str, params: list[Any] | None = None) -> bool:
         body["params"] = params
 
     try:
-        with httpx.Client(timeout=20.0) as client:
-            resp = client.post(
-                endpoint,
-                headers={
-                    "Authorization": f"Bearer {api_token}",
-                    "Content-Type": "application/json",
-                },
-                json=body,
-            )
+        client = await get_client()
+        resp = await client.post(
+            endpoint,
+            headers={
+                "Authorization": f"Bearer {api_token}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+        )
+        resp.raise_for_status()
         payload = resp.json()
+        if not payload.get("success"):
+            print(f"D1 Execute Error: {payload.get('errors')}")
         return bool(payload.get("success"))
-    except Exception:
+    except Exception as e:
+        print(f"D1 Exception: {e}")
         return False
