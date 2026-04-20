@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ChevronRight, Paperclip, X } from 'lucide-react';
+import { Plus, ChevronRight, Paperclip, X, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
@@ -91,9 +91,13 @@ export const BugReport: React.FC<BugReportProps> = ({ lang }) => {
         if (!files) return;
         setUploadingFile(true);
         try {
-            for (const file of Array.from(files)) {
+            const fileArray = Array.from(files);
+            for (const file of fileArray) {
                 const attachment = await bugReportApi.uploadAttachment(file);
-                setUploadedAttachments(prev => [...prev, attachment]);
+                setUploadedAttachments(prev => [
+                    ...prev, 
+                    { ...attachment, name: `Image ${prev.length + 1}` }
+                ]);
             }
         } finally {
             setUploadingFile(false);
@@ -127,6 +131,17 @@ export const BugReport: React.FC<BugReportProps> = ({ lang }) => {
         e.preventDefault();
         setIsDragging(false);
         await handleFileUpload(e.dataTransfer.files);
+    };
+
+    const handleDelete = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (!window.confirm(lang === 'ko' ? '삭제하시겠습니까?' : 'Delete this report?')) return;
+        try {
+            await bugReportApi.delete(id);
+            await fetchReports();
+        } catch {
+            alert(lang === 'ko' ? '삭제 실패' : 'Delete failed');
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -185,48 +200,56 @@ export const BugReport: React.FC<BugReportProps> = ({ lang }) => {
                         {/* 데스크탑 테이블 */}
                         <Card className="hidden md:block rounded-2xl overflow-hidden shadow-sm">
                             <Table>
-                                <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
-                                    <TableRow>
-                                        <TableHead className="w-[100px] text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueId}</TableHead>
-                                        <TableHead className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueTitle}</TableHead>
-                                        <TableHead className="w-[110px] text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueSeverity}</TableHead>
-                                        <TableHead className="w-[130px] text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueStatus}</TableHead>
-                                        <TableHead className="w-[120px] text-xs font-bold text-slate-400 uppercase tracking-widest text-right">{t.issueDate}</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {reports.map((report) => (
-                                        <TableRow key={report.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer group" onClick={() => navigate(`/bug-report/${report.id}`)}>
-                                            <TableCell className="font-mono text-sm text-slate-400">{shortId(report.id)}</TableCell>
-                                            <TableCell className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">{report.title}</TableCell>
-                                            <TableCell>
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${SEVERITY_COLOR[report.severity]}`}>
-                                                    {report.severity}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant={STATUS_BADGE[report.status]} className="uppercase text-[10px] px-2">
-                                                    {statusLabel(report.status)}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-sm font-medium text-slate-500 dark:text-slate-400 text-right">
-                                                {report.created_at.slice(0, 10)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </Card>
+                                        <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
+                                            <TableRow>
+                                                <TableHead className="w-[100px] text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueId}</TableHead>
+                                                <TableHead className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueTitle}</TableHead>
+                                                <TableHead className="w-[110px] text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueSeverity}</TableHead>
+                                                <TableHead className="w-[130px] text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueStatus}</TableHead>
+                                                <TableHead className="w-[120px] text-xs font-bold text-slate-400 uppercase tracking-widest text-right">{t.issueDate}</TableHead>
+                                                <TableHead className="w-[50px]"></TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {reports.map((report) => (
+                                                <TableRow key={report.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer group" onClick={() => navigate(`/bug-report/${report.id}`)}>
+                                                    <TableCell className="font-mono text-sm text-slate-400">{shortId(report.id)}</TableCell>
+                                                    <TableCell className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">{report.title}</TableCell>
+                                                    <TableCell>
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${SEVERITY_COLOR[report.severity]}`}>
+                                                            {report.severity}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={STATUS_BADGE[report.status]} className="uppercase text-[10px] px-2">
+                                                            {statusLabel(report.status)}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-sm font-medium text-slate-500 dark:text-slate-400 text-right">
+                                                        {report.created_at.slice(0, 10)}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <button onClick={(e) => handleDelete(e, report.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </Card>
 
-                        {/* 모바일 카드 리스트 */}
-                        <div className="md:hidden space-y-3">
-                            {reports.map((report) => (
-                                <div key={report.id} onClick={() => navigate(`/bug-report/${report.id}`)}
-                                    className="bg-white dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
-                                    <div className="flex items-start justify-between gap-2 mb-2">
-                                        <span className="font-bold text-slate-800 dark:text-slate-100 text-sm flex-1">{report.title}</span>
-                                        <span className="font-mono text-xs text-slate-400">{shortId(report.id)}</span>
-                                    </div>
+                                {/* 모바일 카드 리스트 */}
+                                <div className="md:hidden space-y-3">
+                                    {reports.map((report) => (
+                                        <div key={report.id} onClick={() => navigate(`/bug-report/${report.id}`)}
+                                            className="bg-white dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors relative group">
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm flex-1">{report.title}</span>
+                                                <button onClick={(e) => handleDelete(e, report.id)} className="text-slate-300 hover:text-red-500">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${SEVERITY_COLOR[report.severity]}`}>
                                             {report.severity}
@@ -299,7 +322,6 @@ export const BugReport: React.FC<BugReportProps> = ({ lang }) => {
                                     placeholder={t.placeholderDesc}
                                     value={formDesc}
                                     onChange={e => setFormDesc(e.target.value)}
-                                    onPaste={handlePaste}
                                 />
                             </div>
                             <div className="space-y-3">
@@ -318,14 +340,27 @@ export const BugReport: React.FC<BugReportProps> = ({ lang }) => {
                                     <input id="file-upload" type="file" multiple accept="image/*,*/*" className="hidden" onChange={e => handleFileUpload(e.target.files)} />
                                 </label>
                                 {uploadedAttachments.length > 0 && (
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
                                         {uploadedAttachments.map((a, i) => (
-                                            <div key={i} className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-1 text-sm">
-                                                <Paperclip size={12} className="text-slate-400" />
-                                                <span className="text-slate-600 dark:text-slate-300">{a.name}</span>
-                                                <button type="button" onClick={() => setUploadedAttachments(prev => prev.filter((_, j) => j !== i))}>
-                                                    <X size={12} className="text-slate-400 hover:text-red-500" />
+                                            <div key={i} className="relative group aspect-video rounded-xl overflow-hidden border dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+                                                {a.type.startsWith('image/') && a.url ? (
+                                                    <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-1 p-2 text-center">
+                                                        <Paperclip size={20} className="text-slate-400" />
+                                                        <span className="text-[10px] text-slate-500 truncate w-full px-2">{a.name}</span>
+                                                    </div>
+                                                )}
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setUploadedAttachments(prev => prev.filter((_, j) => j !== i))}
+                                                    className="absolute top-1 right-1 bg-black/50 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <X size={14} />
                                                 </button>
+                                                <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[10px] px-2 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {a.name}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

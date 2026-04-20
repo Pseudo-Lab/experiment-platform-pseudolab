@@ -78,3 +78,4 @@ class AttachmentUploadResponse(BaseModel):
     name: str
     key: str
     type: str
+    url: Optional[str] = None

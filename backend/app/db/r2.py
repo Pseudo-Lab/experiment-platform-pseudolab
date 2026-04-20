@@ -45,3 +45,11 @@ def presigned_url(key: str, expires_in: int = 3600) -> str | None:
         )
     except Exception:
         return None
+
+
+def delete(key: str) -> bool:
+    try:
+        _get_client().delete_object(Bucket=_bucket(), Key=key)
+        return True
+    except Exception:
+        return False

@@ -262,3 +262,76 @@ class TestComments:
         resp = client.get(BASE + "/")
         report = next(r for r in resp.json() if r["id"] == report_id)
         assert report["comments"] == []
+
+
+# ---------------------------------------------------------------------------
+# 첨부 파일 및 성능 최적화
+# ---------------------------------------------------------------------------
+
+class TestAttachmentsAndOptimization:
+    def test_upload_returns_url(self):
+        """파일 업로드 시 즉시 미리보기를 위한 url을 반환해야 한다."""
+        import io
+        file_content = b"fake image content"
+        file = io.BytesIO(file_content)
+        resp = client.post(
+            f"{BASE}/upload",
+            files={"file": ("test.png", file, "image/png")}
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "url" in body
+        assert body["url"] is not None
+        assert "bug-reports/" in body["key"]
+
+    def test_list_does_not_include_urls(self):
+        """성능 최적화를 위해 목록 조회 시에는 attachment의 url이 None이어야 한다."""
+        # 1. 파일 업로드
+        import io
+        file = io.BytesIO(b"content")
+        upload_resp = client.post(f"{BASE}/upload", files={"file": ("test.png", file, "image/png")})
+        attachment = upload_resp.json()
+
+        # 2. 리포트 생성
+        payload = {
+            "title": "URL 최적화 테스트",
+            "category": "ui",
+            "severity": "minor",
+            "attachment_keys": [attachment],
+        }
+        create_resp = client.post(BASE + "/", json=payload)
+        report_id = create_resp.json()["id"]
+
+        try:
+            # 3. 목록 조회 확인
+            list_resp = client.get(BASE + "/")
+            report_in_list = next(r for r in list_resp.json() if r["id"] == report_id)
+            for att in report_in_list["attachments"]:
+                assert att["url"] is None, "목록에서는 url이 비어있어야 함 (성능 최적화)"
+
+            # 4. 상세 조회 확인
+            get_resp = client.get(f"{BASE}/{report_id}")
+            report_detail = get_resp.json()
+            for att in report_detail["attachments"]:
+                assert att["url"] is not None, "상세 조회에서는 url이 포함되어야 함"
+        finally:
+            client.delete(f"{BASE}/{report_id}")
+
+
+# ---------------------------------------------------------------------------
+# 삭제
+# ---------------------------------------------------------------------------
+
+class TestDeleteBugReport:
+    def test_delete_success(self, created_report):
+        report_id = created_report["id"]
+        resp = client.delete(f"{BASE}/{report_id}")
+        assert resp.status_code == 204
+        
+        # 삭제 후 조회 시 404
+        get_resp = client.get(f"{BASE}/{report_id}")
+        assert get_resp.status_code == 404
+
+    def test_delete_nonexistent_returns_404(self):
+        resp = client.delete(f"{BASE}/nonexistent-id-00000")
+        assert resp.status_code == 404

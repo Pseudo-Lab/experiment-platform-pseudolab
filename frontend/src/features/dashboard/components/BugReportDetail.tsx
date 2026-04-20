@@ -117,6 +117,16 @@ export const BugReportDetail: React.FC<BugReportDetailProps> = ({ lang }) => {
     ui: t.catUI, functional: t.catFunc, performance: t.catPerf, other: t.catOther,
   }[cat] ?? cat);
 
+  const handleDelete = async () => {
+    if (!id || !window.confirm(lang === 'ko' ? '정말로 이 리포트를 삭제하시겠습니까?' : 'Are you sure you want to delete this report?')) return;
+    try {
+      await bugReportApi.delete(id);
+      navigate('/bug-report');
+    } catch (err) {
+      alert(lang === 'ko' ? '삭제에 실패했습니다.' : 'Failed to delete.');
+    }
+  };
+
   if (loading) return <div className="p-8 text-slate-500">{t.loading}</div>;
   if (error) return <div className="p-8 text-red-500">{t.error}</div>;
   if (!report) return <div className="p-8 text-slate-400">{t.notFound}</div>;
@@ -129,6 +139,9 @@ export const BugReportDetail: React.FC<BugReportDetailProps> = ({ lang }) => {
           <ArrowLeft size={20} />
         </Button>
         <h1 className="text-2xl font-extrabold tracking-tight dark:text-slate-100 flex-1">{report.title}</h1>
+        <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+          {lang === 'ko' ? '삭제' : 'Delete'}
+        </Button>
       </div>
 
       {/* 메타 정보 + 상태 변경 */}
@@ -189,14 +202,27 @@ export const BugReportDetail: React.FC<BugReportDetailProps> = ({ lang }) => {
           <CardHeader className="pb-2 pt-4 px-6">
             <CardTitle className="text-sm font-bold text-slate-500 uppercase">{t.labelAttachments}</CardTitle>
           </CardHeader>
-          <CardContent className="px-6 pb-6 flex flex-wrap gap-2">
-            {report.attachments.map((a, i) => (
-              <a key={i} href={a.url ?? '#'} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-1.5 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
-                <Paperclip size={12} className="text-slate-400" />
-                <span className="text-slate-600 dark:text-slate-300">{a.name}</span>
-              </a>
-            ))}
+          <CardContent className="px-6 pb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {report.attachments.map((a, i) => (
+                <div key={i} className="group relative">
+                  {a.type.startsWith('image/') && a.url ? (
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="block aspect-video rounded-xl overflow-hidden border dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shadow-sm hover:ring-2 hover:ring-indigo-500 transition-all">
+                      <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {a.name}
+                      </div>
+                    </a>
+                  ) : (
+                    <a href={a.url ?? '#'} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-4 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors h-full">
+                      <Paperclip size={16} className="text-slate-400 shrink-0" />
+                      <span className="text-slate-600 dark:text-slate-300 truncate font-medium">{a.name}</span>
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
