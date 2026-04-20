@@ -3,27 +3,31 @@ import httpx
 from typing import Any, Optional
 
 _ASYNC_CLIENT: Optional[httpx.AsyncClient] = None
-_CACHE: Optional[tuple[str, str]] = None
+_CACHE: dict[str, tuple[str, str]] = {}
 
 
-def _get_endpoint() -> Optional[tuple[str, str]]:
-    global _CACHE
-    if _CACHE is not None:
-        return _CACHE
+def _get_endpoint(database_id: Optional[str] = None) -> Optional[tuple[str, str]]:
+    if database_id is None:
+        database_id = os.getenv("D1_DATABASE_ID")
+    
+    if not database_id:
+        return None
+        
+    if database_id in _CACHE:
+        return _CACHE[database_id]
 
     account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID")
     api_token = os.getenv("CLOUDFLARE_API_TOKEN")
-    database_id = os.getenv("D1_DATABASE_ID")
 
-    if not account_id or not api_token or not database_id:
+    if not account_id or not api_token:
         return None
 
     endpoint = (
         f"https://api.cloudflare.com/client/v4/accounts/"
         f"{account_id}/d1/database/{database_id}/query"
     )
-    _CACHE = (endpoint, api_token)
-    return _CACHE
+    _CACHE[database_id] = (endpoint, api_token)
+    return _CACHE[database_id]
 
 
 async def get_client() -> httpx.AsyncClient:
@@ -36,10 +40,10 @@ async def get_client() -> httpx.AsyncClient:
     return _ASYNC_CLIENT
 
 
-async def query(sql: str, params: list[Any] | None = None) -> list[dict[str, Any]]:
-    cfg = _get_endpoint()
+async def query(sql: str, params: list[Any] | None = None, database_id: Optional[str] = None) -> list[dict[str, Any]]:
+    cfg = _get_endpoint(database_id)
     if cfg is None:
-        print("D1 Config missing: CLOUDFLARE_ACCOUNT_ID, API_TOKEN, or D1_DATABASE_ID")
+        print(f"D1 Config missing for DB {database_id}: CLOUDFLARE_ACCOUNT_ID, API_TOKEN, or database_id")
         return []
 
     endpoint, api_token = cfg
@@ -71,10 +75,10 @@ async def query(sql: str, params: list[Any] | None = None) -> list[dict[str, Any
         return []
 
 
-async def execute(sql: str, params: list[Any] | None = None) -> bool:
-    cfg = _get_endpoint()
+async def execute(sql: str, params: list[Any] | None = None, database_id: Optional[str] = None) -> bool:
+    cfg = _get_endpoint(database_id)
     if cfg is None:
-        print("D1 Config missing: CLOUDFLARE_ACCOUNT_ID, API_TOKEN, or D1_DATABASE_ID")
+        print(f"D1 Config missing for DB {database_id}: CLOUDFLARE_ACCOUNT_ID, API_TOKEN, or database_id")
         return False
 
     endpoint, api_token = cfg

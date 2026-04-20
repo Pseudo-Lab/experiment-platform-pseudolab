@@ -17,8 +17,8 @@ CACHE_TTL_SECONDS = 60
 _CACHE: dict[str, tuple[datetime, dict[str, Any]]] = {}
 
 
-async def _d1_query(sql: str) -> list[dict[str, Any]]:
-    return await d1.query(sql)
+async def _d1_query(sql: str, database_id: str | None = None) -> list[dict[str, Any]]:
+    return await d1.query(sql, database_id=database_id)
 
 
 def _cache_get(key: str) -> dict[str, Any] | None:
@@ -64,20 +64,35 @@ def _pick_datetime(row: dict[str, Any], keys: list[str]) -> datetime | None:
     return None
 
 
-async def _fetch_rows(table: str, window_days: int) -> list[dict[str, Any]]:
-    """Fetch rows from Cloudflare D1."""
+async def _fetch_rows(table: str, window_days: int, database_id: str | None = None) -> list[dict[str, Any]]:
+    """Fetch rows from Cloudflare D1 with column existence check to avoid 400 errors."""
     start_dt = datetime.now(KST) - timedelta(days=window_days + 2)
     start_day = start_dt.date().isoformat()
 
-    for ts_col in ["base_date", "timestamp", "created_at", "event_ts", "occurred_at"]:
-        sql = (
-            f'SELECT * FROM "{table}" '
-            f"WHERE {ts_col} >= '{start_day}' "
-            f"ORDER BY {ts_col} DESC LIMIT 10000;"
-        )
-        rows = await _d1_query(sql)
-        if rows:
-            return rows
+    # Get available columns for the table
+    cols_info = await _d1_query(f"PRAGMA table_info('{table}');", database_id=database_id)
+    available_cols = {row['name'] for row in cols_info}
+    
+    # Priority order for timestamp columns
+    possible_ts_cols = ["base_date", "timestamp", "created_at", "event_ts", "occurred_at"]
+    
+    for ts_col in possible_ts_cols:
+        if ts_col in available_cols:
+            sql = (
+                f'SELECT * FROM "{table}" '
+                f"WHERE {ts_col} >= '{start_day}' 'ORDER BY' {ts_col} DESC LIMIT 10000;"
+            )
+            # Re-check: D1 sometimes fails with PRAGMA or has specific SQL constraints. 
+            # Simple fallback if query fails.
+            try:
+                rows = await _d1_query(
+                    f'SELECT * FROM "{table}" WHERE {ts_col} >= \'{start_day}\' ORDER BY {ts_col} DESC LIMIT 10000;',
+                    database_id=database_id
+                )
+                if rows:
+                    return rows
+            except Exception:
+                continue
 
     return []
 
@@ -107,10 +122,11 @@ async def get_github_overview(window: str = Query('30d', pattern='^(7d|30d)$')):
     start = now - timedelta(days=days - 1)
     day_keys = [(start + timedelta(days=i)).date().isoformat() for i in range(days)]
 
-    push_rows = await _fetch_rows('dl_push_events', days)
-    pr_rows = await _fetch_rows('dl_pull_request_events', days)
-    review_rows = await _fetch_rows('dl_pull_request_review_events', days)
-    issue_comment_rows = await _fetch_rows('dl_issue_comment_events', days)
+    main_db_id = os.getenv("D1_MAIN_DATABASE_ID")
+    push_rows = await _fetch_rows('dl_push_events', days, database_id=main_db_id)
+    pr_rows = await _fetch_rows('dl_pull_request_events', days, database_id=main_db_id)
+    review_rows = await _fetch_rows('dl_pull_request_review_events', days, database_id=main_db_id)
+    issue_comment_rows = await _fetch_rows('dl_issue_comment_events', days, database_id=main_db_id)
 
     push_daily = _calc_daily_counts(push_rows, day_keys, ['base_date', 'timestamp', 'created_at'])
     pr_daily = _calc_daily_counts(pr_rows, day_keys, ['base_date', 'timestamp', 'created_at'])
@@ -205,7 +221,8 @@ async def get_discord_overview(window: str = Query('30d', pattern='^(7d|30d)$'))
     start = now - timedelta(days=days - 1)
     day_keys = [(start + timedelta(days=i)).date().isoformat() for i in range(days)]
 
-    rows = await _fetch_rows('discord_messages', days)
+    main_db_id = os.getenv("D1_MAIN_DATABASE_ID")
+    rows = await _fetch_rows('discord_messages', days, database_id=main_db_id)
     daily = _calc_daily_counts(rows, day_keys, ['timestamp', 'created_at', 'base_date'])
 
     author_counter: Counter[str] = Counter()

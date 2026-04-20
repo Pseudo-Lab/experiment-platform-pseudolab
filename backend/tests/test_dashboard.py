@@ -16,7 +16,7 @@ def _clear_dashboard_cache():
 def test_github_overview_keeps_backward_compatible_merge_rate_key_per_selected_window(monkeypatch):
     _clear_dashboard_cache()
 
-    async def fake_fetch_rows(table: str, window_days: int):
+    async def fake_fetch_rows(table: str, window_days: int, database_id: str | None = None):
         if table == "dl_push_events":
             return []
         if table == "dl_pull_request_review_events":
@@ -76,7 +76,7 @@ def test_github_overview_keeps_backward_compatible_merge_rate_key_per_selected_w
 def test_github_overview_returns_null_merge_rate_when_opened_count_is_zero(monkeypatch):
     _clear_dashboard_cache()
 
-    async def fake_fetch_rows(table: str, window_days: int):
+    async def fake_fetch_rows(table: str, window_days: int, database_id: str | None = None):
         if table == "dl_pull_request_events":
             return [
                 {
