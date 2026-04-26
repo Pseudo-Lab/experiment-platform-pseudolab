@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
@@ -94,8 +95,8 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h2>
@@ -176,6 +177,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

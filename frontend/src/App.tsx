@@ -8,6 +8,8 @@ import { Experiments } from './features/dashboard/components/Experiments';
 import { ExperimentDetail } from './features/dashboard/components/ExperimentDetail';
 import { GitHubDashboard } from './features/dashboard/components/GitHubDashboard';
 import { DiscordDashboard } from './features/dashboard/components/DiscordDashboard';
+import { FeatureFlags } from './features/dashboard/components/FeatureFlags';
+import { Analytics } from './features/dashboard/components/Analytics';
 
 export default function App() {
   const [lang, setLang] = useState<'en' | 'ko'>(() => {
@@ -66,6 +68,8 @@ export default function App() {
         <Route path="/metrics/discord" element={<DiscordDashboard lang={lang} />} />
         <Route path="/bug-report" element={<BugReport lang={lang} />} />
         <Route path="/bug-report/:id" element={<BugReportDetail lang={lang} />} />
+        <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
+        <Route path="/analytics" element={<Analytics lang={lang} />} />
       </Routes>
     </MainLayout>
   );
