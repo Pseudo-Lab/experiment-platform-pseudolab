@@ -90,10 +90,14 @@ export interface Experiment {
   id: string;
   name: string;
   hypothesis?: string;
+  expected_effect?: string;
+  primary_metric?: string;
   status: ExperimentStatus;
   owner_id?: string;
   start_at?: string;
   end_at?: string;
+  reflection_start_date?: string;
+  reflection_window_days?: number;
   created_at: string;
   updated_at: string;
   variants: Variant[];
@@ -102,6 +106,8 @@ export interface Experiment {
 export interface ExperimentCreate {
   name: string;
   hypothesis?: string;
+  expected_effect?: string;
+  primary_metric?: string;
   owner_id?: string;
   variants: { name: string; traffic_ratio: number; description?: string }[];
 }
@@ -109,6 +115,8 @@ export interface ExperimentCreate {
 export interface ExperimentUpdate {
   name?: string;
   hypothesis?: string;
+  expected_effect?: string;
+  primary_metric?: string;
   status?: ExperimentStatus;
 }
 

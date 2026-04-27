@@ -24,6 +24,8 @@ const translations = {
     placeholderName: 'e.g. Button Color Test',
     labelHypothesis: 'Hypothesis',
     placeholderHypothesis: 'e.g. Changing the button color will increase CTR.',
+    labelPrimaryMetric: 'Primary Metric',
+    placeholderPrimaryMetric: 'e.g. weekly_session_attended',
     labelVariants: 'Variants',
     placeholderVariantName: 'Variant name',
     placeholderRatio: 'Ratio',
@@ -40,6 +42,8 @@ const translations = {
     placeholderName: '예: 버튼 색상 테스트',
     labelHypothesis: '가설',
     placeholderHypothesis: '예: 버튼 색상 변경이 클릭률을 높일 것이다.',
+    labelPrimaryMetric: 'Primary Metric',
+    placeholderPrimaryMetric: '예: weekly_session_attended',
     labelVariants: 'Variants',
     placeholderVariantName: 'Variant 이름',
     placeholderRatio: '비율',
@@ -56,6 +60,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   const t = translations[lang];
   const [name, setName] = useState('');
   const [hypothesis, setHypothesis] = useState('');
+  const [primaryMetric, setPrimaryMetric] = useState('');
   const [variants, setVariants] = useState<VariantInput[]>([
     { name: 'control', traffic_ratio: '0.5' },
     { name: 'treatment', traffic_ratio: '0.5' },
@@ -82,6 +87,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
       await experimentApi.create({
         name: name.trim(),
         hypothesis: hypothesis.trim() || undefined,
+        primary_metric: primaryMetric.trim() || undefined,
         variants: variants.map((v) => ({
           name: v.name,
           traffic_ratio: parseFloat(v.traffic_ratio) || 0,
@@ -124,6 +130,16 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               placeholder={t.placeholderHypothesis}
               className="rounded-xl resize-none"
               rows={2}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
+            <Input
+              value={primaryMetric}
+              onChange={(e) => setPrimaryMetric(e.target.value)}
+              placeholder={t.placeholderPrimaryMetric}
+              className="rounded-xl"
             />
           </div>
 
