@@ -5,8 +5,12 @@ import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive } from 'lucide-react';
-import { experimentApi, type Experiment, type ExperimentStatus } from '../../../services/api';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, RotateCcw } from 'lucide-react';
+import {
+  experimentApi, experimentResultApi, decisionApi,
+  type Experiment, type ExperimentStatus,
+  type ExperimentResult, type Decision, type LearningNote, type DecisionType,
+} from '../../../services/api';
 
 interface ExperimentDetailProps {
   lang: 'en' | 'ko';
@@ -40,6 +44,31 @@ const translations = {
     actionComplete: 'Complete',
     actionArchive: 'Archive',
     statusChangeConfirm: (to: string) => `Change status to "${to}"?`,
+    sectionResult: 'Experiment Result',
+    resultLoading: 'Loading result...',
+    resultNoMetric: 'primary_metric is not configured.',
+    resultNoData: 'No assigned users.',
+    labelTreatment: 'Treatment',
+    labelControl: 'Control',
+    labelUsers: 'Users',
+    labelConversions: 'Conversions',
+    labelRate: 'Conv. Rate',
+    labelUplift: 'Uplift',
+    labelProbWin: 'Prob. Treatment Wins',
+    labelSrm: 'SRM Warning',
+    srmWarningMsg: 'Sample ratio mismatch detected. Check assignment logic.',
+    sectionDecisions: 'Decisions',
+    sectionNotes: 'Learning Notes',
+    addDecision: 'Add Decision',
+    addNote: 'Add Note',
+    decisionPlaceholder: 'Enter decision reason...',
+    notePlaceholder: 'Enter what you learned...',
+    authorPlaceholder: 'Author (optional)',
+    submit: 'Save',
+    submitting: 'Saving...',
+    ship: 'Ship',
+    hold: 'Hold',
+    rollback: 'Rollback',
   },
   ko: {
     back: '목록으로',
@@ -68,6 +97,31 @@ const translations = {
     actionComplete: '완료',
     actionArchive: '보관',
     statusChangeConfirm: (to: string) => `상태를 "${to}"(으)로 변경하시겠습니까?`,
+    sectionResult: '실험 결과',
+    resultLoading: '결과 불러오는 중...',
+    resultNoMetric: 'primary_metric이 설정되지 않았습니다.',
+    resultNoData: '배정된 사용자가 없습니다.',
+    labelTreatment: 'Treatment',
+    labelControl: 'Control',
+    labelUsers: '사용자 수',
+    labelConversions: '전환 수',
+    labelRate: '전환율',
+    labelUplift: 'Uplift',
+    labelProbWin: 'Treatment 승률',
+    labelSrm: 'SRM 경고',
+    srmWarningMsg: '샘플 비율이 예상과 다릅니다. 배정 로직을 확인하세요.',
+    sectionDecisions: '의사결정',
+    sectionNotes: '학습 노트',
+    addDecision: '결정 추가',
+    addNote: '노트 추가',
+    decisionPlaceholder: '결정 이유를 입력하세요...',
+    notePlaceholder: '학습한 내용을 입력하세요...',
+    authorPlaceholder: '작성자 (선택)',
+    submit: '저장',
+    submitting: '저장 중...',
+    ship: '배포',
+    hold: '보류',
+    rollback: '롤백',
   },
 };
 
@@ -120,13 +174,63 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [saving, setSaving] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
+  const [result, setResult] = useState<ExperimentResult | null>(null);
+  const [resultLoading, setResultLoading] = useState(false);
+
+  const [decisions, setDecisions] = useState<Decision[]>([]);
+  const [notes, setNotes] = useState<LearningNote[]>([]);
+  const [decisionType, setDecisionType] = useState<DecisionType>('SHIP');
+  const [decisionReason, setDecisionReason] = useState('');
+  const [decisionBy, setDecisionBy] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [noteBy, setNoteBy] = useState('');
+  const [submittingDecision, setSubmittingDecision] = useState(false);
+  const [submittingNote, setSubmittingNote] = useState(false);
+
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     experimentApi.get(id)
       .then((data) => { setExperiment(data); setLoading(false); })
       .catch(() => { setError(t.error); setLoading(false); });
+    decisionApi.list(id).then(setDecisions).catch(() => {});
+    decisionApi.listNotes(id).then(setNotes).catch(() => {});
   }, [id]);
+
+  const loadResult = () => {
+    if (!id || resultLoading) return;
+    setResultLoading(true);
+    experimentResultApi.getResult(id)
+      .then(setResult)
+      .catch(() => {})
+      .finally(() => setResultLoading(false));
+  };
+
+  const handleAddDecision = async () => {
+    if (!id || !decisionReason.trim()) return;
+    setSubmittingDecision(true);
+    try {
+      const d = await decisionApi.create({ experiment_id: id, decision: decisionType, reason: decisionReason.trim(), decided_by: decisionBy.trim() || 'anonymous' });
+      setDecisions(prev => [d, ...prev]);
+      setDecisionReason('');
+      setDecisionBy('');
+    } finally {
+      setSubmittingDecision(false);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!id || !noteContent.trim()) return;
+    setSubmittingNote(true);
+    try {
+      const n = await decisionApi.createNote({ experiment_id: id, content: noteContent.trim(), created_by: noteBy.trim() || undefined });
+      setNotes(prev => [n, ...prev]);
+      setNoteContent('');
+      setNoteBy('');
+    } finally {
+      setSubmittingNote(false);
+    }
+  };
 
   const startEdit = () => {
     if (!experiment) return;
@@ -307,6 +411,140 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      {/* ── 실험 결과 ── */}
+      <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-indigo-500" />
+            {t.sectionResult}
+          </CardTitle>
+          {!result && (
+            <Button size="sm" variant="outline" className="rounded-xl" onClick={loadResult} disabled={resultLoading}>
+              {resultLoading ? t.resultLoading : (lang === 'ko' ? '결과 불러오기' : 'Load Result')}
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {!result && !resultLoading && (
+            <p className="text-sm text-slate-400">{lang === 'ko' ? '버튼을 눌러 결과를 확인하세요.' : 'Click the button to load results.'}</p>
+          )}
+          {resultLoading && <p className="text-sm text-slate-400">{t.resultLoading}</p>}
+          {result && result.message && <p className="text-sm text-slate-400">{result.message}</p>}
+          {result && result.treatment && result.control && (
+            <div className="space-y-4">
+              {result.srm_warning && (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-600 dark:text-amber-400 text-sm">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  {t.srmWarningMsg}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                {[{ label: t.labelTreatment, data: result.treatment, color: 'indigo' }, { label: t.labelControl, data: result.control, color: 'slate' }].map(({ label, data, color }) => (
+                  <div key={label} className={`p-4 rounded-xl bg-${color}-50 dark:bg-${color}-900/10 border border-${color}-100 dark:border-${color}-800`}>
+                    <p className={`text-xs font-bold uppercase text-${color}-500 mb-2`}>{label}</p>
+                    <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{(data.rate * 100).toFixed(2)}%</p>
+                    <p className="text-xs text-slate-500 mt-1">{data.conversions} / {data.users} {t.labelUsers}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                  <p className="text-xs text-slate-400 mb-1">{t.labelUplift}</p>
+                  <p className={`text-lg font-bold ${(result.uplift ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    {((result.uplift ?? 0) * 100).toFixed(2)}%
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                  <p className="text-xs text-slate-400 mb-1">{t.labelProbWin}</p>
+                  <p className="text-lg font-bold text-indigo-600">{((result.probability_treatment_wins ?? 0) * 100).toFixed(1)}%</p>
+                </div>
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                  <p className="text-xs text-slate-400 mb-1">{lang === 'ko' ? '총 샘플' : 'Sample Size'}</p>
+                  <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{result.sample_size.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── 의사결정 ── */}
+      <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <Ship className="h-5 w-5 text-indigo-500" />
+            {t.sectionDecisions}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              {(['SHIP', 'HOLD', 'ROLLBACK'] as DecisionType[]).map((d) => (
+                <button key={d} onClick={() => setDecisionType(d)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${decisionType === d
+                    ? d === 'SHIP' ? 'bg-emerald-500 text-white border-emerald-500'
+                    : d === 'HOLD' ? 'bg-amber-500 text-white border-amber-500'
+                    : 'bg-rose-500 text-white border-rose-500'
+                    : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}>
+                  {d === 'SHIP' ? t.ship : d === 'HOLD' ? t.hold : t.rollback}
+                </button>
+              ))}
+            </div>
+            <Textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} placeholder={t.decisionPlaceholder} className="rounded-xl resize-none" rows={2} />
+            <div className="flex gap-2">
+              <Input value={decisionBy} onChange={e => setDecisionBy(e.target.value)} placeholder={t.authorPlaceholder} className="rounded-xl" />
+              <Button size="sm" className="rounded-xl shrink-0" onClick={handleAddDecision} disabled={submittingDecision || !decisionReason.trim()}>
+                {submittingDecision ? t.submitting : t.submit}
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {decisions.map(d => (
+              <div key={d.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${d.decision === 'SHIP' ? 'bg-emerald-100 text-emerald-600' : d.decision === 'HOLD' ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
+                    {d.decision}
+                  </span>
+                  <span className="text-xs text-slate-400">{d.decided_by} · {new Date(d.decided_at).toLocaleDateString()}</span>
+                </div>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{d.reason}</p>
+              </div>
+            ))}
+            {decisions.length === 0 && <p className="text-sm text-slate-400">{lang === 'ko' ? '아직 결정이 없습니다.' : 'No decisions yet.'}</p>}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── 학습 노트 ── */}
+      <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-indigo-500" />
+            {t.sectionNotes}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Textarea value={noteContent} onChange={e => setNoteContent(e.target.value)} placeholder={t.notePlaceholder} className="rounded-xl resize-none" rows={2} />
+            <div className="flex gap-2">
+              <Input value={noteBy} onChange={e => setNoteBy(e.target.value)} placeholder={t.authorPlaceholder} className="rounded-xl" />
+              <Button size="sm" className="rounded-xl shrink-0" onClick={handleAddNote} disabled={submittingNote || !noteContent.trim()}>
+                {submittingNote ? t.submitting : t.submit}
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {notes.map(n => (
+              <div key={n.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                <p className="text-xs text-slate-400 mb-1">{n.created_by ?? 'anonymous'} · {new Date(n.created_at).toLocaleDateString()}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{n.content}</p>
+              </div>
+            ))}
+            {notes.length === 0 && <p className="text-sm text-slate-400">{lang === 'ko' ? '아직 노트가 없습니다.' : 'No notes yet.'}</p>}
+          </div>
         </CardContent>
       </Card>
     </div>

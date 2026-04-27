@@ -1,11 +1,14 @@
 import hashlib
 import uuid
+import numpy as np
+from scipy.stats import chi2_contingency
 from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from app.schemas.experiment import (
     Experiment, ExperimentCreate, ExperimentUpdate,
-    Variant, AssignmentResponse, VALID_TRANSITIONS
+    Variant, AssignmentResponse, VALID_TRANSITIONS,
+    ExperimentResult, VariantResult,
 )
 from app.db import d1
 
@@ -65,7 +68,7 @@ class ExperimentService:
     async def create(self, data: ExperimentCreate) -> Experiment:
         exp_id = str(uuid.uuid4())
         now = _now()
-        await d1.execute(
+        ok = await d1.execute(
             """INSERT INTO experiments
                (id, name, hypothesis, status, owner_id, start_at, end_at, created_at, updated_at)
                VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
@@ -76,6 +79,8 @@ class ExperimentService:
                 now, now,
             ]
         )
+        if not ok:
+            raise HTTPException(status_code=500, detail="실험 생성에 실패했습니다")
         for v in data.variants:
             v_id = str(uuid.uuid4())
             await d1.execute(
@@ -168,6 +173,103 @@ class ExperimentService:
             assigned_at=now,
         )
 
+    async def get_result(self, experiment_id: str) -> ExperimentResult:
+        exp = await self.get(experiment_id)
+        if not exp:
+            raise HTTPException(status_code=404, detail="Experiment not found")
+
+        if not exp.primary_metric:
+            return ExperimentResult(
+                experiment_id=experiment_id,
+                primary_metric=None,
+                sample_size=0,
+                message="primary_metric이 설정되지 않았습니다",
+            )
+
+        assignments = await d1.query(
+            """SELECT a.user_id, v.name as variant_name
+               FROM experiment_assignments a
+               JOIN experiment_variants v ON a.variant_id = v.id
+               WHERE a.experiment_id = ?""",
+            [experiment_id],
+        )
+        if not assignments:
+            return ExperimentResult(
+                experiment_id=experiment_id,
+                primary_metric=exp.primary_metric,
+                sample_size=0,
+                message="배정된 사용자가 없습니다",
+            )
+
+        # variant별 사용자 그룹핑 (control / treatment 우선, 없으면 첫 두 variant)
+        variant_users: dict[str, set[str]] = {}
+        for a in assignments:
+            vname = a["variant_name"]
+            variant_users.setdefault(vname, set()).add(a["user_id"])
+
+        variant_names = list(variant_users.keys())
+        control_name = "control" if "control" in variant_users else variant_names[0]
+        treatment_name = "treatment" if "treatment" in variant_users else (
+            variant_names[1] if len(variant_names) > 1 else variant_names[0]
+        )
+
+        all_user_ids = [a["user_id"] for a in assignments]
+        placeholders = ",".join("?" * len(all_user_ids))
+        metric_rows = await d1.query(
+            f"SELECT DISTINCT user_id FROM event_log WHERE event_name = ? AND user_id IN ({placeholders})",
+            [exp.primary_metric] + all_user_ids,
+        )
+        converted_users = {r["user_id"] for r in metric_rows}
+
+        c_users = variant_users.get(control_name, set())
+        t_users = variant_users.get(treatment_name, set())
+        c_total, t_total = len(c_users), len(t_users)
+        c_success = len(c_users & converted_users)
+        t_success = len(t_users & converted_users)
+
+        if c_total == 0 or t_total == 0:
+            return ExperimentResult(
+                experiment_id=experiment_id,
+                primary_metric=exp.primary_metric,
+                sample_size=c_total + t_total,
+                message="control 또는 treatment 사용자가 없습니다",
+            )
+
+        t_samples = np.random.beta(t_success + 1, (t_total - t_success) + 1, 10_000)
+        c_samples = np.random.beta(c_success + 1, (c_total - c_success) + 1, 10_000)
+        prob = float((t_samples > c_samples).mean())
+
+        _, p_value, _, _ = chi2_contingency(
+            [[t_total, c_total], [t_total + c_total, t_total + c_total]]
+        )
+        srm_warning = bool(p_value < 0.01)
+
+        c_rate = c_success / c_total
+        t_rate = t_success / t_total
+
+        return ExperimentResult(
+            experiment_id=experiment_id,
+            primary_metric=exp.primary_metric,
+            treatment=VariantResult(
+                variant_id="",
+                variant_name=treatment_name,
+                users=t_total,
+                conversions=t_success,
+                rate=round(t_rate, 4),
+            ),
+            control=VariantResult(
+                variant_id="",
+                variant_name=control_name,
+                users=c_total,
+                conversions=c_success,
+                rate=round(c_rate, 4),
+            ),
+            uplift=round(t_rate - c_rate, 4),
+            probability_treatment_wins=round(prob, 4),
+            srm_warning=srm_warning,
+            sample_size=c_total + t_total,
+        )
+
     def _to_experiment(self, row: dict) -> Experiment:
         variants = [
             Variant(
@@ -184,10 +286,15 @@ class ExperimentService:
             id=row["id"],
             name=row["name"],
             hypothesis=row.get("hypothesis"),
+            expected_effect=row.get("expected_effect"),
+            primary_metric=row.get("primary_metric"),
+            cohort_id=row.get("cohort_id"),
             status=row["status"],
             owner_id=row.get("owner_id"),
             start_at=row.get("start_at"),
             end_at=row.get("end_at"),
+            reflection_start_date=row.get("reflection_start_date"),
+            reflection_window_days=int(row.get("reflection_window_days") or 7),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
             variants=variants,

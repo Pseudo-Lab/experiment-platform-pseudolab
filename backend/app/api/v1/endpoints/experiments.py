@@ -1,7 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
-from app.schemas.experiment import Experiment, ExperimentCreate, ExperimentUpdate, AssignmentResponse, ExperimentStatus
+from app.schemas.experiment import (
+    Experiment, ExperimentCreate, ExperimentUpdate,
+    AssignmentResponse, ExperimentStatus, ExperimentResult,
+)
+from app.schemas.reflection import ReflectionWindowUpdate
 from app.services.experiment import experiment_service
+from app.services.reflection import reflection_service
 
 router = APIRouter()
 
@@ -43,3 +48,14 @@ async def assign_user(experiment_id: str, user_id: str):
     if not result:
         raise HTTPException(status_code=404, detail="Experiment or variants not found")
     return result
+
+
+@router.get("/{experiment_id}/result", response_model=ExperimentResult)
+async def get_result(experiment_id: str):
+    return await experiment_service.get_result(experiment_id)
+
+
+@router.patch("/{experiment_id}/reflection-window")
+async def update_reflection_window(experiment_id: str, data: ReflectionWindowUpdate):
+    await reflection_service.update_reflection_window(experiment_id, data)
+    return {"success": True}

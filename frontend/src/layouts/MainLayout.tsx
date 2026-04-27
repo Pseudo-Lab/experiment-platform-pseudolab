@@ -14,7 +14,9 @@ import {
     User,
     Sun,
     Moon,
-    Globe
+    Globe,
+    ToggleLeft,
+    BarChart2,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -90,8 +92,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", settings: "Settings" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", settings: "설정" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", settings: "Settings" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", settings: "설정" }
     };
 
     const t = translations[lang];
@@ -105,6 +107,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         activePath === '/metrics/github' ? t.githubMetrics :
         activePath === '/metrics/discord' ? t.discordMetrics :
         activePath === '/bug-report' ? t.bugReport :
+        activePath === '/feature-flags' ? t.featureFlags :
+        activePath === '/analytics' ? t.analytics :
         t.dashboard;
 
     const onTouchStart = (e: React.TouchEvent) => {
@@ -188,6 +192,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/github')} />
                     <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/discord')} />
                     <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} />
+                    <SidebarItem icon={ToggleLeft} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
+                    <SidebarItem icon={BarChart2} label={t.analytics} active={activePath === '/analytics'} expanded={isSidebarOpen} onClick={() => handleNav('/analytics')} />
                 </nav>
 
                 <div className="p-3 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
