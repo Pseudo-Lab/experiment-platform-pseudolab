@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Path, Query
 from typing import List
 from app.schemas.feature_flag import (
@@ -6,6 +7,7 @@ from app.schemas.feature_flag import (
     FeatureFlagCreate,
     FeatureFlagUpdate,
 )
+from app.schemas.feature_flag_exposure import FeatureFlagExposure, FeatureFlagExposureSummary
 from app.schemas.feature_flag_rule import (
     RULE_ID_PATTERN,
     FeatureFlagRule,
@@ -21,8 +23,9 @@ router = APIRouter()
 async def decide(
     flag_key: str = Query(..., pattern=FLAG_KEY_PATTERN),
     user_id: str = Query(..., min_length=1),
+    track: bool = Query(default=True),
 ):
-    variant = await feature_flag_service.decide(flag_key, user_id)
+    variant = await feature_flag_service.decide(flag_key, user_id, track=track)
     return {"success": True, "data": {"variant": variant}}
 
 
@@ -44,6 +47,26 @@ async def update_flag(data: FeatureFlagUpdate, flag_key: str = Path(..., pattern
 @router.post("/{flag_key}/archive", response_model=FeatureFlag)
 async def archive_flag(flag_key: str = Path(..., pattern=FLAG_KEY_PATTERN)):
     return await feature_flag_service.archive(flag_key)
+
+
+@router.get("/{flag_key}/exposures", response_model=List[FeatureFlagExposure])
+async def list_exposures(
+    flag_key: str = Path(..., pattern=FLAG_KEY_PATTERN),
+    from_: datetime | None = Query(default=None, alias="from"),
+    to: datetime | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=1000),
+    first_only: bool = Query(default=False),
+):
+    return await feature_flag_service.list_exposures(flag_key, from_, to, limit, first_only)
+
+
+@router.get("/{flag_key}/exposure-summary", response_model=FeatureFlagExposureSummary)
+async def exposure_summary(
+    flag_key: str = Path(..., pattern=FLAG_KEY_PATTERN),
+    from_: datetime | None = Query(default=None, alias="from"),
+    to: datetime | None = Query(default=None),
+):
+    return await feature_flag_service.exposure_summary(flag_key, from_, to)
 
 
 @router.get("/{flag_key}/rules", response_model=List[FeatureFlagRule])

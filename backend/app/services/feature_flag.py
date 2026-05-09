@@ -1,9 +1,11 @@
 import binascii
+import json
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional
 from fastapi import HTTPException
 from app.schemas.feature_flag import FeatureFlagCreate, FeatureFlagUpdate, FeatureFlag
+from app.schemas.feature_flag_exposure import FeatureFlagExposure, FeatureFlagExposureSummary
 from app.schemas.feature_flag_rule import FeatureFlagRule, FeatureFlagRuleCreate, FeatureFlagRuleUpdate
 from app.db import d1
 
@@ -24,6 +26,13 @@ def _decide_variant(user_id: str, flag_key: str, enabled: bool, rollout_pct: int
 
 def _to_iso(value: Optional[datetime]) -> Optional[str]:
     return value.isoformat() if value else None
+
+
+class FeatureFlagDecision:
+    def __init__(self, variant: str, reason: str, context: Optional[dict[str, Any]] = None):
+        self.variant = variant
+        self.reason = reason
+        self.context = context or {}
 
 
 class FeatureFlagService:
@@ -171,15 +180,81 @@ class FeatureFlagService:
             raise HTTPException(status_code=502, detail="Feature flag rule update did not persist")
         return updated
 
-    async def decide(self, flag_key: str, user_id: str) -> str:
+    async def decide(self, flag_key: str, user_id: str, track: bool = True) -> str:
+        decision = await self._decide(flag_key, user_id)
+        if track and decision.reason != "unknown_flag":
+            await self._record_exposure(flag_key, user_id, decision)
+        return decision.variant
+
+    async def list_exposures(
+        self,
+        flag_key: str,
+        from_: Optional[datetime] = None,
+        to: Optional[datetime] = None,
+        limit: int = 100,
+        first_only: bool = False,
+    ) -> List[FeatureFlagExposure]:
+        if not await self.get(flag_key, include_archived=True):
+            raise HTTPException(status_code=404, detail="Feature flag not found")
+        where = ["flag_key = ?"]
+        params: list[Any] = [flag_key]
+        if from_:
+            where.append("evaluated_at >= ?")
+            params.append(from_.isoformat())
+        if to:
+            where.append("evaluated_at <= ?")
+            params.append(to.isoformat())
+        where_clause = " AND ".join(where)
+        rows = await d1.query(
+            f"""SELECT * FROM feature_flag_exposure
+                 WHERE {where_clause}
+                 ORDER BY evaluated_at ASC""",
+            params,
+        )
+        exposures = [self._to_exposure(r) for r in rows]
+        if first_only:
+            first_by_user: dict[str, FeatureFlagExposure] = {}
+            for exposure in exposures:
+                first_by_user.setdefault(exposure.user_id, exposure)
+            exposures = sorted(first_by_user.values(), key=lambda item: item.evaluated_at, reverse=True)
+        else:
+            exposures = sorted(exposures, key=lambda item: item.evaluated_at, reverse=True)
+        return exposures[:limit]
+
+    async def exposure_summary(
+        self,
+        flag_key: str,
+        from_: Optional[datetime] = None,
+        to: Optional[datetime] = None,
+    ) -> FeatureFlagExposureSummary:
+        exposures = await self.list_exposures(flag_key, from_, to, limit=10000, first_only=False)
+        first_by_user: dict[str, FeatureFlagExposure] = {}
+        for exposure in sorted(exposures, key=lambda item: item.evaluated_at):
+            first_by_user.setdefault(exposure.user_id, exposure)
+        variant_counts: dict[str, int] = {}
+        for exposure in first_by_user.values():
+            variant_counts[exposure.variant] = variant_counts.get(exposure.variant, 0) + 1
+        return FeatureFlagExposureSummary(
+            flag_key=flag_key,
+            **{"from": from_},
+            to=to,
+            total_exposures=len(exposures),
+            unique_users=len({e.user_id for e in exposures}),
+            first_exposure_users=len(first_by_user),
+            variant_counts=variant_counts,
+        )
+
+    async def _decide(self, flag_key: str, user_id: str) -> FeatureFlagDecision:
         rows = await d1.query("SELECT * FROM feature_flag WHERE flag_key = ?", [flag_key])
         if not rows:
-            return "control"
+            return FeatureFlagDecision("control", "unknown_flag")
         flag = rows[0]
         enabled = int(flag["enabled"]) == 1
         rollout_pct = int(flag["rollout_pct"])
-        if flag.get("archived_at") or not enabled:
-            return "control"
+        if flag.get("archived_at"):
+            return FeatureFlagDecision("control", "archived")
+        if not enabled:
+            return FeatureFlagDecision("control", "disabled")
 
         rules = await d1.query(
             """SELECT * FROM feature_flag_rule
@@ -193,9 +268,44 @@ class FeatureFlagService:
                 continue
             if not await self._rule_matches_user(rule, user_id):
                 continue
-            return rule["variant"] if _hash_pct(user_id, flag_key, rule["id"]) < int(rule["rollout_pct"]) else "control"
+            in_rollout = _hash_pct(user_id, flag_key, rule["id"]) < int(rule["rollout_pct"])
+            return FeatureFlagDecision(
+                rule["variant"] if in_rollout else "control",
+                f"rule:{rule['id']}" if in_rollout else f"rule:{rule['id']}:rollout_miss",
+                {
+                    "rule_id": rule["id"],
+                    "segment_id": rule.get("segment_id"),
+                    "rollout_pct": int(rule["rollout_pct"]),
+                    "priority": int(rule["priority"]),
+                },
+            )
 
-        return _decide_variant(user_id, flag_key, enabled, rollout_pct)
+        variant = _decide_variant(user_id, flag_key, enabled, rollout_pct)
+        return FeatureFlagDecision(
+            variant,
+            "fallback_rollout" if variant != "control" else "fallback_rollout_miss",
+            {"rollout_pct": rollout_pct},
+        )
+
+    async def _record_exposure(self, flag_key: str, user_id: str, decision: FeatureFlagDecision) -> None:
+        now = _now()
+        ok = await d1.execute(
+            """INSERT INTO feature_flag_exposure
+               (id, flag_key, user_id, variant, reason, evaluated_at, context_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            [
+                str(uuid.uuid4()),
+                flag_key,
+                user_id,
+                decision.variant,
+                decision.reason,
+                now,
+                json.dumps(decision.context, ensure_ascii=False) if decision.context else None,
+            ],
+        )
+        if not ok:
+            # Decide must stay available even if exposure logging has a transient failure.
+            print(f"Feature flag exposure logging failed: flag_key={flag_key}, user_id={user_id}")
 
     async def _require_flag(self, flag_key: str) -> FeatureFlag:
         flag = await self.get(flag_key, include_archived=False)
@@ -254,6 +364,17 @@ class FeatureFlagService:
             ends_at=row.get("ends_at"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
+        )
+
+    def _to_exposure(self, row: dict) -> FeatureFlagExposure:
+        return FeatureFlagExposure(
+            id=row["id"],
+            flag_key=row["flag_key"],
+            user_id=row["user_id"],
+            variant=row["variant"],
+            reason=row.get("reason"),
+            evaluated_at=row["evaluated_at"],
+            context_json=row.get("context_json"),
         )
 
     def _to_flag(self, row: dict) -> FeatureFlag:

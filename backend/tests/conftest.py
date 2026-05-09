@@ -99,6 +99,16 @@ CREATE TABLE IF NOT EXISTS feature_flag_rule (
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS feature_flag_exposure (
+    id           TEXT PRIMARY KEY,
+    flag_key     TEXT NOT NULL,
+    user_id      TEXT NOT NULL,
+    variant      TEXT NOT NULL,
+    reason       TEXT,
+    evaluated_at TEXT NOT NULL,
+    context_json TEXT
+);
 """
 
 
