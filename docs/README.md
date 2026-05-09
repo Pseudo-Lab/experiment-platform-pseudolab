@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-03-15
+Last-Validated: 2026-05-09
 
 # Docs Guide
 
@@ -61,11 +61,10 @@ Replaced-By: <path>   # 해당 시만
 
 ## 5) 추천 진입 문서
 - 액티브 인덱스(읽기 시작점): `docs/reports/_index.md`
-- 현재 작업 기준: `docs/reports/current-working-agreement.md`
 - 의사결정 로그(append-only): `docs/reports/decision-log.md`
-- 작업별 문서 매핑: `docs/reports/task-to-doc-map.md`
 - 운영 핸드오프: `docs/reports/hand-off-12th-study-platform.md`
 - 실행 계획: `docs/reports/dashboard-execution-plan-v1.md`
+- Feature Flag 개선 계획: `docs/reports/feature-flag-improvement-plan.md`
 - 팀장 기준 계획: `docs/reports/team-lead-rebaseline-plan.md`
 - KPI 정의: `docs/reports/kpi-definition-v2.md`
 - 데이터 검증: `docs/reports/dataset-validation-v2.md`
