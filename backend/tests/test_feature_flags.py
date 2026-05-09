@@ -135,6 +135,25 @@ class TestArchiveFeatureFlag:
         resp = client.patch(f"{BASE}/archived_update", json={"rollout_pct": 50})
         assert resp.status_code == 404
 
+    def test_restore_archived_flag_returns_to_default_list_disabled(self):
+        assert _create_flag("restore_me", rollout_pct=100, enabled=True).status_code == 201
+        assert client.post(f"{BASE}/restore_me/archive").status_code == 200
+
+        restored = client.post(f"{BASE}/restore_me/restore")
+        assert restored.status_code == 200
+        restored_body = restored.json()
+        assert restored_body["archived_at"] is None
+        assert restored_body["enabled"] is False
+
+        default_list = client.get(BASE + "/")
+        assert default_list.status_code == 200
+        assert any(flag["flag_key"] == "restore_me" for flag in default_list.json())
+
+    def test_restore_missing_or_active_returns_404(self):
+        assert client.post(f"{BASE}/missing_restore/restore").status_code == 404
+        assert _create_flag("active_restore", rollout_pct=0, enabled=False).status_code == 201
+        assert client.post(f"{BASE}/active_restore/restore").status_code == 404
+
 
 class TestFeatureFlagExposure:
     def test_decide_records_exposure_by_default(self):

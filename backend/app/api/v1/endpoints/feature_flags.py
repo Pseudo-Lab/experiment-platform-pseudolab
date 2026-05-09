@@ -49,6 +49,11 @@ async def archive_flag(flag_key: str = Path(..., pattern=FLAG_KEY_PATTERN)):
     return await feature_flag_service.archive(flag_key)
 
 
+@router.post("/{flag_key}/restore", response_model=FeatureFlag)
+async def restore_flag(flag_key: str = Path(..., pattern=FLAG_KEY_PATTERN)):
+    return await feature_flag_service.restore(flag_key)
+
+
 @router.get("/{flag_key}/exposures", response_model=List[FeatureFlagExposure])
 async def list_exposures(
     flag_key: str = Path(..., pattern=FLAG_KEY_PATTERN),
