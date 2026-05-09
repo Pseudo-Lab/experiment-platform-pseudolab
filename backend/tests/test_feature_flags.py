@@ -136,6 +136,65 @@ class TestArchiveFeatureFlag:
         assert resp.status_code == 404
 
 
+class TestFeatureFlagExposure:
+    def test_decide_records_exposure_by_default(self):
+        assert _create_flag("exposure_flag", rollout_pct=100, enabled=True).status_code == 201
+
+        decision = client.get(f"{BASE}/decide", params={"flag_key": "exposure_flag", "user_id": "user-1"})
+        assert decision.status_code == 200
+        assert decision.json()["data"]["variant"] == "treatment"
+
+        exposures = client.get(f"{BASE}/exposure_flag/exposures")
+        assert exposures.status_code == 200
+        body = exposures.json()
+        assert len(body) == 1
+        assert body[0]["flag_key"] == "exposure_flag"
+        assert body[0]["user_id"] == "user-1"
+        assert body[0]["variant"] == "treatment"
+        assert body[0]["reason"] == "fallback_rollout"
+
+    def test_decide_track_false_skips_exposure(self):
+        assert _create_flag("no_track_flag", rollout_pct=100, enabled=True).status_code == 201
+
+        decision = client.get(
+            f"{BASE}/decide",
+            params={"flag_key": "no_track_flag", "user_id": "user-1", "track": False},
+        )
+        assert decision.status_code == 200
+
+        exposures = client.get(f"{BASE}/no_track_flag/exposures")
+        assert exposures.status_code == 200
+        assert exposures.json() == []
+
+    def test_exposure_summary_uses_first_exposure_per_user_for_variant_counts(self):
+        assert _create_flag("summary_flag", rollout_pct=100, enabled=True).status_code == 201
+
+        first = client.get(f"{BASE}/decide", params={"flag_key": "summary_flag", "user_id": "user-1"})
+        assert first.status_code == 200
+        assert client.patch(f"{BASE}/summary_flag", json={"rollout_pct": 0}).status_code == 200
+        second = client.get(f"{BASE}/decide", params={"flag_key": "summary_flag", "user_id": "user-1"})
+        assert second.status_code == 200
+        third = client.get(f"{BASE}/decide", params={"flag_key": "summary_flag", "user_id": "user-2"})
+        assert third.status_code == 200
+
+        summary = client.get(f"{BASE}/summary_flag/exposure-summary")
+        assert summary.status_code == 200
+        body = summary.json()
+        assert body["total_exposures"] == 3
+        assert body["unique_users"] == 2
+        assert body["first_exposure_users"] == 2
+        assert body["variant_counts"] == {"treatment": 1, "control": 1}
+
+    def test_first_only_exposures_returns_period_first_exposure_per_user(self):
+        assert _create_flag("first_only_flag", rollout_pct=100, enabled=True).status_code == 201
+        assert client.get(f"{BASE}/decide", params={"flag_key": "first_only_flag", "user_id": "user-1"}).status_code == 200
+        assert client.get(f"{BASE}/decide", params={"flag_key": "first_only_flag", "user_id": "user-1"}).status_code == 200
+
+        exposures = client.get(f"{BASE}/first_only_flag/exposures", params={"first_only": True})
+        assert exposures.status_code == 200
+        assert len(exposures.json()) == 1
+
+
 class TestDecideFeatureFlag:
     def test_unknown_flag_returns_control(self):
         resp = client.get(f"{BASE}/decide", params={"flag_key": "unknown_flag", "user_id": "user-1"})

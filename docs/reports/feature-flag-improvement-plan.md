@@ -304,6 +304,15 @@ CREATE TABLE feature_flag_rule (
 
 목표: 플래그 노출과 결과 지표를 연결한다.
 
+현재 구현 상태(2026-05-09):
+- `feature_flag_exposure` D1 테이블과 조회용 인덱스 추가
+- `decide` 기본 동작에서 exposure 기록
+- `track=false` 옵션으로 기록 제외 가능
+- `GET /api/v1/feature-flags/{flag_key}/exposures` 추가
+- `GET /api/v1/feature-flags/{flag_key}/exposure-summary` 추가
+- 분석 집계는 기간 내 사용자별 최초 노출 기준으로 variant 분포 산출
+- raw 호출 로그는 모두 저장하고, 분석 view/API에서 중복을 억제하는 방향으로 확정
+
 작업:
 1. exposure 테이블 추가
 
