@@ -1,15 +1,33 @@
 Status: active
-Last-Validated: 2026-03-22
+Last-Validated: 2026-05-09
 
 # Reports Index (Active First)
 
 작업 시작 시 이 문서에서 **현재 기준 문서만** 확인합니다.
+삭제되었거나 존재하지 않는 문서를 기준 문서로 삼지 않습니다.
 
 ## 0) Always Read (공통 필수)
-1. `docs/reports/current-working-agreement.md`
+1. `AGENTS.md`
 2. `docs/reports/decision-log.md`
 
-## 읽기 순서
-1. 위 2개 먼저 읽는다
-2. `docs/reports/task-to-doc-map.md` 에서 작업 유형 확인 후 지정된 문서 추가 로딩
+## 1) Current Active Reports
+- `docs/reports/dashboard-execution-plan-v1.md` — 대시보드 실행 계획
+- `docs/reports/team-lead-rebaseline-plan.md` — 팀장 기준 재정렬 계획
+- `docs/reports/kpi-definition-v2.md` — KPI 정의
+- `docs/reports/dataset-validation-v2.md` — 데이터 검증
+- `docs/reports/data-analyst-report-v2.md` — 데이터 분석 보고서
+- `docs/reports/dev-implementation-report-v2.md` — 개발 구현 보고서
+- `docs/reports/team-lead-review-v2.md` — 팀장 리뷰
+- `docs/reports/experiment-platform-foundation-plan.md` — 실험 플랫폼 기반 계획
+- `docs/reports/feature-flag-improvement-plan.md` — Feature Flag 개선 계획
+- `docs/reports/hand-off-12th-study-platform.md` — 운영 핸드오프
+
+## 2) Guides
+- `docs/guides/setup_guide.md` — 개발/운영 설정
+- `docs/guides/design_system.md` — UI/디자인 시스템
+- `docs/guides/data_access.md` — 데이터 접근 규칙
+
+## 3) 읽기 순서
+1. `AGENTS.md`와 `docs/reports/decision-log.md`를 먼저 확인한다.
+2. 작업 영역에 맞는 Active Report 또는 Guide만 추가로 확인한다.
 3. 본문 전체 탐색은 예외 상황(충돌/감사/회귀 추적)에서만 수행한다.

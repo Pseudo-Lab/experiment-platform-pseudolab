@@ -55,6 +55,50 @@ CREATE TABLE IF NOT EXISTS bug_report_comments (
     content     TEXT NOT NULL,
     created_at  TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS feature_flag (
+    flag_key    TEXT PRIMARY KEY,
+    description TEXT,
+    rollout_pct INTEGER NOT NULL DEFAULT 0,
+    enabled     INTEGER NOT NULL DEFAULT 0,
+    archived_at TEXT,
+    created_at  TEXT    NOT NULL,
+    updated_at  TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS feature_segment (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    description TEXT,
+    source      TEXT NOT NULL DEFAULT 'manual',
+    query_name  TEXT,
+    rules_json  TEXT,
+    enabled     INTEGER NOT NULL DEFAULT 1,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS feature_segment_member (
+    segment_id   TEXT NOT NULL,
+    user_id      TEXT NOT NULL,
+    reason       TEXT,
+    refreshed_at TEXT NOT NULL,
+    PRIMARY KEY (segment_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS feature_flag_rule (
+    id          TEXT PRIMARY KEY,
+    flag_key    TEXT NOT NULL,
+    priority    INTEGER NOT NULL DEFAULT 100,
+    segment_id  TEXT,
+    rollout_pct INTEGER NOT NULL DEFAULT 100,
+    variant     TEXT NOT NULL DEFAULT 'treatment',
+    enabled     INTEGER NOT NULL DEFAULT 1,
+    starts_at   TEXT,
+    ends_at     TEXT,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
 """
 
 

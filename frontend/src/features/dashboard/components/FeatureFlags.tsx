@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { ToggleLeft, ToggleRight, Plus, X } from 'lucide-react';
+import { Archive, ToggleLeft, ToggleRight, Plus, X } from 'lucide-react';
 import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate } from '../../../services/api';
 
 interface Props { lang: 'en' | 'ko'; }
@@ -19,9 +19,16 @@ const t = {
     rolloutLabel: '롤아웃 %',
     create: '생성',
     creating: '생성 중...',
+    save: '저장',
+    saving: '저장 중...',
+    archive: '보관',
+    archiving: '보관 중...',
+    archiveConfirm: '이 플래그를 보관할까요? 목록에서 숨겨지고 decide는 control을 반환합니다.',
     loading: '불러오는 중...',
     empty: '등록된 플래그가 없습니다.',
     errorCreate: '생성에 실패했습니다.',
+    errorUpdate: '업데이트에 실패했습니다.',
+    errorArchive: '보관에 실패했습니다.',
   },
   en: {
     title: 'Feature Flags',
@@ -33,9 +40,16 @@ const t = {
     rolloutLabel: 'Rollout %',
     create: 'Create',
     creating: 'Creating...',
+    save: 'Save',
+    saving: 'Saving...',
+    archive: 'Archive',
+    archiving: 'Archiving...',
+    archiveConfirm: 'Archive this flag? It will be hidden from the list and decide will return control.',
     loading: 'Loading...',
     empty: 'No flags configured.',
     errorCreate: 'Failed to create flag.',
+    errorUpdate: 'Failed to update flag.',
+    errorArchive: 'Failed to archive flag.',
   },
 };
 
@@ -49,10 +63,25 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const [newRollout, setNewRollout] = useState(0);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rolloutDrafts, setRolloutDrafts] = useState<Record<string, number>>({});
+  const [savingRolloutKey, setSavingRolloutKey] = useState<string | null>(null);
+  const [updatingKey, setUpdatingKey] = useState<string | null>(null);
+  const [archivingKey, setArchivingKey] = useState<string | null>(null);
 
   useEffect(() => {
-    featureFlagApi.list().then(setFlags).catch(() => {}).finally(() => setLoading(false));
+    featureFlagApi.list()
+      .then(items => {
+        setFlags(items);
+        setRolloutDrafts(Object.fromEntries(items.map(flag => [flag.flag_key, flag.rollout_pct])));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
+
+  const replaceFlag = (updated: FeatureFlag) => {
+    setFlags(prev => prev.map(f => f.flag_key === updated.flag_key ? updated : f));
+    setRolloutDrafts(prev => ({ ...prev, [updated.flag_key]: updated.rollout_pct }));
+  };
 
   const handleCreate = async () => {
     if (!newKey.trim()) return;
@@ -62,6 +91,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
       const data: FeatureFlagCreate = { flag_key: newKey.trim(), description: newDesc.trim() || undefined, rollout_pct: newRollout, enabled: false };
       const created = await featureFlagApi.create(data);
       setFlags(prev => [created, ...prev]);
+      setRolloutDrafts(prev => ({ ...prev, [created.flag_key]: created.rollout_pct }));
       setNewKey(''); setNewDesc(''); setNewRollout(0); setShowForm(false);
     } catch {
       setError(tr.errorCreate);
@@ -71,17 +101,51 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   };
 
   const handleToggle = async (flag: FeatureFlag) => {
+    setUpdatingKey(flag.flag_key);
+    setError(null);
     try {
       const updated = await featureFlagApi.update(flag.flag_key, { enabled: !flag.enabled });
-      setFlags(prev => prev.map(f => f.flag_key === flag.flag_key ? updated : f));
-    } catch {}
+      replaceFlag(updated);
+    } catch {
+      setError(tr.errorUpdate);
+    } finally {
+      setUpdatingKey(null);
+    }
   };
 
-  const handleRolloutChange = async (flag: FeatureFlag, pct: number) => {
+  const handleRolloutSave = async (flag: FeatureFlag) => {
+    const pct = rolloutDrafts[flag.flag_key] ?? flag.rollout_pct;
+    if (pct === flag.rollout_pct) return;
+    setSavingRolloutKey(flag.flag_key);
+    setError(null);
     try {
       const updated = await featureFlagApi.update(flag.flag_key, { rollout_pct: pct });
-      setFlags(prev => prev.map(f => f.flag_key === flag.flag_key ? updated : f));
-    } catch {}
+      replaceFlag(updated);
+    } catch {
+      setError(tr.errorUpdate);
+      setRolloutDrafts(prev => ({ ...prev, [flag.flag_key]: flag.rollout_pct }));
+    } finally {
+      setSavingRolloutKey(null);
+    }
+  };
+
+  const handleArchive = async (flag: FeatureFlag) => {
+    if (!window.confirm(tr.archiveConfirm)) return;
+    setArchivingKey(flag.flag_key);
+    setError(null);
+    try {
+      await featureFlagApi.archive(flag.flag_key);
+      setFlags(prev => prev.filter(f => f.flag_key !== flag.flag_key));
+      setRolloutDrafts(prev => {
+        const next = { ...prev };
+        delete next[flag.flag_key];
+        return next;
+      });
+    } catch {
+      setError(tr.errorArchive);
+    } finally {
+      setArchivingKey(null);
+    }
   };
 
   if (loading) return <p className="text-slate-500 text-sm p-8">{tr.loading}</p>;
@@ -118,6 +182,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
 
       <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
         <CardContent className="p-0">
+          {error && !showForm && <p className="text-xs text-rose-500 px-6 pt-4">{error}</p>}
           {flags.length === 0 ? (
             <p className="text-sm text-slate-400 p-6">{tr.empty}</p>
           ) : (
@@ -132,16 +197,32 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {flags.map(flag => (
+                {flags.map(flag => {
+                  const draftRollout = rolloutDrafts[flag.flag_key] ?? flag.rollout_pct;
+                  const rolloutChanged = draftRollout !== flag.rollout_pct;
+                  const isSavingRollout = savingRolloutKey === flag.flag_key;
+                  const isUpdating = updatingKey === flag.flag_key;
+                  const isArchiving = archivingKey === flag.flag_key;
+
+                  return (
                   <TableRow key={flag.flag_key}>
                     <TableCell className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-200">{flag.flag_key}</TableCell>
                     <TableCell className="text-sm text-slate-500">{flag.description || '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <input type="range" min={0} max={100} value={flag.rollout_pct}
-                          onChange={e => handleRolloutChange(flag, Number(e.target.value))}
+                        <input type="range" min={0} max={100} value={draftRollout}
+                          onChange={e => setRolloutDrafts(prev => ({ ...prev, [flag.flag_key]: Number(e.target.value) }))}
                           className="w-24 accent-indigo-500" />
-                        <span className="text-xs font-bold text-slate-500 w-8">{flag.rollout_pct}%</span>
+                        <span className="text-xs font-bold text-slate-500 w-8">{draftRollout}%</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 rounded-lg px-2 text-xs"
+                          onClick={() => handleRolloutSave(flag)}
+                          disabled={!rolloutChanged || isSavingRollout}
+                        >
+                          {isSavingRollout ? tr.saving : tr.save}
+                        </Button>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -150,12 +231,30 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <button onClick={() => handleToggle(flag)} className="text-slate-400 hover:text-indigo-500 transition-colors">
-                        {flag.enabled ? <ToggleRight className="h-6 w-6 text-indigo-500" /> : <ToggleLeft className="h-6 w-6" />}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggle(flag)}
+                          disabled={isUpdating || isArchiving}
+                          className="text-slate-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
+                          aria-label={flag.enabled ? tr.disabled : tr.enabled}
+                        >
+                          {flag.enabled ? <ToggleRight className="h-6 w-6 text-indigo-500" /> : <ToggleLeft className="h-6 w-6" />}
+                        </button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 rounded-lg px-2 text-xs text-slate-500 hover:text-rose-600"
+                          onClick={() => handleArchive(flag)}
+                          disabled={isArchiving || isUpdating}
+                        >
+                          <Archive className="h-3.5 w-3.5 mr-1" />
+                          {isArchiving ? tr.archiving : tr.archive}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
