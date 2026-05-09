@@ -67,6 +67,65 @@ export interface FeatureFlagUpdate {
   enabled?: boolean;
 }
 
+export interface FeatureFlagRule {
+  id: string;
+  flag_key: string;
+  priority: number;
+  segment_id?: string | null;
+  rollout_pct: number;
+  variant: string;
+  enabled: boolean;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface FeatureFlagRuleCreate {
+  id?: string;
+  priority?: number;
+  segment_id?: string;
+  rollout_pct?: number;
+  variant?: string;
+  enabled?: boolean;
+  starts_at?: string;
+  ends_at?: string;
+}
+export type FeatureFlagRuleUpdate = Partial<FeatureFlagRuleCreate>;
+
+export interface Segment {
+  id: string;
+  name: string;
+  description?: string | null;
+  source: 'manual' | 'query' | string;
+  query_name?: string | null;
+  rules_json?: string | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+  member_count: number;
+}
+export interface SegmentCreate {
+  id: string;
+  name: string;
+  description?: string;
+  source?: 'manual' | 'query';
+  query_name?: string;
+  rules_json?: string;
+  enabled?: boolean;
+  user_ids?: string[];
+}
+export interface SegmentMember {
+  segment_id: string;
+  user_id: string;
+  reason?: string | null;
+  refreshed_at: string;
+}
+export interface SegmentRefreshResponse {
+  segment_id: string;
+  refreshed_count: number;
+  source: string;
+}
+
 // ────────────────────────────────────────────────────────────
 // Analytics
 // ────────────────────────────────────────────────────────────
@@ -322,7 +381,7 @@ export const featureFlagApi = {
     return res.json();
   },
   update: async (flagKey: string, data: FeatureFlagUpdate): Promise<FeatureFlag> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/${flagKey}`, {
+    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -331,10 +390,66 @@ export const featureFlagApi = {
     return res.json();
   },
   decide: async (flagKey: string, userId: string): Promise<{ variant: string }> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/decide?flag_key=${flagKey}&user_id=${userId}`);
+    const params = new URLSearchParams({ flag_key: flagKey, user_id: userId });
+    const res = await fetch(`${API_BASE_URL}/feature-flags/decide?${params}`);
     if (!res.ok) throw new Error('Failed to decide');
     const json = await res.json();
     return json.data;
+  },
+  listRules: async (flagKey: string): Promise<FeatureFlagRule[]> => {
+    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules`);
+    if (!res.ok) throw new Error('Failed to fetch flag rules');
+    return res.json();
+  },
+  createRule: async (flagKey: string, data: FeatureFlagRuleCreate): Promise<FeatureFlagRule> => {
+    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create flag rule');
+    return res.json();
+  },
+  updateRule: async (flagKey: string, ruleId: string, data: FeatureFlagRuleUpdate): Promise<FeatureFlagRule> => {
+    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules/${encodeURIComponent(ruleId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update flag rule');
+    return res.json();
+  },
+};
+
+export const segmentApi = {
+  list: async (): Promise<Segment[]> => {
+    const res = await fetch(`${API_BASE_URL}/segments/`);
+    if (!res.ok) throw new Error('Failed to fetch segments');
+    return res.json();
+  },
+  create: async (data: SegmentCreate): Promise<Segment> => {
+    const res = await fetch(`${API_BASE_URL}/segments/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create segment');
+    return res.json();
+  },
+  refresh: async (segmentId: string, data?: { user_ids?: string[]; reason?: string }): Promise<SegmentRefreshResponse> => {
+    const res = await fetch(`${API_BASE_URL}/segments/${encodeURIComponent(segmentId)}/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data ?? {}),
+    });
+    if (!res.ok) throw new Error('Failed to refresh segment');
+    return res.json();
+  },
+  members: async (segmentId: string, limit = 100): Promise<SegmentMember[]> => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    const res = await fetch(`${API_BASE_URL}/segments/${encodeURIComponent(segmentId)}/members?${params}`);
+    if (!res.ok) throw new Error('Failed to fetch segment members');
+    return res.json();
   },
 };
 
