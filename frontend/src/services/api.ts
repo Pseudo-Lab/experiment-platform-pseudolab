@@ -68,6 +68,16 @@ export interface FeatureFlagUpdate {
   enabled?: boolean;
 }
 
+export interface FeatureFlagExposureSummary {
+  flag_key: string;
+  from?: string | null;
+  to?: string | null;
+  total_exposures: number;
+  unique_users: number;
+  first_exposure_users: number;
+  variant_counts: Record<string, number>;
+}
+
 export interface FeatureFlagRule {
   id: string;
   flag_key: string;
@@ -398,6 +408,11 @@ export const featureFlagApi = {
     const json = await res.json();
     return json.data;
   },
+  exposureSummary: async (flagKey: string): Promise<FeatureFlagExposureSummary> => {
+    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/exposure-summary`);
+    if (!res.ok) throw new Error('Failed to fetch exposure summary');
+    return res.json();
+  },
   listRules: async (flagKey: string): Promise<FeatureFlagRule[]> => {
     const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules`);
     if (!res.ok) throw new Error('Failed to fetch flag rules');
@@ -417,6 +432,13 @@ export const featureFlagApi = {
       method: 'POST',
     });
     if (!res.ok) throw new Error('Failed to archive flag');
+    return res.json();
+  },
+  restore: async (flagKey: string): Promise<FeatureFlag> => {
+    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/restore`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to restore flag');
     return res.json();
   },
   updateRule: async (flagKey: string, ruleId: string, data: FeatureFlagRuleUpdate): Promise<FeatureFlagRule> => {

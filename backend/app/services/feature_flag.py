@@ -108,6 +108,22 @@ class FeatureFlagService:
             raise HTTPException(status_code=502, detail="Feature flag archive did not persist")
         return archived
 
+    async def restore(self, flag_key: str) -> FeatureFlag:
+        existing = await self.get(flag_key, include_archived=True)
+        if not existing or existing.archived_at is None:
+            raise HTTPException(status_code=404, detail="Archived feature flag not found")
+        now = _now()
+        ok = await d1.execute(
+            "UPDATE feature_flag SET archived_at = NULL, updated_at = ? WHERE flag_key = ? AND archived_at IS NOT NULL",
+            [now, flag_key],
+        )
+        if not ok:
+            raise HTTPException(status_code=502, detail="Failed to restore feature flag")
+        restored = await self.get(flag_key, include_archived=False)
+        if not restored or restored.archived_at is not None:
+            raise HTTPException(status_code=502, detail="Feature flag restore did not persist")
+        return restored
+
     async def list_rules(self, flag_key: str) -> List[FeatureFlagRule]:
         await self._require_flag(flag_key)
         rows = await d1.query(
