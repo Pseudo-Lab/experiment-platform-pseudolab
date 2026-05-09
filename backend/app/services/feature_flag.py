@@ -32,12 +32,17 @@ class FeatureFlagService:
         if existing:
             raise HTTPException(status_code=409, detail=f"flag_key '{data.flag_key}' already exists")
         now = _now()
-        await d1.execute(
+        ok = await d1.execute(
             """INSERT INTO feature_flag (flag_key, description, rollout_pct, enabled, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?)""",
             [data.flag_key, data.description, data.rollout_pct, int(data.enabled), now, now],
         )
-        return await self.get(data.flag_key)
+        if not ok:
+            raise HTTPException(status_code=502, detail="Failed to create feature flag")
+        created = await self.get(data.flag_key)
+        if not created:
+            raise HTTPException(status_code=502, detail="Feature flag create did not persist")
+        return created
 
     async def update(self, flag_key: str, data: FeatureFlagUpdate) -> FeatureFlag:
         existing = await self.get(flag_key)
@@ -52,25 +57,30 @@ class FeatureFlagService:
         patch["updated_at"] = _now()
 
         set_clause = ", ".join(f"{k} = ?" for k in patch)
-        await d1.execute(
+        ok = await d1.execute(
             f"UPDATE feature_flag SET {set_clause} WHERE flag_key = ?",
             list(patch.values()) + [flag_key],
         )
-        return await self.get(flag_key)
+        if not ok:
+            raise HTTPException(status_code=502, detail="Failed to update feature flag")
+        updated = await self.get(flag_key)
+        if not updated:
+            raise HTTPException(status_code=502, detail="Feature flag update did not persist")
+        return updated
 
     async def decide(self, flag_key: str, user_id: str) -> str:
         rows = await d1.query("SELECT * FROM feature_flag WHERE flag_key = ?", [flag_key])
         if not rows:
             return "control"
         flag = rows[0]
-        return _decide_variant(user_id, flag_key, bool(flag["enabled"]), int(flag["rollout_pct"]))
+        return _decide_variant(user_id, flag_key, int(flag["enabled"]) == 1, int(flag["rollout_pct"]))
 
     def _to_flag(self, row: dict) -> FeatureFlag:
         return FeatureFlag(
             flag_key=row["flag_key"],
             description=row.get("description"),
             rollout_pct=int(row["rollout_pct"]),
-            enabled=bool(row["enabled"]),
+            enabled=int(row["enabled"]) == 1,
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )

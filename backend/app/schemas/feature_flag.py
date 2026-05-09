@@ -2,9 +2,11 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
+FLAG_KEY_PATTERN = r"^[a-z0-9][a-z0-9_-]{2,63}$"
+
 
 class FeatureFlagCreate(BaseModel):
-    flag_key: str
+    flag_key: str = Field(..., pattern=FLAG_KEY_PATTERN)
     description: Optional[str] = None
     rollout_pct: int = Field(default=0, ge=0, le=100)
     enabled: bool = False

@@ -55,6 +55,15 @@ CREATE TABLE IF NOT EXISTS bug_report_comments (
     content     TEXT NOT NULL,
     created_at  TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS feature_flag (
+    flag_key    TEXT PRIMARY KEY,
+    description TEXT,
+    rollout_pct INTEGER NOT NULL DEFAULT 0,
+    enabled     INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT    NOT NULL,
+    updated_at  TEXT    NOT NULL
+);
 """
 
 
