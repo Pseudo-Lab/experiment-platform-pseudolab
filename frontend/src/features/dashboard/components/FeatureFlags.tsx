@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { ToggleLeft, ToggleRight, Plus, X } from 'lucide-react';
+import { Archive, ToggleLeft, ToggleRight, Plus, X } from 'lucide-react';
 import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate } from '../../../services/api';
 
 interface Props { lang: 'en' | 'ko'; }
@@ -21,10 +21,14 @@ const t = {
     creating: '생성 중...',
     save: '저장',
     saving: '저장 중...',
+    archive: '보관',
+    archiving: '보관 중...',
+    archiveConfirm: '이 플래그를 보관할까요? 목록에서 숨겨지고 decide는 control을 반환합니다.',
     loading: '불러오는 중...',
     empty: '등록된 플래그가 없습니다.',
     errorCreate: '생성에 실패했습니다.',
     errorUpdate: '업데이트에 실패했습니다.',
+    errorArchive: '보관에 실패했습니다.',
   },
   en: {
     title: 'Feature Flags',
@@ -38,10 +42,14 @@ const t = {
     creating: 'Creating...',
     save: 'Save',
     saving: 'Saving...',
+    archive: 'Archive',
+    archiving: 'Archiving...',
+    archiveConfirm: 'Archive this flag? It will be hidden from the list and decide will return control.',
     loading: 'Loading...',
     empty: 'No flags configured.',
     errorCreate: 'Failed to create flag.',
     errorUpdate: 'Failed to update flag.',
+    errorArchive: 'Failed to archive flag.',
   },
 };
 
@@ -58,6 +66,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const [rolloutDrafts, setRolloutDrafts] = useState<Record<string, number>>({});
   const [savingRolloutKey, setSavingRolloutKey] = useState<string | null>(null);
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
+  const [archivingKey, setArchivingKey] = useState<string | null>(null);
 
   useEffect(() => {
     featureFlagApi.list()
@@ -120,6 +129,25 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     }
   };
 
+  const handleArchive = async (flag: FeatureFlag) => {
+    if (!window.confirm(tr.archiveConfirm)) return;
+    setArchivingKey(flag.flag_key);
+    setError(null);
+    try {
+      await featureFlagApi.archive(flag.flag_key);
+      setFlags(prev => prev.filter(f => f.flag_key !== flag.flag_key));
+      setRolloutDrafts(prev => {
+        const next = { ...prev };
+        delete next[flag.flag_key];
+        return next;
+      });
+    } catch {
+      setError(tr.errorArchive);
+    } finally {
+      setArchivingKey(null);
+    }
+  };
+
   if (loading) return <p className="text-slate-500 text-sm p-8">{tr.loading}</p>;
 
   return (
@@ -174,6 +202,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                   const rolloutChanged = draftRollout !== flag.rollout_pct;
                   const isSavingRollout = savingRolloutKey === flag.flag_key;
                   const isUpdating = updatingKey === flag.flag_key;
+                  const isArchiving = archivingKey === flag.flag_key;
 
                   return (
                   <TableRow key={flag.flag_key}>
@@ -202,13 +231,26 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <button
-                        onClick={() => handleToggle(flag)}
-                        disabled={isUpdating}
-                        className="text-slate-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
-                      >
-                        {flag.enabled ? <ToggleRight className="h-6 w-6 text-indigo-500" /> : <ToggleLeft className="h-6 w-6" />}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggle(flag)}
+                          disabled={isUpdating || isArchiving}
+                          className="text-slate-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
+                          aria-label={flag.enabled ? tr.disabled : tr.enabled}
+                        >
+                          {flag.enabled ? <ToggleRight className="h-6 w-6 text-indigo-500" /> : <ToggleLeft className="h-6 w-6" />}
+                        </button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 rounded-lg px-2 text-xs text-slate-500 hover:text-rose-600"
+                          onClick={() => handleArchive(flag)}
+                          disabled={isArchiving || isUpdating}
+                        >
+                          <Archive className="h-3.5 w-3.5 mr-1" />
+                          {isArchiving ? tr.archiving : tr.archive}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                   );

@@ -52,6 +52,7 @@ export interface FeatureFlag {
   description?: string;
   rollout_pct: number;
   enabled: boolean;
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -366,8 +367,9 @@ export const decisionApi = {
 };
 
 export const featureFlagApi = {
-  list: async (): Promise<FeatureFlag[]> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/`);
+  list: async (includeArchived = false): Promise<FeatureFlag[]> => {
+    const params = includeArchived ? '?include_archived=true' : '';
+    const res = await fetch(`${API_BASE_URL}/feature-flags/${params}`);
     if (!res.ok) throw new Error('Failed to fetch flags');
     return res.json();
   },
@@ -408,6 +410,13 @@ export const featureFlagApi = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to create flag rule');
+    return res.json();
+  },
+  archive: async (flagKey: string): Promise<FeatureFlag> => {
+    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/archive`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to archive flag');
     return res.json();
   },
   updateRule: async (flagKey: string, ruleId: string, data: FeatureFlagRuleUpdate): Promise<FeatureFlagRule> => {

@@ -28,12 +28,18 @@ def _to_iso(value: Optional[datetime]) -> Optional[str]:
 
 class FeatureFlagService:
 
-    async def list(self) -> List[FeatureFlag]:
-        rows = await d1.query("SELECT * FROM feature_flag ORDER BY created_at DESC")
+    async def list(self, include_archived: bool = False) -> List[FeatureFlag]:
+        if include_archived:
+            rows = await d1.query("SELECT * FROM feature_flag ORDER BY created_at DESC")
+        else:
+            rows = await d1.query("SELECT * FROM feature_flag WHERE archived_at IS NULL ORDER BY created_at DESC")
         return [self._to_flag(r) for r in rows]
 
-    async def get(self, flag_key: str) -> Optional[FeatureFlag]:
-        rows = await d1.query("SELECT * FROM feature_flag WHERE flag_key = ?", [flag_key])
+    async def get(self, flag_key: str, include_archived: bool = True) -> Optional[FeatureFlag]:
+        if include_archived:
+            rows = await d1.query("SELECT * FROM feature_flag WHERE flag_key = ?", [flag_key])
+        else:
+            rows = await d1.query("SELECT * FROM feature_flag WHERE flag_key = ? AND archived_at IS NULL", [flag_key])
         return self._to_flag(rows[0]) if rows else None
 
     async def create(self, data: FeatureFlagCreate) -> FeatureFlag:
@@ -54,7 +60,7 @@ class FeatureFlagService:
         return created
 
     async def update(self, flag_key: str, data: FeatureFlagUpdate) -> FeatureFlag:
-        existing = await self.get(flag_key)
+        existing = await self.get(flag_key, include_archived=False)
         if not existing:
             raise HTTPException(status_code=404, detail="Feature flag not found")
 
@@ -72,10 +78,26 @@ class FeatureFlagService:
         )
         if not ok:
             raise HTTPException(status_code=502, detail="Failed to update feature flag")
-        updated = await self.get(flag_key)
+        updated = await self.get(flag_key, include_archived=False)
         if not updated:
             raise HTTPException(status_code=502, detail="Feature flag update did not persist")
         return updated
+
+    async def archive(self, flag_key: str) -> FeatureFlag:
+        existing = await self.get(flag_key, include_archived=False)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Feature flag not found")
+        now = _now()
+        ok = await d1.execute(
+            "UPDATE feature_flag SET enabled = 0, archived_at = ?, updated_at = ? WHERE flag_key = ? AND archived_at IS NULL",
+            [now, now, flag_key],
+        )
+        if not ok:
+            raise HTTPException(status_code=502, detail="Failed to archive feature flag")
+        archived = await self.get(flag_key, include_archived=True)
+        if not archived or archived.archived_at is None:
+            raise HTTPException(status_code=502, detail="Feature flag archive did not persist")
+        return archived
 
     async def list_rules(self, flag_key: str) -> List[FeatureFlagRule]:
         await self._require_flag(flag_key)
@@ -156,7 +178,7 @@ class FeatureFlagService:
         flag = rows[0]
         enabled = int(flag["enabled"]) == 1
         rollout_pct = int(flag["rollout_pct"])
-        if not enabled:
+        if flag.get("archived_at") or not enabled:
             return "control"
 
         rules = await d1.query(
@@ -176,7 +198,7 @@ class FeatureFlagService:
         return _decide_variant(user_id, flag_key, enabled, rollout_pct)
 
     async def _require_flag(self, flag_key: str) -> FeatureFlag:
-        flag = await self.get(flag_key)
+        flag = await self.get(flag_key, include_archived=False)
         if not flag:
             raise HTTPException(status_code=404, detail="Feature flag not found")
         return flag
@@ -240,6 +262,7 @@ class FeatureFlagService:
             description=row.get("description"),
             rollout_pct=int(row["rollout_pct"]),
             enabled=int(row["enabled"]) == 1,
+            archived_at=row.get("archived_at"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )

@@ -101,6 +101,41 @@ class TestUpdateFeatureFlag:
         assert resp.json()["detail"] == "Failed to update feature flag"
 
 
+class TestArchiveFeatureFlag:
+    def test_archive_hides_flag_from_default_list_and_disables_decide(self):
+        created = _create_flag("archive_me", rollout_pct=100, enabled=True)
+        assert created.status_code == 201
+
+        archived = client.post(f"{BASE}/archive_me/archive")
+        assert archived.status_code == 200
+        archived_body = archived.json()
+        assert archived_body["enabled"] is False
+        assert archived_body["archived_at"]
+
+        default_list = client.get(BASE + "/")
+        assert default_list.status_code == 200
+        assert all(flag["flag_key"] != "archive_me" for flag in default_list.json())
+
+        archived_list = client.get(BASE + "/", params={"include_archived": True})
+        assert archived_list.status_code == 200
+        assert any(flag["flag_key"] == "archive_me" for flag in archived_list.json())
+
+        decision = client.get(f"{BASE}/decide", params={"flag_key": "archive_me", "user_id": "user-1"})
+        assert decision.status_code == 200
+        assert decision.json()["data"]["variant"] == "control"
+
+    def test_archive_missing_returns_404(self):
+        resp = client.post(f"{BASE}/missing_flag/archive")
+        assert resp.status_code == 404
+
+    def test_update_archived_flag_returns_404(self):
+        assert _create_flag("archived_update", rollout_pct=10, enabled=True).status_code == 201
+        assert client.post(f"{BASE}/archived_update/archive").status_code == 200
+
+        resp = client.patch(f"{BASE}/archived_update", json={"rollout_pct": 50})
+        assert resp.status_code == 404
+
+
 class TestDecideFeatureFlag:
     def test_unknown_flag_returns_control(self):
         resp = client.get(f"{BASE}/decide", params={"flag_key": "unknown_flag", "user_id": "user-1"})

@@ -27,8 +27,8 @@ async def decide(
 
 
 @router.get("/", response_model=List[FeatureFlag])
-async def list_flags():
-    return await feature_flag_service.list()
+async def list_flags(include_archived: bool = Query(default=False)):
+    return await feature_flag_service.list(include_archived=include_archived)
 
 
 @router.post("/", response_model=FeatureFlag, status_code=201)
@@ -39,6 +39,11 @@ async def create_flag(data: FeatureFlagCreate):
 @router.patch("/{flag_key}", response_model=FeatureFlag)
 async def update_flag(data: FeatureFlagUpdate, flag_key: str = Path(..., pattern=FLAG_KEY_PATTERN)):
     return await feature_flag_service.update(flag_key, data)
+
+
+@router.post("/{flag_key}/archive", response_model=FeatureFlag)
+async def archive_flag(flag_key: str = Path(..., pattern=FLAG_KEY_PATTERN)):
+    return await feature_flag_service.archive(flag_key)
 
 
 @router.get("/{flag_key}/rules", response_model=List[FeatureFlagRule])

@@ -23,6 +23,7 @@ class FeatureFlag(BaseModel):
     description: Optional[str] = None
     rollout_pct: int
     enabled: bool
+    archived_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

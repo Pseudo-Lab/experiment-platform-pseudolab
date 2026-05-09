@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS feature_flag (
     description TEXT,
     rollout_pct INTEGER NOT NULL DEFAULT 0,
     enabled     INTEGER NOT NULL DEFAULT 0,
+    archived_at TEXT,
     created_at  TEXT    NOT NULL,
     updated_at  TEXT    NOT NULL
 );
