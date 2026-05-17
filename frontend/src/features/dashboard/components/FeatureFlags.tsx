@@ -236,20 +236,31 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     if (summary === null) return <span className="text-xs text-amber-600">{tr.exposureFailed}</span>;
     if (summary.total_exposures === 0) return <span className="text-xs text-slate-400">{tr.exposureEmpty}</span>;
 
-    const treatment = summary.variant_counts.treatment ?? 0;
-    const control = summary.variant_counts.control ?? 0;
+    const variantEntries = Object.entries(summary.variant_counts)
+      .filter(([, count]) => count > 0)
+      .sort(([a], [b]) => {
+        if (a === 'control') return -1;
+        if (b === 'control') return 1;
+        return a.localeCompare(b);
+      });
+
+    const labelFor = (key: string) =>
+      key === 'control' ? tr.control : key === 'treatment' ? tr.treatment : key;
+
+    const controlChip = 'rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+    const variantChip = 'rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300';
+
     return (
       <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
         <div className="font-semibold text-slate-700 dark:text-slate-300">
           {tr.totalExposure} {summary.total_exposures.toLocaleString()} · {tr.firstExposure} {summary.first_exposure_users.toLocaleString()}
         </div>
         <div className="flex flex-wrap gap-x-2 gap-y-1">
-          <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
-            {tr.treatment} {treatment.toLocaleString()}
-          </span>
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            {tr.control} {control.toLocaleString()}
-          </span>
+          {variantEntries.map(([key, count]) => (
+            <span key={key} className={key === 'control' ? controlChip : variantChip}>
+              {labelFor(key)} {count.toLocaleString()}
+            </span>
+          ))}
         </div>
       </div>
     );

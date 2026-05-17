@@ -129,6 +129,46 @@ describe('FeatureFlags', () => {
     (window.confirm as any).mockRestore();
   });
 
+  it('renders custom variant chips (e.g. list, sidebar) beyond treatment/control', async () => {
+    (featureFlagApi.exposureSummary as any).mockResolvedValueOnce({
+      flag_key: 'new_home',
+      from: null,
+      to: null,
+      total_exposures: 200,
+      unique_users: 200,
+      first_exposure_users: 200,
+      variant_counts: { control: 100, list: 95, sidebar: 5 },
+    });
+
+    await act(async () => {
+      render(<FeatureFlags lang="ko" />);
+    });
+
+    expect(await screen.findByText('control 100')).toBeInTheDocument();
+    expect(screen.getByText('list 95')).toBeInTheDocument();
+    expect(screen.getByText('sidebar 5')).toBeInTheDocument();
+  });
+
+  it('omits zero-count variants from chips', async () => {
+    (featureFlagApi.exposureSummary as any).mockResolvedValueOnce({
+      flag_key: 'new_home',
+      from: null,
+      to: null,
+      total_exposures: 15,
+      unique_users: 15,
+      first_exposure_users: 15,
+      variant_counts: { control: 10, list: 0, sidebar: 5 },
+    });
+
+    await act(async () => {
+      render(<FeatureFlags lang="ko" />);
+    });
+
+    expect(await screen.findByText('control 10')).toBeInTheDocument();
+    expect(screen.getByText('sidebar 5')).toBeInTheDocument();
+    expect(screen.queryByText(/^list /)).not.toBeInTheDocument();
+  });
+
   it('renders empty exposure state in English', async () => {
     (featureFlagApi.exposureSummary as any).mockResolvedValueOnce({
       flag_key: 'new_home',
