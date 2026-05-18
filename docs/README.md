@@ -65,12 +65,14 @@ Replaced-By: <path>   # 해당 시만
 - 액티브 인덱스(읽기 시작점): `docs/reports/_index.md`
 - 의사결정 로그(append-only): `docs/reports/decision-log.md`
 - 운영 핸드오프: `docs/reports/hand-off-12th-study-platform.md`
+- 실험 분석가 역할 정의: `docs/reports/experiment-analyst-agent-research-2026-05-18.md`
 - 실행 계획: `docs/reports/dashboard-execution-plan-v1.md`
 - Feature Flag 개선 계획: `docs/reports/feature-flag-improvement-plan.md`
 - 팀장 기준 계획: `docs/reports/team-lead-rebaseline-plan.md`
 - KPI 정의: `docs/reports/kpi-definition-v2.md`
 - 데이터 검증: `docs/reports/dataset-validation-v2.md`
 - 공통 가이드: `docs/guides/setup_guide.md`, `docs/guides/design_system.md`, `docs/guides/data_access.md`, `docs/guides/experiment_platform_concepts.md`, `docs/guides/agent_collaboration.md`
+- 템플릿: `docs/templates/agent-handoff.md`, `docs/templates/experiment-analyst-brief.md`
 
 ---
 

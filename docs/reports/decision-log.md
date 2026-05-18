@@ -53,3 +53,9 @@ Last-Validated: 2026-03-22
 - Why: 실험 플랫폼 작업이 backend/frontend/docs/infra를 자주 넘나들고, 여러 에이전트나 에디터 창이 병렬로 열릴 수 있어 파일 충돌과 맥락 손실을 줄여야 한다.
 - Impact: 병렬 작업은 기본적으로 `git worktree`를 사용하고, 영향 범위가 큰 작업은 `docs/templates/agent-handoff.md` 형식으로 handoff를 남긴다.
 - Owner: soo
+
+- Date: 2026-05-18
+- Decision: 실험 의사결정 품질을 검토하는 `Experiment Analyst` 에이전트 역할을 공식 협업 역할에 추가한다.
+- Why: 실험 플랫폼은 기능 동작 여부뿐 아니라 가설, primary/guardrail metric, randomization unit, exposure 품질, SRM, 데이터 신선도, 결과 해석이 의사결정 신뢰도를 좌우하기 때문이다.
+- Impact: 새 실험, metric 변경, query-backed segment/rule 변경, exposure/result readout 작업은 `Experiment Analyst` 체크를 우선 고려하고, 분석 결과는 `docs/templates/experiment-analyst-brief.md` 또는 `docs/reports/**`에 남긴다.
+- Owner: soo

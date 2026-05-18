@@ -22,6 +22,7 @@ Last-Validated: 2026-05-18
 - `docs/reports/team-lead-review-v2.md` — 팀장 리뷰
 - `docs/reports/experiment-platform-foundation-plan.md` — 실험 플랫폼 기반 계획
 - `docs/reports/feature-flag-improvement-plan.md` — Feature Flag 개선 계획
+- `docs/reports/experiment-analyst-agent-research-2026-05-18.md` — Experiment Analyst 에이전트 리서치/역할 정의
 - `docs/reports/hand-off-12th-study-platform.md` — 운영 핸드오프
 - `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md` — Feature Flag UI 이어받기
 
@@ -31,6 +32,10 @@ Last-Validated: 2026-05-18
 - `docs/guides/data_access.md` — 데이터 접근 규칙
 - `docs/guides/experiment_platform_concepts.md` — 실험 플랫폼/feature flag 첫 진입 개념 가이드
 - `docs/guides/agent_collaboration.md` — 에이전트 협업/워크트리/핸드오프 규칙
+
+## 2-1) Templates
+- `docs/templates/agent-handoff.md` — 에이전트 handoff 템플릿
+- `docs/templates/experiment-analyst-brief.md` — 실험 분석가 브리프/readout 템플릿
 
 ## 3) 읽기 순서
 1. `AGENTS.md`와 `docs/reports/decision-log.md`를 먼저 확인한다.

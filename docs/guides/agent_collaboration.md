@@ -164,11 +164,75 @@ Team Lead 책임:
 | Demo App | `examples/demo-app` behavior, SDK usage, demo seed flow |
 | Infra/Ops | Docker compose, CI, env vars, D1/R2 runtime connectivity, deployment notes |
 | Data/Analytics | D1 source tables, metric definitions, exposure/result connection |
+| Experiment Analyst | experiment hypothesis, primary/guardrail metrics, randomization unit, exposure quality, SRM/readout risk |
 | QA | regression, edge cases, loading/error/empty/success states, release confidence |
 | Security | auth, permission, secrets, privacy-sensitive data flow |
 | Product | scope, acceptance criteria, prioritization |
 
 모든 작업에 모든 역할이 필요한 것은 아닙니다. 필요한 최소 역할만 사용합니다.
+
+### 7-1. Experiment Analyst 역할
+
+이 저장소는 일반 웹서비스가 아니라 실험 플랫폼이므로, 실험 의사결정 품질을 보는 `Experiment Analyst` 역할을 별도로 둡니다.
+
+기본 원칙:
+
+1. `Experiment Analyst`는 read-only가 기본입니다.
+2. 운영 DB를 직접 수정하지 않습니다.
+3. 신규 실험/feature flag 분석에서 raw Supabase DB를 직접 조회하지 않습니다.
+4. D1 동기화 데이터, export, 제한 API, 문서화된 스냅샷을 기준으로 분석합니다.
+5. 최종 제품 결정은 단독으로 내리지 않고, 근거와 리스크를 Product/Backend/Frontend/Infra owner에게 넘깁니다.
+
+호출 조건:
+
+1. 새 experiment 또는 feature flag가 의사결정 metric과 연결됩니다.
+2. primary metric, secondary metric, guardrail metric, KPI 정의가 추가/변경됩니다.
+3. query-backed segment, audience, targeting rule이 추가/변경됩니다.
+4. exposure logging, assignment, rollout algorithm이 변경됩니다.
+5. treatment/control 결과 readout 또는 ship/rollback 판단이 필요합니다.
+6. 데이터 소스, 스키마, freshness, user identifier mapping이 결과 해석에 영향을 줍니다.
+7. “이 숫자를 믿어도 되는가?”가 핵심 질문입니다.
+
+주요 체크:
+
+1. hypothesis가 명확한지 확인합니다.
+2. primary metric과 secondary/guardrail metric을 분리합니다.
+3. metric의 분자, 분모, unit, time window, timezone을 명시합니다.
+4. randomization unit과 metric unit이 일치하는지 확인합니다.
+5. exposure가 결과 event보다 먼저 기록되는지 확인합니다.
+6. expected split과 observed split을 비교하고 SRM 위험을 남깁니다.
+7. ratio metric은 numerator/denominator를 분리해서 해석합니다.
+8. 데이터 신선도, row count, missing day, schema drift를 확인합니다.
+9. 봇/내부 트래픽 제외 가능 여부를 확인합니다.
+10. 결과를 `ship`, `hold`, `rollback`, `rerun`, `needs more data` 중 어떤 후보로 볼지 근거를 제시합니다.
+
+기본 입력:
+
+1. `docs/guides/experiment_platform_concepts.md`
+2. `docs/reports/feature-flag-improvement-plan.md`
+3. `docs/reports/kpi-definition-v2.md`
+4. `docs/reports/dataset-validation-v2.md`
+5. `docs/reports/data-analyst-report-v2.md`
+6. `docs/templates/experiment-analyst-brief.md`
+
+기본 산출물:
+
+1. `docs/reports/**` 아래 분석 리포트 또는 readout
+2. metric contract 초안 또는 변경 제안
+3. segment/exposure 품질 체크 결과
+4. backend/frontend/infra owner에게 넘길 구현 요구사항
+
+템플릿:
+
+```text
+docs/templates/experiment-analyst-brief.md
+```
+
+상세 근거:
+
+```text
+docs/reports/experiment-analyst-agent-research-2026-05-18.md
+```
 
 ---
 
