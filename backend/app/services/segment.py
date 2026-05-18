@@ -1,12 +1,59 @@
+import json
+import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException
 
 from app.db import d1
-from app.schemas.segment import Segment, SegmentCreate, SegmentMember, SegmentRefreshRequest, SegmentRefreshResponse
+from app.schemas.segment import (
+    Segment,
+    SegmentCreate,
+    SegmentMember,
+    SegmentQueryTemplate,
+    SegmentRefreshRequest,
+    SegmentRefreshResponse,
+)
 
-SUPPORTED_QUERY_SEGMENTS: dict[str, str] = {}
+
+@dataclass(frozen=True)
+class QuerySegmentTemplate:
+    sql: str
+    description: str
+    user_id_column: str = "user_id"
+    params: tuple = ()
+    rules_schema: dict | None = None
+
+
+SUPPORTED_QUERY_SEGMENTS: dict[str, QuerySegmentTemplate] = {
+    "project_members": QuerySegmentTemplate(
+        description="Distinct users with at least one synced project membership.",
+        sql="""
+            SELECT DISTINCT user_id
+              FROM dl_project_members
+             WHERE user_id IS NOT NULL AND user_id != ''
+        """
+    ),
+    "discord_active_users": QuerySegmentTemplate(
+        description="Distinct Discord authors active within the configured day window.",
+        sql="""
+            SELECT DISTINCT author_id AS user_id
+              FROM discord_messages
+             WHERE author_id IS NOT NULL AND author_id != ''
+               AND created_at >= datetime('now', ?)
+        """,
+        params=("-30 days",),
+        rules_schema={
+            "active_days": {
+                "type": "integer",
+                "default": 30,
+                "minimum": 1,
+                "maximum": 365,
+            }
+        },
+    ),
+}
 
 
 def _now() -> str:
@@ -14,6 +61,16 @@ def _now() -> str:
 
 
 class SegmentService:
+    def query_templates(self) -> List[SegmentQueryTemplate]:
+        return [
+            SegmentQueryTemplate(
+                query_name=query_name,
+                description=template.description,
+                rules_schema=template.rules_schema or {},
+            )
+            for query_name, template in sorted(SUPPORTED_QUERY_SEGMENTS.items())
+        ]
+
     async def list(self) -> List[Segment]:
         rows = await d1.query(
             """
@@ -46,8 +103,11 @@ class SegmentService:
         if data.source == "query":
             if not data.query_name:
                 raise HTTPException(status_code=400, detail="query_name is required for query-backed segments")
+            if data.user_ids:
+                raise HTTPException(status_code=400, detail="query-backed segments must not set user_ids")
             if data.query_name not in SUPPORTED_QUERY_SEGMENTS:
                 raise HTTPException(status_code=501, detail=f"segment query '{data.query_name}' is not supported yet")
+            self._build_query_template(data.query_name, self._parse_rules_json(data.rules_json))
         if data.source == "manual" and data.query_name:
             raise HTTPException(status_code=400, detail="manual segments must not set query_name")
 
@@ -86,7 +146,10 @@ class SegmentService:
 
         if segment.query_name not in SUPPORTED_QUERY_SEGMENTS:
             raise HTTPException(status_code=501, detail=f"segment query '{segment.query_name}' is not supported yet")
-        raise HTTPException(status_code=501, detail="query-backed segment refresh is not implemented yet")
+        user_ids = await self._query_segment_user_ids(segment.query_name, segment.rules_json)
+        count = await self._replace_members(segment_id, user_ids, f"query:{segment.query_name}", now)
+        await d1.execute("UPDATE feature_segment SET updated_at = ? WHERE id = ?", [now, segment_id])
+        return SegmentRefreshResponse(segment_id=segment_id, refreshed_count=count, source=segment.source)
 
     async def members(self, segment_id: str, limit: int = 100) -> List[SegmentMember]:
         segment = await self.get(segment_id)
@@ -123,6 +186,51 @@ class SegmentService:
             if not ok:
                 raise HTTPException(status_code=502, detail="Failed to refresh segment members")
         return len(unique_user_ids)
+
+    async def _query_segment_user_ids(self, query_name: Optional[str], rules_json: Optional[str]) -> List[str]:
+        if not query_name or query_name not in SUPPORTED_QUERY_SEGMENTS:
+            raise HTTPException(status_code=501, detail=f"segment query '{query_name}' is not supported yet")
+        rules = self._parse_rules_json(rules_json)
+        template = self._build_query_template(query_name, rules)
+        main_database_id = os.getenv("D1_MAIN_DATABASE_ID")
+        if not main_database_id:
+            raise HTTPException(status_code=503, detail="D1_MAIN_DATABASE_ID is required for query-backed segment refresh")
+        rows = await d1.query(
+            template.sql,
+            list(template.params),
+            database_id=main_database_id,
+        )
+        return [str(row[template.user_id_column]) for row in rows if row.get(template.user_id_column)]
+
+    def _parse_rules_json(self, rules_json: Optional[str]) -> dict:
+        if not rules_json:
+            return {}
+        try:
+            parsed = json.loads(rules_json)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="rules_json must be valid JSON")
+        if not isinstance(parsed, dict):
+            raise HTTPException(status_code=400, detail="rules_json must be a JSON object")
+        return parsed
+
+    def _build_query_template(self, query_name: str, rules: dict) -> QuerySegmentTemplate:
+        if query_name == "discord_active_users":
+            try:
+                active_days = int(rules.get("active_days", 30))
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=400, detail="active_days must be an integer")
+            if active_days < 1 or active_days > 365:
+                raise HTTPException(status_code=400, detail="active_days must be between 1 and 365")
+            base_template = SUPPORTED_QUERY_SEGMENTS[query_name]
+            return QuerySegmentTemplate(
+                sql=base_template.sql,
+                description=base_template.description,
+                params=(f"-{active_days} days",),
+                rules_schema=base_template.rules_schema,
+            )
+        if rules:
+            raise HTTPException(status_code=400, detail=f"segment query '{query_name}' does not accept rules_json")
+        return SUPPORTED_QUERY_SEGMENTS[query_name]
 
     def _to_segment(self, row: dict) -> Segment:
         return Segment(

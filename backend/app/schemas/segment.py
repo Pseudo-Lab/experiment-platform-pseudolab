@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -47,3 +47,9 @@ class SegmentMember(BaseModel):
     user_id: str
     reason: Optional[str] = None
     refreshed_at: datetime
+
+
+class SegmentQueryTemplate(BaseModel):
+    query_name: str
+    description: str
+    rules_schema: dict[str, Any] = Field(default_factory=dict)

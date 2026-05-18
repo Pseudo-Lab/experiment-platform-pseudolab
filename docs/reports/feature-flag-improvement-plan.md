@@ -1,8 +1,10 @@
 Status: draft
-Last-Validated: 2026-05-08
+Last-Validated: 2026-05-18
 Owner: experiment-lab
 
 # Feature Flag 개선 계획
+
+> 실험 플랫폼/Feature Flag 개념이 익숙하지 않다면 먼저 `docs/guides/experiment_platform_concepts.md`를 읽는다.
 
 ## 1. 배경
 
@@ -19,15 +21,56 @@ Owner: experiment-lab
 
 따라서 피쳐플래그를 “단순 on/off + percentage rollout”에서 “세그먼트 기반 실험 제어 레이어”로 확장한다.
 
+### 1.1 2026-05-18 운영 조회 스냅샷
+
+민감정보 값은 확인/기록하지 않고, 환경변수 존재 여부와 D1 스키마/row count만 확인했다.
+
+환경변수 상태:
+
+| 항목 | 상태 |
+|---|---|
+| `CLOUDFLARE_ACCOUNT_ID` | 설정됨 |
+| `CLOUDFLARE_API_TOKEN` | 설정됨 |
+| `D1_DATABASE_ID` | 설정됨 |
+| `D1_MAIN_DATABASE_ID` | 설정됨 |
+
+`pseudolab-exp` feature flag 관련 테이블:
+
+| 테이블 | 상태 | 현재 row count |
+|---|---|---:|
+| `feature_flag` | 존재 | 7 |
+| `feature_segment` | 존재 | 0 |
+| `feature_segment_member` | 존재 | 0으로 추정 |
+| `feature_flag_rule` | 존재 | 4 |
+| `feature_flag_exposure` | 존재 | 361 |
+
+현재 rule 4건은 모두 `segment_id` 없이 동작하는 rule이며, 존재하지 않는 segment를 참조하는 dangling rule은 없었다.
+
+`pseudolab-main` source 테이블:
+
+| 테이블 | 상태 | 현재 row count / distinct users |
+|---|---|---:|
+| `dl_project_members` | 존재 | 9,121 rows / 213 distinct users |
+| `discord_messages` | 존재 | 7,367 rows / 최근 30일 11 users / 최근 7일 8 users |
+
+주의: 운영 D1의 `discord_messages`에는 `is_bot` 컬럼이 없다. 따라서 현재 `discord_active_users` template은 `author_id`, `created_at` 기준으로만 계산한다. 봇 제외 조건이 필요하면 ETL/D1 스키마에 `is_bot` 또는 동등한 식별 컬럼을 먼저 추가해야 한다.
+
+조회 결과에 따른 판단:
+
+1. 백엔드 마이그레이션은 운영 D1에 적용되어 있다.
+2. query-backed segment를 만들 수 있는 source 테이블도 존재한다.
+3. 아직 운영 segment가 없으므로 다음 개발의 핵심은 `/segments` UI와 rule UI다.
+4. `feature_flag_rule`은 이미 사용 중이지만 segment targeting은 아직 운영 데이터로 쓰이지 않고 있다.
+
 ### 데이터 소스 전제
 
 DB 역할은 다음처럼 구분한다.
 
-- **Supabase**: 가짜연구소 홈페이지 raw DB. 운영 원천 데이터이며 실험 플랫폼에서 직접 자유 쿼리하는 대상이 아니다.
+- **Supabase**: 가짜연구소 홈페이지 raw DB. 운영 원천 데이터이며 실험 플랫폼/feature flag/분석 작업에서 직접 활용하지 않는다.
 - **Cloudflare D1 홈페이지 DB**: 가짜연구소 홈페이지용 DB. raw DB에서 매일 동기화된 데이터를 보유한다.
 - **실험 플랫폼 DB**: 실험/플래그/노출/세그먼트 메타데이터를 저장하는 DB.
 
-피쳐플래그 세그먼트는 raw Supabase를 직접 때리는 구조가 아니라, **매일 동기화된 D1 홈페이지 DB 또는 실험 플랫폼용 동기화 DB를 안전한 소스**로 사용한다. 실험 플랫폼 DB에는 segment snapshot, rule, exposure 등 실험 운영에 필요한 파생 데이터를 저장한다.
+피쳐플래그 세그먼트는 raw Supabase를 직접 때리는 구조가 아니라, **매일 동기화된 D1 홈페이지 DB 또는 실험 플랫폼용 동기화 DB를 안전한 소스**로 사용한다. 실험 플랫폼 DB에는 segment snapshot, rule, exposure 등 실험 운영에 필요한 파생 데이터를 저장한다. 분석가에게도 Supabase raw DB 계정보다는 D1 스키마/export/read-only query API를 제공한다.
 
 ---
 
@@ -127,10 +170,10 @@ DB 역할은 다음처럼 구분한다.
 
 ### 검증 현황
 
-- Backend tests: `73 passed`
+- Backend tests: `112 passed` (2026-05-18)
 - Frontend tests: `42 passed`
 - Frontend build: 성공
-- 단, feature flag 전용 회귀 테스트는 아직 없다.
+- Feature flag/segment 전용 backend 회귀 테스트 포함
 
 ---
 
@@ -280,14 +323,19 @@ CREATE TABLE feature_flag_rule (
 
 2. Segment API 추가
    - `GET /segments`
+   - `GET /segments/query-templates`
    - `POST /segments`
    - `POST /segments/{id}/refresh`
    - `GET /segments/{id}/members?limit=`
+   - 현재 구현 상태(2026-05-18): manual segment, allowlisted query-backed segment refresh, query template 목록 조회 지원
 3. 안전한 query registry 도입
    - UI에서 raw SQL 직접 입력 금지
    - raw Supabase 직접 조회 금지
    - 매일 동기화된 D1 홈페이지 DB/실험 플랫폼용 동기화 DB를 대상으로 서버 allowlisted query templates 정의
    - 예: `active_cohort_members`, `project_members`, `discord_active_users`, `github_active_users`
+   - 현재 allowlist: `project_members`, `discord_active_users`
+   - `discord_active_users`는 현재 운영 D1의 `discord_messages.author_id`, `created_at` 기준으로 계산한다. 봇 제외가 필요하면 `is_bot` 같은 식별 컬럼을 ETL/D1 스키마에 먼저 추가해야 한다.
+   - query-backed refresh는 `D1_MAIN_DATABASE_ID`가 설정된 경우에만 실행하며, 누락 시 빈 segment로 성공 처리하지 않고 503을 반환
 4. Feature flag rule API 추가
    - `GET /feature-flags/{flag_key}/rules`
    - `POST /feature-flags/{flag_key}/rules`
@@ -351,16 +399,19 @@ CREATE INDEX idx_feature_flag_exposure_evaluated_at ON feature_flag_exposure(eva
 목표: 운영자가 코드 없이 segment/rule/rollout을 관리한다.
 
 작업:
-1. `/feature-flags` 상세 페이지 추가
+1. `/segments` 관리 화면 추가
+   - query template 목록 조회: `GET /api/v1/segments/query-templates`
+   - segment 목록 조회
+   - manual segment 생성
+   - query-backed segment 생성
+   - refresh 실행
+   - member count와 member 일부 확인
+   - 빈 상태, 실패 상태, refresh 중 상태 표시
+2. `/feature-flags` 상세 페이지 추가
    - 기본정보
    - rules 목록
    - exposure summary
    - audit log
-2. `/segments` 관리 화면 추가
-   - segment 목록
-   - 조건/템플릿 선택
-   - refresh
-   - member count 확인
 3. 룰 빌더 UI
    - Segment 선택
    - rollout percentage
@@ -371,6 +422,9 @@ CREATE INDEX idx_feature_flag_exposure_evaluated_at ON feature_flag_exposure(eva
    - 100% rollout 경고
    - disabled/expired 표시
    - 마지막 변경자/변경시각 표시
+   - dangling rule 표시
+   - `D1_MAIN_DATABASE_ID` 미설정/refresh 실패 메시지 표시
+   - Discord active users template은 현재 bot 제외가 불가하다는 안내 표시
 
 완료 기준:
 - 운영자가 UI에서 “대상군 선택 → rollout 설정 → 활성화 → 노출 확인” 흐름을 수행할 수 있음

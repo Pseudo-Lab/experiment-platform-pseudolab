@@ -1,7 +1,9 @@
 # 실험 플랫폼 기반 개발 계획
 
-> 최초 작성: 2026-04-08 | 최종 업데이트: 2026-04-15 (3차)
+> 최초 작성: 2026-04-08 | 최종 업데이트: 2026-05-18 (4차)
 > 목적: 분석가 실험 설계 병행 중, 플랫폼 개발 선행 항목 정의 및 관리
+
+> 실험 플랫폼 개념이 처음이면 먼저 `docs/guides/experiment_platform_concepts.md`를 읽는다.
 
 ---
 
@@ -19,17 +21,17 @@
 | 백엔드 API | FastAPI (Python) | 실험 로직, 통계 분석 |
 | 실험 플랫폼 DB | Cloudflare D1 (`pseudolab-exp`) | experiments, variants, assignments |
 | 데이터 웨어하우스 | Cloudflare D1 (`pseudolab-main`) | 성장시스템 `dl_*` 테이블 + Discord/GitHub 데이터 |
-| 성장 시스템 DB | Supabase (`zizxaljzqmfcwgjeiwvn`) | lvup 원천 데이터 (읽기 전용, 매일 D1으로 동기화) |
-| 분석가 접근 | PostgreSQL 읽기 전용 계정 | `initiative_analyst_reader` — 57개 테이블 |
+| 성장 시스템 원천 DB | Supabase (`zizxaljzqmfcwgjeiwvn`) | 운영 raw DB. 실험 플랫폼/분석 작업에서 직접 활용하지 않음 |
+| 분석가 접근 | Cloudflare D1 / export / 제한 API | D1 동기화 데이터 기준. `initiative_analyst_reader`는 legacy reference only |
 
 ---
 
 ## DB 구조
 
 ```
-lvup (Supabase)          → 유저 원천 데이터 (읽기만)
-                            xp_history, project_attendance, user_badges 등 57개 테이블
-                            매일 D1 pseudolab-main으로 동기화 (비식별화: name/email SHA-256 해시)
+lvup (Supabase)          → 운영 raw DB
+                            실험 플랫폼/분석가 직접 조회 대상에서 제외
+                            필요한 데이터는 ETL/동기화/export를 통해 D1 기준으로 사용
 
 Cloudflare D1
   pseudolab-main         → 커뮤니티 데이터 (Discord, GitHub)
@@ -45,7 +47,7 @@ Cloudflare D1
                            두 DB는 별개라 SQL 조인 불가 → 백엔드(Python)에서 합치는 구조
 
 유저 식별자              → 🔴 미결정 (성장시스템 담당자와 별도 논의 필요)
-                           방향: Supabase UUID 활용 가능성 높음
+                           방향: D1 동기화 데이터의 안정 식별자 기준으로 재정의 필요
                            현재 POC 단계에서는 개별 유저 추적 불필요
 ```
 
@@ -63,7 +65,7 @@ backend/app/
     status.py       ← 헬스체크 (/api/v1/status)
   db/
     d1.py           ← Cloudflare D1 클라이언트
-    supabase.py     ← Supabase 클라이언트 (lvup 조회용)
+    supabase.py     ← legacy fallback. 신규 분석/feature flag 경로에서는 직접 raw DB 조회 금지
   services/
     experiment.py   ← 실험 CRUD + 결정론적 할당 로직
 ```
@@ -80,13 +82,14 @@ GET /api/v1/experiments/{id}/assign/{user_id}
 
 ## 선행 개발 항목
 
-### 1. 분석가용 DB 접근 레이어
+### 1. 분석가용 데이터 접근 레이어
 
-**상태:** ✅ 완료 (2026-04-10)
+**상태:** 🟡 기준 변경 (2026-05-18)
 
-- 계정: `initiative_analyst_reader` (읽기 전용)
-- 접근 범위: 전체 81개 테이블 중 개인정보 제외 **57개**
-- 스크립트: `create_analyst_role.sql` (적용 완료)
+- 기존 기록: `initiative_analyst_reader` PostgreSQL 읽기 전용 계정
+- 현재 결정: raw Supabase DB는 실험 플랫폼/feature flag 분석 소스로 직접 활용하지 않음
+- 분석가 제공 기준: Cloudflare D1 동기화 데이터, export, 또는 제한된 read-only query/API
+- 비밀번호/토큰/connection string은 문서와 Discord에 평문 공유하지 않음
 
 ---
 
@@ -161,7 +164,7 @@ EDA 완료 후 분석가와 함께 확정. 성장 시스템 데이터 기반 후
 
 **상태:** 🔴 미착수
 
-실험 대상자 필터링. 분석가 접근 가능 테이블 기반 세그멘트:
+실험 대상자 필터링. D1 동기화 데이터 기반 세그멘트:
 
 | 기준 | D1 소스 테이블 | 현재 데이터 |
 |---|---|---|
@@ -188,7 +191,7 @@ EDA 완료 후 분석가와 함께 확정. 성장 시스템 데이터 기반 후
 
 | 항목 | 상태 |
 |---|---|
-| 분석가 DB 접근 레이어 | ✅ 완료 (2026-04-10) |
+| 분석가 데이터 접근 기준 | 🟡 raw DB 직접 활용 제외로 기준 변경 (2026-05-18) |
 | 실험 메타데이터 스키마 + CRUD API | ✅ 완료 (2026-04-13) |
 | 결정론적 할당 로직 | ✅ 완료 (2026-04-13) |
 | API 테스트 코드 (18개 케이스) | ✅ 완료 (2026-04-13) |
@@ -207,7 +210,7 @@ EDA 완료 후 분석가와 함께 확정. 성장 시스템 데이터 기반 후
 
 ## 다음 액션
 
-- [x] 분석가 DB 접근 레이어 (2026-04-10 완료)
+- [x] 분석가 데이터 접근 기준 정리 (2026-05-18: raw DB 직접 활용 제외, D1 기준)
 - [x] 실험 메타데이터 스키마 + CRUD API (2026-04-13 완료)
 - [x] 결정론적 할당 로직 (2026-04-13 완료)
 - [x] API 테스트 코드 18개 케이스 (2026-04-13 완료)
@@ -227,7 +230,7 @@ EDA 완료 후 분석가와 함께 확정. 성장 시스템 데이터 기반 후
 | 문서 | 경로 |
 |---|---|
 | 실험 플랫폼 리서치 | `실험플랫폼_리서치.md` |
-| 분석가 DB 접근 범위 | `분석가_DB접근_검토요청.md` |
+| 분석가 DB 접근 범위 | `분석가_DB접근_검토요청.md` (legacy reference) |
 | 접근 불가 테이블 목록 | `analyst_restricted_tables.md` |
 | DB 역할 생성 스크립트 | `create_analyst_role.sql` |
 | Lovable 이벤트 요청서 | `요청서.md` |

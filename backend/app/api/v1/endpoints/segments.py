@@ -7,6 +7,7 @@ from app.schemas.segment import (
     Segment,
     SegmentCreate,
     SegmentMember,
+    SegmentQueryTemplate,
     SegmentRefreshRequest,
     SegmentRefreshResponse,
 )
@@ -23,6 +24,11 @@ async def list_segments():
 @router.post("/", response_model=Segment, status_code=201)
 async def create_segment(data: SegmentCreate):
     return await segment_service.create(data)
+
+
+@router.get("/query-templates", response_model=List[SegmentQueryTemplate])
+async def list_query_templates():
+    return segment_service.query_templates()
 
 
 @router.post("/{segment_id}/refresh", response_model=SegmentRefreshResponse)

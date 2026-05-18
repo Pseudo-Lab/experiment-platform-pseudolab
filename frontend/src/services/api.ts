@@ -136,6 +136,11 @@ export interface SegmentRefreshResponse {
   refreshed_count: number;
   source: string;
 }
+export interface SegmentQueryTemplate {
+  query_name: string;
+  description: string;
+  rules_schema: Record<string, unknown>;
+}
 
 // ────────────────────────────────────────────────────────────
 // Analytics
@@ -453,6 +458,11 @@ export const featureFlagApi = {
 };
 
 export const segmentApi = {
+  queryTemplates: async (): Promise<SegmentQueryTemplate[]> => {
+    const res = await fetch(`${API_BASE_URL}/segments/query-templates`);
+    if (!res.ok) throw new Error('Failed to fetch segment query templates');
+    return res.json();
+  },
   list: async (): Promise<Segment[]> => {
     const res = await fetch(`${API_BASE_URL}/segments/`);
     if (!res.ok) throw new Error('Failed to fetch segments');

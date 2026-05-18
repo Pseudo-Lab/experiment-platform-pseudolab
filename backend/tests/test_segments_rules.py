@@ -41,6 +41,14 @@ def _decide(flag_key, user_id):
 
 
 class TestSegments:
+    def test_list_query_templates(self):
+        resp = client.get(f"{SEGMENTS}/query-templates")
+        assert resp.status_code == 200
+        templates = {item["query_name"]: item for item in resp.json()}
+        assert "project_members" in templates
+        assert "discord_active_users" in templates
+        assert templates["discord_active_users"]["rules_schema"]["active_days"]["default"] == 30
+
     def test_create_list_refresh_and_members_manual_segment(self):
         created = _create_segment("manual_users", ["user-2", "user-1", "user-1"])
         assert created.status_code == 201
@@ -67,7 +75,21 @@ class TestSegments:
         assert [m["user_id"] for m in members.json()] == ["user-3"]
         assert members.json()[0]["reason"] == "manual update"
 
-    def test_query_backed_segment_is_explicitly_unsupported(self):
+    def test_query_backed_segment_refreshes_from_allowlisted_d1_template(self, mock_d1):
+        mock_d1.executescript(
+            """
+            CREATE TABLE dl_project_members (
+                user_id TEXT,
+                project_id TEXT
+            );
+            INSERT INTO dl_project_members (user_id, project_id) VALUES
+                ('user-2', 'project-a'),
+                ('user-1', 'project-a'),
+                ('user-1', 'project-b'),
+                (NULL, 'project-a');
+            """
+        )
+
         resp = client.post(
             SEGMENTS + "/",
             json={
@@ -75,6 +97,115 @@ class TestSegments:
                 "name": "Project members",
                 "source": "query",
                 "query_name": "project_members",
+            },
+        )
+        assert resp.status_code == 201
+        assert resp.json()["member_count"] == 0
+
+        refreshed = client.post(f"{SEGMENTS}/project_members/refresh")
+        assert refreshed.status_code == 200
+        assert refreshed.json()["refreshed_count"] == 2
+
+        members = client.get(f"{SEGMENTS}/project_members/members")
+        assert [m["user_id"] for m in members.json()] == ["user-1", "user-2"]
+
+    def test_query_backed_discord_active_users_respects_active_days_rule(self, mock_d1):
+        mock_d1.executescript(
+            """
+            CREATE TABLE discord_messages (
+                author_id TEXT,
+                created_at TEXT
+            );
+            INSERT INTO discord_messages (author_id, created_at) VALUES
+                ('recent-user', datetime('now', '-3 days')),
+                ('old-user', datetime('now', '-20 days')),
+                (NULL, datetime('now', '-1 day'));
+            """
+        )
+
+        resp = client.post(
+            SEGMENTS + "/",
+            json={
+                "id": "discord_recent",
+                "name": "Discord recent users",
+                "source": "query",
+                "query_name": "discord_active_users",
+                "rules_json": '{"active_days": 7}',
+            },
+        )
+        assert resp.status_code == 201
+
+        refreshed = client.post(f"{SEGMENTS}/discord_recent/refresh")
+        assert refreshed.status_code == 200
+        assert refreshed.json()["refreshed_count"] == 1
+
+        members = client.get(f"{SEGMENTS}/discord_recent/members")
+        assert [m["user_id"] for m in members.json()] == ["recent-user"]
+        assert members.json()[0]["reason"] == "query:discord_active_users"
+
+    def test_query_backed_segment_rejects_manual_user_ids(self):
+        resp = client.post(
+            SEGMENTS + "/",
+            json={
+                "id": "query_with_users",
+                "name": "Query with users",
+                "source": "query",
+                "query_name": "project_members",
+                "user_ids": ["user-1"],
+            },
+        )
+        assert resp.status_code == 400
+        assert "must not set user_ids" in resp.json()["detail"]
+
+    def test_query_backed_segment_rejects_invalid_rules_json(self):
+        resp = client.post(
+            SEGMENTS + "/",
+            json={
+                "id": "bad_rules",
+                "name": "Bad rules",
+                "source": "query",
+                "query_name": "discord_active_users",
+                "rules_json": '{"active_days": 0}',
+            },
+        )
+        assert resp.status_code == 400
+        assert "between 1 and 365" in resp.json()["detail"]
+
+    def test_query_backed_refresh_requires_main_database_id(self, mock_d1, monkeypatch):
+        mock_d1.executescript(
+            """
+            CREATE TABLE dl_project_members (
+                user_id TEXT,
+                project_id TEXT
+            );
+            INSERT INTO dl_project_members (user_id, project_id) VALUES ('user-1', 'project-a');
+            """
+        )
+
+        resp = client.post(
+            SEGMENTS + "/",
+            json={
+                "id": "main_db_required",
+                "name": "Main DB required",
+                "source": "query",
+                "query_name": "project_members",
+            },
+        )
+        assert resp.status_code == 201
+
+        monkeypatch.delenv("D1_MAIN_DATABASE_ID")
+        refreshed = client.post(f"{SEGMENTS}/main_db_required/refresh")
+        assert refreshed.status_code == 503
+        assert refreshed.json()["detail"] == "D1_MAIN_DATABASE_ID is required for query-backed segment refresh"
+
+    def test_query_backed_segment_rejects_unknown_template(self):
+        resp = client.post(
+            SEGMENTS + "/",
+            json={
+                "id": "unknown_query",
+                "name": "Unknown query",
+                "source": "query",
+                "query_name": "not_registered",
             },
         )
         assert resp.status_code == 501

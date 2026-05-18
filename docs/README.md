@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-05-09
+Last-Validated: 2026-05-18
 
 # Docs Guide
 
@@ -68,7 +68,7 @@ Replaced-By: <path>   # 해당 시만
 - 팀장 기준 계획: `docs/reports/team-lead-rebaseline-plan.md`
 - KPI 정의: `docs/reports/kpi-definition-v2.md`
 - 데이터 검증: `docs/reports/dataset-validation-v2.md`
-- 공통 가이드: `docs/guides/setup_guide.md`, `docs/guides/design_system.md`, `docs/guides/data_access.md`
+- 공통 가이드: `docs/guides/setup_guide.md`, `docs/guides/design_system.md`, `docs/guides/data_access.md`, `docs/guides/experiment_platform_concepts.md`
 
 ---
 

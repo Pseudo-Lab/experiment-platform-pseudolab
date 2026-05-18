@@ -41,3 +41,9 @@ Last-Validated: 2026-03-22
 - Why: 현재 공유 로직이 없고 빈 폴더 상태로 방치되어 Docker 빌드 에러 및 프로젝트 복잡도를 유발함. 필요 시 다시 생성하기 용이함.
 - Impact: 프로젝트 구조 단순화, Docker 빌드 안정성 확보.
 - Owner: Gemini CLI (Agent)
+
+- Date: 2026-05-18
+- Decision: 실험 플랫폼과 feature flag 분석에서 raw Supabase DB를 직접 활용하지 않고, D1 동기화 데이터/export/제한 API를 기준 데이터 접근 경로로 사용한다.
+- Why: 운영 raw DB 직접 접근에 따른 보안/권한/성능 리스크를 줄이고, 실험 플랫폼의 분석 경로를 D1 기반으로 일관되게 유지하기 위함.
+- Impact: `initiative_analyst_reader` PostgreSQL read-only 계정은 legacy/reference 성격으로만 남기고, 신규 분석가 접근은 D1 스키마, export, 또는 read-only query/API 중심으로 제공한다.
+- Owner: soo

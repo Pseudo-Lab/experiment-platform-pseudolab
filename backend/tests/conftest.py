@@ -115,16 +115,17 @@ CREATE TABLE IF NOT EXISTS feature_flag_exposure (
 @pytest.fixture(autouse=True)
 def mock_d1(monkeypatch):
     """테스트마다 빈 in-memory SQLite DB를 생성하고 d1 모듈을 교체한다."""
+    monkeypatch.setenv("D1_MAIN_DATABASE_ID", "test-main")
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
     conn.commit()
 
-    async def _query(sql: str, params=None):
+    async def _query(sql: str, params=None, database_id=None):
         cursor = conn.execute(sql, params or [])
         return [dict(row) for row in cursor.fetchall()]
 
-    async def _execute(sql: str, params=None):
+    async def _execute(sql: str, params=None, database_id=None):
         conn.execute(sql, params or [])
         conn.commit()
         return True
