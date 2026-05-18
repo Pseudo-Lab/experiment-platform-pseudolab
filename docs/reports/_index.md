@@ -25,6 +25,7 @@ Last-Validated: 2026-05-18
 - `docs/reports/experiment-analyst-agent-research-2026-05-18.md` — Experiment Analyst 에이전트 리서치/역할 정의
 - `docs/reports/hand-off-12th-study-platform.md` — 운영 핸드오프
 - `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md` — Feature Flag UI 이어받기
+- `docs/reports/handoffs/2026-05-18-segments-ui-agent-handoff.md` — Segment UI 에이전트 작업 핸드오프
 
 ## 2) Guides
 - `docs/guides/setup_guide.md` — 개발/운영 설정
