@@ -10,6 +10,7 @@ Last-Validated: 2026-05-18
 1. `AGENTS.md`
 2. `docs/reports/decision-log.md`
 3. 실험 플랫폼 개념이 익숙하지 않으면 `docs/guides/experiment_platform_concepts.md`
+4. 에이전트/병렬 작업은 `docs/guides/agent_collaboration.md`
 
 ## 1) Current Active Reports
 - `docs/reports/dashboard-execution-plan-v1.md` — 대시보드 실행 계획
@@ -23,12 +24,14 @@ Last-Validated: 2026-05-18
 - `docs/reports/feature-flag-improvement-plan.md` — Feature Flag 개선 계획
 - `docs/reports/weekly-work-summary-2026-05-11.md` — 이번 주 작업 요약
 - `docs/reports/hand-off-12th-study-platform.md` — 운영 핸드오프
+- `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md` — Feature Flag UI 이어받기
 
 ## 2) Guides
 - `docs/guides/setup_guide.md` — 개발/운영 설정
 - `docs/guides/design_system.md` — UI/디자인 시스템
 - `docs/guides/data_access.md` — 데이터 접근 규칙
 - `docs/guides/experiment_platform_concepts.md` — 실험 플랫폼/feature flag 첫 진입 개념 가이드
+- `docs/guides/agent_collaboration.md` — 에이전트 협업/워크트리/핸드오프 규칙
 
 ## 3) 읽기 순서
 1. `AGENTS.md`와 `docs/reports/decision-log.md`를 먼저 확인한다.

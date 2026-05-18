@@ -47,3 +47,9 @@ Last-Validated: 2026-03-22
 - Why: 운영 raw DB 직접 접근에 따른 보안/권한/성능 리스크를 줄이고, 실험 플랫폼의 분석 경로를 D1 기반으로 일관되게 유지하기 위함.
 - Impact: `initiative_analyst_reader` PostgreSQL read-only 계정은 legacy/reference 성격으로만 남기고, 신규 분석가 접근은 D1 스키마, export, 또는 read-only query/API 중심으로 제공한다.
 - Owner: soo
+
+- Date: 2026-05-18
+- Decision: `Pseudo-Lab/event-bingo`의 에이전트 협업 방식 중 worktree 격리, 도메인 소유권, impact trigger, handoff 템플릿을 이 저장소에 맞게 도입한다.
+- Why: 실험 플랫폼 작업이 backend/frontend/docs/infra를 자주 넘나들고, 여러 에이전트나 에디터 창이 병렬로 열릴 수 있어 파일 충돌과 맥락 손실을 줄여야 한다.
+- Impact: 병렬 작업은 기본적으로 `git worktree`를 사용하고, 영향 범위가 큰 작업은 `docs/templates/agent-handoff.md` 형식으로 handoff를 남긴다.
+- Owner: soo

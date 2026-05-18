@@ -29,7 +29,9 @@ Replaced-By: <path>   # 해당 시만
 - `docs/` : 문서 진입점 및 상위 안내
 - `docs/guides/` : 공통 가이드/정책/설계
 - `docs/reports/` : 실행 보고서, 분석 보고서, 작업 로그
+- `docs/reports/handoffs/` : 다음 작업자가 이어받기 위한 핸드오프
 - `docs/reports/snapshots/` : 시점 고정 스냅샷
+- `docs/templates/` : 반복 문서 템플릿
 - `docs/archive/` : 아카이브 문서
 - `docs/superseded/` : 대체된 문서
 
@@ -68,7 +70,7 @@ Replaced-By: <path>   # 해당 시만
 - 팀장 기준 계획: `docs/reports/team-lead-rebaseline-plan.md`
 - KPI 정의: `docs/reports/kpi-definition-v2.md`
 - 데이터 검증: `docs/reports/dataset-validation-v2.md`
-- 공통 가이드: `docs/guides/setup_guide.md`, `docs/guides/design_system.md`, `docs/guides/data_access.md`, `docs/guides/experiment_platform_concepts.md`
+- 공통 가이드: `docs/guides/setup_guide.md`, `docs/guides/design_system.md`, `docs/guides/data_access.md`, `docs/guides/experiment_platform_concepts.md`, `docs/guides/agent_collaboration.md`
 
 ---
 
