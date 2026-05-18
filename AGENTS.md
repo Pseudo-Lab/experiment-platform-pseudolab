@@ -36,11 +36,12 @@ Last-Updated: 2026-05-18
 5. 작은 단일 작업은 별도 핸드오프 문서를 강제하지 않습니다. 대신 완료 후 3줄 리포트는 남깁니다.
 
 ## 3-1) 도메인 소유권
-1. Backend: `backend/**`
-2. Frontend: `frontend/**`
+1. Backend: `backend/app/**`, `backend/migrations/**`, `backend/tests/**`
+2. Frontend Dashboard: `frontend/src/**`
 3. Demo app: `examples/demo-app/**`
 4. Infra/Ops: `.github/**`, `docker-compose*.yml`, 배포/운영 매니페스트, 런타임 설정
 5. Docs/Process: `AGENTS.md`, `docs/**`
+6. 세부 파일 소유권과 Feature Flag 작업 기준은 `docs/guides/agent_collaboration.md`를 따릅니다.
 
 ## 3-2) 에이전트 모드
 1. Team Lead Mode 또는 멀티 에이전트 위임은 사용자가 명시적으로 요청한 경우에만 사용합니다.

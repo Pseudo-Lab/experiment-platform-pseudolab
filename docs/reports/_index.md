@@ -22,7 +22,6 @@ Last-Validated: 2026-05-18
 - `docs/reports/team-lead-review-v2.md` — 팀장 리뷰
 - `docs/reports/experiment-platform-foundation-plan.md` — 실험 플랫폼 기반 계획
 - `docs/reports/feature-flag-improvement-plan.md` — Feature Flag 개선 계획
-- `docs/reports/weekly-work-summary-2026-05-11.md` — 이번 주 작업 요약
 - `docs/reports/hand-off-12th-study-platform.md` — 운영 핸드오프
 - `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md` — Feature Flag UI 이어받기
 

@@ -14,6 +14,32 @@ Owner: soo
 
 ---
 
+## 0. 이 저장소 운영 프로필
+
+이 저장소는 실험 플랫폼 애플리케이션 저장소입니다. agent 작업은 아래 프로젝트 경계를 기준으로 판단합니다.
+
+| 영역 | 현재 기준 |
+|---|---|
+| Backend | FastAPI, Pydantic, Cloudflare D1/R2 client, pytest |
+| Frontend | React, Vite, TypeScript, Tailwind CSS, shadcn/ui 스타일 컴포넌트, Vitest |
+| Experiment DB | Cloudflare D1 `pseudolab-exp` |
+| Data source DB | Cloudflare D1 `pseudolab-main` |
+| Raw 운영 DB | Supabase raw DB. 실험 플랫폼/feature flag 분석에서는 직접 조회하지 않음 |
+| Demo app | `examples/demo-app/**` |
+| Local dev | `docker-compose.dev.yml`, backend `:8000`, frontend `:8081`, demo app `:8082` |
+
+현재 주요 작업 흐름은 Feature Flag 운영 UI 확장입니다.
+
+다음 작업자가 우선 확인할 문서:
+
+1. `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md`
+2. `docs/reports/feature-flag-improvement-plan.md`
+3. `docs/guides/experiment_platform_concepts.md`
+4. `frontend/src/features/dashboard/components/FeatureFlags.tsx`
+5. `frontend/src/services/api.ts`
+
+---
+
 ## 1. 기준 문서 우선순위
 
 작업 시작 시 아래 순서로 확인합니다.
@@ -25,6 +51,7 @@ Owner: soo
    - 데이터/DB: `docs/guides/data_access.md`
    - 실험 플랫폼 개념: `docs/guides/experiment_platform_concepts.md`
    - Feature Flag: `docs/reports/feature-flag-improvement-plan.md`
+   - Feature Flag UI 이어받기: `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md`
 
 기준 문서가 충돌하면 `AGENTS.md`를 우선하고, 그 다음 최신 active 문서를 따릅니다.
 
@@ -76,11 +103,21 @@ cd ../workspace-experiment-<task>
 
 | 도메인 | 소유 범위 |
 |---|---|
-| Backend | `backend/**` |
-| Frontend | `frontend/**` |
-| Demo app | `examples/demo-app/**` |
-| Infra/Ops | `.github/**`, `docker-compose*.yml`, 배포/운영 매니페스트, 런타임 설정 |
+| Backend | `backend/app/**`, `backend/migrations/**`, `backend/tests/**`, `backend/requirements.txt` |
+| Frontend Dashboard | `frontend/src/**`, `frontend/package.json`, `frontend/vite.config.ts`, `frontend/tailwind.config.js` |
+| Demo App | `examples/demo-app/**` |
+| Infra/Ops | `.github/**`, `docker-compose*.yml`, `backend/.env.sample`, `frontend/.env.sample`, 배포/운영 매니페스트, 런타임 설정 |
 | Docs/Process | `AGENTS.md`, `docs/**` |
+
+Feature Flag UI 작업의 권장 파일 소유:
+
+| 작업 | 주 소유 파일 |
+|---|---|
+| Segment 관리 UI | `frontend/src/features/dashboard/components/Segments.tsx`, `frontend/src/__tests__/Segments.test.tsx` |
+| Segment API client | `frontend/src/services/api.ts` |
+| Routing/sidebar | `frontend/src/App.tsx`, `frontend/src/layouts/MainLayout.tsx` |
+| Rule builder UI | `frontend/src/features/dashboard/components/FeatureFlags.tsx` 또는 신규 detail/rule 컴포넌트 |
+| Backend API gap | `backend/app/api/v1/endpoints/**`, `backend/app/services/**`, `backend/tests/**` |
 
 여러 도메인을 동시에 바꾸면 PR 또는 명시적 handoff가 필요합니다.
 
@@ -122,10 +159,12 @@ Team Lead 책임:
 
 | 역할 | 주 관심사 |
 |---|---|
-| Backend | API, schema, service, DB migration, backend tests |
-| Frontend | UI flow, state, API client, responsive behavior, frontend tests |
-| Infra | Docker, CI/CD, env vars, deployment, runtime topology |
-| QA | regression, edge cases, test plan, release confidence |
+| Backend API | FastAPI endpoint, schema, service, D1 migration, backend tests |
+| Frontend Dashboard | Dashboard UI, Feature Flag/Segment UI, API client, responsive states, frontend tests |
+| Demo App | `examples/demo-app` behavior, SDK usage, demo seed flow |
+| Infra/Ops | Docker compose, CI, env vars, D1/R2 runtime connectivity, deployment notes |
+| Data/Analytics | D1 source tables, metric definitions, exposure/result connection |
+| QA | regression, edge cases, loading/error/empty/success states, release confidence |
 | Security | auth, permission, secrets, privacy-sensitive data flow |
 | Product | scope, acceptance criteria, prioritization |
 
@@ -184,3 +223,28 @@ git diff --check
 ```
 
 검증하지 않은 항목은 이유를 남깁니다.
+
+---
+
+## 10. 작업 유형별 기본 검증
+
+| 작업 유형 | 최소 검증 |
+|---|---|
+| Backend API/service | `cd backend && ./venv/bin/pytest` |
+| Frontend UI/API client | `cd frontend && npm test -- --run`, `cd frontend && npm run build` |
+| Demo app | `cd examples/demo-app && npm run build` |
+| Docs/process only | `git diff --check` |
+| D1 schema/query change | backend tests + 운영 D1에는 민감정보 값 없이 테이블/컬럼/row count만 확인 |
+| Feature Flag UI | frontend tests/build + `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md` 업데이트 여부 확인 |
+
+---
+
+## 11. Feature Flag 작업 시 주의사항
+
+1. Supabase raw DB를 직접 query source로 추가하지 않습니다.
+2. query-backed segment는 서버 allowlist template만 사용합니다.
+3. `D1_MAIN_DATABASE_ID` 누락은 빈 segment 성공이 아니라 실패로 처리해야 합니다.
+4. Discord active user segment는 현재 `is_bot` 컬럼이 없으므로 bot 제외를 전제로 쓰지 않습니다.
+5. UI 텍스트를 추가/수정하면 KO/EN을 함께 반영합니다.
+6. operator-facing UI는 loading/error/empty/success 상태를 테스트에 포함합니다.
+7. rule builder는 100% rollout, disabled/archived flag, refresh 실패 같은 위험 상태를 눈에 띄게 표시해야 합니다.
