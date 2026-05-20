@@ -10,6 +10,15 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["*"] # 실제 운영 시 구체화 필요
 
+    # Admin auth
+    ADMIN_USERNAME: str | None = None
+    ADMIN_PASSWORD_HASH: str | None = None
+    AUTH_SESSION_SECRET: str | None = None
+    AUTH_SESSION_TTL_SECONDS: int = 60 * 60 * 12
+    AUTH_COOKIE_NAME: str = "experiment_platform_session"
+    AUTH_COOKIE_SECURE: bool = False
+    AUTH_COOKIE_SAMESITE: str = "lax"
+
     class Config:
         env_file = ".env"
         case_sensitive = True

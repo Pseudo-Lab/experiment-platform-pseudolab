@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
+import { AuthProvider, useAuth } from './features/auth/AuthContext';
+import { LoginPage } from './features/auth/LoginPage';
 import { Dashboard } from './features/dashboard/components/Dashboard';
 import { BugReport } from './features/dashboard/components/BugReport';
 import { BugReportDetail } from './features/dashboard/components/BugReportDetail';
@@ -12,6 +14,14 @@ import { FeatureFlags } from './features/dashboard/components/FeatureFlags';
 import { Analytics } from './features/dashboard/components/Analytics';
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
+  );
+}
+
+function AppShell() {
   const [lang, setLang] = useState<'en' | 'ko'>(() => {
     const savedLang = localStorage.getItem('lang');
     return (savedLang === 'en' || savedLang === 'ko') ? savedLang : 'ko';
@@ -27,6 +37,8 @@ export default function App() {
     return 'light';
   });
   const [backendStatus, setBackendStatus] = useState<string>("connecting...");
+  const { state: authState, user, logout } = useAuth();
+  const location = useLocation();
 
   useEffect(() => {
     const apiBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL || '/api/v1';
@@ -50,6 +62,23 @@ export default function App() {
     }
   }, [theme]);
 
+  if (authState === 'loading') {
+    return (
+      <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="text-sm font-medium text-slate-300">Loading...</div>
+      </main>
+    );
+  }
+
+  if (authState === 'anonymous') {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage lang={lang} />} />
+        <Route path="*" element={<Navigate to="/login" replace state={{ from: location }} />} />
+      </Routes>
+    );
+  }
+
   return (
     <MainLayout
       lang={lang}
@@ -57,9 +86,12 @@ export default function App() {
       theme={theme}
       setTheme={setTheme}
       backendStatus={backendStatus}
+      userLabel={user?.username}
+      onLogout={logout}
     >
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard lang={lang} />} />
         <Route path="/experiments" element={<Experiments lang={lang} />} />
         <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} />} />

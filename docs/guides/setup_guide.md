@@ -31,6 +31,15 @@ cp backend/.env.sample backend/.env
 # 이후 backend/.env 파일을 열어 Cloudflare 관련 키 등을 입력합니다.
 ```
 
+관리자 로그인은 `backend/.env`에서 단일 admin 계정으로 설정합니다. 비밀번호는 평문으로 저장하지 않고 hash 값만 둡니다.
+
+```bash
+cd backend
+python scripts/hash_admin_password.py
+```
+
+생성된 값을 `ADMIN_PASSWORD_HASH`에 넣고, 운영 환경에서는 HTTPS 뒤에서 `AUTH_COOKIE_SECURE=true`로 설정합니다. 로컬 개발에서는 `AUTH_COOKIE_SECURE=false`를 사용할 수 있습니다.
+
 ### 3단계: Docker Compose 빌드 및 실행
 단일 명령어로 프론트엔드와 백엔드 컨테이너를 동시에 띄웁니다.
 

@@ -68,6 +68,8 @@ interface MainLayoutProps {
     theme: 'light' | 'dark';
     setTheme: (theme: 'light' | 'dark') => void;
     backendStatus: string;
+    userLabel?: string;
+    onLogout?: () => void | Promise<void>;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
@@ -76,7 +78,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     setLang,
     theme,
     setTheme,
-    backendStatus
+    backendStatus,
+    userLabel,
+    onLogout
 }) => {
     const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -92,8 +96,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", settings: "Settings" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", settings: "설정" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", settings: "Settings", logout: "Logout" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", settings: "설정", logout: "로그아웃" }
     };
 
     const t = translations[lang];
@@ -228,9 +232,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             <Bell size={20} />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900"></span>
                         </Button>
-                        <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white cursor-pointer shadow-md hover:scale-105 transition-transform">
-                            <User size={18} />
-                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onLogout}
+                            className="gap-2 text-slate-500 rounded-lg"
+                            aria-label={t.logout}
+                        >
+                            <span className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md">
+                                <User size={16} />
+                            </span>
+                            <span className="hidden md:inline max-w-[120px] truncate">{userLabel || t.logout}</span>
+                        </Button>
                     </div>
                 </header>
                 <div className="flex-1 p-4 md:p-8 overflow-auto">
