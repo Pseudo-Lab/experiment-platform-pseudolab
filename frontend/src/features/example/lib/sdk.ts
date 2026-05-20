@@ -1,14 +1,13 @@
 import { getUserId } from './userId'
 import { devLog } from './devLog'
-
-const API = import.meta.env.VITE_PLATFORM_API as string
+import { API_BASE_URL } from './apiBase'
 
 export async function decideFlag(flagKey: string): Promise<string> {
   const uid = getUserId()
   const logId = devLog.add('decide', flagKey, { user_id: uid })
   try {
     const res = await fetch(
-      `${API}/feature-flags/decide?flag_key=${encodeURIComponent(flagKey)}&user_id=${encodeURIComponent(uid)}`,
+      `${API_BASE_URL}/feature-flags/decide?flag_key=${encodeURIComponent(flagKey)}&user_id=${encodeURIComponent(uid)}`,
     )
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = await res.json()
@@ -28,7 +27,7 @@ export async function track(
 ): Promise<void> {
   const logId = devLog.add('track', eventName, properties)
   try {
-    const res = await fetch(`${API}/capture`, {
+    const res = await fetch(`${API_BASE_URL}/capture`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -53,7 +52,7 @@ export async function assignExperiment(
   const logId = devLog.add('assign', experimentName, { experiment_id: experimentId, user_id: uid })
   try {
     const res = await fetch(
-      `${API}/experiments/${encodeURIComponent(experimentId)}/assign/${encodeURIComponent(uid)}`,
+      `${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/assign/${encodeURIComponent(uid)}`,
     )
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = await res.json()
@@ -75,7 +74,7 @@ export async function identify(meta: {
 }): Promise<void> {
   const logId = devLog.add('identify', 'identify', meta)
   try {
-    const res = await fetch(`${API}/identify`, {
+    const res = await fetch(`${API_BASE_URL}/identify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: getUserId(), ...meta }),

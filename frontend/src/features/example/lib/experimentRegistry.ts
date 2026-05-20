@@ -1,4 +1,5 @@
-const API = import.meta.env.VITE_PLATFORM_API as string
+import type { Lang } from '../i18n'
+import { API_BASE_URL } from './apiBase'
 
 export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed' | 'archived'
 
@@ -39,7 +40,7 @@ export const experimentRegistry = {
   async refresh() {
     setState({ ...state, status: 'loading' })
     try {
-      const res = await fetch(`${API}/experiments/`)
+      const res = await fetch(`${API_BASE_URL}/experiments/`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const items: ExperimentMeta[] = await res.json()
       const byName: Record<string, ExperimentMeta> = {}
@@ -75,13 +76,20 @@ export type Diagnosis = {
 export function diagnoseExperiment(
   experimentName: string,
   exp: ExperimentMeta | undefined,
+  lang: Lang,
 ): Diagnosis {
   if (!exp) {
     return {
       level: 'error',
       label: 'unknown_experiment',
-      detail: '실험이 등록돼 있지 않습니다. assign 호출이 404로 실패합니다.',
-      remediation: `bash examples/demo-app/scripts/seed.sh  실행 (실험 "${experimentName}" 생성)`,
+      detail:
+        lang === 'ko'
+          ? '실험이 등록돼 있지 않습니다. assign 호출이 404로 실패합니다.'
+          : 'The experiment is not registered. Assign calls fail with 404.',
+      remediation:
+        lang === 'ko'
+          ? `관리자 콘솔 -> 실험 관리에서 "${experimentName}" 생성 후 running 상태로 전환.`
+          : `Create "${experimentName}" in Admin console -> Experiments, then switch it to running.`,
     }
   }
   if (exp.status === 'running') {
@@ -90,28 +98,42 @@ export function diagnoseExperiment(
       label: 'running',
       detail: exp.primary_metric
         ? `primary_metric: ${exp.primary_metric}`
-        : 'primary_metric 미설정',
+        : lang === 'ko'
+          ? 'primary_metric 미설정'
+          : 'primary_metric is not set',
     }
   }
   if (exp.status === 'draft') {
     return {
       level: 'warn',
       label: 'draft',
-      detail: '아직 분석 대상이 아닙니다. assign은 동작하지만 통계 계산은 안 됩니다.',
-      remediation: `bash examples/demo-app/scripts/seed.sh 재실행 (status를 running으로 전환).`,
+      detail:
+        lang === 'ko'
+          ? '아직 분석 대상이 아닙니다. assign은 동작하지만 통계 계산은 안 됩니다.'
+          : 'This is not ready for analysis yet. Assign works, but statistics are not calculated.',
+      remediation:
+        lang === 'ko'
+          ? '관리자 콘솔 -> 실험 관리에서 status를 running으로 전환.'
+          : 'Switch status to running in Admin console -> Experiments.',
     }
   }
   if (exp.status === 'paused') {
     return {
       level: 'warn',
       label: 'paused',
-      detail: '일시정지 상태입니다.',
-      remediation: `관리자 콘솔 → 실험 관리 → "${experimentName}" → 재개.`,
+      detail: lang === 'ko' ? '일시정지 상태입니다.' : 'The experiment is paused.',
+      remediation:
+        lang === 'ko'
+          ? `관리자 콘솔 -> 실험 관리 -> "${experimentName}" -> 재개.`
+          : `Admin console -> Experiments -> "${experimentName}" -> resume.`,
     }
   }
   return {
     level: 'error',
     label: exp.status,
-    detail: '종결 상태(completed/archived)라 신규 데이터가 누적되지 않습니다.',
+    detail:
+      lang === 'ko'
+        ? '종결 상태(completed/archived)라 신규 데이터가 누적되지 않습니다.'
+        : 'This is a terminal state (completed/archived), so no new data accumulates.',
   }
 }
