@@ -163,6 +163,9 @@ describe('ExperimentDetail placements', () => {
         ui_id: 's12-sidebar-reflection',
         title: '사이드바 회고',
         target_url: '/reflection/sidebar',
+        source: 'unknown',
+        target_cohort: '*',
+        allowed_roles: [],
       }),
     );
     expect(await screen.findByText('LVUP 노출 슬롯을 생성했습니다.')).toBeInTheDocument();

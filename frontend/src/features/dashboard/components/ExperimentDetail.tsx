@@ -83,7 +83,9 @@ const translations = {
     targetUrl: 'Target URL',
     source: 'Source',
     targetCohort: 'Target cohort',
+    targetCohortPlaceholder: 'Use * for all cohorts',
     allowedRoles: 'Allowed roles',
+    allowedRolesHint: 'Leave empty to allow all roles.',
     enabled: 'Enabled',
     disabled: 'Disabled',
     roleBuilder: 'Builder',
@@ -165,7 +167,9 @@ const translations = {
     targetUrl: '이동 URL',
     source: 'Source',
     targetCohort: '대상 기수',
+    targetCohortPlaceholder: '* 입력 시 전체 기수',
     allowedRoles: '허용 역할',
+    allowedRolesHint: '선택하지 않으면 모든 역할을 허용합니다.',
     enabled: '활성',
     disabled: '비활성',
     roleBuilder: '빌더',
@@ -255,9 +259,9 @@ const emptyPlacementForm = (): PlacementForm => ({
   title: '',
   description: '',
   target_url: '',
-  source: 'project_detail_home',
-  target_cohort: '12',
-  allowed_roles: ['builder', 'runner'],
+  source: 'unknown',
+  target_cohort: '*',
+  allowed_roles: [],
   enabled: false,
 });
 
@@ -525,8 +529,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     placementForm.description.trim() &&
     placementForm.target_url.trim() &&
     placementForm.source.trim() &&
-    placementForm.target_cohort.trim() &&
-    placementForm.allowed_roles.length > 0,
+    placementForm.target_cohort.trim(),
   );
   const placementMessageIsSuccess = placementSaveMessage
     ? [t.placementCreated, t.placementSaved, t.placementDeleted].includes(placementSaveMessage)
@@ -828,6 +831,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                         <Input
                           value={placementForm.target_cohort}
                           onChange={(event) => updatePlacementForm('target_cohort', event.target.value)}
+                          placeholder={t.targetCohortPlaceholder}
                           className="rounded-xl"
                           aria-label={t.targetCohort}
                         />
@@ -847,6 +851,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
 
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.allowedRolesHint}</p>
                       <div className="flex flex-wrap gap-3">
                         {roleOptions.map((role) => (
                           <label key={role} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">

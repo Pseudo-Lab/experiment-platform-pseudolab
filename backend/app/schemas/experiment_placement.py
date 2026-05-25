@@ -70,9 +70,9 @@ class ExperimentPlacementConfigCreate(BaseModel):
     title: str = Field(..., min_length=1)
     description: str = Field(..., min_length=1)
     target_url: str = Field(..., min_length=1)
-    source: str = Field("project_detail_home", min_length=1)
-    target_cohort: str = Field("12", min_length=1)
-    allowed_roles: list[str] = Field(default_factory=lambda: ["builder", "runner"], min_length=1)
+    source: str = Field("unknown", min_length=1)
+    target_cohort: str = Field("*", min_length=1)
+    allowed_roles: list[str] = Field(default_factory=list)
     enabled: bool = True
 
 

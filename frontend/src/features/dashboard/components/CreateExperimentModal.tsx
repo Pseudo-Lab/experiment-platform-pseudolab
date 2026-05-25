@@ -50,7 +50,9 @@ const translations = {
     targetUrlPlaceholder: 'e.g. /reflection/s12-mid-reflection',
     source: 'Source',
     targetCohort: 'Target cohort',
+    targetCohortPlaceholder: 'Use * for all cohorts',
     allowedRoles: 'Allowed roles',
+    allowedRolesHint: 'Leave empty to allow all roles.',
     roleBuilder: 'Builder',
     roleRunner: 'Runner',
     placementEnabled: 'Enable slot immediately',
@@ -88,7 +90,9 @@ const translations = {
     targetUrlPlaceholder: '예: /reflection/s12-mid-reflection',
     source: 'Source',
     targetCohort: '대상 기수',
+    targetCohortPlaceholder: '* 입력 시 전체 기수',
     allowedRoles: '허용 역할',
+    allowedRolesHint: '선택하지 않으면 모든 역할을 허용합니다.',
     roleBuilder: '빌더',
     roleRunner: '러너',
     placementEnabled: '슬롯 즉시 활성화',
@@ -116,9 +120,9 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   const [slotTitle, setSlotTitle] = useState('');
   const [slotDescription, setSlotDescription] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
-  const [source, setSource] = useState('project_detail_home');
-  const [targetCohort, setTargetCohort] = useState('12');
-  const [allowedRoles, setAllowedRoles] = useState<string[]>(['builder', 'runner']);
+  const [source, setSource] = useState('unknown');
+  const [targetCohort, setTargetCohort] = useState('*');
+  const [allowedRoles, setAllowedRoles] = useState<string[]>([]);
   const [placementEnabled, setPlacementEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,8 +149,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     slotDescription.trim() &&
     targetUrl.trim() &&
     source.trim() &&
-    targetCohort.trim() &&
-    allowedRoles.length > 0,
+    targetCohort.trim(),
   );
 
   const handleSubmit = async () => {
@@ -363,6 +366,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                     <Input
                       value={targetCohort}
                       onChange={(e) => setTargetCohort(e.target.value)}
+                      placeholder={t.targetCohortPlaceholder}
                       className="rounded-xl"
                       aria-label={t.targetCohort}
                     />
@@ -383,6 +387,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
                 <div className="space-y-2">
                   <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t.allowedRolesHint}</p>
                   <div className="flex flex-wrap gap-3">
                     {roleOptions.map((role) => (
                       <label key={role} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">

@@ -245,6 +245,27 @@ class TestExperimentPlacementDecide:
         assert resp.status_code == 200
         assert resp.json()["reason"] == "not_project_member"
 
+    def test_wildcard_cohort_and_empty_roles_are_not_12th_specific(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
+        mock_d1.execute(
+            """UPDATE experiment_placement_config
+                  SET target_cohort = ?, allowed_roles = ?
+                WHERE experiment_id = ? AND placement_key = ?""",
+            ["*", "[]", EXPERIMENT_ID, PLACEMENT_KEY],
+        )
+        mock_d1.commit()
+        _insert_project(mock_d1, cohort="99")
+        _insert_member(mock_d1, role="mentor")
+
+        resp = _decide()
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["show"] is True
+        assert body["reason"] == "eligible"
+        assert body["logging_context"]["project_cohort"] == "99"
+        assert body["logging_context"]["user_project_role"] == "mentor"
+
     def test_unsupported_role_returns_unsupported_role(self, mock_d1):
         _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1)

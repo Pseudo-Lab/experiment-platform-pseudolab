@@ -6,17 +6,17 @@ Owner: soo
 
 ## 1. 한 줄 요약
 
-외부 LVUP 프론트엔드가 12기 프로젝트 회고 진입 UI를 노출할지 실험 플랫폼에 물어볼 수 있도록, `placement_key`만으로 활성 실험을 찾아 판단하는 placement-only decide API와 실험별 placement 관리 API를 백엔드에 추가했다.
+외부 프론트엔드가 특정 UI 슬롯을 노출할지 실험 플랫폼에 물어볼 수 있도록, `placement_key`만으로 활성 실험을 찾아 판단하는 placement-only decide API와 실험별 placement 관리 API를 백엔드에 추가했다. 12기 프로젝트 회고는 이 범용 기능을 검증하는 첫 파일럿 케이스다.
 
 현재 LVUP 화면에서는 이 UI가 배너로 렌더링될 수 있지만, 실험 플랫폼 API 계약은 배너에 고정하지 않는다. API는 “어떤 실험의 어떤 LVUP UI 위치/진입점에 무엇을 보여줄지”를 판단하고, 응답의 `ui.type`으로 현재 표현 방식(`banner`, `card`, `modal` 등)을 내려준다.
 
 ## 2. 용어 구분
 
-- 외부 LVUP 프론트엔드: 프로젝트 상세 홈 화면에서 실제 UI를 렌더링하는 시스템
+- 외부 프론트엔드: 실제 UI를 렌더링하는 제품 시스템. 이번 파일럿에서는 LVUP 프로젝트 상세 홈 화면
 - 실험 플랫폼 백엔드: 대상자, 기간, 제출 여부, 설정값을 판단하는 시스템
 - 실험 플랫폼 대시보드 프론트엔드: 운영자가 실험/placement 설정을 수정할 관리 UI
 - Experiment: `s12-mid-reflection`처럼 운영 목적을 가진 실험 단위
-- Placement: LVUP 프론트엔드가 미리 정의한 UI 슬롯 또는 진입점. 실험 플랫폼은 실제 화면 위치를 정하지 않고, 해당 슬롯의 노출 여부와 문구를 관리한다.
+- Placement: 외부 프론트엔드가 미리 정의한 UI 슬롯 또는 진입점. 실험 플랫폼은 실제 화면 위치를 정하지 않고, 해당 슬롯의 노출 여부와 문구를 관리한다.
 - UI Type: 실제 렌더링 형태. 현재 기본값은 `banner`
 
 ## 3. 왜 배너 전용 API가 아닌가
@@ -63,14 +63,14 @@ GET /api/v1/experiments/s12-mid-reflection/placements/project-detail-home-reflec
 
 ## 3-1. 과도기 준실험 관점 검증
 
-이번 12기 회고 조사는 실험 플랫폼 전체 기능이 완성되기 전 과도기 운영이다. 따라서 이번에는 무작위 배정 A/B 테스트가 아니라 준실험으로 먼저 진행한다.
+이번 12기 회고 조사는 실험 플랫폼이 실제 제품 연동에서 플랫폼 역할을 수행하는지 검증하는 첫 과도기 운영이다. 따라서 이번에는 무작위 배정 A/B 테스트가 아니라 준실험으로 먼저 진행한다.
 
 그래서 현재 PR에서는 실험 플랫폼의 `experiment_assignments`나 feature flag rollout으로 사용자를 실험군/대조군에 균등 분배하지 않는다.
 
 이번 API의 역할은 다음으로 제한한다.
 
-- 12기 전체 대상 조건을 서버에서 일관되게 판정한다.
-- LVUP의 특정 placement에 UI를 노출할지 결정한다.
+- 설정된 target cohort와 role 조건을 서버에서 일관되게 판정한다.
+- 외부 프론트엔드의 특정 placement에 UI를 노출할지 결정한다.
 - 노출/클릭 이벤트 분석에 필요한 컨텍스트를 내려준다.
 
 효과 분석은 노출/클릭/제출 로그와 비교 가능한 관측 데이터를 활용해 별도 분석 단계에서 수행한다.
@@ -93,7 +93,7 @@ Experiment
 
 검증 결과:
 
-- LVUP 연동 라우트는 `/placements/{placement_key}/decide`로 단순화하고, 플랫폼 내부 관리 라우트는 `/experiments/{experiment_id}/placements/{placement_key}` 아래에 있어 기존 experiment 중심 모델과 맞다.
+- 외부 프론트엔드 연동 라우트는 `/placements/{placement_key}/decide`로 단순화하고, 플랫폼 내부 관리 라우트는 `/experiments/{experiment_id}/placements/{placement_key}` 아래에 있어 기존 experiment 중심 모델과 맞다.
 - `project-reflection` 같은 실험별 엔드포인트를 만들지 않아 다음 실험에서 라우트가 늘어나는 문제를 피했다.
 - feature flag rollout/assignment는 이번 과도기 준실험 범위에서 사용하지 않는다.
 - 대상자 판단은 raw Supabase DB가 아니라 기존 원칙대로 D1 동기화 테이블을 사용한다.
@@ -104,7 +104,7 @@ Experiment
 남겨둔 경계:
 
 - decide 호출 자체를 exposure로 자동 기록하지 않는다. 실제 화면 노출은 LVUP 프론트엔드만 알 수 있으므로 `project_reflection_ui_viewed` 이벤트를 별도로 전송하게 한다.
-- 현재는 12기 전체 대상 준실험이므로 사용자별 variant를 반환하지 않는다.
+- 현재 파일럿은 12기 전체 대상 준실험이므로 사용자별 variant를 반환하지 않는다.
 - 향후 정식 실험에서는 같은 placement API 내부에서 assignment 또는 feature flag decide 결과를 함께 내려줄 수 있다.
 
 ## 4. Decide API
@@ -248,7 +248,7 @@ API는 다음 순서로 판단한다.
 3. 명시 호출이면 `{experiment_id}` 실험이 존재하는지 확인한다.
 4. `{placement_key}` 설정이 존재하는지 확인한다.
 5. 실험 상태가 `running`이고 placement가 enabled인지 확인한다.
-6. 해당 프로젝트가 target cohort, 현재는 12기 프로젝트인지 확인한다.
+6. 해당 프로젝트가 placement config의 target cohort에 속하는지 확인한다. 이번 seed 값은 12기다.
 7. 해당 사용자가 프로젝트 멤버인지 확인한다.
 8. 프로젝트 role이 `builder` 또는 `runner`인지 확인한다.
 9. 멤버십 상태가 `active`인지 확인한다.
@@ -275,6 +275,8 @@ UI placement 설정은 새 config 테이블에서 관리한다.
 - `experiment_placement_config.target_cohort`
 - `experiment_placement_config.allowed_roles`
 - `experiment_placement_config.enabled`
+
+`target_cohort = "*"`이면 특정 기수로 제한하지 않는다. `allowed_roles = []`이면 프로젝트 멤버 role을 제한하지 않는다. 따라서 12기와 builder/runner는 플랫폼 기본값이 아니라 이번 파일럿 seed 설정이다.
 
 즉, 실험 상태와 기간은 기존 실험관리 모델로 제어하고, LVUP에 내려줄 UI 문구/링크/활성화는 placement config로 제어한다.
 
@@ -309,7 +311,7 @@ DELETE /api/v1/experiments/{experiment_id}/placements/{placement_key}
 사용 테이블:
 
 - `dl_projects`
-  - 프로젝트가 12기인지 확인
+  - 프로젝트가 placement config의 target cohort에 속하는지 확인
   - 최신 `base_date` 스냅샷 기준
 - `dl_project_members`
   - 사용자가 프로젝트 멤버인지 확인
@@ -351,9 +353,9 @@ POST /api/v1/capture
 
 ## 13. 분배 정책
 
-이번 12기 회고 조사는 실험 플랫폼 완성 전 과도기 준실험이며, 12기 전체 대상 조사다. 따라서 현 단계에서는 실험군/대조군 균등 분배를 적용하지 않는다.
+이번 12기 회고 조사는 실험 플랫폼 완성 전 과도기 준실험이며, 플랫폼의 placement decide, target rule, event logging 연동이 실제 제품에서 동작하는지 확인하는 검증 케이스다. 따라서 현 단계에서는 실험군/대조군 균등 분배를 적용하지 않는다.
 
-대상 조건을 만족하는 12기 active `builder`/`runner`에게 모두 같은 placement 판단을 제공한다.
+이번 파일럿 seed에서는 대상 조건을 만족하는 12기 active `builder`/`runner`에게 모두 같은 placement 판단을 제공한다. 다른 실험에서는 config의 target cohort와 allowed roles를 다르게 설정할 수 있다.
 
 향후 정식 실험으로 운영할 때는 같은 placement API 뒤에 assignment 또는 feature flag rule을 연결해 사용자별 variant를 결정하고 exposure를 기록할 수 있다.
 
@@ -387,7 +389,7 @@ POST /api/v1/capture
 
 ```text
 cd backend && ./venv/bin/pytest
-148 passed
+149 passed
 ```
 
 프론트엔드 전체 테스트와 빌드도 통과했다.
@@ -413,7 +415,7 @@ built successfully
 
 ## 17. 팀장 보고용 결론
 
-이번 작업은 외부 LVUP 프론트엔드가 회고 UI 노출 판단을 직접 하지 않고, 실험 플랫폼에 위임할 수 있게 만든 백엔드 계약 작업이다.
+이번 작업은 외부 프론트엔드가 UI 노출 판단을 직접 하지 않고, 실험 플랫폼에 위임할 수 있게 만든 백엔드 계약 작업이다. 12기 회고는 그 계약이 실제 제품 연동에서 동작하는지 확인하는 첫 검증 사례다.
 
 초기 요청은 배너였지만, 플랫폼 API를 배너 전용으로 만들면 다음 UI 실험마다 라우트와 테이블이 늘어난다. 그래서 이번 PR에서는 “실험의 특정 UI placement를 보여줄지 판단한다”는 모델로 일반화했다.
 

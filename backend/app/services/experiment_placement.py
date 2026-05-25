@@ -175,17 +175,20 @@ class ExperimentPlacementService:
         if config.get("experiment_status") != "running" or int(config.get("enabled") or 0) != 1:
             return self._hidden(ExperimentPlacementReason.OUTSIDE_EXPOSURE_WINDOW)
 
-        target_cohort = str(config.get("target_cohort") or "")
+        target_cohort = str(config.get("target_cohort") or "*").strip()
         allowed_roles = self._parse_allowed_roles(config.get("allowed_roles"))
         project_membership = await self._get_project_membership(normalized_user_id, project_id)
-        if not project_membership or str(project_membership.get("project_cohort") or "") != target_cohort:
+        if not project_membership:
+            return self._hidden(ExperimentPlacementReason.NOT_PROJECT_MEMBER)
+        project_cohort = str(project_membership.get("project_cohort") or "")
+        if target_cohort != "*" and project_cohort != target_cohort:
             return self._hidden(ExperimentPlacementReason.NOT_TARGET_COHORT)
 
         role = project_membership.get("user_project_role")
         membership_status = project_membership.get("membership_status")
         if not role:
             return self._hidden(ExperimentPlacementReason.NOT_PROJECT_MEMBER)
-        if role not in allowed_roles:
+        if allowed_roles and role not in allowed_roles:
             return self._hidden(ExperimentPlacementReason.UNSUPPORTED_ROLE)
         if membership_status != "active":
             return self._hidden(ExperimentPlacementReason.INACTIVE_MEMBERSHIP)
@@ -200,7 +203,7 @@ class ExperimentPlacementService:
                 placement_key=placement_key,
                 config=config,
                 project_id=project_id,
-                project_cohort=target_cohort,
+                project_cohort=project_cohort,
                 user_project_role=role,
             )
 
@@ -209,7 +212,7 @@ class ExperimentPlacementService:
             placement_key=placement_key,
             config=config,
             project_id=project_id,
-            project_cohort=target_cohort,
+            project_cohort=project_cohort,
             user_project_role=role,
         )
 
@@ -485,13 +488,13 @@ class ExperimentPlacementService:
 
     def _parse_allowed_roles(self, raw_roles: Optional[str]) -> set[str]:
         if not raw_roles:
-            return set(DEFAULT_ALLOWED_ROLES)
+            return set()
         try:
             parsed = json.loads(raw_roles)
         except json.JSONDecodeError:
-            return set(DEFAULT_ALLOWED_ROLES)
+            return set()
         if not isinstance(parsed, list):
-            return set(DEFAULT_ALLOWED_ROLES)
+            return set()
         return {str(role) for role in parsed if role}
 
     def _to_config(self, row: dict) -> ExperimentPlacementConfig:

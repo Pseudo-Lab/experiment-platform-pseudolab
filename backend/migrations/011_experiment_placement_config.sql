@@ -1,5 +1,6 @@
--- LVUP 12기 중간 회고 UI placement 실험 메타데이터
--- reflection_start_date는 운영 시작 시점에 별도 설정해야 실제 노출된다.
+-- Generic experiment placement metadata.
+-- The seeded 12th-cohort reflection placement below is the first platform validation case,
+-- not a schema-level default.
 CREATE TABLE IF NOT EXISTS experiment_placement_config (
     experiment_id  TEXT NOT NULL REFERENCES experiments(id) ON DELETE CASCADE,
     placement_key  TEXT NOT NULL,
@@ -8,9 +9,9 @@ CREATE TABLE IF NOT EXISTS experiment_placement_config (
     title          TEXT NOT NULL,
     description    TEXT NOT NULL,
     target_url     TEXT NOT NULL,
-    source         TEXT NOT NULL DEFAULT 'project_detail_home',
-    target_cohort  TEXT NOT NULL DEFAULT '12',
-    allowed_roles  TEXT NOT NULL DEFAULT '["builder","runner"]',
+    source         TEXT NOT NULL DEFAULT 'unknown',
+    target_cohort  TEXT NOT NULL DEFAULT '*',
+    allowed_roles  TEXT NOT NULL DEFAULT '[]',
     enabled        INTEGER NOT NULL DEFAULT 1,
     created_at     TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
