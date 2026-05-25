@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["*"] # 실제 운영 시 구체화 필요
+    REFLECTION_BANNER_SCENARIO_OVERRIDE_ENABLED: bool = False
 
     class Config:
         env_file = ".env"

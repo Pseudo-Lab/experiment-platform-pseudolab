@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     status, experiments, dashboard, bug_reports,
     events, feature_flags, analytics, decisions, reflections, segments,
+    project_reflection_banner,
 )
 
 api_router = APIRouter()
@@ -15,3 +16,4 @@ api_router.include_router(segments.router,      prefix="/segments",      tags=["
 api_router.include_router(analytics.router,     prefix="/analytics",     tags=["analytics"])
 api_router.include_router(decisions.router,     prefix="",               tags=["decisions"])
 api_router.include_router(reflections.router,   prefix="/reflections",   tags=["reflections"])
+api_router.include_router(project_reflection_banner.router, prefix="/project-reflection-banner", tags=["project-reflection-banner"])

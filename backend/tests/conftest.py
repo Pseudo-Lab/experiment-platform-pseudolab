@@ -11,10 +11,15 @@ CREATE TABLE IF NOT EXISTS experiments (
     id          TEXT PRIMARY KEY,
     name        TEXT NOT NULL,
     hypothesis  TEXT,
+    expected_effect TEXT,
+    primary_metric  TEXT,
+    cohort_id       TEXT,
     status      TEXT NOT NULL DEFAULT 'draft',
     owner_id    TEXT,
     start_at    TEXT,
     end_at      TEXT,
+    reflection_start_date  TEXT,
+    reflection_window_days INTEGER NOT NULL DEFAULT 7,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
@@ -109,6 +114,54 @@ CREATE TABLE IF NOT EXISTS feature_flag_exposure (
     evaluated_at TEXT NOT NULL,
     context_json TEXT
 );
+
+CREATE TABLE IF NOT EXISTS event_log (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id   TEXT    NOT NULL,
+    cohort_id TEXT,
+    event_name TEXT   NOT NULL,
+    properties TEXT,
+    event_time TEXT   NOT NULL,
+    created_at TEXT   NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS person (
+    user_id     TEXT PRIMARY KEY,
+    cohort_id   TEXT,
+    cohort_name TEXT,
+    team_name   TEXT,
+    role        TEXT,
+    updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS reflection (
+    id                 TEXT PRIMARY KEY,
+    experiment_id      TEXT NOT NULL,
+    user_id            TEXT NOT NULL,
+    project_id         TEXT NOT NULL,
+    project_type       TEXT NOT NULL,
+    output_types       TEXT,
+    response_good      TEXT,
+    response_blocked   TEXT,
+    response_goal      TEXT,
+    final_output_type  TEXT,
+    completed_at       TEXT NOT NULL,
+    created_at         TEXT NOT NULL,
+    UNIQUE(user_id, experiment_id)
+);
+
+CREATE TABLE IF NOT EXISTS project_reflection_banner_config (
+    experiment_id TEXT PRIMARY KEY,
+    banner_id     TEXT NOT NULL,
+    title         TEXT NOT NULL,
+    description   TEXT NOT NULL,
+    target_url    TEXT NOT NULL,
+    source        TEXT NOT NULL DEFAULT 'project_detail_home',
+    enabled       INTEGER NOT NULL DEFAULT 1,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+
 """
 
 
