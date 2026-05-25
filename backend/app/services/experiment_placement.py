@@ -213,6 +213,24 @@ class ExperimentPlacementService:
             user_project_role=role,
         )
 
+    async def decide_by_placement(
+        self,
+        placement_key: str,
+        user_id: Optional[str],
+        project_id: str,
+    ) -> ExperimentPlacementDecisionResponse:
+        normalized_user_id = (user_id or "").strip()
+        if not normalized_user_id:
+            return self._hidden(ExperimentPlacementReason.NOT_AUTHENTICATED)
+
+        config = await self._get_active_decide_config_for_placement(placement_key)
+        if not config:
+            if await self._placement_key_exists(placement_key):
+                return self._hidden(ExperimentPlacementReason.OUTSIDE_EXPOSURE_WINDOW)
+            return self._hidden(ExperimentPlacementReason.PLACEMENT_NOT_FOUND)
+
+        return await self.decide(config["id"], placement_key, normalized_user_id, project_id)
+
     async def _experiment_exists(self, experiment_id: str) -> bool:
         rows = await d1.query("SELECT 1 FROM experiments WHERE id = ? LIMIT 1", [experiment_id])
         return bool(rows)
@@ -225,6 +243,16 @@ class ExperimentPlacementService:
                   AND placement_key = ?
                 LIMIT 1""",
             [experiment_id, placement_key],
+        )
+        return bool(rows)
+
+    async def _placement_key_exists(self, placement_key: str) -> bool:
+        rows = await d1.query(
+            """SELECT 1
+                 FROM experiment_placement_config
+                WHERE placement_key = ?
+                LIMIT 1""",
+            [placement_key],
         )
         return bool(rows)
 
@@ -253,6 +281,44 @@ class ExperimentPlacementService:
             [placement_key, experiment_id],
         )
         return rows[0] if rows else None
+
+    async def _get_active_decide_config_for_placement(self, placement_key: str) -> Optional[dict]:
+        rows = await d1.query(
+            """SELECT
+                    e.id,
+                    e.status AS experiment_status,
+                    e.reflection_start_date,
+                    e.reflection_window_days,
+                    e.created_at AS experiment_created_at,
+                    c.placement_key,
+                    c.ui_id,
+                    c.ui_type,
+                    c.title,
+                    c.description,
+                    c.target_url,
+                    c.source,
+                    c.enabled,
+                    c.target_cohort,
+                    c.allowed_roles
+                 FROM experiment_placement_config c
+                 JOIN experiments e
+                   ON e.id = c.experiment_id
+                WHERE c.placement_key = ?
+                ORDER BY
+                    COALESCE(e.reflection_start_date, '') DESC,
+                    e.created_at DESC,
+                    e.id DESC""",
+            [placement_key],
+        )
+        for row in rows:
+            if row.get("experiment_status") != "running":
+                continue
+            if int(row.get("enabled") or 0) != 1:
+                continue
+            if not self._is_inside_exposure_window(row):
+                continue
+            return row
+        return None
 
     async def _get_project_membership(self, user_id: str, project_id: str) -> Optional[dict]:
         main_database_id = os.getenv("D1_MAIN_DATABASE_ID")
