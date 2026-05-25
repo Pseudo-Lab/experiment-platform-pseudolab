@@ -39,22 +39,29 @@ const translations = {
     configurePlacement: 'Create UI exposure slot with this experiment',
     placementKey: 'Slot key',
     placementKeyPlaceholder: 'e.g. product-home-primary-cta',
+    placementKeyHelp: 'Frontend-owned placement key sent to the decide API.',
     uiId: 'UI ID',
     uiIdPlaceholder: 'e.g. onboarding-start-banner',
+    uiIdHelp: 'Stable UI identifier returned for analytics and rendering.',
     uiType: 'UI type',
+    uiTypeHelp: 'Rendering hint returned to the frontend. The service still owns the component implementation.',
     uiTitle: 'Slot title',
     uiTitlePlaceholder: 'e.g. Start onboarding',
+    uiTitleHelp: 'Copy returned as ui.title.',
     uiDescription: 'Slot description',
     uiDescriptionPlaceholder: 'Short copy shown in the product UI',
+    uiDescriptionHelp: 'Copy returned as ui.description.',
     targetUrl: 'Target URL',
     targetUrlPlaceholder: 'e.g. /onboarding/start',
+    targetUrlHelp: 'Service-owned destination URL. The platform stores and returns it, but does not own the route.',
     source: 'Exposure source',
+    sourceHelp: 'Analytics source key for where the slot is rendered.',
     targetCohort: 'Target cohort',
     targetCohortPlaceholder: 'Use * for all cohorts',
+    targetCohortHelp: 'Coarse cohort targeting rule. Use * when this slot is not cohort-limited.',
     allowedRoles: 'Allowed roles',
-    allowedRolesHint: 'Leave empty to allow all roles.',
-    roleBuilder: 'Builder',
-    roleRunner: 'Runner',
+    allowedRolesPlaceholder: 'e.g. builder, runner, mentor',
+    allowedRolesHint: 'Comma-separated project role keys. Leave empty to allow all roles.',
     placementEnabled: 'Enable slot immediately',
     placementRequired: 'Fill all UI exposure slot fields or turn off slot creation.',
     placementCreateFailed: 'Experiment was created, but UI exposure slot creation failed. Add the slot from the experiment detail page.',
@@ -79,30 +86,41 @@ const translations = {
     configurePlacement: '실험 생성과 함께 UI 노출 슬롯 생성',
     placementKey: '슬롯 키',
     placementKeyPlaceholder: '예: product-home-primary-cta',
+    placementKeyHelp: '서비스 프론트가 decide API에 전달하는 슬롯 식별자입니다.',
     uiId: 'UI ID',
     uiIdPlaceholder: '예: onboarding-start-banner',
+    uiIdHelp: '분석과 렌더링 식별에 사용할 안정적인 UI 식별자입니다.',
     uiType: 'UI 타입',
+    uiTypeHelp: '프론트에 내려줄 렌더링 힌트입니다. 실제 컴포넌트 구현은 각 서비스가 소유합니다.',
     uiTitle: '슬롯 제목',
     uiTitlePlaceholder: '예: 새 온보딩 시작하기',
+    uiTitleHelp: '응답의 ui.title로 내려갈 문구입니다.',
     uiDescription: '슬롯 설명',
     uiDescriptionPlaceholder: '제품 UI에 보여줄 짧은 설명',
+    uiDescriptionHelp: '응답의 ui.description으로 내려갈 문구입니다.',
     targetUrl: '이동 URL',
     targetUrlPlaceholder: '예: /onboarding/start',
+    targetUrlHelp: '각 서비스가 소유한 이동 경로입니다. 실험 플랫폼은 저장하고 응답으로 돌려줄 뿐 라우트를 소유하지 않습니다.',
     source: '노출 소스',
+    sourceHelp: '어느 화면/영역에서 노출됐는지 분석하기 위한 source 키입니다.',
     targetCohort: '대상 코호트',
     targetCohortPlaceholder: '* 입력 시 전체 기수',
+    targetCohortHelp: '코호트 기준의 간단한 대상 조건입니다. 제한하지 않으려면 *를 사용합니다.',
     allowedRoles: '허용 역할',
-    allowedRolesHint: '선택하지 않으면 모든 역할을 허용합니다.',
-    roleBuilder: '빌더',
-    roleRunner: '러너',
+    allowedRolesPlaceholder: '예: builder, runner, mentor',
+    allowedRolesHint: '쉼표로 구분한 프로젝트 역할 키입니다. 비워두면 모든 역할을 허용합니다.',
     placementEnabled: '슬롯 즉시 활성화',
     placementRequired: 'UI 노출 슬롯 필드를 모두 입력하거나 슬롯 생성을 끄세요.',
     placementCreateFailed: '실험은 생성됐지만 UI 노출 슬롯 생성에 실패했습니다. 실험 상세 화면에서 슬롯을 추가하세요.',
   },
 };
 
-const roleOptions = ['builder', 'runner'] as const;
 const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
+
+const parseCsvList = (value: string) => value
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean);
 
 export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ lang, onClose, onCreated }) => {
   const t = translations[lang];
@@ -122,7 +140,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   const [targetUrl, setTargetUrl] = useState('');
   const [source, setSource] = useState('unknown');
   const [targetCohort, setTargetCohort] = useState('*');
-  const [allowedRoles, setAllowedRoles] = useState<string[]>([]);
+  const [allowedRolesText, setAllowedRolesText] = useState('');
   const [placementEnabled, setPlacementEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,12 +153,6 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   const updateVariant = (i: number, field: keyof VariantInput, value: string) => {
     setVariants((prev) => prev.map((v, idx) => idx === i ? { ...v, [field]: value } : v));
   };
-  const toggleRole = (role: string, checked: boolean) => {
-    setAllowedRoles((prev) => checked
-      ? Array.from(new Set([...prev, role]))
-      : prev.filter((item) => item !== role));
-  };
-
   const placementValid = Boolean(
     placementKey.trim() &&
     uiId.trim() &&
@@ -180,7 +192,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             target_url: targetUrl.trim(),
             source: source.trim(),
             target_cohort: targetCohort.trim(),
-            allowed_roles: allowedRoles,
+            allowed_roles: parseCsvList(allowedRolesText),
             enabled: placementEnabled,
           });
         } catch {
@@ -308,6 +320,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                       className="rounded-xl"
                       aria-label={t.placementKey}
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.placementKeyHelp}</p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiId}</label>
@@ -318,6 +331,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                       className="rounded-xl"
                       aria-label={t.uiId}
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiIdHelp}</p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiType}</label>
@@ -331,6 +345,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiTypeHelp}</p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiTitle}</label>
@@ -341,6 +356,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                       className="rounded-xl"
                       aria-label={t.uiTitle}
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiTitleHelp}</p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetUrl}</label>
@@ -351,6 +367,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                       className="rounded-xl"
                       aria-label={t.targetUrl}
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetUrlHelp}</p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.source}</label>
@@ -360,6 +377,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                       className="rounded-xl"
                       aria-label={t.source}
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.sourceHelp}</p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetCohort}</label>
@@ -370,6 +388,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                       className="rounded-xl"
                       aria-label={t.targetCohort}
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetCohortHelp}</p>
                   </div>
                 </div>
 
@@ -383,24 +402,19 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                     rows={2}
                     aria-label={t.uiDescription}
                   />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiDescriptionHelp}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</p>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</label>
+                  <Input
+                    value={allowedRolesText}
+                    onChange={(e) => setAllowedRolesText(e.target.value)}
+                    placeholder={t.allowedRolesPlaceholder}
+                    className="rounded-xl"
+                    aria-label={t.allowedRoles}
+                  />
                   <p className="text-xs text-slate-500 dark:text-slate-400">{t.allowedRolesHint}</p>
-                  <div className="flex flex-wrap gap-3">
-                    {roleOptions.map((role) => (
-                      <label key={role} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                          checked={allowedRoles.includes(role)}
-                          onChange={(e) => toggleRole(role, e.target.checked)}
-                        />
-                        {role === 'builder' ? t.roleBuilder : t.roleRunner}
-                      </label>
-                    ))}
-                  </div>
                 </div>
               </div>
             )}

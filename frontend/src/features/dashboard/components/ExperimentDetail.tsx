@@ -76,20 +76,28 @@ const translations = {
     placementsError: 'Failed to load UI exposure slots.',
     placementsEmpty: 'No UI exposure slots configured.',
     placementKey: 'Slot key',
+    placementKeyHelp: 'Frontend-owned placement key sent to the decide API.',
     uiId: 'UI ID',
+    uiIdHelp: 'Stable UI identifier returned for analytics and rendering.',
     uiType: 'UI type',
+    uiTypeHelp: 'Rendering hint returned to the frontend. The service still owns the component implementation.',
     uiTitle: 'Title',
+    uiTitleHelp: 'Copy returned as ui.title.',
     uiDescription: 'Description',
+    uiDescriptionHelp: 'Copy returned as ui.description.',
     targetUrl: 'Target URL',
+    targetUrlHelp: 'Service-owned destination URL. The platform stores and returns it, but does not own the route.',
     source: 'Exposure source',
+    sourceHelp: 'Analytics source key for where the slot is rendered.',
     targetCohort: 'Target cohort',
     targetCohortPlaceholder: 'Use * for all cohorts',
+    targetCohortHelp: 'Coarse cohort targeting rule. Use * when this slot is not cohort-limited.',
     allowedRoles: 'Allowed roles',
-    allowedRolesHint: 'Leave empty to allow all roles.',
+    allowedRolesPlaceholder: 'e.g. builder, runner, mentor',
+    allowedRolesHint: 'Comma-separated project role keys. Leave empty to allow all roles.',
+    allRoles: 'All roles',
     enabled: 'Enabled',
     disabled: 'Disabled',
-    roleBuilder: 'Builder',
-    roleRunner: 'Runner',
     addPlacement: 'Add Slot',
     createPlacement: 'Create Slot',
     creatingPlacement: 'Creating...',
@@ -160,20 +168,28 @@ const translations = {
     placementsError: 'UI 노출 슬롯을 불러오지 못했습니다.',
     placementsEmpty: '설정된 UI 노출 슬롯이 없습니다.',
     placementKey: '슬롯 키',
+    placementKeyHelp: '서비스 프론트가 decide API에 전달하는 슬롯 식별자입니다.',
     uiId: 'UI ID',
+    uiIdHelp: '분석과 렌더링 식별에 사용할 안정적인 UI 식별자입니다.',
     uiType: 'UI 타입',
+    uiTypeHelp: '프론트에 내려줄 렌더링 힌트입니다. 실제 컴포넌트 구현은 각 서비스가 소유합니다.',
     uiTitle: '제목',
+    uiTitleHelp: '응답의 ui.title로 내려갈 문구입니다.',
     uiDescription: '설명',
+    uiDescriptionHelp: '응답의 ui.description으로 내려갈 문구입니다.',
     targetUrl: '이동 URL',
+    targetUrlHelp: '각 서비스가 소유한 이동 경로입니다. 실험 플랫폼은 저장하고 응답으로 돌려줄 뿐 라우트를 소유하지 않습니다.',
     source: '노출 소스',
+    sourceHelp: '어느 화면/영역에서 노출됐는지 분석하기 위한 source 키입니다.',
     targetCohort: '대상 코호트',
     targetCohortPlaceholder: '* 입력 시 전체 기수',
+    targetCohortHelp: '코호트 기준의 간단한 대상 조건입니다. 제한하지 않으려면 *를 사용합니다.',
     allowedRoles: '허용 역할',
-    allowedRolesHint: '선택하지 않으면 모든 역할을 허용합니다.',
+    allowedRolesPlaceholder: '예: builder, runner, mentor',
+    allowedRolesHint: '쉼표로 구분한 프로젝트 역할 키입니다. 비워두면 모든 역할을 허용합니다.',
+    allRoles: '모든 역할',
     enabled: '활성',
     disabled: '비활성',
-    roleBuilder: '빌더',
-    roleRunner: '러너',
     addPlacement: '슬롯 추가',
     createPlacement: '슬롯 생성',
     creatingPlacement: '생성 중...',
@@ -223,8 +239,12 @@ const transitionButtons: Record<ExperimentStatus, TransitionButton[]> = {
   archived: [],
 };
 
-const roleOptions = ['builder', 'runner'] as const;
 const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
+
+const parseCsvList = (value: string) => value
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean);
 
 type PlacementForm = {
   placement_key: string;
@@ -235,7 +255,7 @@ type PlacementForm = {
   target_url: string;
   source: string;
   target_cohort: string;
-  allowed_roles: string[];
+  allowed_roles_text: string;
   enabled: boolean;
 };
 
@@ -248,7 +268,7 @@ const toPlacementForm = (placement: ExperimentPlacementConfig): PlacementForm =>
   target_url: placement.target_url,
   source: placement.source,
   target_cohort: placement.target_cohort,
-  allowed_roles: [...placement.allowed_roles],
+  allowed_roles_text: placement.allowed_roles.join(', '),
   enabled: placement.enabled,
 });
 
@@ -261,7 +281,7 @@ const emptyPlacementForm = (): PlacementForm => ({
   target_url: '',
   source: 'unknown',
   target_cohort: '*',
-  allowed_roles: [],
+  allowed_roles_text: '',
   enabled: false,
 });
 
@@ -442,16 +462,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     setPlacementForm((current) => current ? { ...current, [key]: value } : current);
   };
 
-  const togglePlacementRole = (role: string, checked: boolean) => {
-    setPlacementForm((current) => {
-      if (!current) return current;
-      const nextRoles = checked
-        ? Array.from(new Set([...current.allowed_roles, role]))
-        : current.allowed_roles.filter((item) => item !== role);
-      return { ...current, allowed_roles: nextRoles };
-    });
-  };
-
   const handlePlacementSave = async () => {
     if (!id || !placementForm) return;
     setPlacementSaving(true);
@@ -465,7 +475,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         target_url: placementForm.target_url.trim(),
         source: placementForm.source.trim(),
         target_cohort: placementForm.target_cohort.trim(),
-        allowed_roles: placementForm.allowed_roles,
+        allowed_roles: parseCsvList(placementForm.allowed_roles_text),
         enabled: placementForm.enabled,
       };
       if (placementCreating) {
@@ -743,7 +753,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                       [t.targetUrl, selectedPlacement.target_url],
                       [t.source, selectedPlacement.source],
                       [t.targetCohort, selectedPlacement.target_cohort],
-                      [t.allowedRoles, selectedPlacement.allowed_roles.join(', ')],
+                      [t.allowedRoles, selectedPlacement.allowed_roles.length ? selectedPlacement.allowed_roles.join(', ') : t.allRoles],
                       [t.labelStatus, selectedPlacement.enabled ? t.enabled : t.disabled],
                     ].map(([label, value]) => (
                       <div key={label} className="space-y-1">
@@ -776,6 +786,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           aria-label={t.placementKey}
                           disabled={!placementCreating}
                         />
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.placementKeyHelp}</p>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiId}</label>
@@ -785,6 +796,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           className="rounded-xl"
                           aria-label={t.uiId}
                         />
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiIdHelp}</p>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiType}</label>
@@ -798,6 +810,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                             ))}
                           </SelectContent>
                         </Select>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiTypeHelp}</p>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiTitle}</label>
@@ -807,6 +820,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           className="rounded-xl"
                           aria-label={t.uiTitle}
                         />
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiTitleHelp}</p>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetUrl}</label>
@@ -816,6 +830,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           className="rounded-xl"
                           aria-label={t.targetUrl}
                         />
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetUrlHelp}</p>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.source}</label>
@@ -825,6 +840,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           className="rounded-xl"
                           aria-label={t.source}
                         />
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.sourceHelp}</p>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetCohort}</label>
@@ -835,6 +851,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           className="rounded-xl"
                           aria-label={t.targetCohort}
                         />
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetCohortHelp}</p>
                       </div>
                     </div>
 
@@ -847,24 +864,19 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                         rows={2}
                         aria-label={t.uiDescription}
                       />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiDescriptionHelp}</p>
                     </div>
 
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</p>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</label>
+                      <Input
+                        value={placementForm.allowed_roles_text}
+                        onChange={(event) => updatePlacementForm('allowed_roles_text', event.target.value)}
+                        placeholder={t.allowedRolesPlaceholder}
+                        className="rounded-xl"
+                        aria-label={t.allowedRoles}
+                      />
                       <p className="text-xs text-slate-500 dark:text-slate-400">{t.allowedRolesHint}</p>
-                      <div className="flex flex-wrap gap-3">
-                        {roleOptions.map((role) => (
-                          <label key={role} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                              checked={placementForm.allowed_roles.includes(role)}
-                              onChange={(event) => togglePlacementRole(role, event.target.checked)}
-                            />
-                            {role === 'builder' ? t.roleBuilder : t.roleRunner}
-                          </label>
-                        ))}
-                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 pt-1">
