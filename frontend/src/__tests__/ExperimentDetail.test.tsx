@@ -86,7 +86,7 @@ describe('ExperimentDetail placements', () => {
   it('renders placement config in Korean', async () => {
     await renderDetail();
 
-    expect(await screen.findByText('LVUP 노출 슬롯')).toBeInTheDocument();
+    expect(await screen.findByText('UI 노출 슬롯')).toBeInTheDocument();
     expect(screen.getAllByText('project-detail-home-reflection-cta').length).toBeGreaterThan(0);
     expect(screen.getByText('중간 회고 작성하기')).toBeInTheDocument();
     expect(experimentPlacementApi.list).toHaveBeenCalledWith('s12-mid-reflection');
@@ -121,10 +121,10 @@ describe('ExperimentDetail placements', () => {
         enabled: true,
       }),
     );
-    expect(await screen.findByText('LVUP 노출 슬롯을 저장했습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('UI 노출 슬롯을 저장했습니다.')).toBeInTheDocument();
   });
 
-  it('creates a new LVUP UI slot', async () => {
+  it('creates a new UI exposure slot', async () => {
     (experimentPlacementApi.create as any).mockResolvedValue({
       ...placement,
       placement_key: 'project-sidebar-reflection-cta',
@@ -168,10 +168,10 @@ describe('ExperimentDetail placements', () => {
         allowed_roles: [],
       }),
     );
-    expect(await screen.findByText('LVUP 노출 슬롯을 생성했습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('UI 노출 슬롯을 생성했습니다.')).toBeInTheDocument();
   });
 
-  it('deletes a LVUP UI slot after confirmation', async () => {
+  it('deletes a UI exposure slot after confirmation', async () => {
     vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
     (experimentPlacementApi.delete as any).mockResolvedValue(undefined);
 
@@ -185,7 +185,7 @@ describe('ExperimentDetail placements', () => {
       's12-mid-reflection',
       'project-detail-home-reflection-cta',
     );
-    expect(await screen.findByText('LVUP 노출 슬롯을 삭제했습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('UI 노출 슬롯을 삭제했습니다.')).toBeInTheDocument();
 
     (window.confirm as any).mockRestore();
   });

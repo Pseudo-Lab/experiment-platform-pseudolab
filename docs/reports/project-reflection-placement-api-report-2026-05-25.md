@@ -298,9 +298,9 @@ PATCH /api/v1/experiments/{experiment_id}/placements/{placement_key}/config
 DELETE /api/v1/experiments/{experiment_id}/placements/{placement_key}
 ```
 
-관리 API는 실험 플랫폼 대시보드 프론트엔드에서 LVUP 노출 슬롯을 관리하기 위해 사용하는 백엔드 계약이다.
+관리 API는 실험 플랫폼 대시보드 프론트엔드에서 UI 노출 슬롯을 관리하기 위해 사용하는 백엔드 계약이다.
 
-실험 생성 화면에서는 실험을 만들면서 초기 LVUP 노출 슬롯을 선택적으로 함께 생성할 수 있다. 실험 상세 화면에서는 슬롯 목록 조회, 생성, 수정, 삭제를 지원한다.
+실험 생성 화면에서는 실험을 만들면서 초기 UI 노출 슬롯을 선택적으로 함께 생성할 수 있다. 실험 상세 화면에서는 슬롯 목록 조회, 생성, 수정, 삭제를 지원한다.
 
 새 슬롯은 LVUP 프론트엔드에 실제 렌더링 슬롯이 먼저 정의되어 있을 때 생성한다. 운영 중 잠시 숨기려는 경우에는 삭제보다 `enabled=false` 비활성화를 우선 사용한다.
 
