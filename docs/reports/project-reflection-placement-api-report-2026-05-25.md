@@ -14,9 +14,9 @@ Owner: soo
 
 - 외부 LVUP 프론트엔드: 프로젝트 상세 홈 화면에서 실제 UI를 렌더링하는 시스템
 - 실험 플랫폼 백엔드: 대상자, 기간, 제출 여부, 설정값을 판단하는 시스템
-- 실험 플랫폼 대시보드 프론트엔드: 향후 운영자가 실험/placement 설정을 수정할 관리 UI
+- 실험 플랫폼 대시보드 프론트엔드: 운영자가 실험/placement 설정을 수정할 관리 UI
 - Experiment: `s12-mid-reflection`처럼 운영 목적을 가진 실험 단위
-- Placement: LVUP 안에서 UI가 놓이는 위치 또는 진입점
+- Placement: LVUP 프론트엔드가 미리 정의한 UI 슬롯 또는 진입점. 실험 플랫폼은 실제 화면 위치를 정하지 않고, 해당 슬롯의 노출 여부와 문구를 관리한다.
 - UI Type: 실제 렌더링 형태. 현재 기본값은 `banner`
 
 ## 3. 왜 배너 전용 API가 아닌가
@@ -73,7 +73,7 @@ Experiment
   -> decision
 ```
 
-이번 placement API는 이 흐름을 우회하는 별도 제품 API가 아니라, `Experiment` 하위에서 LVUP의 특정 노출 지점을 관리하는 리소스다.
+이번 placement API는 이 흐름을 우회하는 별도 제품 API가 아니라, `Experiment` 하위에서 LVUP이 미리 정의한 UI 슬롯을 관리하는 리소스다.
 
 검증 결과:
 
@@ -244,9 +244,9 @@ GET /api/v1/experiments/{experiment_id}/placements/{placement_key}/config
 PATCH /api/v1/experiments/{experiment_id}/placements/{placement_key}/config
 ```
 
-이 API는 실험 플랫폼 대시보드 프론트엔드의 실험 상세 화면에서 placement 목록을 조회하고, 문구, 설명, URL, UI 타입, enabled 상태를 수정할 수 있도록 사용하는 백엔드 계약이다.
+이 API는 실험 플랫폼 대시보드 프론트엔드의 실험 상세 화면에서 LVUP 노출 슬롯 목록을 조회하고, 문구, 설명, URL, UI 타입, enabled 상태를 수정할 수 있도록 사용하는 백엔드 계약이다.
 
-현재 구현 범위에는 기존 placement의 조회/편집이 포함된다. 새 placement 생성과 삭제는 LVUP 렌더링 위치와 운영 정책 합의가 필요하므로 포함하지 않았다.
+현재 구현 범위에는 기존 placement의 조회/편집이 포함된다. 새 placement 생성과 삭제는 LVUP 프론트엔드에 실제 슬롯이 먼저 정의되어 있어야 하므로 포함하지 않았다.
 
 ## 11. 사용하는 데이터
 

@@ -32,6 +32,8 @@ placement_key = project-detail-home-reflection-cta
 ui.type = banner
 ```
 
+여기서 placement는 실험 플랫폼이 LVUP 화면의 물리적 위치를 정한다는 뜻이 아니다. LVUP 프론트엔드가 미리 정의한 UI 슬롯 또는 진입점의 식별자이며, 실험 플랫폼은 해당 슬롯의 노출 여부와 문구를 관리한다.
+
 ## 3. 왜 이렇게 바꿨는가
 
 처음 구현은 `/project-reflection-banner/decide`에 가까운 구조였다. 이 방식은 빠르게 만들 수 있지만 다음 문제가 있었다.
@@ -272,7 +274,7 @@ placement 테스트에서 검증한 주요 케이스:
 
 3. 실험 플랫폼 대시보드 프론트엔드에는 기존 placement config 조회/편집 UI가 붙었다.
    - 새 placement 생성/삭제는 아직 제공하지 않는다.
-   - LVUP 렌더링 위치와 운영 정책 합의 없이 임의 placement를 만들면 사용할 수 없는 설정이 생길 수 있으므로 의도적으로 제외했다.
+   - LVUP 프론트엔드에 실제 슬롯이 없는 상태에서 임의 placement를 만들면 사용할 수 없는 설정이 생길 수 있으므로 의도적으로 제외했다.
 
 4. D1 main 동기화 데이터 품질에 의존한다.
    - `dl_projects`, `dl_project_members`의 최신 `base_date` 기준으로 판단한다.

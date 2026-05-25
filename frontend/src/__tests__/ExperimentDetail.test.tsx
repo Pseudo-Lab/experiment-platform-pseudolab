@@ -84,7 +84,7 @@ describe('ExperimentDetail placements', () => {
   it('renders placement config in Korean', async () => {
     await renderDetail();
 
-    expect(await screen.findByText('UI 노출 위치')).toBeInTheDocument();
+    expect(await screen.findByText('LVUP 노출 슬롯')).toBeInTheDocument();
     expect(screen.getAllByText('project-detail-home-reflection-cta').length).toBeGreaterThan(0);
     expect(screen.getByText('중간 회고 작성하기')).toBeInTheDocument();
     expect(experimentPlacementApi.list).toHaveBeenCalledWith('s12-mid-reflection');
@@ -119,6 +119,6 @@ describe('ExperimentDetail placements', () => {
         enabled: true,
       }),
     );
-    expect(await screen.findByText('노출 위치를 저장했습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('LVUP 노출 슬롯을 저장했습니다.')).toBeInTheDocument();
   });
 });
