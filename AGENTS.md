@@ -38,7 +38,7 @@ Last-Updated: 2026-05-18
 ## 3-1) 도메인 소유권
 1. Backend: `backend/app/**`, `backend/migrations/**`, `backend/tests/**`
 2. Frontend Dashboard: `frontend/src/**`
-3. Demo app: `examples/demo-app/**`
+3. Example app: `frontend/src/features/example/**`
 4. Infra/Ops: `.github/**`, `docker-compose*.yml`, 배포/운영 매니페스트, 런타임 설정
 5. Docs/Process: `AGENTS.md`, `docs/**`
 6. 세부 파일 소유권과 Feature Flag 작업 기준은 `docs/guides/agent_collaboration.md`를 따릅니다.

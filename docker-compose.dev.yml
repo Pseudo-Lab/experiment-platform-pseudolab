@@ -30,19 +30,3 @@ services:
     restart: always
     env_file:
       - ./backend/.env
-
-  experiment-platform-pseudolab-demo-app:
-    build:
-      context: ./examples/demo-app
-      dockerfile: Dockerfile
-      target: dev
-    container_name: experiment-platform-pseudolab-demo-app-dev
-    ports:
-      - "8082:5173"
-    volumes:
-      - ./examples/demo-app:/app
-      - /app/node_modules
-    command: npm run dev -- --host 0.0.0.0
-    restart: always
-    environment:
-      - VITE_PLATFORM_API=http://localhost:8000/api/v1
