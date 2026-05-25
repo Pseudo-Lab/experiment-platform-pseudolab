@@ -6,7 +6,7 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus } from 'lucide-react';
 import {
   experimentApi, experimentResultApi, decisionApi, experimentPlacementApi,
   type Experiment, type ExperimentStatus,
@@ -88,8 +88,18 @@ const translations = {
     disabled: 'Disabled',
     roleBuilder: 'Builder',
     roleRunner: 'Runner',
+    addPlacement: 'Add Slot',
+    createPlacement: 'Create Slot',
+    creatingPlacement: 'Creating...',
+    deletePlacement: 'Delete Slot',
+    deletingPlacement: 'Deleting...',
+    deletePlacementConfirm: 'Delete this LVUP UI slot? Use Disabled instead if it may be reused.',
+    placementCreated: 'LVUP UI slot created.',
     placementSaved: 'LVUP UI slot saved.',
+    placementDeleted: 'LVUP UI slot deleted.',
+    placementCreateError: 'Failed to create LVUP UI slot.',
     placementSaveError: 'Failed to save LVUP UI slot.',
+    placementDeleteError: 'Failed to delete LVUP UI slot.',
   },
   ko: {
     back: '목록으로',
@@ -160,8 +170,18 @@ const translations = {
     disabled: '비활성',
     roleBuilder: '빌더',
     roleRunner: '러너',
+    addPlacement: '슬롯 추가',
+    createPlacement: '슬롯 생성',
+    creatingPlacement: '생성 중...',
+    deletePlacement: '슬롯 삭제',
+    deletingPlacement: '삭제 중...',
+    deletePlacementConfirm: '이 LVUP 노출 슬롯을 삭제하시겠습니까? 다시 사용할 가능성이 있으면 비활성을 사용하세요.',
+    placementCreated: 'LVUP 노출 슬롯을 생성했습니다.',
     placementSaved: 'LVUP 노출 슬롯을 저장했습니다.',
+    placementDeleted: 'LVUP 노출 슬롯을 삭제했습니다.',
+    placementCreateError: 'LVUP 노출 슬롯 생성에 실패했습니다.',
     placementSaveError: 'LVUP 노출 슬롯 저장에 실패했습니다.',
+    placementDeleteError: 'LVUP 노출 슬롯 삭제에 실패했습니다.',
   },
 };
 
@@ -203,6 +223,7 @@ const roleOptions = ['builder', 'runner'] as const;
 const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
 
 type PlacementForm = {
+  placement_key: string;
   ui_id: string;
   ui_type: string;
   title: string;
@@ -215,6 +236,7 @@ type PlacementForm = {
 };
 
 const toPlacementForm = (placement: ExperimentPlacementConfig): PlacementForm => ({
+  placement_key: placement.placement_key,
   ui_id: placement.ui_id,
   ui_type: placement.ui_type,
   title: placement.title,
@@ -224,6 +246,19 @@ const toPlacementForm = (placement: ExperimentPlacementConfig): PlacementForm =>
   target_cohort: placement.target_cohort,
   allowed_roles: [...placement.allowed_roles],
   enabled: placement.enabled,
+});
+
+const emptyPlacementForm = (): PlacementForm => ({
+  placement_key: '',
+  ui_id: '',
+  ui_type: 'banner',
+  title: '',
+  description: '',
+  target_url: '',
+  source: 'project_detail_home',
+  target_cohort: '12',
+  allowed_roles: ['builder', 'runner'],
+  enabled: false,
 });
 
 export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
@@ -249,8 +284,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [placementsError, setPlacementsError] = useState<string | null>(null);
   const [selectedPlacementKey, setSelectedPlacementKey] = useState<string | null>(null);
   const [placementEditing, setPlacementEditing] = useState(false);
+  const [placementCreating, setPlacementCreating] = useState(false);
   const [placementForm, setPlacementForm] = useState<PlacementForm | null>(null);
   const [placementSaving, setPlacementSaving] = useState(false);
+  const [placementDeleting, setPlacementDeleting] = useState(false);
   const [placementSaveMessage, setPlacementSaveMessage] = useState<string | null>(null);
 
   const [decisions, setDecisions] = useState<Decision[]>([]);
@@ -371,7 +408,15 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const handleSelectPlacement = (placementKey: string) => {
     setSelectedPlacementKey(placementKey);
     setPlacementEditing(false);
+    setPlacementCreating(false);
     setPlacementForm(null);
+    setPlacementSaveMessage(null);
+  };
+
+  const startPlacementCreate = () => {
+    setPlacementForm(emptyPlacementForm());
+    setPlacementCreating(true);
+    setPlacementEditing(false);
     setPlacementSaveMessage(null);
   };
 
@@ -379,7 +424,14 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     if (!selectedPlacement) return;
     setPlacementForm(toPlacementForm(selectedPlacement));
     setPlacementEditing(true);
+    setPlacementCreating(false);
     setPlacementSaveMessage(null);
+  };
+
+  const cancelPlacementForm = () => {
+    setPlacementEditing(false);
+    setPlacementCreating(false);
+    setPlacementForm(null);
   };
 
   const updatePlacementForm = <K extends keyof PlacementForm>(key: K, value: PlacementForm[K]) => {
@@ -397,11 +449,11 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   };
 
   const handlePlacementSave = async () => {
-    if (!id || !selectedPlacement || !placementForm) return;
+    if (!id || !placementForm) return;
     setPlacementSaving(true);
     setPlacementSaveMessage(null);
     try {
-      const updated = await experimentPlacementApi.update(id, selectedPlacement.placement_key, {
+      const payload = {
         ui_id: placementForm.ui_id.trim(),
         ui_type: placementForm.ui_type.trim(),
         title: placementForm.title.trim(),
@@ -411,17 +463,48 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         target_cohort: placementForm.target_cohort.trim(),
         allowed_roles: placementForm.allowed_roles,
         enabled: placementForm.enabled,
-      });
-      setPlacements((current) => current.map((placement) => (
-        placement.placement_key === updated.placement_key ? updated : placement
-      )));
+      };
+      if (placementCreating) {
+        const created = await experimentPlacementApi.create(id, {
+          placement_key: placementForm.placement_key.trim(),
+          ...payload,
+        });
+        setPlacements((current) => [...current, created].sort((a, b) => a.placement_key.localeCompare(b.placement_key)));
+        setSelectedPlacementKey(created.placement_key);
+        setPlacementSaveMessage(t.placementCreated);
+      } else {
+        if (!selectedPlacement) return;
+        const updated = await experimentPlacementApi.update(id, selectedPlacement.placement_key, payload);
+        setPlacements((current) => current.map((placement) => (
+          placement.placement_key === updated.placement_key ? updated : placement
+        )));
+        setPlacementSaveMessage(t.placementSaved);
+      }
       setPlacementEditing(false);
+      setPlacementCreating(false);
       setPlacementForm(null);
-      setPlacementSaveMessage(t.placementSaved);
     } catch {
-      setPlacementSaveMessage(t.placementSaveError);
+      setPlacementSaveMessage(placementCreating ? t.placementCreateError : t.placementSaveError);
     } finally {
       setPlacementSaving(false);
+    }
+  };
+
+  const handlePlacementDelete = async () => {
+    if (!id || !selectedPlacement || !window.confirm(t.deletePlacementConfirm)) return;
+    setPlacementDeleting(true);
+    setPlacementSaveMessage(null);
+    try {
+      await experimentPlacementApi.delete(id, selectedPlacement.placement_key);
+      const remaining = placements.filter((placement) => placement.placement_key !== selectedPlacement.placement_key);
+      setPlacements(remaining);
+      setSelectedPlacementKey(remaining[0]?.placement_key ?? null);
+      cancelPlacementForm();
+      setPlacementSaveMessage(t.placementDeleted);
+    } catch {
+      setPlacementSaveMessage(t.placementDeleteError);
+    } finally {
+      setPlacementDeleting(false);
     }
   };
 
@@ -435,7 +518,8 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     new Set([...uiTypeOptions, placementForm?.ui_type].filter((value): value is string => Boolean(value))),
   );
   const placementFormValid = Boolean(
-    placementForm?.ui_id.trim() &&
+    placementForm?.placement_key.trim() &&
+    placementForm.ui_id.trim() &&
     placementForm.ui_type.trim() &&
     placementForm.title.trim() &&
     placementForm.description.trim() &&
@@ -444,6 +528,9 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     placementForm.target_cohort.trim() &&
     placementForm.allowed_roles.length > 0,
   );
+  const placementMessageIsSuccess = placementSaveMessage
+    ? [t.placementCreated, t.placementSaved, t.placementDeleted].includes(placementSaveMessage)
+    : false;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -581,20 +668,40 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
             <SlidersHorizontal className="h-5 w-5 text-indigo-500" />
             {t.sectionPlacements}
           </CardTitle>
-          {selectedPlacement && !placementEditing && (
-            <Button size="sm" variant="outline" className="gap-1.5 rounded-xl" onClick={startPlacementEdit}>
-              <Pencil className="h-3.5 w-3.5" />
-              {t.edit}
-            </Button>
-          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            {!placementEditing && !placementCreating && (
+              <Button size="sm" variant="outline" className="gap-1.5 rounded-xl" onClick={startPlacementCreate}>
+                <Plus className="h-3.5 w-3.5" />
+                {t.addPlacement}
+              </Button>
+            )}
+            {selectedPlacement && !placementEditing && !placementCreating && (
+              <>
+                <Button size="sm" variant="outline" className="gap-1.5 rounded-xl" onClick={startPlacementEdit}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  {t.edit}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 rounded-xl border-rose-200 text-rose-600 hover:text-rose-600"
+                  onClick={handlePlacementDelete}
+                  disabled={placementDeleting}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {placementDeleting ? t.deletingPlacement : t.deletePlacement}
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {placementsLoading && <p className="text-sm text-slate-400">{t.placementsLoading}</p>}
           {placementsError && <p className="text-sm text-rose-500">{placementsError}</p>}
-          {!placementsLoading && !placementsError && placements.length === 0 && (
+          {!placementsLoading && !placementsError && placements.length === 0 && !placementCreating && (
             <p className="text-sm text-slate-400">{t.placementsEmpty}</p>
           )}
-          {!placementsLoading && !placementsError && selectedPlacement && (
+          {!placementsLoading && !placementsError && (selectedPlacement || placementCreating) && (
             <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
               <div className="space-y-2">
                 {placements.map((placement) => {
@@ -622,7 +729,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-                {!placementEditing && (
+                {!placementEditing && !placementCreating && selectedPlacement && (
                   <div className="grid gap-4 sm:grid-cols-2">
                     {[
                       [t.placementKey, selectedPlacement.placement_key],
@@ -644,7 +751,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                   </div>
                 )}
 
-                {placementEditing && placementForm && (
+                {(placementEditing || placementCreating) && placementForm && (
                   <div className="space-y-4">
                     <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
                       <input
@@ -658,11 +765,22 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.placementKey}</label>
+                        <Input
+                          value={placementForm.placement_key}
+                          onChange={(event) => updatePlacementForm('placement_key', event.target.value)}
+                          className="rounded-xl"
+                          aria-label={t.placementKey}
+                          disabled={!placementCreating}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiId}</label>
                         <Input
                           value={placementForm.ui_id}
                           onChange={(event) => updatePlacementForm('ui_id', event.target.value)}
                           className="rounded-xl"
+                          aria-label={t.uiId}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -684,6 +802,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           value={placementForm.title}
                           onChange={(event) => updatePlacementForm('title', event.target.value)}
                           className="rounded-xl"
+                          aria-label={t.uiTitle}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -692,6 +811,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           value={placementForm.target_url}
                           onChange={(event) => updatePlacementForm('target_url', event.target.value)}
                           className="rounded-xl"
+                          aria-label={t.targetUrl}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -700,6 +820,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           value={placementForm.source}
                           onChange={(event) => updatePlacementForm('source', event.target.value)}
                           className="rounded-xl"
+                          aria-label={t.source}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -708,6 +829,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                           value={placementForm.target_cohort}
                           onChange={(event) => updatePlacementForm('target_cohort', event.target.value)}
                           className="rounded-xl"
+                          aria-label={t.targetCohort}
                         />
                       </div>
                     </div>
@@ -719,6 +841,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                         onChange={(event) => updatePlacementForm('description', event.target.value)}
                         className="rounded-xl resize-none"
                         rows={2}
+                        aria-label={t.uiDescription}
                       />
                     </div>
 
@@ -747,16 +870,13 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                         disabled={placementSaving || !placementFormValid}
                       >
                         <Check className="h-3.5 w-3.5" />
-                        {placementSaving ? t.saving : t.save}
+                        {placementSaving ? (placementCreating ? t.creatingPlacement : t.saving) : (placementCreating ? t.createPlacement : t.save)}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         className="gap-1.5 rounded-xl"
-                        onClick={() => {
-                          setPlacementEditing(false);
-                          setPlacementForm(null);
-                        }}
+                        onClick={cancelPlacementForm}
                         disabled={placementSaving}
                       >
                         <X className="h-3.5 w-3.5" />
@@ -769,7 +889,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
             </div>
           )}
           {placementSaveMessage && (
-            <p className={`text-sm ${placementSaveMessage === t.placementSaved ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+            <p className={`text-sm ${placementMessageIsSuccess ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
               {placementSaveMessage}
             </p>
           )}

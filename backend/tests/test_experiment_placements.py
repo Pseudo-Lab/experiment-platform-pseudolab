@@ -362,6 +362,64 @@ class TestExperimentPlacementCapture:
 
 
 class TestExperimentPlacementConfig:
+    def test_create_config(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
+
+        resp = client.post(
+            LIST_BASE,
+            json={
+                "placement_key": "project-sidebar-reflection-cta",
+                "ui_id": "s12-sidebar-reflection",
+                "ui_type": "card",
+                "title": "사이드바 회고",
+                "description": "프로젝트 사이드바 회고 진입점",
+                "target_url": "/reflection/sidebar",
+                "source": "project_sidebar",
+                "target_cohort": "12",
+                "allowed_roles": ["builder"],
+                "enabled": False,
+            },
+        )
+
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["placement_key"] == "project-sidebar-reflection-cta"
+        assert body["ui_type"] == "card"
+        assert body["allowed_roles"] == ["builder"]
+        assert body["enabled"] is False
+
+    def test_create_config_returns_404_for_missing_experiment(self, mock_d1):
+        resp = client.post(
+            LIST_BASE,
+            json={
+                "placement_key": "project-sidebar-reflection-cta",
+                "ui_id": "s12-sidebar-reflection",
+                "title": "사이드바 회고",
+                "description": "프로젝트 사이드바 회고 진입점",
+                "target_url": "/reflection/sidebar",
+            },
+        )
+
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Experiment not found"
+
+    def test_create_config_returns_409_for_duplicate_placement(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
+
+        resp = client.post(
+            LIST_BASE,
+            json={
+                "placement_key": PLACEMENT_KEY,
+                "ui_id": "duplicate",
+                "title": "중복 슬롯",
+                "description": "이미 존재하는 슬롯",
+                "target_url": "/reflection/duplicate",
+            },
+        )
+
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == "Experiment placement config already exists"
+
     def test_list_configs(self, mock_d1):
         _insert_experiment(conn=mock_d1)
 
@@ -436,3 +494,19 @@ class TestExperimentPlacementConfig:
             "description": "이번 주 회고를 작성해주세요",
             "target_url": "/reflection/custom",
         }
+
+    def test_delete_config(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
+
+        resp = client.delete(f"/api/v1/experiments/{EXPERIMENT_ID}/placements/{PLACEMENT_KEY}")
+
+        assert resp.status_code == 204
+        assert client.get(CONFIG_BASE).status_code == 404
+
+    def test_delete_config_returns_404_for_missing_placement(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
+
+        resp = client.delete(f"/api/v1/experiments/{EXPERIMENT_ID}/placements/missing-placement")
+
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Experiment placement config not found"

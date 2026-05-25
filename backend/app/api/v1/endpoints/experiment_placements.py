@@ -1,9 +1,10 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 
 from app.schemas.experiment_placement import (
     ExperimentPlacementConfig,
+    ExperimentPlacementConfigCreate,
     ExperimentPlacementConfigUpdate,
     ExperimentPlacementDecisionResponse,
 )
@@ -15,6 +16,11 @@ router = APIRouter()
 @router.get("/{experiment_id}/placements", response_model=List[ExperimentPlacementConfig])
 async def list_experiment_placement_configs(experiment_id: str):
     return await experiment_placement_service.list_configs(experiment_id)
+
+
+@router.post("/{experiment_id}/placements", response_model=ExperimentPlacementConfig, status_code=201)
+async def create_experiment_placement_config(experiment_id: str, data: ExperimentPlacementConfigCreate):
+    return await experiment_placement_service.create_config(experiment_id, data)
 
 
 @router.get("/{experiment_id}/placements/{placement_key}/decide", response_model=ExperimentPlacementDecisionResponse)
@@ -40,3 +46,9 @@ async def update_experiment_placement_config(
     data: ExperimentPlacementConfigUpdate,
 ):
     return await experiment_placement_service.update_config(experiment_id, placement_key, data)
+
+
+@router.delete("/{experiment_id}/placements/{placement_key}", status_code=204)
+async def delete_experiment_placement_config(experiment_id: str, placement_key: str):
+    await experiment_placement_service.delete_config(experiment_id, placement_key)
+    return Response(status_code=204)

@@ -240,13 +240,17 @@ UI placement 설정은 새 config 테이블에서 관리한다.
 
 ```http
 GET /api/v1/experiments/{experiment_id}/placements
+POST /api/v1/experiments/{experiment_id}/placements
 GET /api/v1/experiments/{experiment_id}/placements/{placement_key}/config
 PATCH /api/v1/experiments/{experiment_id}/placements/{placement_key}/config
+DELETE /api/v1/experiments/{experiment_id}/placements/{placement_key}
 ```
 
-이 API는 실험 플랫폼 대시보드 프론트엔드의 실험 상세 화면에서 LVUP 노출 슬롯 목록을 조회하고, 문구, 설명, URL, UI 타입, enabled 상태를 수정할 수 있도록 사용하는 백엔드 계약이다.
+이 API는 실험 플랫폼 대시보드 프론트엔드에서 LVUP 노출 슬롯을 관리하기 위해 사용하는 백엔드 계약이다.
 
-현재 구현 범위에는 기존 placement의 조회/편집이 포함된다. 새 placement 생성과 삭제는 LVUP 프론트엔드에 실제 슬롯이 먼저 정의되어 있어야 하므로 포함하지 않았다.
+실험 생성 화면에서는 실험을 만들면서 초기 LVUP 노출 슬롯을 선택적으로 함께 생성할 수 있다. 실험 상세 화면에서는 슬롯 목록 조회, 생성, 수정, 삭제를 지원한다.
+
+새 슬롯은 LVUP 프론트엔드에 실제 렌더링 슬롯이 먼저 정의되어 있을 때 생성한다. 운영 중 잠시 숨기려는 경우에는 삭제보다 `enabled=false` 비활성화를 우선 사용한다.
 
 ## 11. 사용하는 데이터
 
@@ -318,11 +322,13 @@ POST /api/v1/capture
 - `backend/.env.sample`
 - `backend/tests/conftest.py`
 - `frontend/src/services/api.ts`
+- `frontend/src/features/dashboard/components/CreateExperimentModal.tsx`
 - `frontend/src/features/dashboard/components/ExperimentDetail.tsx`
 
 추가된 프론트엔드 테스트:
 
 - `frontend/src/__tests__/ExperimentDetail.test.tsx`
+- `frontend/src/__tests__/CreateExperimentModal.test.tsx`
 
 ## 15. 테스트 결과
 
@@ -330,14 +336,14 @@ POST /api/v1/capture
 
 ```text
 cd backend && ./venv/bin/pytest
-139 passed
+144 passed
 ```
 
 프론트엔드 전체 테스트와 빌드도 통과했다.
 
 ```text
 cd frontend && npm test -- --run
-52 passed
+55 passed
 
 cd frontend && npm run build
 built successfully

@@ -223,6 +223,19 @@ export interface ExperimentPlacementConfigUpdate {
   enabled?: boolean;
 }
 
+export interface ExperimentPlacementConfigCreate extends ExperimentPlacementConfigUpdate {
+  placement_key: string;
+  ui_id: string;
+  ui_type: string;
+  title: string;
+  description: string;
+  target_url: string;
+  source: string;
+  target_cohort: string;
+  allowed_roles: string[];
+  enabled: boolean;
+}
+
 export const experimentApi = {
   list: async (status?: ExperimentStatus): Promise<Experiment[]> => {
     const url = new URL(`${API_BASE_URL}/experiments/`, window.location.origin);
@@ -273,6 +286,19 @@ export const experimentPlacementApi = {
     return response.json();
   },
 
+  create: async (
+    experimentId: string,
+    data: ExperimentPlacementConfigCreate,
+  ): Promise<ExperimentPlacementConfig> => {
+    const response = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to create experiment placement');
+    return response.json();
+  },
+
   update: async (
     experimentId: string,
     placementKey: string,
@@ -288,6 +314,14 @@ export const experimentPlacementApi = {
     );
     if (!response.ok) throw new Error('Failed to update experiment placement');
     return response.json();
+  },
+
+  delete: async (experimentId: string, placementKey: string): Promise<void> => {
+    const response = await fetch(
+      `${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}`,
+      { method: 'DELETE' },
+    );
+    if (!response.ok) throw new Error('Failed to delete experiment placement');
   },
 };
 

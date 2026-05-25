@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.db import d1
 from app.schemas.experiment_placement import (
     ExperimentPlacementConfig,
+    ExperimentPlacementConfigCreate,
     ExperimentPlacementConfigUpdate,
     ExperimentPlacementDecisionResponse,
     ExperimentPlacementLoggingContext,
@@ -52,6 +53,44 @@ class ExperimentPlacementService:
             [experiment_id],
         )
         return [self._to_config(row) for row in rows]
+
+    async def create_config(
+        self,
+        experiment_id: str,
+        data: ExperimentPlacementConfigCreate,
+    ) -> ExperimentPlacementConfig:
+        if not await self._experiment_exists(experiment_id):
+            raise HTTPException(status_code=404, detail="Experiment not found")
+
+        placement_key = data.placement_key.strip()
+        if await self._placement_exists(experiment_id, placement_key):
+            raise HTTPException(status_code=409, detail="Experiment placement config already exists")
+
+        now = datetime.now(timezone.utc).isoformat()
+        ok = await d1.execute(
+            """INSERT INTO experiment_placement_config
+               (experiment_id, placement_key, ui_id, ui_type, title, description, target_url, source,
+                target_cohort, allowed_roles, enabled, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                experiment_id,
+                placement_key,
+                data.ui_id.strip(),
+                data.ui_type.strip(),
+                data.title.strip(),
+                data.description.strip(),
+                data.target_url.strip(),
+                data.source.strip(),
+                data.target_cohort.strip(),
+                json.dumps(data.allowed_roles),
+                1 if data.enabled else 0,
+                now,
+                now,
+            ],
+        )
+        if not ok:
+            raise HTTPException(status_code=502, detail="Failed to create experiment placement config")
+        return await self.get_config(experiment_id, placement_key)
 
     async def get_config(self, experiment_id: str, placement_key: str) -> ExperimentPlacementConfig:
         rows = await d1.query(
@@ -99,6 +138,19 @@ class ExperimentPlacementService:
             if not ok:
                 raise HTTPException(status_code=502, detail="Failed to update experiment placement config")
         return await self.get_config(experiment_id, placement_key)
+
+    async def delete_config(self, experiment_id: str, placement_key: str) -> None:
+        if not await self._placement_exists(experiment_id, placement_key):
+            raise HTTPException(status_code=404, detail="Experiment placement config not found")
+
+        ok = await d1.execute(
+            """DELETE FROM experiment_placement_config
+                WHERE experiment_id = ?
+                  AND placement_key = ?""",
+            [experiment_id, placement_key],
+        )
+        if not ok:
+            raise HTTPException(status_code=502, detail="Failed to delete experiment placement config")
 
     async def decide(
         self,
@@ -163,6 +215,17 @@ class ExperimentPlacementService:
 
     async def _experiment_exists(self, experiment_id: str) -> bool:
         rows = await d1.query("SELECT 1 FROM experiments WHERE id = ? LIMIT 1", [experiment_id])
+        return bool(rows)
+
+    async def _placement_exists(self, experiment_id: str, placement_key: str) -> bool:
+        rows = await d1.query(
+            """SELECT 1
+                 FROM experiment_placement_config
+                WHERE experiment_id = ?
+                  AND placement_key = ?
+                LIMIT 1""",
+            [experiment_id, placement_key],
+        )
         return bool(rows)
 
     async def _get_decide_config(self, experiment_id: str, placement_key: str) -> Optional[dict]:

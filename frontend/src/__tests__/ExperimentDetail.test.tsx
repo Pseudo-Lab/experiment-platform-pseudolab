@@ -16,7 +16,9 @@ vi.mock('@/services/api', () => ({
   },
   experimentPlacementApi: {
     list: vi.fn(),
+    create: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
   },
   experimentResultApi: {
     getResult: vi.fn(),
@@ -120,5 +122,68 @@ describe('ExperimentDetail placements', () => {
       }),
     );
     expect(await screen.findByText('LVUP 노출 슬롯을 저장했습니다.')).toBeInTheDocument();
+  });
+
+  it('creates a new LVUP UI slot', async () => {
+    (experimentPlacementApi.create as any).mockResolvedValue({
+      ...placement,
+      placement_key: 'project-sidebar-reflection-cta',
+      ui_id: 's12-sidebar-reflection',
+      title: '사이드바 회고',
+      enabled: false,
+    });
+
+    await renderDetail();
+
+    fireEvent.click(await screen.findByRole('button', { name: /슬롯 추가/ }));
+    fireEvent.change(screen.getByLabelText('슬롯 키'), {
+      target: { value: 'project-sidebar-reflection-cta' },
+    });
+    fireEvent.change(screen.getByLabelText('UI ID'), {
+      target: { value: 's12-sidebar-reflection' },
+    });
+    fireEvent.change(screen.getByLabelText('제목'), {
+      target: { value: '사이드바 회고' },
+    });
+    fireEvent.change(screen.getByLabelText('이동 URL'), {
+      target: { value: '/reflection/sidebar' },
+    });
+    fireEvent.change(screen.getByLabelText('설명'), {
+      target: { value: '프로젝트 사이드바 회고 진입점' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /슬롯 생성/ }));
+    });
+
+    expect(experimentPlacementApi.create).toHaveBeenCalledWith(
+      's12-mid-reflection',
+      expect.objectContaining({
+        placement_key: 'project-sidebar-reflection-cta',
+        ui_id: 's12-sidebar-reflection',
+        title: '사이드바 회고',
+        target_url: '/reflection/sidebar',
+      }),
+    );
+    expect(await screen.findByText('LVUP 노출 슬롯을 생성했습니다.')).toBeInTheDocument();
+  });
+
+  it('deletes a LVUP UI slot after confirmation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    (experimentPlacementApi.delete as any).mockResolvedValue(undefined);
+
+    await renderDetail();
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: /슬롯 삭제/ }));
+    });
+
+    expect(experimentPlacementApi.delete).toHaveBeenCalledWith(
+      's12-mid-reflection',
+      'project-detail-home-reflection-cta',
+    );
+    expect(await screen.findByText('LVUP 노출 슬롯을 삭제했습니다.')).toBeInTheDocument();
+
+    (window.confirm as any).mockRestore();
   });
 });

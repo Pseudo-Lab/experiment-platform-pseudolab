@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { X, Plus, Trash2 } from 'lucide-react';
-import { experimentApi } from '../../../services/api';
+import { experimentApi, experimentPlacementApi } from '../../../services/api';
 
 interface VariantInput {
   name: string;
@@ -35,6 +36,26 @@ const translations = {
     create: 'Create',
     creating: 'Creating...',
     nameRequired: 'Experiment name is required.',
+    configurePlacement: 'Create LVUP UI slot with this experiment',
+    placementKey: 'Slot key',
+    placementKeyPlaceholder: 'e.g. project-detail-home-reflection-cta',
+    uiId: 'UI ID',
+    uiIdPlaceholder: 'e.g. s12-mid-reflection-banner',
+    uiType: 'UI type',
+    uiTitle: 'Slot title',
+    uiTitlePlaceholder: 'e.g. Write mid-point reflection',
+    uiDescription: 'Slot description',
+    uiDescriptionPlaceholder: 'Short copy shown in LVUP',
+    targetUrl: 'Target URL',
+    targetUrlPlaceholder: 'e.g. /reflection/s12-mid-reflection',
+    source: 'Source',
+    targetCohort: 'Target cohort',
+    allowedRoles: 'Allowed roles',
+    roleBuilder: 'Builder',
+    roleRunner: 'Runner',
+    placementEnabled: 'Enable slot immediately',
+    placementRequired: 'Fill all LVUP UI slot fields or turn off slot creation.',
+    placementCreateFailed: 'Experiment was created, but LVUP UI slot creation failed. Add the slot from the experiment detail page.',
   },
   ko: {
     title: '새 실험 생성',
@@ -53,8 +74,31 @@ const translations = {
     create: '생성',
     creating: '생성 중...',
     nameRequired: '실험 이름을 입력해주세요.',
+    configurePlacement: '실험 생성과 함께 LVUP 노출 슬롯 생성',
+    placementKey: '슬롯 키',
+    placementKeyPlaceholder: '예: project-detail-home-reflection-cta',
+    uiId: 'UI ID',
+    uiIdPlaceholder: '예: s12-mid-reflection-banner',
+    uiType: 'UI 타입',
+    uiTitle: '슬롯 제목',
+    uiTitlePlaceholder: '예: 중간 회고 작성하기',
+    uiDescription: '슬롯 설명',
+    uiDescriptionPlaceholder: 'LVUP에 보여줄 짧은 설명',
+    targetUrl: '이동 URL',
+    targetUrlPlaceholder: '예: /reflection/s12-mid-reflection',
+    source: 'Source',
+    targetCohort: '대상 기수',
+    allowedRoles: '허용 역할',
+    roleBuilder: '빌더',
+    roleRunner: '러너',
+    placementEnabled: '슬롯 즉시 활성화',
+    placementRequired: 'LVUP 노출 슬롯 필드를 모두 입력하거나 슬롯 생성을 끄세요.',
+    placementCreateFailed: '실험은 생성됐지만 LVUP 노출 슬롯 생성에 실패했습니다. 실험 상세 화면에서 슬롯을 추가하세요.',
   },
 };
+
+const roleOptions = ['builder', 'runner'] as const;
+const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
 
 export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ lang, onClose, onCreated }) => {
   const t = translations[lang];
@@ -65,6 +109,17 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     { name: 'control', traffic_ratio: '0.5' },
     { name: 'treatment', traffic_ratio: '0.5' },
   ]);
+  const [configurePlacement, setConfigurePlacement] = useState(false);
+  const [placementKey, setPlacementKey] = useState('');
+  const [uiId, setUiId] = useState('');
+  const [uiType, setUiType] = useState('banner');
+  const [slotTitle, setSlotTitle] = useState('');
+  const [slotDescription, setSlotDescription] = useState('');
+  const [targetUrl, setTargetUrl] = useState('');
+  const [source, setSource] = useState('project_detail_home');
+  const [targetCohort, setTargetCohort] = useState('12');
+  const [allowedRoles, setAllowedRoles] = useState<string[]>(['builder', 'runner']);
+  const [placementEnabled, setPlacementEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,15 +131,33 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   const updateVariant = (i: number, field: keyof VariantInput, value: string) => {
     setVariants((prev) => prev.map((v, idx) => idx === i ? { ...v, [field]: value } : v));
   };
+  const toggleRole = (role: string, checked: boolean) => {
+    setAllowedRoles((prev) => checked
+      ? Array.from(new Set([...prev, role]))
+      : prev.filter((item) => item !== role));
+  };
+
+  const placementValid = Boolean(
+    placementKey.trim() &&
+    uiId.trim() &&
+    uiType.trim() &&
+    slotTitle.trim() &&
+    slotDescription.trim() &&
+    targetUrl.trim() &&
+    source.trim() &&
+    targetCohort.trim() &&
+    allowedRoles.length > 0,
+  );
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError(t.nameRequired); return; }
     if (variants.length > 0 && !ratioValid) { setError(t.ratioWarning.replace('{sum}', ratioSum.toFixed(2))); return; }
+    if (configurePlacement && !placementValid) { setError(t.placementRequired); return; }
 
     setSubmitting(true);
     setError(null);
     try {
-      await experimentApi.create({
+      const created = await experimentApi.create({
         name: name.trim(),
         hypothesis: hypothesis.trim() || undefined,
         primary_metric: primaryMetric.trim() || undefined,
@@ -93,6 +166,24 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
           traffic_ratio: parseFloat(v.traffic_ratio) || 0,
         })),
       });
+      if (configurePlacement) {
+        try {
+          await experimentPlacementApi.create(created.id, {
+            placement_key: placementKey.trim(),
+            ui_id: uiId.trim(),
+            ui_type: uiType.trim(),
+            title: slotTitle.trim(),
+            description: slotDescription.trim(),
+            target_url: targetUrl.trim(),
+            source: source.trim(),
+            target_cohort: targetCohort.trim(),
+            allowed_roles: allowedRoles,
+            enabled: placementEnabled,
+          });
+        } catch {
+          window.alert(t.placementCreateFailed);
+        }
+      }
       onCreated();
     } catch {
       setError(lang === 'ko' ? '생성 중 오류가 발생했습니다.' : 'Failed to create experiment.');
@@ -103,7 +194,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6 space-y-5">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -179,6 +270,135 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               <Plus className="h-3.5 w-3.5" />
               {t.addVariant}
             </Button>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/60 space-y-4">
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                checked={configurePlacement}
+                onChange={(e) => setConfigurePlacement(e.target.checked)}
+              />
+              {t.configurePlacement}
+            </label>
+
+            {configurePlacement && (
+              <div className="space-y-4">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    checked={placementEnabled}
+                    onChange={(e) => setPlacementEnabled(e.target.checked)}
+                  />
+                  {t.placementEnabled}
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.placementKey}</label>
+                    <Input
+                      value={placementKey}
+                      onChange={(e) => setPlacementKey(e.target.value)}
+                      placeholder={t.placementKeyPlaceholder}
+                      className="rounded-xl"
+                      aria-label={t.placementKey}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiId}</label>
+                    <Input
+                      value={uiId}
+                      onChange={(e) => setUiId(e.target.value)}
+                      placeholder={t.uiIdPlaceholder}
+                      className="rounded-xl"
+                      aria-label={t.uiId}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiType}</label>
+                    <Select value={uiType} onValueChange={setUiType}>
+                      <SelectTrigger className="rounded-xl" aria-label={t.uiType}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {uiTypeOptions.map((value) => (
+                          <SelectItem key={value} value={value}>{value}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiTitle}</label>
+                    <Input
+                      value={slotTitle}
+                      onChange={(e) => setSlotTitle(e.target.value)}
+                      placeholder={t.uiTitlePlaceholder}
+                      className="rounded-xl"
+                      aria-label={t.uiTitle}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetUrl}</label>
+                    <Input
+                      value={targetUrl}
+                      onChange={(e) => setTargetUrl(e.target.value)}
+                      placeholder={t.targetUrlPlaceholder}
+                      className="rounded-xl"
+                      aria-label={t.targetUrl}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.source}</label>
+                    <Input
+                      value={source}
+                      onChange={(e) => setSource(e.target.value)}
+                      className="rounded-xl"
+                      aria-label={t.source}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetCohort}</label>
+                    <Input
+                      value={targetCohort}
+                      onChange={(e) => setTargetCohort(e.target.value)}
+                      className="rounded-xl"
+                      aria-label={t.targetCohort}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiDescription}</label>
+                  <Textarea
+                    value={slotDescription}
+                    onChange={(e) => setSlotDescription(e.target.value)}
+                    placeholder={t.uiDescriptionPlaceholder}
+                    className="rounded-xl resize-none"
+                    rows={2}
+                    aria-label={t.uiDescription}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</p>
+                  <div className="flex flex-wrap gap-3">
+                    {roleOptions.map((role) => (
+                      <label key={role} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          checked={allowedRoles.includes(role)}
+                          onChange={(e) => toggleRole(role, e.target.checked)}
+                        />
+                        {role === 'builder' ? t.roleBuilder : t.roleRunner}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
