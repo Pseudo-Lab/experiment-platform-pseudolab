@@ -140,8 +140,9 @@ LVUP 최초 요청과 다르게 보정한 내용:
 문서:
 
 - `docs/reports/project-reflection-placement-api-report-2026-05-25.md`
-- `docs/reports/lvup-project-reflection-ui-placement-contract-2026-05-25.md`
 - `docs/reports/project-reflection-placement-development-internal-report-2026-05-25.md`
+
+LVUP 전달용 문서는 외부 공유 후 repo에는 보관하지 않는다.
 
 ## 9. Decide API 내부 판단 흐름
 
@@ -278,7 +279,7 @@ PR에 push하기 전에 확인할 것:
 
 우선순위 높은 후속 작업:
 
-1. LVUP 전달 문서 리뷰 후 API 계약 확정
+1. LVUP 전달 내용 리뷰 후 API 계약 확정
 2. 실험 플랫폼 대시보드 프론트엔드에 placement config 편집 UI 추가
 3. 실제 운영 시작일 설정
 4. 스테이징에서 LVUP 연동 QA
