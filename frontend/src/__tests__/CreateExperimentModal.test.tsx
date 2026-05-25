@@ -41,7 +41,7 @@ describe('CreateExperimentModal', () => {
 
   afterEach(cleanup);
 
-  it('creates an experiment with an initial UI exposure slot', async () => {
+  it('creates an experiment with an initial placement', async () => {
     const onCreated = vi.fn();
 
     render(<CreateExperimentModal lang="ko" onClose={vi.fn()} onCreated={onCreated} />);
@@ -52,21 +52,21 @@ describe('CreateExperimentModal', () => {
     fireEvent.change(screen.getByPlaceholderText('예: weekly_session_attended'), {
       target: { value: 'project_reflection_ui_clicked' },
     });
-    fireEvent.click(screen.getByLabelText('실험 생성과 함께 UI 노출 슬롯 생성'));
-    fireEvent.click(screen.getByLabelText('슬롯 즉시 활성화'));
-    fireEvent.change(screen.getByLabelText('슬롯 키'), {
+    fireEvent.click(screen.getByLabelText('실험 생성과 함께 Placement 생성'));
+    fireEvent.click(screen.getByLabelText('Placement 즉시 활성화'));
+    fireEvent.change(screen.getByLabelText('Placement 키'), {
       target: { value: 'project-detail-home-reflection-cta' },
     });
     fireEvent.change(screen.getByLabelText('UI ID'), {
       target: { value: 's12-mid-reflection-banner' },
     });
-    fireEvent.change(screen.getByLabelText('슬롯 제목'), {
+    fireEvent.change(screen.getByLabelText('제목'), {
       target: { value: '중간 회고 작성하기' },
     });
-    fireEvent.change(screen.getByLabelText('이동 URL'), {
+    fireEvent.change(screen.getByLabelText('이동 URL payload'), {
       target: { value: '/reflection/s12-mid-reflection' },
     });
-    fireEvent.change(screen.getByLabelText('슬롯 설명'), {
+    fireEvent.change(screen.getByLabelText('설명'), {
       target: { value: '지금까지의 여정을 정리하고 남은 기간 방향을 잡아봐요' },
     });
 

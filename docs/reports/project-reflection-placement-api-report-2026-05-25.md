@@ -278,7 +278,7 @@ UI placement 설정은 새 config 테이블에서 관리한다.
 
 `target_cohort = "*"`이면 특정 기수로 제한하지 않는다. `allowed_roles = []`이면 프로젝트 멤버 role을 제한하지 않는다. 따라서 12기와 builder/runner는 플랫폼 기본값이 아니라 이번 파일럿 seed 설정이다.
 
-즉, 실험 상태와 기간은 기존 실험관리 모델로 제어하고, LVUP에 내려줄 UI 문구/링크/활성화는 placement config로 제어한다.
+즉, 실험 상태와 기간은 기존 실험관리 모델로 제어하고, LVUP에 내려줄 렌더링 참고값은 placement response payload로 제어한다. 실제 UI 컴포넌트와 라우트는 LVUP 같은 외부 제품 서비스가 소유한다.
 
 ## 10. 관리 API
 
@@ -298,11 +298,18 @@ PATCH /api/v1/experiments/{experiment_id}/placements/{placement_key}/config
 DELETE /api/v1/experiments/{experiment_id}/placements/{placement_key}
 ```
 
-관리 API는 실험 플랫폼 대시보드 프론트엔드에서 UI 노출 슬롯을 관리하기 위해 사용하는 백엔드 계약이다.
+관리 API는 실험 플랫폼 대시보드 프론트엔드에서 placement를 관리하기 위해 사용하는 백엔드 계약이다.
 
-실험 생성 화면에서는 실험을 만들면서 초기 UI 노출 슬롯을 선택적으로 함께 생성할 수 있다. 실험 상세 화면에서는 슬롯 목록 조회, 생성, 수정, 삭제를 지원한다.
+대시보드 UI는 placement 설정을 다음처럼 나눠 보여준다.
 
-새 슬롯은 LVUP 프론트엔드에 실제 렌더링 슬롯이 먼저 정의되어 있을 때 생성한다. 운영 중 잠시 숨기려는 경우에는 삭제보다 `enabled=false` 비활성화를 우선 사용한다.
+- Placement 기본 정보: `placement_key`, 활성화 여부
+- 대상 조건: `target_cohort`, `allowed_roles`
+- 응답 payload: `ui_id`, `ui_type`, `title`, `description`, `target_url`
+- 분석/로깅 컨텍스트: `source`
+
+실험 생성 화면에서는 실험을 만들면서 초기 placement를 선택적으로 함께 생성할 수 있다. 실험 상세 화면에서는 placement 목록 조회, 생성, 수정, 삭제를 지원한다.
+
+새 placement는 LVUP 프론트엔드에 실제 렌더링 지점이 먼저 정의되어 있을 때 생성한다. 운영 중 잠시 숨기려는 경우에는 삭제보다 `enabled=false` 비활성화를 우선 사용한다.
 
 ## 11. 사용하는 데이터
 

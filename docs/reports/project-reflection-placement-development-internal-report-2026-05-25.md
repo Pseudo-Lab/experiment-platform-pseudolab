@@ -319,9 +319,11 @@ placement 테스트에서 검증한 주요 케이스:
    - 정식 실험 전환 시 placement decide와 exposure logging 연결이 필요하다.
 
 4. 실험 플랫폼 대시보드 프론트엔드에는 placement config 생성/조회/편집/삭제 UI가 붙었다.
-   - 실험 생성 화면에서 초기 UI 노출 슬롯을 선택적으로 함께 생성할 수 있다.
-   - 실험 상세 화면에서 기존 실험의 슬롯을 추가/수정/삭제할 수 있다.
-   - 새 placement는 LVUP 프론트엔드에 실제 슬롯이 정의되어 있을 때만 생성해야 한다.
+   - 실험 생성 화면에서 초기 placement를 선택적으로 함께 생성할 수 있다.
+   - 실험 상세 화면에서 기존 실험의 placement를 추가/수정/삭제할 수 있다.
+   - 대시보드 화면은 placement 기본 정보, 대상 조건, 응답 payload, 분석/로깅 컨텍스트를 구분해서 보여준다.
+   - `target_url`, `title`, `description`, `ui_type`은 실험 플랫폼이 UI를 소유한다는 의미가 아니라 외부 제품 서비스에 내려줄 response payload다.
+   - 새 placement는 LVUP 프론트엔드에 실제 렌더링 지점이 정의되어 있을 때만 생성해야 한다.
    - 운영 중 잠시 숨기려는 경우에는 삭제보다 `enabled=false` 비활성화를 우선 사용한다.
 
 5. placement-only decide는 같은 placement의 active experiment가 여러 개일 때 최신 노출 시작일 기준으로 하나를 선택한다.

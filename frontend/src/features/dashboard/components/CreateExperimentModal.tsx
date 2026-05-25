@@ -36,35 +36,44 @@ const translations = {
     create: 'Create',
     creating: 'Creating...',
     nameRequired: 'Experiment name is required.',
-    configurePlacement: 'Create UI exposure slot with this experiment',
-    placementKey: 'Slot key',
+    configurePlacement: 'Create placement with this experiment',
+    placementIntro: 'A placement is a frontend-owned decision point. The product service renders the UI and owns routes; this platform decides eligibility and returns optional payload.',
+    placementIdentity: 'Placement identity',
+    placementIdentityHelp: 'Stable integration keys used by product frontends and decide APIs.',
+    placementTargeting: 'Audience targeting',
+    placementTargetingHelp: 'Temporary coarse targeting for this placement. Later this should move to reusable segments and targeting rules.',
+    placementPayload: 'Response payload',
+    placementPayloadHelp: 'Optional rendering config returned to the product service. The service still owns components and routes.',
+    placementLogging: 'Logging context',
+    placementLoggingHelp: 'Analytics context used when the product service logs view, click, or conversion events.',
+    placementKey: 'Placement key',
     placementKeyPlaceholder: 'e.g. product-home-primary-cta',
-    placementKeyHelp: 'Frontend-owned placement key sent to the decide API.',
+    placementKeyHelp: 'Frontend-owned decision key sent to the placement decide API.',
     uiId: 'UI ID',
     uiIdPlaceholder: 'e.g. onboarding-start-banner',
-    uiIdHelp: 'Stable UI identifier returned for analytics and rendering.',
+    uiIdHelp: 'Stable UI identifier returned as payload for analytics and rendering.',
     uiType: 'UI type',
-    uiTypeHelp: 'Rendering hint returned to the frontend. The service still owns the component implementation.',
-    uiTitle: 'Slot title',
+    uiTypeHelp: 'Payload hint for how the service may render this UI. The service owns the implementation.',
+    uiTitle: 'Title',
     uiTitlePlaceholder: 'e.g. Start onboarding',
-    uiTitleHelp: 'Copy returned as ui.title.',
-    uiDescription: 'Slot description',
+    uiTitleHelp: 'Payload copy returned as ui.title.',
+    uiDescription: 'Description',
     uiDescriptionPlaceholder: 'Short copy shown in the product UI',
-    uiDescriptionHelp: 'Copy returned as ui.description.',
-    targetUrl: 'Target URL',
+    uiDescriptionHelp: 'Payload copy returned as ui.description.',
+    targetUrl: 'Target URL payload',
     targetUrlPlaceholder: 'e.g. /onboarding/start',
     targetUrlHelp: 'Service-owned destination URL. The platform stores and returns it, but does not own the route.',
-    source: 'Exposure source',
-    sourceHelp: 'Analytics source key for where the slot is rendered.',
+    source: 'Logging source',
+    sourceHelp: 'Analytics source key for where this placement is rendered.',
     targetCohort: 'Target cohort',
     targetCohortPlaceholder: 'Use * for all cohorts',
-    targetCohortHelp: 'Coarse cohort targeting rule. Use * when this slot is not cohort-limited.',
+    targetCohortHelp: 'Coarse cohort targeting fallback. Use * when this placement is not cohort-limited.',
     allowedRoles: 'Allowed roles',
     allowedRolesPlaceholder: 'e.g. builder, runner, mentor',
     allowedRolesHint: 'Comma-separated project role keys. Leave empty to allow all roles.',
-    placementEnabled: 'Enable slot immediately',
-    placementRequired: 'Fill all UI exposure slot fields or turn off slot creation.',
-    placementCreateFailed: 'Experiment was created, but UI exposure slot creation failed. Add the slot from the experiment detail page.',
+    placementEnabled: 'Enable placement immediately',
+    placementRequired: 'Fill all placement fields or turn off placement creation.',
+    placementCreateFailed: 'Experiment was created, but placement creation failed. Add the placement from the experiment detail page.',
   },
   ko: {
     title: '새 실험 생성',
@@ -83,25 +92,34 @@ const translations = {
     create: '생성',
     creating: '생성 중...',
     nameRequired: '실험 이름을 입력해주세요.',
-    configurePlacement: '실험 생성과 함께 UI 노출 슬롯 생성',
-    placementKey: '슬롯 키',
+    configurePlacement: '실험 생성과 함께 Placement 생성',
+    placementIntro: 'Placement는 서비스 프론트가 소유한 노출 결정 지점입니다. 실제 UI 렌더링과 라우트는 각 서비스가 소유하고, 실험 플랫폼은 대상 여부와 응답 payload를 결정합니다.',
+    placementIdentity: 'Placement 기본 정보',
+    placementIdentityHelp: '서비스 프론트와 decide API가 공유하는 안정적인 연동 키입니다.',
+    placementTargeting: '대상 조건',
+    placementTargetingHelp: '현재는 Placement 단위의 간단한 대상 조건입니다. 추후에는 재사용 가능한 Segment/Targeting rule로 분리하는 것이 좋습니다.',
+    placementPayload: '응답 Payload',
+    placementPayloadHelp: '서비스 프론트 렌더링에 참고할 설정값입니다. 실제 컴포넌트와 라우트는 각 서비스가 소유합니다.',
+    placementLogging: '분석/로깅 컨텍스트',
+    placementLoggingHelp: '서비스 프론트가 view, click, conversion 이벤트를 남길 때 함께 보낼 분석 컨텍스트입니다.',
+    placementKey: 'Placement 키',
     placementKeyPlaceholder: '예: product-home-primary-cta',
-    placementKeyHelp: '서비스 프론트가 decide API에 전달하는 슬롯 식별자입니다.',
+    placementKeyHelp: '서비스 프론트가 placement decide API에 전달하는 노출 결정 키입니다.',
     uiId: 'UI ID',
     uiIdPlaceholder: '예: onboarding-start-banner',
-    uiIdHelp: '분석과 렌더링 식별에 사용할 안정적인 UI 식별자입니다.',
+    uiIdHelp: '분석과 렌더링 식별에 사용할 payload 식별자입니다.',
     uiType: 'UI 타입',
-    uiTypeHelp: '프론트에 내려줄 렌더링 힌트입니다. 실제 컴포넌트 구현은 각 서비스가 소유합니다.',
-    uiTitle: '슬롯 제목',
+    uiTypeHelp: '서비스가 UI를 어떻게 렌더링할지 참고하는 payload 힌트입니다. 구현은 각 서비스가 소유합니다.',
+    uiTitle: '제목',
     uiTitlePlaceholder: '예: 새 온보딩 시작하기',
-    uiTitleHelp: '응답의 ui.title로 내려갈 문구입니다.',
-    uiDescription: '슬롯 설명',
+    uiTitleHelp: '응답의 ui.title로 내려갈 payload 문구입니다.',
+    uiDescription: '설명',
     uiDescriptionPlaceholder: '제품 UI에 보여줄 짧은 설명',
-    uiDescriptionHelp: '응답의 ui.description으로 내려갈 문구입니다.',
-    targetUrl: '이동 URL',
+    uiDescriptionHelp: '응답의 ui.description으로 내려갈 payload 문구입니다.',
+    targetUrl: '이동 URL payload',
     targetUrlPlaceholder: '예: /onboarding/start',
     targetUrlHelp: '각 서비스가 소유한 이동 경로입니다. 실험 플랫폼은 저장하고 응답으로 돌려줄 뿐 라우트를 소유하지 않습니다.',
-    source: '노출 소스',
+    source: '로깅 소스',
     sourceHelp: '어느 화면/영역에서 노출됐는지 분석하기 위한 source 키입니다.',
     targetCohort: '대상 코호트',
     targetCohortPlaceholder: '* 입력 시 전체 기수',
@@ -109,9 +127,9 @@ const translations = {
     allowedRoles: '허용 역할',
     allowedRolesPlaceholder: '예: builder, runner, mentor',
     allowedRolesHint: '쉼표로 구분한 프로젝트 역할 키입니다. 비워두면 모든 역할을 허용합니다.',
-    placementEnabled: '슬롯 즉시 활성화',
-    placementRequired: 'UI 노출 슬롯 필드를 모두 입력하거나 슬롯 생성을 끄세요.',
-    placementCreateFailed: '실험은 생성됐지만 UI 노출 슬롯 생성에 실패했습니다. 실험 상세 화면에서 슬롯을 추가하세요.',
+    placementEnabled: 'Placement 즉시 활성화',
+    placementRequired: 'Placement 필드를 모두 입력하거나 Placement 생성을 끄세요.',
+    placementCreateFailed: '실험은 생성됐지만 Placement 생성에 실패했습니다. 실험 상세 화면에서 Placement를 추가하세요.',
   },
 };
 
@@ -300,17 +318,22 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
             {configurePlacement && (
               <div className="space-y-4">
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                    checked={placementEnabled}
-                    onChange={(e) => setPlacementEnabled(e.target.checked)}
-                  />
-                  {t.placementEnabled}
-                </label>
+                <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementIntro}</p>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <section className="space-y-3">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.placementIdentity}</h3>
+                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementIdentityHelp}</p>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      checked={placementEnabled}
+                      onChange={(e) => setPlacementEnabled(e.target.checked)}
+                    />
+                    {t.placementEnabled}
+                  </label>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.placementKey}</label>
                     <Input
@@ -322,52 +345,111 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                     />
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t.placementKeyHelp}</p>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiId}</label>
-                    <Input
-                      value={uiId}
-                      onChange={(e) => setUiId(e.target.value)}
-                      placeholder={t.uiIdPlaceholder}
-                      className="rounded-xl"
-                      aria-label={t.uiId}
-                    />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiIdHelp}</p>
+                </section>
+
+                <section className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.placementTargeting}</h3>
+                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementTargetingHelp}</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetCohort}</label>
+                      <Input
+                        value={targetCohort}
+                        onChange={(e) => setTargetCohort(e.target.value)}
+                        placeholder={t.targetCohortPlaceholder}
+                        className="rounded-xl"
+                        aria-label={t.targetCohort}
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetCohortHelp}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</label>
+                      <Input
+                        value={allowedRolesText}
+                        onChange={(e) => setAllowedRolesText(e.target.value)}
+                        placeholder={t.allowedRolesPlaceholder}
+                        className="rounded-xl"
+                        aria-label={t.allowedRoles}
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.allowedRolesHint}</p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.placementPayload}</h3>
+                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementPayloadHelp}</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiId}</label>
+                      <Input
+                        value={uiId}
+                        onChange={(e) => setUiId(e.target.value)}
+                        placeholder={t.uiIdPlaceholder}
+                        className="rounded-xl"
+                        aria-label={t.uiId}
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiIdHelp}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiType}</label>
+                      <Select value={uiType} onValueChange={setUiType}>
+                        <SelectTrigger className="rounded-xl" aria-label={t.uiType}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {uiTypeOptions.map((value) => (
+                            <SelectItem key={value} value={value}>{value}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiTypeHelp}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiTitle}</label>
+                      <Input
+                        value={slotTitle}
+                        onChange={(e) => setSlotTitle(e.target.value)}
+                        placeholder={t.uiTitlePlaceholder}
+                        className="rounded-xl"
+                        aria-label={t.uiTitle}
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiTitleHelp}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetUrl}</label>
+                      <Input
+                        value={targetUrl}
+                        onChange={(e) => setTargetUrl(e.target.value)}
+                        placeholder={t.targetUrlPlaceholder}
+                        className="rounded-xl"
+                        aria-label={t.targetUrl}
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetUrlHelp}</p>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiType}</label>
-                    <Select value={uiType} onValueChange={setUiType}>
-                      <SelectTrigger className="rounded-xl" aria-label={t.uiType}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {uiTypeOptions.map((value) => (
-                          <SelectItem key={value} value={value}>{value}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiTypeHelp}</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiTitle}</label>
-                    <Input
-                      value={slotTitle}
-                      onChange={(e) => setSlotTitle(e.target.value)}
-                      placeholder={t.uiTitlePlaceholder}
-                      className="rounded-xl"
-                      aria-label={t.uiTitle}
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiDescription}</label>
+                    <Textarea
+                      value={slotDescription}
+                      onChange={(e) => setSlotDescription(e.target.value)}
+                      placeholder={t.uiDescriptionPlaceholder}
+                      className="rounded-xl resize-none"
+                      rows={2}
+                      aria-label={t.uiDescription}
                     />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiTitleHelp}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiDescriptionHelp}</p>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetUrl}</label>
-                    <Input
-                      value={targetUrl}
-                      onChange={(e) => setTargetUrl(e.target.value)}
-                      placeholder={t.targetUrlPlaceholder}
-                      className="rounded-xl"
-                      aria-label={t.targetUrl}
-                    />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetUrlHelp}</p>
+                </section>
+
+                <section className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.placementLogging}</h3>
+                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementLoggingHelp}</p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.source}</label>
@@ -379,43 +461,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                     />
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t.sourceHelp}</p>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetCohort}</label>
-                    <Input
-                      value={targetCohort}
-                      onChange={(e) => setTargetCohort(e.target.value)}
-                      placeholder={t.targetCohortPlaceholder}
-                      className="rounded-xl"
-                      aria-label={t.targetCohort}
-                    />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetCohortHelp}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiDescription}</label>
-                  <Textarea
-                    value={slotDescription}
-                    onChange={(e) => setSlotDescription(e.target.value)}
-                    placeholder={t.uiDescriptionPlaceholder}
-                    className="rounded-xl resize-none"
-                    rows={2}
-                    aria-label={t.uiDescription}
-                  />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiDescriptionHelp}</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</label>
-                  <Input
-                    value={allowedRolesText}
-                    onChange={(e) => setAllowedRolesText(e.target.value)}
-                    placeholder={t.allowedRolesPlaceholder}
-                    className="rounded-xl"
-                    aria-label={t.allowedRoles}
-                  />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t.allowedRolesHint}</p>
-                </div>
+                </section>
               </div>
             )}
           </div>

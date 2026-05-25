@@ -71,45 +71,54 @@ const translations = {
     ship: 'Ship',
     hold: 'Hold',
     rollback: 'Rollback',
-    sectionPlacements: 'UI Exposure Slots',
-    placementsLoading: 'Loading UI exposure slots...',
-    placementsError: 'Failed to load UI exposure slots.',
-    placementsEmpty: 'No UI exposure slots configured.',
-    placementKey: 'Slot key',
-    placementKeyHelp: 'Frontend-owned placement key sent to the decide API.',
+    sectionPlacements: 'Placements',
+    placementsIntro: 'A placement is a frontend-owned decision point. The product service renders the UI and owns routes; this platform decides eligibility and returns optional payload.',
+    placementsLoading: 'Loading placements...',
+    placementsError: 'Failed to load placements.',
+    placementsEmpty: 'No placements configured.',
+    placementIdentity: 'Placement identity',
+    placementIdentityHelp: 'Stable integration keys used by product frontends and decide APIs.',
+    placementTargeting: 'Audience targeting',
+    placementTargetingHelp: 'Temporary coarse targeting for this placement. Later this should move to reusable segments and targeting rules.',
+    placementPayload: 'Response payload',
+    placementPayloadHelp: 'Optional rendering config returned to the product service. The service still owns components and routes.',
+    placementLogging: 'Logging context',
+    placementLoggingHelp: 'Analytics context used when the product service logs view, click, or conversion events.',
+    placementKey: 'Placement key',
+    placementKeyHelp: 'Frontend-owned decision key sent to the placement decide API.',
     uiId: 'UI ID',
-    uiIdHelp: 'Stable UI identifier returned for analytics and rendering.',
+    uiIdHelp: 'Stable UI identifier returned as payload for analytics and rendering.',
     uiType: 'UI type',
-    uiTypeHelp: 'Rendering hint returned to the frontend. The service still owns the component implementation.',
+    uiTypeHelp: 'Payload hint for how the service may render this UI. The service owns the implementation.',
     uiTitle: 'Title',
-    uiTitleHelp: 'Copy returned as ui.title.',
+    uiTitleHelp: 'Payload copy returned as ui.title.',
     uiDescription: 'Description',
-    uiDescriptionHelp: 'Copy returned as ui.description.',
-    targetUrl: 'Target URL',
-    targetUrlHelp: 'Service-owned destination URL. The platform stores and returns it, but does not own the route.',
-    source: 'Exposure source',
-    sourceHelp: 'Analytics source key for where the slot is rendered.',
+    uiDescriptionHelp: 'Payload copy returned as ui.description.',
+    targetUrl: 'Target URL payload',
+    targetUrlHelp: 'Service-owned destination URL. The platform stores and returns it but does not own the route.',
+    source: 'Logging source',
+    sourceHelp: 'Analytics source key for where this placement is rendered.',
     targetCohort: 'Target cohort',
     targetCohortPlaceholder: 'Use * for all cohorts',
-    targetCohortHelp: 'Coarse cohort targeting rule. Use * when this slot is not cohort-limited.',
+    targetCohortHelp: 'Coarse cohort targeting fallback. Use * when this placement is not cohort-limited.',
     allowedRoles: 'Allowed roles',
     allowedRolesPlaceholder: 'e.g. builder, runner, mentor',
     allowedRolesHint: 'Comma-separated project role keys. Leave empty to allow all roles.',
     allRoles: 'All roles',
     enabled: 'Enabled',
     disabled: 'Disabled',
-    addPlacement: 'Add Slot',
-    createPlacement: 'Create Slot',
+    addPlacement: 'Add Placement',
+    createPlacement: 'Create Placement',
     creatingPlacement: 'Creating...',
-    deletePlacement: 'Delete Slot',
+    deletePlacement: 'Delete Placement',
     deletingPlacement: 'Deleting...',
-    deletePlacementConfirm: 'Delete this UI exposure slot? Use Disabled instead if it may be reused.',
-    placementCreated: 'UI exposure slot created.',
-    placementSaved: 'UI exposure slot saved.',
-    placementDeleted: 'UI exposure slot deleted.',
-    placementCreateError: 'Failed to create UI exposure slot.',
-    placementSaveError: 'Failed to save UI exposure slot.',
-    placementDeleteError: 'Failed to delete UI exposure slot.',
+    deletePlacementConfirm: 'Delete this placement? Use Disabled instead if it may be reused.',
+    placementCreated: 'Placement created.',
+    placementSaved: 'Placement saved.',
+    placementDeleted: 'Placement deleted.',
+    placementCreateError: 'Failed to create placement.',
+    placementSaveError: 'Failed to save placement.',
+    placementDeleteError: 'Failed to delete placement.',
   },
   ko: {
     back: '목록으로',
@@ -163,23 +172,32 @@ const translations = {
     ship: '배포',
     hold: '보류',
     rollback: '롤백',
-    sectionPlacements: 'UI 노출 슬롯',
-    placementsLoading: 'UI 노출 슬롯을 불러오는 중...',
-    placementsError: 'UI 노출 슬롯을 불러오지 못했습니다.',
-    placementsEmpty: '설정된 UI 노출 슬롯이 없습니다.',
-    placementKey: '슬롯 키',
-    placementKeyHelp: '서비스 프론트가 decide API에 전달하는 슬롯 식별자입니다.',
+    sectionPlacements: '노출 지점(Placement)',
+    placementsIntro: 'Placement는 서비스 프론트가 소유한 노출 결정 지점입니다. 실제 UI 렌더링과 라우트는 각 서비스가 소유하고, 실험 플랫폼은 대상 여부와 응답 payload를 결정합니다.',
+    placementsLoading: 'Placement를 불러오는 중...',
+    placementsError: 'Placement를 불러오지 못했습니다.',
+    placementsEmpty: '설정된 Placement가 없습니다.',
+    placementIdentity: 'Placement 기본 정보',
+    placementIdentityHelp: '서비스 프론트와 decide API가 공유하는 안정적인 연동 키입니다.',
+    placementTargeting: '대상 조건',
+    placementTargetingHelp: '현재는 Placement 단위의 간단한 대상 조건입니다. 추후에는 재사용 가능한 Segment/Targeting rule로 분리하는 것이 좋습니다.',
+    placementPayload: '응답 Payload',
+    placementPayloadHelp: '서비스 프론트 렌더링에 참고할 설정값입니다. 실제 컴포넌트와 라우트는 각 서비스가 소유합니다.',
+    placementLogging: '분석/로깅 컨텍스트',
+    placementLoggingHelp: '서비스 프론트가 view, click, conversion 이벤트를 남길 때 함께 보낼 분석 컨텍스트입니다.',
+    placementKey: 'Placement 키',
+    placementKeyHelp: '서비스 프론트가 placement decide API에 전달하는 노출 결정 키입니다.',
     uiId: 'UI ID',
-    uiIdHelp: '분석과 렌더링 식별에 사용할 안정적인 UI 식별자입니다.',
+    uiIdHelp: '분석과 렌더링 식별에 사용할 payload 식별자입니다.',
     uiType: 'UI 타입',
-    uiTypeHelp: '프론트에 내려줄 렌더링 힌트입니다. 실제 컴포넌트 구현은 각 서비스가 소유합니다.',
+    uiTypeHelp: '서비스가 UI를 어떻게 렌더링할지 참고하는 payload 힌트입니다. 구현은 각 서비스가 소유합니다.',
     uiTitle: '제목',
-    uiTitleHelp: '응답의 ui.title로 내려갈 문구입니다.',
+    uiTitleHelp: '응답의 ui.title로 내려갈 payload 문구입니다.',
     uiDescription: '설명',
-    uiDescriptionHelp: '응답의 ui.description으로 내려갈 문구입니다.',
-    targetUrl: '이동 URL',
+    uiDescriptionHelp: '응답의 ui.description으로 내려갈 payload 문구입니다.',
+    targetUrl: '이동 URL payload',
     targetUrlHelp: '각 서비스가 소유한 이동 경로입니다. 실험 플랫폼은 저장하고 응답으로 돌려줄 뿐 라우트를 소유하지 않습니다.',
-    source: '노출 소스',
+    source: '로깅 소스',
     sourceHelp: '어느 화면/영역에서 노출됐는지 분석하기 위한 source 키입니다.',
     targetCohort: '대상 코호트',
     targetCohortPlaceholder: '* 입력 시 전체 기수',
@@ -190,18 +208,18 @@ const translations = {
     allRoles: '모든 역할',
     enabled: '활성',
     disabled: '비활성',
-    addPlacement: '슬롯 추가',
-    createPlacement: '슬롯 생성',
+    addPlacement: 'Placement 추가',
+    createPlacement: 'Placement 생성',
     creatingPlacement: '생성 중...',
-    deletePlacement: '슬롯 삭제',
+    deletePlacement: 'Placement 삭제',
     deletingPlacement: '삭제 중...',
-    deletePlacementConfirm: '이 UI 노출 슬롯을 삭제하시겠습니까? 다시 사용할 가능성이 있으면 비활성을 사용하세요.',
-    placementCreated: 'UI 노출 슬롯을 생성했습니다.',
-    placementSaved: 'UI 노출 슬롯을 저장했습니다.',
-    placementDeleted: 'UI 노출 슬롯을 삭제했습니다.',
-    placementCreateError: 'UI 노출 슬롯 생성에 실패했습니다.',
-    placementSaveError: 'UI 노출 슬롯 저장에 실패했습니다.',
-    placementDeleteError: 'UI 노출 슬롯 삭제에 실패했습니다.',
+    deletePlacementConfirm: '이 Placement를 삭제하시겠습니까? 다시 사용할 가능성이 있으면 비활성을 사용하세요.',
+    placementCreated: 'Placement를 생성했습니다.',
+    placementSaved: 'Placement를 저장했습니다.',
+    placementDeleted: 'Placement를 삭제했습니다.',
+    placementCreateError: 'Placement 생성에 실패했습니다.',
+    placementSaveError: 'Placement 저장에 실패했습니다.',
+    placementDeleteError: 'Placement 삭제에 실패했습니다.',
   },
 };
 
@@ -544,6 +562,42 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const placementMessageIsSuccess = placementSaveMessage
     ? [t.placementCreated, t.placementSaved, t.placementDeleted].includes(placementSaveMessage)
     : false;
+  const placementDetailGroups = selectedPlacement ? [
+    {
+      title: t.placementIdentity,
+      help: t.placementIdentityHelp,
+      items: [
+        [t.placementKey, selectedPlacement.placement_key],
+        [t.labelStatus, selectedPlacement.enabled ? t.enabled : t.disabled],
+      ],
+    },
+    {
+      title: t.placementTargeting,
+      help: t.placementTargetingHelp,
+      items: [
+        [t.targetCohort, selectedPlacement.target_cohort],
+        [t.allowedRoles, selectedPlacement.allowed_roles.length ? selectedPlacement.allowed_roles.join(', ') : t.allRoles],
+      ],
+    },
+    {
+      title: t.placementPayload,
+      help: t.placementPayloadHelp,
+      items: [
+        [t.uiId, selectedPlacement.ui_id],
+        [t.uiType, selectedPlacement.ui_type],
+        [t.uiTitle, selectedPlacement.title],
+        [t.uiDescription, selectedPlacement.description],
+        [t.targetUrl, selectedPlacement.target_url],
+      ],
+    },
+    {
+      title: t.placementLogging,
+      help: t.placementLoggingHelp,
+      items: [
+        [t.source, selectedPlacement.source],
+      ],
+    },
+  ] : [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -711,6 +765,9 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         <CardContent className="space-y-4">
           {placementsLoading && <p className="text-sm text-slate-400">{t.placementsLoading}</p>}
           {placementsError && <p className="text-sm text-rose-500">{placementsError}</p>}
+          {!placementsLoading && !placementsError && (
+            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{t.placementsIntro}</p>
+          )}
           {!placementsLoading && !placementsError && placements.length === 0 && !placementCreating && (
             <p className="text-sm text-slate-400">{t.placementsEmpty}</p>
           )}
@@ -743,40 +800,42 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
 
               <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/60">
                 {!placementEditing && !placementCreating && selectedPlacement && (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {[
-                      [t.placementKey, selectedPlacement.placement_key],
-                      [t.uiId, selectedPlacement.ui_id],
-                      [t.uiType, selectedPlacement.ui_type],
-                      [t.uiTitle, selectedPlacement.title],
-                      [t.uiDescription, selectedPlacement.description],
-                      [t.targetUrl, selectedPlacement.target_url],
-                      [t.source, selectedPlacement.source],
-                      [t.targetCohort, selectedPlacement.target_cohort],
-                      [t.allowedRoles, selectedPlacement.allowed_roles.length ? selectedPlacement.allowed_roles.join(', ') : t.allRoles],
-                      [t.labelStatus, selectedPlacement.enabled ? t.enabled : t.disabled],
-                    ].map(([label, value]) => (
-                      <div key={label} className="space-y-1">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-                        <p className="break-words text-sm font-medium text-slate-700 dark:text-slate-300">{value}</p>
-                      </div>
+                  <div className="space-y-5">
+                    {placementDetailGroups.map((group) => (
+                      <section key={group.title} className="space-y-3 border-t border-slate-200 pt-4 first:border-t-0 first:pt-0 dark:border-slate-800">
+                        <div className="space-y-1">
+                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{group.title}</h3>
+                          <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{group.help}</p>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {group.items.map(([label, value]) => (
+                            <div key={label} className="space-y-1">
+                              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+                              <p className="break-words text-sm font-medium text-slate-700 dark:text-slate-300">{value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
                     ))}
                   </div>
                 )}
 
                 {(placementEditing || placementCreating) && placementForm && (
                   <div className="space-y-4">
-                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                        checked={placementForm.enabled}
-                        onChange={(event) => updatePlacementForm('enabled', event.target.checked)}
-                      />
-                      {t.enabled}
-                    </label>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <section className="space-y-3">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.placementIdentity}</h3>
+                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementIdentityHelp}</p>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          checked={placementForm.enabled}
+                          onChange={(event) => updatePlacementForm('enabled', event.target.checked)}
+                        />
+                        {t.enabled}
+                      </label>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.placementKey}</label>
                         <Input
@@ -788,16 +847,55 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                         />
                         <p className="text-xs text-slate-500 dark:text-slate-400">{t.placementKeyHelp}</p>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiId}</label>
-                        <Input
-                          value={placementForm.ui_id}
-                          onChange={(event) => updatePlacementForm('ui_id', event.target.value)}
-                          className="rounded-xl"
-                          aria-label={t.uiId}
-                        />
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiIdHelp}</p>
+                    </section>
+
+                    <section className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.placementTargeting}</h3>
+                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementTargetingHelp}</p>
                       </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetCohort}</label>
+                          <Input
+                            value={placementForm.target_cohort}
+                            onChange={(event) => updatePlacementForm('target_cohort', event.target.value)}
+                            placeholder={t.targetCohortPlaceholder}
+                            className="rounded-xl"
+                            aria-label={t.targetCohort}
+                          />
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetCohortHelp}</p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</label>
+                          <Input
+                            value={placementForm.allowed_roles_text}
+                            onChange={(event) => updatePlacementForm('allowed_roles_text', event.target.value)}
+                            placeholder={t.allowedRolesPlaceholder}
+                            className="rounded-xl"
+                            aria-label={t.allowedRoles}
+                          />
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{t.allowedRolesHint}</p>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.placementPayload}</h3>
+                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementPayloadHelp}</p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiId}</label>
+                          <Input
+                            value={placementForm.ui_id}
+                            onChange={(event) => updatePlacementForm('ui_id', event.target.value)}
+                            className="rounded-xl"
+                            aria-label={t.uiId}
+                          />
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiIdHelp}</p>
+                        </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiType}</label>
                         <Select value={placementForm.ui_type} onValueChange={(value) => updatePlacementForm('ui_type', value)}>
@@ -832,6 +930,25 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                         />
                         <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetUrlHelp}</p>
                       </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiDescription}</label>
+                        <Textarea
+                          value={placementForm.description}
+                          onChange={(event) => updatePlacementForm('description', event.target.value)}
+                          className="rounded-xl resize-none"
+                          rows={2}
+                          aria-label={t.uiDescription}
+                        />
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiDescriptionHelp}</p>
+                      </div>
+                    </section>
+
+                    <section className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.placementLogging}</h3>
+                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementLoggingHelp}</p>
+                      </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.source}</label>
                         <Input
@@ -842,42 +959,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                         />
                         <p className="text-xs text-slate-500 dark:text-slate-400">{t.sourceHelp}</p>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetCohort}</label>
-                        <Input
-                          value={placementForm.target_cohort}
-                          onChange={(event) => updatePlacementForm('target_cohort', event.target.value)}
-                          placeholder={t.targetCohortPlaceholder}
-                          className="rounded-xl"
-                          aria-label={t.targetCohort}
-                        />
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{t.targetCohortHelp}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiDescription}</label>
-                      <Textarea
-                        value={placementForm.description}
-                        onChange={(event) => updatePlacementForm('description', event.target.value)}
-                        className="rounded-xl resize-none"
-                        rows={2}
-                        aria-label={t.uiDescription}
-                      />
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.uiDescriptionHelp}</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</label>
-                      <Input
-                        value={placementForm.allowed_roles_text}
-                        onChange={(event) => updatePlacementForm('allowed_roles_text', event.target.value)}
-                        placeholder={t.allowedRolesPlaceholder}
-                        className="rounded-xl"
-                        aria-label={t.allowedRoles}
-                      />
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{t.allowedRolesHint}</p>
-                    </div>
+                    </section>
 
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <Button

@@ -86,9 +86,10 @@ describe('ExperimentDetail placements', () => {
   it('renders placement config in Korean', async () => {
     await renderDetail();
 
-    expect(await screen.findByText('UI 노출 슬롯')).toBeInTheDocument();
+    expect(await screen.findByText('노출 지점(Placement)')).toBeInTheDocument();
     expect(screen.getAllByText('project-detail-home-reflection-cta').length).toBeGreaterThan(0);
     expect(screen.getByText('중간 회고 작성하기')).toBeInTheDocument();
+    expect(screen.getByText('응답 Payload')).toBeInTheDocument();
     expect(experimentPlacementApi.list).toHaveBeenCalledWith('s12-mid-reflection');
   });
 
@@ -121,10 +122,10 @@ describe('ExperimentDetail placements', () => {
         enabled: true,
       }),
     );
-    expect(await screen.findByText('UI 노출 슬롯을 저장했습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('Placement를 저장했습니다.')).toBeInTheDocument();
   });
 
-  it('creates a new UI exposure slot', async () => {
+  it('creates a new placement', async () => {
     (experimentPlacementApi.create as any).mockResolvedValue({
       ...placement,
       placement_key: 'project-sidebar-reflection-cta',
@@ -135,8 +136,8 @@ describe('ExperimentDetail placements', () => {
 
     await renderDetail();
 
-    fireEvent.click(await screen.findByRole('button', { name: /슬롯 추가/ }));
-    fireEvent.change(screen.getByLabelText('슬롯 키'), {
+    fireEvent.click(await screen.findByRole('button', { name: /Placement 추가/ }));
+    fireEvent.change(screen.getByLabelText('Placement 키'), {
       target: { value: 'project-sidebar-reflection-cta' },
     });
     fireEvent.change(screen.getByLabelText('UI ID'), {
@@ -145,7 +146,7 @@ describe('ExperimentDetail placements', () => {
     fireEvent.change(screen.getByLabelText('제목'), {
       target: { value: '사이드바 회고' },
     });
-    fireEvent.change(screen.getByLabelText('이동 URL'), {
+    fireEvent.change(screen.getByLabelText('이동 URL payload'), {
       target: { value: '/reflection/sidebar' },
     });
     fireEvent.change(screen.getByLabelText('설명'), {
@@ -153,7 +154,7 @@ describe('ExperimentDetail placements', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /슬롯 생성/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Placement 생성/ }));
     });
 
     expect(experimentPlacementApi.create).toHaveBeenCalledWith(
@@ -168,24 +169,24 @@ describe('ExperimentDetail placements', () => {
         allowed_roles: [],
       }),
     );
-    expect(await screen.findByText('UI 노출 슬롯을 생성했습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('Placement를 생성했습니다.')).toBeInTheDocument();
   });
 
-  it('deletes a UI exposure slot after confirmation', async () => {
+  it('deletes a placement after confirmation', async () => {
     vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
     (experimentPlacementApi.delete as any).mockResolvedValue(undefined);
 
     await renderDetail();
 
     await act(async () => {
-      fireEvent.click(await screen.findByRole('button', { name: /슬롯 삭제/ }));
+      fireEvent.click(await screen.findByRole('button', { name: /Placement 삭제/ }));
     });
 
     expect(experimentPlacementApi.delete).toHaveBeenCalledWith(
       's12-mid-reflection',
       'project-detail-home-reflection-cta',
     );
-    expect(await screen.findByText('UI 노출 슬롯을 삭제했습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('Placement를 삭제했습니다.')).toBeInTheDocument();
 
     (window.confirm as any).mockRestore();
   });
