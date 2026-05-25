@@ -195,6 +195,34 @@ export interface ExperimentUpdate {
   status?: ExperimentStatus;
 }
 
+export interface ExperimentPlacementConfig {
+  experiment_id: string;
+  placement_key: string;
+  ui_id: string;
+  ui_type: string;
+  title: string;
+  description: string;
+  target_url: string;
+  source: string;
+  target_cohort: string;
+  allowed_roles: string[];
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExperimentPlacementConfigUpdate {
+  ui_id?: string;
+  ui_type?: string;
+  title?: string;
+  description?: string;
+  target_url?: string;
+  source?: string;
+  target_cohort?: string;
+  allowed_roles?: string[];
+  enabled?: boolean;
+}
+
 export const experimentApi = {
   list: async (status?: ExperimentStatus): Promise<Experiment[]> => {
     const url = new URL(`${API_BASE_URL}/experiments/`, window.location.origin);
@@ -235,6 +263,31 @@ export const experimentApi = {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete experiment');
+  },
+};
+
+export const experimentPlacementApi = {
+  list: async (experimentId: string): Promise<ExperimentPlacementConfig[]> => {
+    const response = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`);
+    if (!response.ok) throw new Error('Failed to fetch experiment placements');
+    return response.json();
+  },
+
+  update: async (
+    experimentId: string,
+    placementKey: string,
+    data: ExperimentPlacementConfigUpdate,
+  ): Promise<ExperimentPlacementConfig> => {
+    const response = await fetch(
+      `${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}/config`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      },
+    );
+    if (!response.ok) throw new Error('Failed to update experiment placement');
+    return response.json();
   },
 };
 

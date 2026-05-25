@@ -108,6 +108,23 @@ GET /api/v1/experiments/{experiment_id}/placements/{placement_key}/decide?user_i
 - `show: true`, `submitted: true`: 이미 제출한 사용자용 완료 상태 UI 렌더링
 - `show: false`: 대상자가 아니거나 노출 기간 밖이므로 렌더링하지 않음
 
+## 4-1. LVUP 연동 환경 기준
+
+LVUP에 공식 전달할 API base URL은 운영 URL만 기준으로 한다.
+
+```text
+https://exp.pseudolab-devfactory.com/api/v1
+```
+
+현재 별도 공식 staging/sandbox API는 정의되어 있지 않다. 개인 확인용 URL은 실험 플랫폼 담당자의 개발 확인에만 사용하며, LVUP 연동 문서나 QA 기준 URL로 사용하지 않는다.
+
+따라서 LVUP 연동 QA는 다음처럼 구분한다.
+
+- API 연결 smoke test: 운영 URL에서 `/status/`, OpenAPI, decide endpoint 응답 여부를 확인한다.
+- 기능 QA: 운영 환경에 `s12-mid-reflection` 실험과 `project-detail-home-reflection-cta` placement 설정이 등록된 뒤 진행한다.
+- 설정 등록 전 decide 응답의 `show: false`, `reason: "experiment_not_found"`는 API 장애가 아니라 실험 설정 데이터가 없다는 의미다.
+- QA scenario override는 명시적으로 활성화된 QA 환경에서만 사용한다. 현재 공식 staging/sandbox가 없으면 LVUP 전달 기준에 포함하지 않는다.
+
 ## 5. 노출 대상 응답 예시
 
 ```json
@@ -222,13 +239,14 @@ UI placement 설정은 새 config 테이블에서 관리한다.
 ## 10. 관리 API
 
 ```http
+GET /api/v1/experiments/{experiment_id}/placements
 GET /api/v1/experiments/{experiment_id}/placements/{placement_key}/config
 PATCH /api/v1/experiments/{experiment_id}/placements/{placement_key}/config
 ```
 
-이 API는 향후 실험 플랫폼 대시보드 프론트엔드의 실험관리 UI에서 placement 문구, 설명, URL, UI 타입, enabled 상태를 수정할 수 있도록 열어둔 백엔드 계약이다.
+이 API는 실험 플랫폼 대시보드 프론트엔드의 실험 상세 화면에서 placement 목록을 조회하고, 문구, 설명, URL, UI 타입, enabled 상태를 수정할 수 있도록 사용하는 백엔드 계약이다.
 
-현재 구현 범위에는 실험 플랫폼 대시보드 프론트엔드의 편집 화면은 포함하지 않았다.
+현재 구현 범위에는 기존 placement의 조회/편집이 포함된다. 새 placement 생성과 삭제는 LVUP 렌더링 위치와 운영 정책 합의가 필요하므로 포함하지 않았다.
 
 ## 11. 사용하는 데이터
 
@@ -299,6 +317,12 @@ POST /api/v1/capture
 - `backend/app/core/config.py`
 - `backend/.env.sample`
 - `backend/tests/conftest.py`
+- `frontend/src/services/api.ts`
+- `frontend/src/features/dashboard/components/ExperimentDetail.tsx`
+
+추가된 프론트엔드 테스트:
+
+- `frontend/src/__tests__/ExperimentDetail.test.tsx`
 
 ## 15. 테스트 결과
 
@@ -306,7 +330,17 @@ POST /api/v1/capture
 
 ```text
 cd backend && ./venv/bin/pytest
-136 passed
+139 passed
+```
+
+프론트엔드 전체 테스트와 빌드도 통과했다.
+
+```text
+cd frontend && npm test -- --run
+52 passed
+
+cd frontend && npm run build
+built successfully
 ```
 
 ## 16. 남은 결정 사항
@@ -316,8 +350,9 @@ cd backend && ./venv/bin/pytest
 1. 실제 회고 UI 노출 시작일
 2. 노출 기간 일수
 3. 외부 LVUP 프론트엔드에 전달할 최종 API 계약 문서
-4. 실험 플랫폼 대시보드 프론트엔드에 placement config 편집 화면을 붙일지 여부
+4. 운영 환경에 `s12-mid-reflection` 실험과 placement 설정을 등록할 시점
 5. `req.md`를 공식 계약 문서로 남길지 여부
+6. 별도 공식 staging/sandbox API를 둘지 여부. 현재 LVUP 전달 기준은 운영 URL이다.
 
 ## 17. 팀장 보고용 결론
 

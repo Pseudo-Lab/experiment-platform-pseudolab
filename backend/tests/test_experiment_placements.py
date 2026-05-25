@@ -14,6 +14,7 @@ EXPERIMENT_ID = DEFAULT_EXPERIMENT_ID
 PLACEMENT_KEY = DEFAULT_PLACEMENT_KEY
 BASE = f"/api/v1/experiments/{EXPERIMENT_ID}/placements/{PLACEMENT_KEY}/decide"
 CONFIG_BASE = f"/api/v1/experiments/{EXPERIMENT_ID}/placements/{PLACEMENT_KEY}/config"
+LIST_BASE = f"/api/v1/experiments/{EXPERIMENT_ID}/placements"
 CAPTURE = "/api/v1/capture"
 
 
@@ -361,6 +362,40 @@ class TestExperimentPlacementCapture:
 
 
 class TestExperimentPlacementConfig:
+    def test_list_configs(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
+
+        resp = client.get(LIST_BASE)
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body) == 1
+        assert body[0]["experiment_id"] == EXPERIMENT_ID
+        assert body[0]["placement_key"] == PLACEMENT_KEY
+        assert body[0]["allowed_roles"] == ["builder", "runner"]
+        assert body[0]["enabled"] is True
+
+    def test_list_configs_returns_empty_list_for_experiment_without_configs(self, mock_d1):
+        now = datetime.now(timezone.utc).isoformat()
+        mock_d1.execute(
+            """INSERT INTO experiments
+               (id, name, hypothesis, status, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            [EXPERIMENT_ID, "No placement experiment", "", "draft", now, now],
+        )
+        mock_d1.commit()
+
+        resp = client.get(LIST_BASE)
+
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_list_configs_returns_404_for_missing_experiment(self, mock_d1):
+        resp = client.get(LIST_BASE)
+
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Experiment not found"
+
     def test_get_config(self, mock_d1):
         _insert_experiment(conn=mock_d1)
 

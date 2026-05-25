@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Query
 
@@ -10,6 +10,11 @@ from app.schemas.experiment_placement import (
 from app.services.experiment_placement import experiment_placement_service
 
 router = APIRouter()
+
+
+@router.get("/{experiment_id}/placements", response_model=List[ExperimentPlacementConfig])
+async def list_experiment_placement_configs(experiment_id: str):
+    return await experiment_placement_service.list_configs(experiment_id)
 
 
 @router.get("/{experiment_id}/placements/{placement_key}/decide", response_model=ExperimentPlacementDecisionResponse)

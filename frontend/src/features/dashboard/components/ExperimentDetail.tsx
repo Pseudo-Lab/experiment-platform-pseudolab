@@ -5,11 +5,13 @@ import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal } from 'lucide-react';
 import {
-  experimentApi, experimentResultApi, decisionApi,
+  experimentApi, experimentResultApi, decisionApi, experimentPlacementApi,
   type Experiment, type ExperimentStatus,
   type ExperimentResult, type Decision, type LearningNote, type DecisionType,
+  type ExperimentPlacementConfig,
 } from '../../../services/api';
 
 interface ExperimentDetailProps {
@@ -69,6 +71,25 @@ const translations = {
     ship: 'Ship',
     hold: 'Hold',
     rollback: 'Rollback',
+    sectionPlacements: 'UI Placements',
+    placementsLoading: 'Loading placements...',
+    placementsError: 'Failed to load placements.',
+    placementsEmpty: 'No placements configured.',
+    placementKey: 'Placement key',
+    uiId: 'UI ID',
+    uiType: 'UI type',
+    uiTitle: 'Title',
+    uiDescription: 'Description',
+    targetUrl: 'Target URL',
+    source: 'Source',
+    targetCohort: 'Target cohort',
+    allowedRoles: 'Allowed roles',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    roleBuilder: 'Builder',
+    roleRunner: 'Runner',
+    placementSaved: 'Placement saved.',
+    placementSaveError: 'Failed to save placement.',
   },
   ko: {
     back: '목록으로',
@@ -122,6 +143,25 @@ const translations = {
     ship: '배포',
     hold: '보류',
     rollback: '롤백',
+    sectionPlacements: 'UI 노출 위치',
+    placementsLoading: '노출 위치를 불러오는 중...',
+    placementsError: '노출 위치를 불러오지 못했습니다.',
+    placementsEmpty: '설정된 노출 위치가 없습니다.',
+    placementKey: 'Placement key',
+    uiId: 'UI ID',
+    uiType: 'UI 타입',
+    uiTitle: '제목',
+    uiDescription: '설명',
+    targetUrl: '이동 URL',
+    source: 'Source',
+    targetCohort: '대상 기수',
+    allowedRoles: '허용 역할',
+    enabled: '활성',
+    disabled: '비활성',
+    roleBuilder: '빌더',
+    roleRunner: '러너',
+    placementSaved: '노출 위치를 저장했습니다.',
+    placementSaveError: '노출 위치 저장에 실패했습니다.',
   },
 };
 
@@ -159,6 +199,33 @@ const transitionButtons: Record<ExperimentStatus, TransitionButton[]> = {
   archived: [],
 };
 
+const roleOptions = ['builder', 'runner'] as const;
+const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
+
+type PlacementForm = {
+  ui_id: string;
+  ui_type: string;
+  title: string;
+  description: string;
+  target_url: string;
+  source: string;
+  target_cohort: string;
+  allowed_roles: string[];
+  enabled: boolean;
+};
+
+const toPlacementForm = (placement: ExperimentPlacementConfig): PlacementForm => ({
+  ui_id: placement.ui_id,
+  ui_type: placement.ui_type,
+  title: placement.title,
+  description: placement.description,
+  target_url: placement.target_url,
+  source: placement.source,
+  target_cohort: placement.target_cohort,
+  allowed_roles: [...placement.allowed_roles],
+  enabled: placement.enabled,
+});
+
 export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -177,6 +244,15 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [result, setResult] = useState<ExperimentResult | null>(null);
   const [resultLoading, setResultLoading] = useState(false);
 
+  const [placements, setPlacements] = useState<ExperimentPlacementConfig[]>([]);
+  const [placementsLoading, setPlacementsLoading] = useState(false);
+  const [placementsError, setPlacementsError] = useState<string | null>(null);
+  const [selectedPlacementKey, setSelectedPlacementKey] = useState<string | null>(null);
+  const [placementEditing, setPlacementEditing] = useState(false);
+  const [placementForm, setPlacementForm] = useState<PlacementForm | null>(null);
+  const [placementSaving, setPlacementSaving] = useState(false);
+  const [placementSaveMessage, setPlacementSaveMessage] = useState<string | null>(null);
+
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [notes, setNotes] = useState<LearningNote[]>([]);
   const [decisionType, setDecisionType] = useState<DecisionType>('SHIP');
@@ -193,6 +269,18 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     experimentApi.get(id)
       .then((data) => { setExperiment(data); setLoading(false); })
       .catch(() => { setError(t.error); setLoading(false); });
+    setPlacementsLoading(true);
+    setPlacementsError(null);
+    experimentPlacementApi.list(id)
+      .then((data) => {
+        setPlacements(data);
+        setSelectedPlacementKey((current) => {
+          if (current && data.some((placement) => placement.placement_key === current)) return current;
+          return data[0]?.placement_key ?? null;
+        });
+      })
+      .catch(() => setPlacementsError(t.placementsError))
+      .finally(() => setPlacementsLoading(false));
     decisionApi.list(id).then(setDecisions).catch(() => {});
     decisionApi.listNotes(id).then(setNotes).catch(() => {});
   }, [id]);
@@ -277,12 +365,85 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     navigate('/experiments');
   };
 
+  const selectedPlacement =
+    placements.find((placement) => placement.placement_key === selectedPlacementKey) ?? placements[0] ?? null;
+
+  const handleSelectPlacement = (placementKey: string) => {
+    setSelectedPlacementKey(placementKey);
+    setPlacementEditing(false);
+    setPlacementForm(null);
+    setPlacementSaveMessage(null);
+  };
+
+  const startPlacementEdit = () => {
+    if (!selectedPlacement) return;
+    setPlacementForm(toPlacementForm(selectedPlacement));
+    setPlacementEditing(true);
+    setPlacementSaveMessage(null);
+  };
+
+  const updatePlacementForm = <K extends keyof PlacementForm>(key: K, value: PlacementForm[K]) => {
+    setPlacementForm((current) => current ? { ...current, [key]: value } : current);
+  };
+
+  const togglePlacementRole = (role: string, checked: boolean) => {
+    setPlacementForm((current) => {
+      if (!current) return current;
+      const nextRoles = checked
+        ? Array.from(new Set([...current.allowed_roles, role]))
+        : current.allowed_roles.filter((item) => item !== role);
+      return { ...current, allowed_roles: nextRoles };
+    });
+  };
+
+  const handlePlacementSave = async () => {
+    if (!id || !selectedPlacement || !placementForm) return;
+    setPlacementSaving(true);
+    setPlacementSaveMessage(null);
+    try {
+      const updated = await experimentPlacementApi.update(id, selectedPlacement.placement_key, {
+        ui_id: placementForm.ui_id.trim(),
+        ui_type: placementForm.ui_type.trim(),
+        title: placementForm.title.trim(),
+        description: placementForm.description.trim(),
+        target_url: placementForm.target_url.trim(),
+        source: placementForm.source.trim(),
+        target_cohort: placementForm.target_cohort.trim(),
+        allowed_roles: placementForm.allowed_roles,
+        enabled: placementForm.enabled,
+      });
+      setPlacements((current) => current.map((placement) => (
+        placement.placement_key === updated.placement_key ? updated : placement
+      )));
+      setPlacementEditing(false);
+      setPlacementForm(null);
+      setPlacementSaveMessage(t.placementSaved);
+    } catch {
+      setPlacementSaveMessage(t.placementSaveError);
+    } finally {
+      setPlacementSaving(false);
+    }
+  };
+
   if (loading) return <p className="text-slate-500 dark:text-slate-400 text-sm p-8">{t.loading}</p>;
   if (error) return <p className="text-rose-500 text-sm p-8">{error}</p>;
   if (!experiment) return <p className="text-slate-500 text-sm p-8">{t.notFound}</p>;
 
   const status = statusConfig[experiment.status];
   const buttons = transitionButtons[experiment.status] ?? [];
+  const uiTypeSelectOptions = Array.from(
+    new Set([...uiTypeOptions, placementForm?.ui_type].filter((value): value is string => Boolean(value))),
+  );
+  const placementFormValid = Boolean(
+    placementForm?.ui_id.trim() &&
+    placementForm.ui_type.trim() &&
+    placementForm.title.trim() &&
+    placementForm.description.trim() &&
+    placementForm.target_url.trim() &&
+    placementForm.source.trim() &&
+    placementForm.target_cohort.trim() &&
+    placementForm.allowed_roles.length > 0,
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -411,6 +572,207 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+            <SlidersHorizontal className="h-5 w-5 text-indigo-500" />
+            {t.sectionPlacements}
+          </CardTitle>
+          {selectedPlacement && !placementEditing && (
+            <Button size="sm" variant="outline" className="gap-1.5 rounded-xl" onClick={startPlacementEdit}>
+              <Pencil className="h-3.5 w-3.5" />
+              {t.edit}
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {placementsLoading && <p className="text-sm text-slate-400">{t.placementsLoading}</p>}
+          {placementsError && <p className="text-sm text-rose-500">{placementsError}</p>}
+          {!placementsLoading && !placementsError && placements.length === 0 && (
+            <p className="text-sm text-slate-400">{t.placementsEmpty}</p>
+          )}
+          {!placementsLoading && !placementsError && selectedPlacement && (
+            <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+              <div className="space-y-2">
+                {placements.map((placement) => {
+                  const active = placement.placement_key === selectedPlacement.placement_key;
+                  return (
+                    <button
+                      type="button"
+                      key={placement.placement_key}
+                      onClick={() => handleSelectPlacement(placement.placement_key)}
+                      className={`w-full rounded-xl border px-3 py-3 text-left transition-colors ${
+                        active
+                          ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
+                      }`}
+                    >
+                      <span className="block truncate text-sm font-bold">{placement.placement_key}</span>
+                      <span className="mt-1 flex items-center gap-2 text-xs">
+                        <span>{placement.ui_type}</span>
+                        <span className="text-slate-300">/</span>
+                        <span>{placement.enabled ? t.enabled : t.disabled}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+                {!placementEditing && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {[
+                      [t.placementKey, selectedPlacement.placement_key],
+                      [t.uiId, selectedPlacement.ui_id],
+                      [t.uiType, selectedPlacement.ui_type],
+                      [t.uiTitle, selectedPlacement.title],
+                      [t.uiDescription, selectedPlacement.description],
+                      [t.targetUrl, selectedPlacement.target_url],
+                      [t.source, selectedPlacement.source],
+                      [t.targetCohort, selectedPlacement.target_cohort],
+                      [t.allowedRoles, selectedPlacement.allowed_roles.join(', ')],
+                      [t.labelStatus, selectedPlacement.enabled ? t.enabled : t.disabled],
+                    ].map(([label, value]) => (
+                      <div key={label} className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+                        <p className="break-words text-sm font-medium text-slate-700 dark:text-slate-300">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {placementEditing && placementForm && (
+                  <div className="space-y-4">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        checked={placementForm.enabled}
+                        onChange={(event) => updatePlacementForm('enabled', event.target.checked)}
+                      />
+                      {t.enabled}
+                    </label>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiId}</label>
+                        <Input
+                          value={placementForm.ui_id}
+                          onChange={(event) => updatePlacementForm('ui_id', event.target.value)}
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiType}</label>
+                        <Select value={placementForm.ui_type} onValueChange={(value) => updatePlacementForm('ui_type', value)}>
+                          <SelectTrigger className="rounded-xl">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {uiTypeSelectOptions.map((value) => (
+                              <SelectItem key={value} value={value}>{value}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiTitle}</label>
+                        <Input
+                          value={placementForm.title}
+                          onChange={(event) => updatePlacementForm('title', event.target.value)}
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetUrl}</label>
+                        <Input
+                          value={placementForm.target_url}
+                          onChange={(event) => updatePlacementForm('target_url', event.target.value)}
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.source}</label>
+                        <Input
+                          value={placementForm.source}
+                          onChange={(event) => updatePlacementForm('source', event.target.value)}
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.targetCohort}</label>
+                        <Input
+                          value={placementForm.target_cohort}
+                          onChange={(event) => updatePlacementForm('target_cohort', event.target.value)}
+                          className="rounded-xl"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.uiDescription}</label>
+                      <Textarea
+                        value={placementForm.description}
+                        onChange={(event) => updatePlacementForm('description', event.target.value)}
+                        className="rounded-xl resize-none"
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.allowedRoles}</p>
+                      <div className="flex flex-wrap gap-3">
+                        {roleOptions.map((role) => (
+                          <label key={role} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                              checked={placementForm.allowed_roles.includes(role)}
+                              onChange={(event) => togglePlacementRole(role, event.target.checked)}
+                            />
+                            {role === 'builder' ? t.roleBuilder : t.roleRunner}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        className="gap-1.5 rounded-xl"
+                        onClick={handlePlacementSave}
+                        disabled={placementSaving || !placementFormValid}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        {placementSaving ? t.saving : t.save}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 rounded-xl"
+                        onClick={() => {
+                          setPlacementEditing(false);
+                          setPlacementForm(null);
+                        }}
+                        disabled={placementSaving}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        {t.cancel}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {placementSaveMessage && (
+            <p className={`text-sm ${placementSaveMessage === t.placementSaved ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+              {placementSaveMessage}
+            </p>
+          )}
         </CardContent>
       </Card>
 

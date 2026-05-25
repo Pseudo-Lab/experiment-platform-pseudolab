@@ -40,6 +40,19 @@ def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
 
 
 class ExperimentPlacementService:
+    async def list_configs(self, experiment_id: str) -> list[ExperimentPlacementConfig]:
+        if not await self._experiment_exists(experiment_id):
+            raise HTTPException(status_code=404, detail="Experiment not found")
+
+        rows = await d1.query(
+            """SELECT *
+                 FROM experiment_placement_config
+                WHERE experiment_id = ?
+                ORDER BY placement_key""",
+            [experiment_id],
+        )
+        return [self._to_config(row) for row in rows]
+
     async def get_config(self, experiment_id: str, placement_key: str) -> ExperimentPlacementConfig:
         rows = await d1.query(
             """SELECT *
