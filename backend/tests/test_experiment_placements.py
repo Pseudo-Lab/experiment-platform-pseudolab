@@ -5,12 +5,15 @@ from fastapi.testclient import TestClient
 
 from app.core.config import settings
 from app.main import app
-from app.services.project_reflection_banner import EXPERIMENT_ID
+from app.services.experiment_placement import DEFAULT_EXPERIMENT_ID, DEFAULT_PLACEMENT_KEY
 
 
 client = TestClient(app)
 
-BASE = "/api/v1/project-reflection-banner/decide"
+EXPERIMENT_ID = DEFAULT_EXPERIMENT_ID
+PLACEMENT_KEY = DEFAULT_PLACEMENT_KEY
+BASE = f"/api/v1/experiments/{EXPERIMENT_ID}/placements/{PLACEMENT_KEY}/decide"
+CONFIG_BASE = f"/api/v1/experiments/{EXPERIMENT_ID}/placements/{PLACEMENT_KEY}/config"
 CAPTURE = "/api/v1/capture"
 
 
@@ -54,8 +57,8 @@ def _insert_experiment(conn, start_days=-1, window_days=7, status="running", con
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             EXPERIMENT_ID,
-            "LVUP 12기 중간 회고 배너",
-            "회고 배너 노출은 제출을 늘린다.",
+            "LVUP 12기 중간 회고 UI 노출",
+            "회고 진입 UI 노출은 제출을 늘린다.",
             status,
             _iso(start_days) if start_days is not None else None,
             window_days,
@@ -64,16 +67,21 @@ def _insert_experiment(conn, start_days=-1, window_days=7, status="running", con
         ],
     )
     conn.execute(
-        """INSERT INTO project_reflection_banner_config
-           (experiment_id, banner_id, title, description, target_url, source, enabled, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO experiment_placement_config
+           (experiment_id, placement_key, ui_id, ui_type, title, description, target_url, source,
+            target_cohort, allowed_roles, enabled, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             EXPERIMENT_ID,
+            PLACEMENT_KEY,
             "s12-mid-reflection-banner",
+            "banner",
             "중간 회고 작성하기",
             "지금까지의 여정을 정리하고 남은 기간 방향을 잡아봐요",
             "/reflection/s12-mid-reflection",
             "project_detail_home",
+            "12",
+            json.dumps(["builder", "runner"]),
             1 if config_enabled else 0,
             now,
             now,
@@ -127,9 +135,9 @@ def _decide(user_id="user-runner", project_id="project-s12", **params):
     return client.get(BASE, params=query)
 
 
-class TestProjectReflectionBannerDecide:
-    def test_eligible_returns_banner_payload(self, mock_d1):
-        _insert_experiment(mock_d1)
+class TestExperimentPlacementDecide:
+    def test_eligible_returns_placement_payload(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1)
         _insert_member(mock_d1)
 
@@ -140,12 +148,20 @@ class TestProjectReflectionBannerDecide:
         assert body["show"] is True
         assert body["reason"] == "eligible"
         assert body["submitted"] is False
-        assert body["experiment_id"] == "s12-mid-reflection"
-        assert body["banner_id"] == "s12-mid-reflection-banner"
-        assert body["target_url"] == "/reflection/s12-mid-reflection"
+        assert body["experiment_id"] == EXPERIMENT_ID
+        assert body["placement_key"] == PLACEMENT_KEY
+        assert body["ui"] == {
+            "id": "s12-mid-reflection-banner",
+            "type": "banner",
+            "title": "중간 회고 작성하기",
+            "description": "지금까지의 여정을 정리하고 남은 기간 방향을 잡아봐요",
+            "target_url": "/reflection/s12-mid-reflection",
+        }
         assert body["logging_context"] == {
-            "experiment_id": "s12-mid-reflection",
-            "banner_id": "s12-mid-reflection-banner",
+            "experiment_id": EXPERIMENT_ID,
+            "placement_key": PLACEMENT_KEY,
+            "ui_id": "s12-mid-reflection-banner",
+            "ui_type": "banner",
             "project_id": "project-s12",
             "project_cohort": "12",
             "user_project_role": "runner",
@@ -153,7 +169,7 @@ class TestProjectReflectionBannerDecide:
         }
 
     def test_missing_user_returns_not_authenticated(self, mock_d1):
-        _insert_experiment(mock_d1)
+        _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1)
 
         resp = _decide(user_id=None)
@@ -164,10 +180,8 @@ class TestProjectReflectionBannerDecide:
             "reason": "not_authenticated",
             "submitted": False,
             "experiment_id": None,
-            "banner_id": None,
-            "title": None,
-            "description": None,
-            "target_url": None,
+            "placement_key": None,
+            "ui": None,
             "logging_context": None,
         }
 
@@ -180,18 +194,31 @@ class TestProjectReflectionBannerDecide:
         assert resp.status_code == 200
         assert resp.json()["reason"] == "experiment_not_found"
 
-    def test_non_s12_project_returns_not_s12_project(self, mock_d1):
-        _insert_experiment(mock_d1)
+    def test_missing_placement_returns_placement_not_found(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
+        _insert_project(mock_d1)
+        _insert_member(mock_d1)
+
+        resp = client.get(
+            f"/api/v1/experiments/{EXPERIMENT_ID}/placements/missing-placement/decide",
+            params={"user_id": "user-runner", "project_id": "project-s12"},
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["reason"] == "placement_not_found"
+
+    def test_non_target_cohort_returns_not_target_cohort(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1, cohort="11")
         _insert_member(mock_d1)
 
         resp = _decide()
 
         assert resp.status_code == 200
-        assert resp.json()["reason"] == "not_s12_project"
+        assert resp.json()["reason"] == "not_target_cohort"
 
     def test_missing_membership_returns_not_project_member(self, mock_d1):
-        _insert_experiment(mock_d1)
+        _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1)
 
         resp = _decide()
@@ -200,7 +227,7 @@ class TestProjectReflectionBannerDecide:
         assert resp.json()["reason"] == "not_project_member"
 
     def test_unsupported_role_returns_unsupported_role(self, mock_d1):
-        _insert_experiment(mock_d1)
+        _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1)
         _insert_member(mock_d1, role="member")
 
@@ -210,7 +237,7 @@ class TestProjectReflectionBannerDecide:
         assert resp.json()["reason"] == "unsupported_role"
 
     def test_inactive_membership_returns_inactive_membership(self, mock_d1):
-        _insert_experiment(mock_d1)
+        _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1)
         _insert_member(mock_d1, role="runner", status="claiming")
 
@@ -219,38 +246,38 @@ class TestProjectReflectionBannerDecide:
         assert resp.status_code == 200
         assert resp.json()["reason"] == "inactive_membership"
 
-    def test_outside_window_returns_outside_reflection_window(self, mock_d1):
-        _insert_experiment(mock_d1, start_days=-10, window_days=2)
+    def test_outside_window_returns_outside_exposure_window(self, mock_d1):
+        _insert_experiment(conn=mock_d1, start_days=-10, window_days=2)
         _insert_project(mock_d1)
         _insert_member(mock_d1)
 
         resp = _decide()
 
         assert resp.status_code == 200
-        assert resp.json()["reason"] == "outside_reflection_window"
+        assert resp.json()["reason"] == "outside_exposure_window"
 
-    def test_paused_experiment_returns_outside_reflection_window(self, mock_d1):
-        _insert_experiment(mock_d1, status="paused")
+    def test_paused_experiment_returns_outside_exposure_window(self, mock_d1):
+        _insert_experiment(conn=mock_d1, status="paused")
         _insert_project(mock_d1)
         _insert_member(mock_d1)
 
         resp = _decide()
 
         assert resp.status_code == 200
-        assert resp.json()["reason"] == "outside_reflection_window"
+        assert resp.json()["reason"] == "outside_exposure_window"
 
-    def test_disabled_banner_config_returns_outside_reflection_window(self, mock_d1):
-        _insert_experiment(mock_d1, config_enabled=False)
+    def test_disabled_placement_config_returns_outside_exposure_window(self, mock_d1):
+        _insert_experiment(conn=mock_d1, config_enabled=False)
         _insert_project(mock_d1)
         _insert_member(mock_d1)
 
         resp = _decide()
 
         assert resp.status_code == 200
-        assert resp.json()["reason"] == "outside_reflection_window"
+        assert resp.json()["reason"] == "outside_exposure_window"
 
-    def test_submitted_user_returns_completed_banner_state(self, mock_d1):
-        _insert_experiment(mock_d1)
+    def test_submitted_user_returns_completed_ui_state(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1)
         _insert_member(mock_d1)
         now = datetime.now(timezone.utc).isoformat()
@@ -269,7 +296,7 @@ class TestProjectReflectionBannerDecide:
         assert body["show"] is True
         assert body["reason"] == "already_submitted"
         assert body["submitted"] is True
-        assert body["target_url"] == "/reflection/s12-mid-reflection"
+        assert body["ui"]["target_url"] == "/reflection/s12-mid-reflection"
 
     def test_scenario_override_is_disabled_by_default(self):
         resp = _decide(scenario="eligible")
@@ -278,16 +305,17 @@ class TestProjectReflectionBannerDecide:
         assert resp.json()["detail"] == "scenario override is disabled"
 
     def test_scenario_override_can_force_eligible(self, monkeypatch):
-        monkeypatch.setattr(settings, "REFLECTION_BANNER_SCENARIO_OVERRIDE_ENABLED", True)
+        monkeypatch.setattr(settings, "EXPERIMENT_PLACEMENT_SCENARIO_OVERRIDE_ENABLED", True)
 
         resp = _decide(project_id="sandbox-project", scenario="eligible")
 
         assert resp.status_code == 200
         assert resp.json()["show"] is True
         assert resp.json()["logging_context"]["project_id"] == "sandbox-project"
+        assert resp.json()["placement_key"] == PLACEMENT_KEY
 
     def test_scenario_override_can_force_already_submitted_state(self, monkeypatch):
-        monkeypatch.setattr(settings, "REFLECTION_BANNER_SCENARIO_OVERRIDE_ENABLED", True)
+        monkeypatch.setattr(settings, "EXPERIMENT_PLACEMENT_SCENARIO_OVERRIDE_ENABLED", True)
 
         resp = _decide(project_id="sandbox-project", scenario="already_submitted")
 
@@ -299,7 +327,7 @@ class TestProjectReflectionBannerDecide:
         assert body["logging_context"]["project_id"] == "sandbox-project"
 
     def test_scenario_override_can_force_server_error(self, monkeypatch):
-        monkeypatch.setattr(settings, "REFLECTION_BANNER_SCENARIO_OVERRIDE_ENABLED", True)
+        monkeypatch.setattr(settings, "EXPERIMENT_PLACEMENT_SCENARIO_OVERRIDE_ENABLED", True)
 
         resp = _decide(scenario="server_error")
 
@@ -307,14 +335,16 @@ class TestProjectReflectionBannerDecide:
         assert resp.json()["detail"] == "forced server_error scenario"
 
 
-class TestProjectReflectionBannerCapture:
-    def test_capture_accepts_project_reflection_banner_events(self, mock_d1):
+class TestExperimentPlacementCapture:
+    def test_capture_accepts_project_reflection_events(self, mock_d1):
         payload = {
             "user_id": "user-runner",
-            "event_name": "project_reflection_banner_viewed",
+            "event_name": "project_reflection_ui_viewed",
             "properties": {
-                "experiment_id": "s12-mid-reflection",
-                "banner_id": "s12-mid-reflection-banner",
+                "experiment_id": EXPERIMENT_ID,
+                "placement_key": PLACEMENT_KEY,
+                "ui_id": "s12-mid-reflection-banner",
+                "ui_type": "banner",
                 "project_id": "project-s12",
                 "project_cohort": "12",
                 "user_project_role": "runner",
@@ -326,40 +356,48 @@ class TestProjectReflectionBannerCapture:
 
         assert resp.status_code == 202
         rows = mock_d1.execute("SELECT event_name, properties FROM event_log WHERE user_id = ?", ["user-runner"]).fetchall()
-        assert rows[0]["event_name"] == "project_reflection_banner_viewed"
-        assert json.loads(rows[0]["properties"])["banner_id"] == "s12-mid-reflection-banner"
+        assert rows[0]["event_name"] == "project_reflection_ui_viewed"
+        assert json.loads(rows[0]["properties"])["placement_key"] == PLACEMENT_KEY
 
 
-class TestProjectReflectionBannerConfig:
+class TestExperimentPlacementConfig:
     def test_get_config(self, mock_d1):
-        _insert_experiment(mock_d1)
+        _insert_experiment(conn=mock_d1)
 
-        resp = client.get(f"/api/v1/project-reflection-banner/config/{EXPERIMENT_ID}")
+        resp = client.get(CONFIG_BASE)
 
         assert resp.status_code == 200
         body = resp.json()
         assert body["experiment_id"] == EXPERIMENT_ID
+        assert body["placement_key"] == PLACEMENT_KEY
+        assert body["ui_type"] == "banner"
         assert body["title"] == "중간 회고 작성하기"
         assert body["enabled"] is True
 
     def test_patch_config_updates_decide_payload(self, mock_d1):
-        _insert_experiment(mock_d1)
+        _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1)
         _insert_member(mock_d1)
 
         patched = client.patch(
-            f"/api/v1/project-reflection-banner/config/{EXPERIMENT_ID}",
+            CONFIG_BASE,
             json={
+                "ui_type": "card",
                 "title": "회고 남기기",
                 "description": "이번 주 회고를 작성해주세요",
                 "target_url": "/reflection/custom",
             },
         )
         assert patched.status_code == 200
+        assert patched.json()["ui_type"] == "card"
         assert patched.json()["title"] == "회고 남기기"
 
         decided = _decide()
         assert decided.status_code == 200
-        assert decided.json()["title"] == "회고 남기기"
-        assert decided.json()["description"] == "이번 주 회고를 작성해주세요"
-        assert decided.json()["target_url"] == "/reflection/custom"
+        assert decided.json()["ui"] == {
+            "id": "s12-mid-reflection-banner",
+            "type": "card",
+            "title": "회고 남기기",
+            "description": "이번 주 회고를 작성해주세요",
+            "target_url": "/reflection/custom",
+        }

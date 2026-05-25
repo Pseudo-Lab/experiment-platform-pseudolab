@@ -150,16 +150,21 @@ CREATE TABLE IF NOT EXISTS reflection (
     UNIQUE(user_id, experiment_id)
 );
 
-CREATE TABLE IF NOT EXISTS project_reflection_banner_config (
-    experiment_id TEXT PRIMARY KEY,
-    banner_id     TEXT NOT NULL,
-    title         TEXT NOT NULL,
-    description   TEXT NOT NULL,
-    target_url    TEXT NOT NULL,
-    source        TEXT NOT NULL DEFAULT 'project_detail_home',
-    enabled       INTEGER NOT NULL DEFAULT 1,
-    created_at    TEXT NOT NULL,
-    updated_at    TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS experiment_placement_config (
+    experiment_id  TEXT NOT NULL,
+    placement_key  TEXT NOT NULL,
+    ui_id          TEXT NOT NULL,
+    ui_type        TEXT NOT NULL DEFAULT 'banner',
+    title          TEXT NOT NULL,
+    description    TEXT NOT NULL,
+    target_url     TEXT NOT NULL,
+    source         TEXT NOT NULL DEFAULT 'project_detail_home',
+    target_cohort  TEXT NOT NULL DEFAULT '12',
+    allowed_roles  TEXT NOT NULL DEFAULT '["builder","runner"]',
+    enabled        INTEGER NOT NULL DEFAULT 1,
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL,
+    PRIMARY KEY (experiment_id, placement_key)
 );
 
 """

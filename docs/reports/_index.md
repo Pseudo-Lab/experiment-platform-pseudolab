@@ -23,7 +23,9 @@ Last-Validated: 2026-05-18
 - `docs/reports/experiment-platform-foundation-plan.md` — 실험 플랫폼 기반 계획
 - `docs/reports/feature-flag-improvement-plan.md` — Feature Flag 개선 계획
 - `docs/reports/experiment-analyst-agent-research-2026-05-18.md` — Experiment Analyst 에이전트 리서치/역할 정의
-- `docs/reports/project-reflection-banner-api-report-2026-05-25.md` — 12기 회고 배너 decide/config API 구현 보고
+- `docs/reports/project-reflection-placement-api-report-2026-05-25.md` — 12기 회고 UI placement decide/config API 구현 보고
+- `docs/reports/lvup-project-reflection-ui-placement-contract-2026-05-25.md` — LVUP 전달용 12기 회고 UI placement API 계약
+- `docs/reports/project-reflection-placement-development-internal-report-2026-05-25.md` — 내부용 실험 플랫폼 개발 작업 보고
 - `docs/reports/hand-off-12th-study-platform.md` — 운영 핸드오프
 - `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md` — Feature Flag UI 이어받기
 - `docs/reports/handoffs/2026-05-18-segments-ui-agent-handoff.md` — Segment UI 에이전트 작업 핸드오프
