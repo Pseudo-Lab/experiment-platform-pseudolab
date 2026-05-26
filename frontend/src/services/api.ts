@@ -167,6 +167,9 @@ export interface Experiment {
   hypothesis?: string;
   expected_effect?: string;
   primary_metric?: string;
+  completion_event?: string;
+  experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
+  cohort_id?: string;
   status: ExperimentStatus;
   owner_id?: string;
   start_at?: string;
@@ -179,11 +182,17 @@ export interface Experiment {
 }
 
 export interface ExperimentCreate {
+  id?: string;
   name: string;
   hypothesis?: string;
   expected_effect?: string;
   primary_metric?: string;
+  completion_event?: string;
+  experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
+  cohort_id?: string;
   owner_id?: string;
+  start_at?: string;
+  end_at?: string;
   variants: { name: string; traffic_ratio: number; description?: string }[];
 }
 
@@ -192,6 +201,11 @@ export interface ExperimentUpdate {
   hypothesis?: string;
   expected_effect?: string;
   primary_metric?: string;
+  completion_event?: string;
+  experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
+  cohort_id?: string;
+  start_at?: string;
+  end_at?: string;
   status?: ExperimentStatus;
 }
 

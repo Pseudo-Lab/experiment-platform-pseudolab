@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-05-25
+Last-Validated: 2026-05-27
 Owner: soo
 
 # Project Reflection UI Placement API Implementation Report
@@ -126,8 +126,9 @@ active experiment 판단 기준:
 - 같은 `placement_key`를 가진 placement config가 있어야 한다.
 - 연결된 experiment 상태가 `running`이어야 한다.
 - placement config가 `enabled=true`여야 한다.
-- 현재 시간이 `reflection_start_date + reflection_window_days` 노출 기간 안이어야 한다.
-- 동시에 여러 active experiment가 잡히면 최신 `reflection_start_date`, 최신 `created_at` 순으로 하나를 선택한다.
+- 현재 시간이 실험의 `start_at <= now < end_at` 노출 기간 안이어야 한다.
+- 기존 회고 파일럿 데이터와의 호환을 위해 `start_at/end_at`이 없을 때만 `reflection_start_date + reflection_window_days`를 fallback으로 사용한다.
+- 동시에 여러 active experiment가 잡히면 최신 `start_at`, 최신 `reflection_start_date`, 최신 `created_at` 순으로 하나를 선택한다.
 
 운영 원칙상 같은 placement에 동시에 여러 active experiment가 걸리지 않게 관리하는 것이 좋다.
 
@@ -144,8 +145,8 @@ GET /api/v1/experiments/{experiment_id}/placements/{placement_key}/decide?user_i
 
 외부 LVUP 프론트엔드는 프로젝트 상세 홈 진입 시 권장 endpoint를 호출한다.
 
-- `show: true`, `submitted: false`: 작성 가능한 회고 진입 UI 렌더링
-- `show: true`, `submitted: true`: 이미 제출한 사용자용 완료 상태 UI 렌더링
+- `show: true`, `completed: false`: 작성 가능한 회고 진입 UI 렌더링
+- `show: true`, `completed: true`: 이미 완료한 사용자용 완료 상태 UI 렌더링
 - `show: false`: 대상자가 아니거나 노출 기간 밖이므로 렌더링하지 않음
 
 ## 4-1. LVUP 연동 환경 기준
@@ -172,7 +173,7 @@ https://exp.pseudolab-devfactory.com/api/v1
 {
   "show": true,
   "reason": "eligible",
-  "submitted": false,
+  "completed": false,
   "experiment_id": "s12-mid-reflection",
   "placement_key": "project-detail-home-reflection-cta",
   "ui": {
@@ -197,13 +198,13 @@ https://exp.pseudolab-devfactory.com/api/v1
 
 ## 6. 제출 완료 응답 예시
 
-이미 제출한 사용자에게도 12기 전체 조사 안내의 일관성을 위해 UI 영역은 노출한다. 단, `submitted: true`와 `reason: "already_submitted"`를 내려 외부 LVUP 프론트엔드가 완료 상태로 렌더링할 수 있게 한다.
+이미 제출한 사용자에게도 12기 전체 조사 안내의 일관성을 위해 UI 영역은 노출한다. 단, `completed: true`와 `reason: "already_completed"`를 내려 외부 LVUP 프론트엔드가 완료 상태로 렌더링할 수 있게 한다.
 
 ```json
 {
   "show": true,
-  "reason": "already_submitted",
-  "submitted": true,
+  "reason": "already_completed",
+  "completed": true,
   "experiment_id": "s12-mid-reflection",
   "placement_key": "project-detail-home-reflection-cta",
   "ui": {
@@ -222,7 +223,7 @@ https://exp.pseudolab-devfactory.com/api/v1
 {
   "show": false,
   "reason": "not_project_member",
-  "submitted": false
+  "completed": false
 }
 ```
 
@@ -234,7 +235,7 @@ https://exp.pseudolab-devfactory.com/api/v1
 - `unsupported_role`
 - `inactive_membership`
 - `outside_exposure_window`
-- `already_submitted`
+- `already_completed`
 - `experiment_not_found`
 - `placement_not_found`
 - `eligible`
@@ -260,8 +261,9 @@ API는 다음 순서로 판단한다.
 실험 상태와 기간은 기존 experiment 모델을 사용한다.
 
 - `experiments.status`
-- `experiments.reflection_start_date`
-- `experiments.reflection_window_days`
+- `experiments.start_at`
+- `experiments.end_at`
+- 기존 호환 fallback: `experiments.reflection_start_date`, `experiments.reflection_window_days`
 
 UI placement 설정은 새 config 테이블에서 관리한다.
 
@@ -327,7 +329,7 @@ DELETE /api/v1/experiments/{experiment_id}/placements/{placement_key}
   - 최신 `base_date` 스냅샷 기준
 - `reflection`
   - `user_id + experiment_id` 기준 제출 여부 확인
-  - 제출자는 숨기지 않고 `submitted: true` 상태로 내려줌
+  - 제출자는 숨기지 않고 `completed: true` 상태로 내려줌
 - `experiments`
   - 실험 존재 여부, 상태, 회고 노출 기간 확인
 - `experiment_placement_config`

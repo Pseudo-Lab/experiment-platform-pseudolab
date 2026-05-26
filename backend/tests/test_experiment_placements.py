@@ -63,16 +63,23 @@ def _insert_experiment(
     target_url="/reflection/s12-mid-reflection",
 ):
     now = datetime.now(timezone.utc).isoformat()
+    start_at = _iso(start_days) if start_days is not None else None
+    end_at = _iso(start_days + window_days) if start_days is not None and window_days is not None else None
     conn.execute(
         """INSERT INTO experiments
-           (id, name, hypothesis, status, reflection_start_date, reflection_window_days, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+           (id, name, hypothesis, status, experiment_type, completion_event, start_at, end_at,
+            reflection_start_date, reflection_window_days, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [
             experiment_id,
             "LVUP 12기 중간 회고 UI 노출",
             "회고 진입 UI 노출은 제출을 늘린다.",
             status,
-            _iso(start_days) if start_days is not None else None,
+            "quasi_experiment",
+            "project_reflection_submitted",
+            start_at,
+            end_at,
+            None,
             window_days,
             now,
             now,
@@ -166,7 +173,7 @@ class TestExperimentPlacementDecide:
         body = resp.json()
         assert body["show"] is True
         assert body["reason"] == "eligible"
-        assert body["submitted"] is False
+        assert body["completed"] is False
         assert body["experiment_id"] == EXPERIMENT_ID
         assert body["placement_key"] == PLACEMENT_KEY
         assert body["ui"] == {
@@ -197,7 +204,7 @@ class TestExperimentPlacementDecide:
         assert resp.json() == {
             "show": False,
             "reason": "not_authenticated",
-            "submitted": False,
+            "completed": False,
             "experiment_id": None,
             "placement_key": None,
             "ui": None,
@@ -316,7 +323,36 @@ class TestExperimentPlacementDecide:
         assert resp.status_code == 200
         assert resp.json()["reason"] == "outside_exposure_window"
 
-    def test_submitted_user_returns_completed_ui_state(self, mock_d1):
+    def test_completed_user_returns_completed_ui_state(self, mock_d1):
+        _insert_experiment(conn=mock_d1)
+        _insert_project(mock_d1)
+        _insert_member(mock_d1)
+        now = datetime.now(timezone.utc).isoformat()
+        mock_d1.execute(
+            """INSERT INTO event_log
+               (user_id, cohort_id, event_name, properties, event_time, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            [
+                "user-runner",
+                None,
+                "project_reflection_submitted",
+                json.dumps({"experiment_id": EXPERIMENT_ID, "project_id": "project-s12"}),
+                now,
+                now,
+            ],
+        )
+        mock_d1.commit()
+
+        resp = _decide()
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["show"] is True
+        assert body["reason"] == "already_completed"
+        assert body["completed"] is True
+        assert body["ui"]["target_url"] == "/reflection/s12-mid-reflection"
+
+    def test_reflection_row_is_completion_fallback(self, mock_d1):
         _insert_experiment(conn=mock_d1)
         _insert_project(mock_d1)
         _insert_member(mock_d1)
@@ -333,10 +369,8 @@ class TestExperimentPlacementDecide:
 
         assert resp.status_code == 200
         body = resp.json()
-        assert body["show"] is True
-        assert body["reason"] == "already_submitted"
-        assert body["submitted"] is True
-        assert body["ui"]["target_url"] == "/reflection/s12-mid-reflection"
+        assert body["reason"] == "already_completed"
+        assert body["completed"] is True
 
     def test_scenario_override_is_disabled_by_default(self):
         resp = _decide(scenario="eligible")
@@ -354,16 +388,16 @@ class TestExperimentPlacementDecide:
         assert resp.json()["logging_context"]["project_id"] == "sandbox-project"
         assert resp.json()["placement_key"] == PLACEMENT_KEY
 
-    def test_scenario_override_can_force_already_submitted_state(self, monkeypatch):
+    def test_scenario_override_can_force_already_completed_state(self, monkeypatch):
         monkeypatch.setattr(settings, "EXPERIMENT_PLACEMENT_SCENARIO_OVERRIDE_ENABLED", True)
 
-        resp = _decide(project_id="sandbox-project", scenario="already_submitted")
+        resp = _decide(project_id="sandbox-project", scenario="already_completed")
 
         assert resp.status_code == 200
         body = resp.json()
         assert body["show"] is True
-        assert body["reason"] == "already_submitted"
-        assert body["submitted"] is True
+        assert body["reason"] == "already_completed"
+        assert body["completed"] is True
         assert body["logging_context"]["project_id"] == "sandbox-project"
 
     def test_scenario_override_can_force_server_error(self, monkeypatch):
@@ -387,7 +421,7 @@ class TestPlacementOnlyDecide:
         body = resp.json()
         assert body["show"] is True
         assert body["reason"] == "eligible"
-        assert body["submitted"] is False
+        assert body["completed"] is False
         assert body["experiment_id"] == EXPERIMENT_ID
         assert body["placement_key"] == PLACEMENT_KEY
         assert body["logging_context"]["experiment_id"] == EXPERIMENT_ID

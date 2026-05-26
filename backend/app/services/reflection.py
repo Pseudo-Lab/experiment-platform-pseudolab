@@ -18,7 +18,7 @@ def _now() -> str:
 class ReflectionService:
 
     async def submit(self, data: ReflectionCreate) -> Reflection:
-        exp = await d1.query("SELECT id FROM experiments WHERE id = ?", [data.experiment_id])
+        exp = await d1.query("SELECT id, completion_event FROM experiments WHERE id = ?", [data.experiment_id])
         if not exp:
             raise HTTPException(status_code=404, detail="Experiment not found")
 
@@ -46,6 +46,24 @@ class ReflectionService:
                 data.final_output_type, now, now,
             ],
         )
+        completion_event = (exp[0].get("completion_event") or "").strip()
+        if completion_event:
+            await d1.execute(
+                """INSERT INTO event_log (user_id, cohort_id, event_name, properties, event_time, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                [
+                    data.user_id,
+                    None,
+                    completion_event,
+                    json.dumps({
+                        "experiment_id": data.experiment_id,
+                        "project_id": data.project_id,
+                        "source": "reflection_submit",
+                    }),
+                    now,
+                    now,
+                ],
+            )
         rows = await d1.query("SELECT * FROM reflection WHERE id = ?", [ref_id])
         return self._to_reflection(rows[0])
 

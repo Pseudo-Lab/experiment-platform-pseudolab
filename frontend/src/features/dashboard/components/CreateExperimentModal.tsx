@@ -12,6 +12,8 @@ interface VariantInput {
   traffic_ratio: string;
 }
 
+type ExperimentType = 'ab_test' | 'quasi_experiment' | 'rollout';
+
 interface CreateExperimentModalProps {
   lang: 'en' | 'ko';
   onClose: () => void;
@@ -21,12 +23,26 @@ interface CreateExperimentModalProps {
 const translations = {
   en: {
     title: 'New Experiment',
+    labelId: 'Experiment ID',
+    placeholderId: 'e.g. s12-mid-reflection',
+    idHelp: 'Stable API slug. Leave empty to auto-generate.',
     labelName: 'Experiment Name',
     placeholderName: 'e.g. Button Color Test',
+    labelType: 'Experiment type',
     labelHypothesis: 'Hypothesis',
     placeholderHypothesis: 'e.g. Changing the button color will increase CTR.',
+    labelExpectedEffect: 'Expected effect',
+    placeholderExpectedEffect: 'e.g. Increase completed reflections',
     labelPrimaryMetric: 'Primary Metric',
     placeholderPrimaryMetric: 'e.g. weekly_session_attended',
+    labelCompletionEvent: 'Completion event',
+    placeholderCompletionEvent: 'e.g. project_reflection_submitted',
+    completionEventHelp: 'Event used to return completed=true from placement decide.',
+    labelCohortId: 'Cohort ID',
+    placeholderCohortId: 'e.g. 12',
+    labelStartAt: 'Exposure starts',
+    labelEndAt: 'Exposure ends',
+    scheduleHelp: 'Placement decide uses this experiment schedule. End time is exclusive.',
     labelVariants: 'Variants',
     placeholderVariantName: 'Variant name',
     placeholderRatio: 'Ratio',
@@ -77,12 +93,26 @@ const translations = {
   },
   ko: {
     title: '새 실험 생성',
+    labelId: '실험 ID',
+    placeholderId: '예: s12-mid-reflection',
+    idHelp: 'API와 운영 설정에서 쓰는 안정적인 slug입니다. 비워두면 자동 생성됩니다.',
     labelName: '실험 이름',
     placeholderName: '예: 버튼 색상 테스트',
+    labelType: '실험 유형',
     labelHypothesis: '가설',
     placeholderHypothesis: '예: 버튼 색상 변경이 클릭률을 높일 것이다.',
+    labelExpectedEffect: '기대 효과',
+    placeholderExpectedEffect: '예: 회고 제출 수 확보',
     labelPrimaryMetric: 'Primary Metric',
     placeholderPrimaryMetric: '예: weekly_session_attended',
+    labelCompletionEvent: '완료 이벤트',
+    placeholderCompletionEvent: '예: project_reflection_submitted',
+    completionEventHelp: 'placement decide에서 completed=true를 판단할 이벤트입니다.',
+    labelCohortId: '코호트 ID',
+    placeholderCohortId: '예: 12',
+    labelStartAt: '노출 시작',
+    labelEndAt: '노출 종료',
+    scheduleHelp: 'Placement decide는 이 실험 기간을 기준으로 노출 여부를 판단합니다. 종료 시각은 포함하지 않습니다.',
     labelVariants: 'Variants',
     placeholderVariantName: 'Variant 이름',
     placeholderRatio: '비율',
@@ -134,6 +164,13 @@ const translations = {
 };
 
 const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
+const experimentTypeOptions: { value: ExperimentType; en: string; ko: string }[] = [
+  { value: 'quasi_experiment', en: 'Quasi experiment', ko: '준실험' },
+  { value: 'ab_test', en: 'A/B test', ko: 'A/B 테스트' },
+  { value: 'rollout', en: 'Rollout', ko: '점진 배포' },
+];
+
+const toApiDatetime = (value: string) => (value ? new Date(value).toISOString() : undefined);
 
 const parseCsvList = (value: string) => value
   .split(',')
@@ -142,9 +179,16 @@ const parseCsvList = (value: string) => value
 
 export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ lang, onClose, onCreated }) => {
   const t = translations[lang];
+  const [experimentId, setExperimentId] = useState('');
   const [name, setName] = useState('');
+  const [experimentType, setExperimentType] = useState<ExperimentType>('quasi_experiment');
   const [hypothesis, setHypothesis] = useState('');
+  const [expectedEffect, setExpectedEffect] = useState('');
   const [primaryMetric, setPrimaryMetric] = useState('');
+  const [completionEvent, setCompletionEvent] = useState('');
+  const [cohortId, setCohortId] = useState('');
+  const [startAt, setStartAt] = useState('');
+  const [endAt, setEndAt] = useState('');
   const [variants, setVariants] = useState<VariantInput[]>([
     { name: 'control', traffic_ratio: '0.5' },
     { name: 'treatment', traffic_ratio: '0.5' },
@@ -191,9 +235,16 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     setError(null);
     try {
       const created = await experimentApi.create({
+        id: experimentId.trim() || undefined,
         name: name.trim(),
         hypothesis: hypothesis.trim() || undefined,
+        expected_effect: expectedEffect.trim() || undefined,
         primary_metric: primaryMetric.trim() || undefined,
+        completion_event: completionEvent.trim() || undefined,
+        experiment_type: experimentType,
+        cohort_id: cohortId.trim() || undefined,
+        start_at: toApiDatetime(startAt),
+        end_at: toApiDatetime(endAt),
         variants: variants.map((v) => ({
           name: v.name,
           traffic_ratio: parseFloat(v.traffic_ratio) || 0,
@@ -236,14 +287,44 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
         </div>
 
         <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelId}</label>
+              <Input
+                value={experimentId}
+                onChange={(e) => setExperimentId(e.target.value)}
+                placeholder={t.placeholderId}
+                className="rounded-xl"
+                aria-label={t.labelId}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t.idHelp}</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelType}</label>
+              <Select value={experimentType} onValueChange={(value) => setExperimentType(value as ExperimentType)}>
+                <SelectTrigger className="rounded-xl" aria-label={t.labelType}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {experimentTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option[lang]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelName}</label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t.placeholderName}
-              className="rounded-xl"
-            />
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t.placeholderName}
+                className="rounded-xl"
+                aria-label={t.labelName}
+              />
           </div>
 
           <div className="space-y-1.5">
@@ -254,17 +335,77 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               placeholder={t.placeholderHypothesis}
               className="rounded-xl resize-none"
               rows={2}
+              aria-label={t.labelHypothesis}
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelExpectedEffect}</label>
             <Input
-              value={primaryMetric}
-              onChange={(e) => setPrimaryMetric(e.target.value)}
-              placeholder={t.placeholderPrimaryMetric}
+              value={expectedEffect}
+              onChange={(e) => setExpectedEffect(e.target.value)}
+              placeholder={t.placeholderExpectedEffect}
               className="rounded-xl"
+              aria-label={t.labelExpectedEffect}
             />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
+              <Input
+                value={primaryMetric}
+                onChange={(e) => setPrimaryMetric(e.target.value)}
+                placeholder={t.placeholderPrimaryMetric}
+                className="rounded-xl"
+                aria-label={t.labelPrimaryMetric}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCompletionEvent}</label>
+              <Input
+                value={completionEvent}
+                onChange={(e) => setCompletionEvent(e.target.value)}
+                placeholder={t.placeholderCompletionEvent}
+                className="rounded-xl"
+                aria-label={t.labelCompletionEvent}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t.completionEventHelp}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr]">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCohortId}</label>
+              <Input
+                value={cohortId}
+                onChange={(e) => setCohortId(e.target.value)}
+                placeholder={t.placeholderCohortId}
+                className="rounded-xl"
+                aria-label={t.labelCohortId}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelStartAt}</label>
+              <Input
+                value={startAt}
+                onChange={(e) => setStartAt(e.target.value)}
+                className="rounded-xl"
+                type="datetime-local"
+                aria-label={t.labelStartAt}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelEndAt}</label>
+              <Input
+                value={endAt}
+                onChange={(e) => setEndAt(e.target.value)}
+                className="rounded-xl"
+                type="datetime-local"
+                aria-label={t.labelEndAt}
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 sm:col-span-3">{t.scheduleHelp}</p>
           </div>
 
           <div className="space-y-2">

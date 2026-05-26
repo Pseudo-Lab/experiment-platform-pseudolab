@@ -58,6 +58,52 @@ class TestCreateExperiment:
         names = {v["name"] for v in variants}
         assert names == {"control", "treatment"}
 
+    def test_create_with_generic_operation_fields(self):
+        payload = {
+            "id": "s12-mid-reflection",
+            "name": "12기 중간 회고 조사",
+            "hypothesis": "배너 노출은 회고 제출을 늘린다",
+            "expected_effect": "준실험 응답 수 확보",
+            "primary_metric": "project_reflection_submitted",
+            "completion_event": "project_reflection_submitted",
+            "experiment_type": "quasi_experiment",
+            "cohort_id": "12",
+            "start_at": "2026-05-27T15:00:00+00:00",
+            "end_at": "2026-06-09T15:00:00+00:00",
+            "variants": [
+                {"name": "control", "traffic_ratio": 0.5},
+                {"name": "treatment", "traffic_ratio": 0.5},
+            ],
+        }
+
+        resp = client.post(BASE + "/", json=payload)
+
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["id"] == "s12-mid-reflection"
+        assert body["experiment_type"] == "quasi_experiment"
+        assert body["primary_metric"] == "project_reflection_submitted"
+        assert body["completion_event"] == "project_reflection_submitted"
+        assert body["cohort_id"] == "12"
+        assert body["start_at"] == "2026-05-27T15:00:00Z"
+        assert body["end_at"] == "2026-06-09T15:00:00Z"
+        client.delete(f"{BASE}/{body['id']}")
+
+    def test_duplicate_explicit_id_returns_409(self):
+        payload = {"id": "duplicate-exp", "name": "중복 실험"}
+
+        assert client.post(BASE + "/", json=payload).status_code == 201
+        resp = client.post(BASE + "/", json=payload)
+
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == "Experiment id already exists"
+        client.delete(f"{BASE}/duplicate-exp")
+
+    def test_invalid_explicit_id_returns_422(self):
+        resp = client.post(BASE + "/", json={"id": "S12 Mid Reflection", "name": "잘못된 ID"})
+
+        assert resp.status_code == 422
+
 
 class TestListFilter:
     def test_filter_by_status(self, created_experiment):

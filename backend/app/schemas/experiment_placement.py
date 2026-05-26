@@ -12,7 +12,7 @@ class ExperimentPlacementReason(str, Enum):
     UNSUPPORTED_ROLE = "unsupported_role"
     INACTIVE_MEMBERSHIP = "inactive_membership"
     OUTSIDE_EXPOSURE_WINDOW = "outside_exposure_window"
-    ALREADY_SUBMITTED = "already_submitted"
+    ALREADY_COMPLETED = "already_completed"
     EXPERIMENT_NOT_FOUND = "experiment_not_found"
     PLACEMENT_NOT_FOUND = "placement_not_found"
     ELIGIBLE = "eligible"
@@ -40,7 +40,7 @@ class ExperimentPlacementLoggingContext(BaseModel):
 class ExperimentPlacementDecisionResponse(BaseModel):
     show: bool
     reason: ExperimentPlacementReason
-    submitted: bool = False
+    completed: bool = False
     experiment_id: Optional[str] = None
     placement_key: Optional[str] = None
     ui: Optional[ExperimentPlacementUI] = None
