@@ -63,6 +63,19 @@ class ExperimentPlacementConfig(BaseModel):
     updated_at: datetime
 
 
+class ExperimentPlacementConfigCreate(BaseModel):
+    placement_key: str = Field(..., min_length=1)
+    ui_id: str = Field(..., min_length=1)
+    ui_type: str = Field("banner", min_length=1)
+    title: str = Field(..., min_length=1)
+    description: str = Field(..., min_length=1)
+    target_url: str = Field(..., min_length=1)
+    source: str = Field("unknown", min_length=1)
+    target_cohort: str = Field("*", min_length=1)
+    allowed_roles: list[str] = Field(default_factory=list)
+    enabled: bool = True
+
+
 class ExperimentPlacementConfigUpdate(BaseModel):
     ui_id: Optional[str] = Field(None, min_length=1)
     ui_type: Optional[str] = Field(None, min_length=1)
