@@ -49,8 +49,26 @@ describe('CreateExperimentModal', () => {
     fireEvent.change(screen.getByPlaceholderText('예: 버튼 색상 테스트'), {
       target: { value: '12기 중간 회고' },
     });
+    fireEvent.change(screen.getByLabelText('실험 ID'), {
+      target: { value: 's12-mid-reflection' },
+    });
+    fireEvent.change(screen.getByLabelText('기대 효과'), {
+      target: { value: '12기 회고 응답 수 확보' },
+    });
     fireEvent.change(screen.getByPlaceholderText('예: weekly_session_attended'), {
-      target: { value: 'project_reflection_ui_clicked' },
+      target: { value: 'project_reflection_submitted' },
+    });
+    fireEvent.change(screen.getByLabelText('완료 이벤트'), {
+      target: { value: 'project_reflection_submitted' },
+    });
+    fireEvent.change(screen.getByLabelText('코호트 ID'), {
+      target: { value: '12' },
+    });
+    fireEvent.change(screen.getByLabelText('노출 시작'), {
+      target: { value: '2026-05-28T00:00' },
+    });
+    fireEvent.change(screen.getByLabelText('노출 종료'), {
+      target: { value: '2026-06-10T00:00' },
     });
     fireEvent.click(screen.getByLabelText('실험 생성과 함께 Placement 생성'));
     fireEvent.click(screen.getByLabelText('Placement 즉시 활성화'));
@@ -75,8 +93,15 @@ describe('CreateExperimentModal', () => {
     });
 
     expect(experimentApi.create).toHaveBeenCalledWith(expect.objectContaining({
+      id: 's12-mid-reflection',
       name: '12기 중간 회고',
-      primary_metric: 'project_reflection_ui_clicked',
+      expected_effect: '12기 회고 응답 수 확보',
+      primary_metric: 'project_reflection_submitted',
+      completion_event: 'project_reflection_submitted',
+      experiment_type: 'quasi_experiment',
+      cohort_id: '12',
+      start_at: expect.any(String),
+      end_at: expect.any(String),
     }));
     expect(experimentPlacementApi.create).toHaveBeenCalledWith(
       's12-mid-reflection',

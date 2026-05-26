@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-05-25
+Last-Validated: 2026-05-27
 Owner: soo
 Audience: internal only
 
@@ -94,7 +94,7 @@ Experiment
 현재 파일럿 정책:
 
 - seed config의 대상자인 12기 active `builder`/`runner`는 모두 같은 placement 판단을 받는다.
-- 이미 제출한 대상자도 숨기지 않고 `show: true`, `submitted: true`를 받는다.
+- 이미 제출한 대상자도 숨기지 않고 `show: true`, `completed: true`를 받는다.
 - target cohort/role 조건에 맞지 않거나 대상자가 아니면 `show: false`다.
 - 정식 A/B 실험처럼 variant assignment를 생성하지 않는다.
 - decide 호출 자체를 exposure로 자동 기록하지 않는다.
@@ -108,14 +108,14 @@ Experiment
 - LVUP은 `user_id`, `project_id`만 전달한다.
 - 대상 판단은 실험 플랫폼 백엔드가 한다.
 - 프로젝트 cohort와 멤버십은 D1 동기화 데이터를 사용한다.
-- 회고 제출 여부는 `user_id + experiment_id` 기준으로 판단한다.
+- 완료 여부는 실험의 `completion_event`와 `user_id + experiment_id` 기준으로 판단한다.
 - 문구, 설명, 이동 URL은 API 응답으로 내려준다.
 - 이벤트는 기존 `/api/v1/capture`를 사용한다.
 - QA용 `scenario` 강제 응답을 제공하되, 명시적으로 override가 켜진 QA 환경에서만 사용한다.
 
 정책 결정 후 반영한 내용:
 
-- 이미 제출한 사용자도 `show: true`, `submitted: true`로 내려준다.
+- 이미 제출한 사용자도 `show: true`, `completed: true`로 내려준다.
 - 12기 전체 조사이므로 제출자와 미제출자 모두 UI 영역은 유지한다.
 - 12기가 아닌 프로젝트나 대상자가 아닌 사용자는 `show: false`다.
 
@@ -187,15 +187,15 @@ LVUP 전달용 문서는 외부 공유 후 repo에는 보관하지 않는다.
 10. role이 허용 목록 밖이면 `unsupported_role`.
 11. 멤버십이 active가 아니면 `inactive_membership`.
 12. 노출 기간 밖이면 `outside_exposure_window`.
-13. `reflection` 테이블에서 이미 제출했는지 확인한다.
-14. 제출자는 `show: true`, `submitted: true`, `already_submitted`.
-15. 미제출 대상자는 `show: true`, `submitted: false`, `eligible`.
+13. `completion_event` 또는 기존 `reflection` fallback으로 이미 완료했는지 확인한다.
+14. 완료자는 `show: true`, `completed: true`, `already_completed`.
+15. 미완료 대상자는 `show: true`, `completed: false`, `eligible`.
 
 `ExperimentPlacementService.decide_by_placement()`는 LVUP 권장 endpoint에서 사용한다.
 
 1. `user_id`가 없으면 `not_authenticated`.
 2. `{placement_key}`에 연결된 placement config들을 찾는다.
-3. `running`, `enabled=true`, 노출 기간 안인 active experiment를 최신 `reflection_start_date`, 최신 `created_at` 순으로 하나 선택한다.
+3. `running`, `enabled=true`, 노출 기간 안인 active experiment를 최신 `start_at`, 최신 `reflection_start_date`, 최신 `created_at` 순으로 하나 선택한다.
 4. placement config 자체가 없으면 `placement_not_found`.
 5. placement config는 있으나 active experiment가 없으면 `outside_exposure_window`.
 6. active experiment를 찾으면 기존 `decide(experiment_id, placement_key, ...)` 판단 흐름을 재사용한다.
@@ -289,7 +289,7 @@ git diff --check
 placement 테스트에서 검증한 주요 케이스:
 
 - 대상자는 `show: true`, `eligible`.
-- 제출자는 `show: true`, `already_submitted`, `submitted: true`.
+- 완료자는 `show: true`, `already_completed`, `completed: true`.
 - 미로그인 사용자는 `not_authenticated`.
 - 실험 없음은 `experiment_not_found`.
 - placement 없음은 `placement_not_found`.
@@ -306,13 +306,13 @@ placement 테스트에서 검증한 주요 케이스:
 
 ## 13. 현재 남은 리스크
 
-1. `experiments.reflection_start_date`, `reflection_window_days` 필드 이름이 아직 회고 도메인에 묶여 있다.
-   - 이번 PR에서는 기존 reflection 기능과 공유하므로 유지했다.
-   - 향후 범용 placement 노출 기간 모델이 필요하면 `experiment_placement_config`에 `starts_at`, `ends_at`을 추가하는 편이 낫다.
+1. placement decide의 기준 노출 기간은 `experiments.start_at/end_at`으로 일반화했다.
+   - 기존 reflection 기능과의 호환을 위해 `reflection_start_date/window_days`는 fallback으로만 유지했다.
+   - 향후 더 세밀한 노출 제어가 필요하면 `experiment_placement_config`에 `starts_at`, `ends_at`을 추가하는 편이 낫다.
 
-2. 제출 여부 판단이 아직 `reflection` 테이블에 묶여 있다.
-   - 이번 파일럿은 회고 제출 여부가 필요하므로 유지했다.
-   - 범용 실험 플랫폼으로 확장하려면 placement별 conversion/completion source를 config로 분리하는 것이 다음 단계다.
+2. 완료 여부 판단은 `completion_event`를 우선 사용한다.
+   - 기존 회고 제출 데이터와의 호환을 위해 `reflection` 테이블 fallback은 유지했다.
+   - 장기적으로는 event schema와 conversion window를 더 명확히 정의해야 한다.
 
 3. 이번 API는 아직 자동 exposure logging을 하지 않는다.
    - 과도기 준실험에서는 LVUP의 viewed/clicked 이벤트가 기준이다.
@@ -343,7 +343,7 @@ PR에 push하기 전에 확인할 것:
 
 - LVUP이 권장 endpoint인 `/placements/{placement_key}/decide`와 reason 이름을 수용할 수 있는지
 - 이벤트 이름을 `project_reflection_ui_*`로 바꾸는 데 동의하는지
-- `show: true`, `submitted: true` 완료 상태 UI를 구현할 수 있는지
+- `show: true`, `completed: true` 완료 상태 UI를 구현할 수 있는지
 - `ui.type`이 `banner` 외 값이어도 fallback할 수 있는지
 - 운영 노출 시작일과 기간을 누가 설정할지
 

@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS experiments (
     hypothesis  TEXT,
     expected_effect TEXT,
     primary_metric  TEXT,
+    completion_event TEXT,
+    experiment_type TEXT NOT NULL DEFAULT 'ab_test',
     cohort_id       TEXT,
     status      TEXT NOT NULL DEFAULT 'draft',
     owner_id    TEXT,

@@ -25,6 +25,15 @@ const translations = {
     error: 'Failed to load experiment.',
     notFound: 'Experiment not found.',
     labelHypothesis: 'Hypothesis',
+    labelExpectedEffect: 'Expected effect',
+    labelPrimaryMetric: 'Primary metric',
+    labelCompletionEvent: 'Completion event',
+    labelExperimentType: 'Experiment type',
+    labelCohortId: 'Cohort ID',
+    labelStartAt: 'Exposure starts',
+    labelEndAt: 'Exposure ends',
+    labelSchedule: 'Exposure schedule',
+    scheduleHelp: 'Placement decide uses start_at/end_at as the canonical exposure window.',
     labelStatus: 'Status',
     labelCreated: 'Created',
     labelUpdated: 'Updated',
@@ -126,6 +135,15 @@ const translations = {
     error: '실험 정보를 불러오지 못했습니다.',
     notFound: '실험을 찾을 수 없습니다.',
     labelHypothesis: '가설',
+    labelExpectedEffect: '기대 효과',
+    labelPrimaryMetric: 'Primary metric',
+    labelCompletionEvent: '완료 이벤트',
+    labelExperimentType: '실험 유형',
+    labelCohortId: '코호트 ID',
+    labelStartAt: '노출 시작',
+    labelEndAt: '노출 종료',
+    labelSchedule: '노출 기간',
+    scheduleHelp: 'Placement decide는 start_at/end_at을 기준 노출 기간으로 사용합니다.',
     labelStatus: '상태',
     labelCreated: '생성일',
     labelUpdated: '수정일',
@@ -258,6 +276,32 @@ const transitionButtons: Record<ExperimentStatus, TransitionButton[]> = {
 };
 
 const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
+type ExperimentType = 'ab_test' | 'quasi_experiment' | 'rollout';
+const experimentTypeOptions: { value: ExperimentType; en: string; ko: string }[] = [
+  { value: 'quasi_experiment', en: 'Quasi experiment', ko: '준실험' },
+  { value: 'ab_test', en: 'A/B test', ko: 'A/B 테스트' },
+  { value: 'rollout', en: 'Rollout', ko: '점진 배포' },
+];
+
+const toLocalDateTimeInput = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+};
+
+const toApiDatetime = (value: string) => (value ? new Date(value).toISOString() : undefined);
+
+const formatDateTime = (value: string | undefined, lang: 'en' | 'ko') => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(lang === 'ko' ? 'ko-KR' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+};
 
 const parseCsvList = (value: string) => value
   .split(',')
@@ -315,6 +359,13 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editHypothesis, setEditHypothesis] = useState('');
+  const [editExpectedEffect, setEditExpectedEffect] = useState('');
+  const [editPrimaryMetric, setEditPrimaryMetric] = useState('');
+  const [editCompletionEvent, setEditCompletionEvent] = useState('');
+  const [editExperimentType, setEditExperimentType] = useState<ExperimentType>('ab_test');
+  const [editCohortId, setEditCohortId] = useState('');
+  const [editStartAt, setEditStartAt] = useState('');
+  const [editEndAt, setEditEndAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
@@ -403,6 +454,13 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     if (!experiment) return;
     setEditName(experiment.name);
     setEditHypothesis(experiment.hypothesis || '');
+    setEditExpectedEffect(experiment.expected_effect || '');
+    setEditPrimaryMetric(experiment.primary_metric || '');
+    setEditCompletionEvent(experiment.completion_event || '');
+    setEditExperimentType((experiment.experiment_type || 'ab_test') as ExperimentType);
+    setEditCohortId(experiment.cohort_id || '');
+    setEditStartAt(toLocalDateTimeInput(experiment.start_at));
+    setEditEndAt(toLocalDateTimeInput(experiment.end_at));
     setEditing(true);
   };
 
@@ -413,6 +471,13 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       const updated = await experimentApi.update(experiment.id, {
         name: editName.trim(),
         hypothesis: editHypothesis.trim() || undefined,
+        expected_effect: editExpectedEffect.trim() || undefined,
+        primary_metric: editPrimaryMetric.trim() || undefined,
+        completion_event: editCompletionEvent.trim() || undefined,
+        experiment_type: editExperimentType,
+        cohort_id: editCohortId.trim() || undefined,
+        start_at: toApiDatetime(editStartAt),
+        end_at: toApiDatetime(editEndAt),
       });
       setExperiment(updated);
       setEditing(false);
@@ -598,6 +663,9 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       ],
     },
   ] : [];
+  const experimentTypeLabel = experimentTypeOptions.find(
+    (option) => option.value === (experiment.experiment_type || 'ab_test'),
+  )?.[lang] ?? experiment.experiment_type ?? t.none;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -624,13 +692,62 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         <CardHeader className="pb-4">
           {editing ? (
             <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelName}</label>
-                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded-xl text-lg font-bold" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelName}</label>
+                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded-xl text-lg font-bold" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelExperimentType}</label>
+                  <Select value={editExperimentType} onValueChange={(value) => setEditExperimentType(value as ExperimentType)}>
+                    <SelectTrigger className="rounded-xl" aria-label={t.labelExperimentType}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {experimentTypeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option[lang]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelHypothesis}</label>
                 <Textarea value={editHypothesis} onChange={(e) => setEditHypothesis(e.target.value)} className="rounded-xl resize-none" rows={2} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelExpectedEffect}</label>
+                <Input value={editExpectedEffect} onChange={(e) => setEditExpectedEffect(e.target.value)} className="rounded-xl" />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
+                  <Input value={editPrimaryMetric} onChange={(e) => setEditPrimaryMetric(e.target.value)} className="rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCompletionEvent}</label>
+                  <Input value={editCompletionEvent} onChange={(e) => setEditCompletionEvent(e.target.value)} className="rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCohortId}</label>
+                  <Input value={editCohortId} onChange={(e) => setEditCohortId(e.target.value)} className="rounded-xl" />
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelStartAt}</label>
+                  <Input value={editStartAt} onChange={(e) => setEditStartAt(e.target.value)} className="rounded-xl" type="datetime-local" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelEndAt}</label>
+                  <Input value={editEndAt} onChange={(e) => setEditEndAt(e.target.value)} className="rounded-xl" type="datetime-local" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 sm:col-span-2">{t.scheduleHelp}</p>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button size="sm" className="gap-1.5 rounded-xl" onClick={handleSave} disabled={saving}>
@@ -656,6 +773,12 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
               <p className="text-slate-700 dark:text-slate-300">{experiment.hypothesis}</p>
             </div>
           )}
+          {!editing && experiment.expected_effect && (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelExpectedEffect}</p>
+              <p className="text-slate-700 dark:text-slate-300">{experiment.expected_effect}</p>
+            </div>
+          )}
           <div className="flex flex-wrap gap-6">
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelStatus}</p>
@@ -677,6 +800,28 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                   </Button>
                 ))}
               </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelExperimentType}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300">{experimentTypeLabel}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelPrimaryMetric}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300">{experiment.primary_metric || t.none}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelCompletionEvent}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300">{experiment.completion_event || t.none}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelCohortId}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300">{experiment.cohort_id || t.none}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelSchedule}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                {formatDateTime(experiment.start_at, lang)} - {formatDateTime(experiment.end_at, lang)}
+              </p>
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelCreated}</p>

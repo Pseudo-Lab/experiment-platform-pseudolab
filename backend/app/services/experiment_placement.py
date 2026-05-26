@@ -40,6 +40,16 @@ def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
     return parsed.astimezone(timezone.utc)
 
 
+def _json_extract_experiment_id_filter() -> str:
+    return """
+      AND (
+        properties IS NULL
+        OR json_extract(properties, '$.experiment_id') IS NULL
+        OR json_extract(properties, '$.experiment_id') = ?
+      )
+    """
+
+
 class ExperimentPlacementService:
     async def list_configs(self, experiment_id: str) -> list[ExperimentPlacementConfig]:
         if not await self._experiment_exists(experiment_id):
@@ -196,9 +206,9 @@ class ExperimentPlacementService:
         if not self._is_inside_exposure_window(config):
             return self._hidden(ExperimentPlacementReason.OUTSIDE_EXPOSURE_WINDOW)
 
-        submitted = await self._has_submitted(experiment_id, normalized_user_id)
-        if submitted:
-            return self._submitted(
+        completed = await self._has_completed(experiment_id, normalized_user_id, config)
+        if completed:
+            return self._completed(
                 experiment_id=experiment_id,
                 placement_key=placement_key,
                 config=config,
@@ -264,8 +274,11 @@ class ExperimentPlacementService:
             """SELECT
                     e.id,
                     e.status AS experiment_status,
+                    e.start_at,
+                    e.end_at,
                     e.reflection_start_date,
                     e.reflection_window_days,
+                    e.completion_event,
                     c.placement_key,
                     c.ui_id,
                     c.ui_type,
@@ -290,8 +303,11 @@ class ExperimentPlacementService:
             """SELECT
                     e.id,
                     e.status AS experiment_status,
+                    e.start_at,
+                    e.end_at,
                     e.reflection_start_date,
                     e.reflection_window_days,
+                    e.completion_event,
                     e.created_at AS experiment_created_at,
                     c.placement_key,
                     c.ui_id,
@@ -308,6 +324,7 @@ class ExperimentPlacementService:
                    ON e.id = c.experiment_id
                 WHERE c.placement_key = ?
                 ORDER BY
+                    COALESCE(e.start_at, '') DESC,
                     COALESCE(e.reflection_start_date, '') DESC,
                     e.created_at DESC,
                     e.id DESC""",
@@ -357,18 +374,54 @@ class ExperimentPlacementService:
         )
         return rows[0] if rows else None
 
-    async def _has_submitted(self, experiment_id: str, user_id: str) -> bool:
+    async def _has_completed(self, experiment_id: str, user_id: str, config: dict) -> bool:
+        completion_event = (config.get("completion_event") or "").strip()
+        if completion_event:
+            try:
+                rows = await d1.query(
+                    f"""SELECT 1 AS completed
+                          FROM event_log
+                         WHERE user_id = ?
+                           AND event_name = ?
+                           {_json_extract_experiment_id_filter()}
+                         LIMIT 1""",
+                    [user_id, completion_event, experiment_id],
+                )
+                if rows:
+                    return True
+            except Exception:
+                rows = await d1.query(
+                    """SELECT 1 AS completed
+                         FROM event_log
+                        WHERE user_id = ?
+                          AND event_name = ?
+                        LIMIT 1""",
+                    [user_id, completion_event],
+                )
+                if rows:
+                    return True
+
         rows = await d1.query(
-            "SELECT 1 AS submitted FROM reflection WHERE user_id = ? AND experiment_id = ? LIMIT 1",
+            "SELECT 1 AS completed FROM reflection WHERE user_id = ? AND experiment_id = ? LIMIT 1",
             [user_id, experiment_id],
         )
         return bool(rows)
 
     def _is_inside_exposure_window(self, experiment: dict) -> bool:
+        now = datetime.now(timezone.utc)
+
+        start_at = _parse_datetime(experiment.get("start_at"))
+        end_at = _parse_datetime(experiment.get("end_at"))
+        if start_at or end_at:
+            if start_at and now < start_at:
+                return False
+            if end_at and now >= end_at:
+                return False
+            return True
+
         start_at = _parse_datetime(experiment.get("reflection_start_date"))
         if not start_at:
             return False
-
         try:
             window_days = int(experiment.get("reflection_window_days") or 0)
         except (TypeError, ValueError):
@@ -376,7 +429,6 @@ class ExperimentPlacementService:
         if window_days <= 0:
             return False
 
-        now = datetime.now(timezone.utc)
         return start_at <= now < start_at + timedelta(days=window_days)
 
     def _decide_scenario(
@@ -399,8 +451,8 @@ class ExperimentPlacementService:
                 project_cohort=DEFAULT_TARGET_COHORT,
                 user_project_role="runner",
             )
-        if scenario == ExperimentPlacementReason.ALREADY_SUBMITTED.value:
-            return self._submitted(
+        if scenario in {ExperimentPlacementReason.ALREADY_COMPLETED.value, "already_submitted"}:
+            return self._completed(
                 experiment_id=experiment_id,
                 placement_key=placement_key,
                 config=self._scenario_config(experiment_id, placement_key),
@@ -429,7 +481,7 @@ class ExperimentPlacementService:
     def _hidden(self, reason: ExperimentPlacementReason) -> ExperimentPlacementDecisionResponse:
         return ExperimentPlacementDecisionResponse(show=False, reason=reason)
 
-    def _submitted(
+    def _completed(
         self,
         experiment_id: str,
         placement_key: str,
@@ -446,8 +498,8 @@ class ExperimentPlacementService:
             project_cohort=project_cohort,
             user_project_role=user_project_role,
         )
-        response.reason = ExperimentPlacementReason.ALREADY_SUBMITTED
-        response.submitted = True
+        response.reason = ExperimentPlacementReason.ALREADY_COMPLETED
+        response.completed = True
         return response
 
     def _eligible(
@@ -479,7 +531,7 @@ class ExperimentPlacementService:
         return ExperimentPlacementDecisionResponse(
             show=True,
             reason=ExperimentPlacementReason.ELIGIBLE,
-            submitted=False,
+            completed=False,
             experiment_id=experiment_id,
             placement_key=placement_key,
             ui=ui,
