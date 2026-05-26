@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-03-22
+Last-Validated: 2026-05-27
 
 # Decision Log (append-only)
 
@@ -58,4 +58,16 @@ Last-Validated: 2026-03-22
 - Decision: 실험 의사결정 품질을 검토하는 `Experiment Analyst` 에이전트 역할을 공식 협업 역할에 추가한다.
 - Why: 실험 플랫폼은 기능 동작 여부뿐 아니라 가설, primary/guardrail metric, randomization unit, exposure 품질, SRM, 데이터 신선도, 결과 해석이 의사결정 신뢰도를 좌우하기 때문이다.
 - Impact: 새 실험, metric 변경, query-backed segment/rule 변경, exposure/result readout 작업은 `Experiment Analyst` 체크를 우선 고려하고, 분석 결과는 `docs/templates/experiment-analyst-brief.md` 또는 `docs/reports/**`에 남긴다.
+- Owner: soo
+
+- Date: 2026-05-27
+- Decision: 12기 중간 회고는 정식 A/B 분배 실험이 아니라 과도기 준실험으로 우선 집행하고, GrowthBook/Hackle류 실험 플랫폼 기능은 후속 로드맵으로 분리한다.
+- Why: 현재 목적은 12기 회고 UI 노출 판단, 일정 제어, completion 판단, LVUP 연동 계약을 검증하는 것이며, 정식 assignment/segment/metric readout까지 한 번에 확장하면 이번 운영 일정과 범위가 흐려진다.
+- Impact: PR #17은 12기 준실험 운영에 필요한 placement decide와 일정/완료 계약에 집중한다. 재사용 segment, targeting rule builder, variant별 payload, deterministic assignment, 자동 exposure logging, metric/guardrail readout은 별도 플랫폼 고도화 작업으로 관리한다.
+- Owner: soo
+
+- Date: 2026-05-27
+- Decision: D1 migration 관리 체계 보강은 12기 준실험 운영을 막지 않고 후속 작업으로 분리한다.
+- Why: 운영 생성 실패 원인은 코드 배포 후 운영 D1에 일부 schema migration이 누락된 것이었고, 현재 필요한 DDL은 적용되어 12기 준실험 생성은 가능하다. 다만 현재 `run_migration.sh`는 적용 이력 테이블이 없어 재실행/중복 컬럼/seed 혼입 위험이 있다.
+- Impact: 지금은 실험 생성과 LVUP 연동 검증을 계속 진행한다. 후속 작업으로 `schema_migrations` 같은 적용 이력, 운영 baseline, seed/schema 분리, 배포 전 migration 체크를 정리한다.
 - Owner: soo

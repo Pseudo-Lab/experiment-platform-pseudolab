@@ -337,6 +337,12 @@ placement 테스트에서 검증한 주요 케이스:
 7. LVUP이 이벤트를 정확히 보내야 분석이 가능하다.
    - 특히 viewed 이벤트는 “실제로 보였는지” 기준이므로 프론트 구현 품질이 중요하다.
 
+8. 운영 D1 migration 적용 이력이 별도 테이블로 관리되지 않는다.
+   - 2026-05-27 운영 반영 확인 중 백엔드/프론트 코드는 PR #17 기준이었지만, 운영 D1에는 `experiment_type`, `completion_event`, `experiment_placement_config`가 누락되어 실험 생성이 500으로 실패했다.
+   - 장애 해소를 위해 seed 데이터 없이 필요한 DDL만 운영 DB에 적용했고, 임시 실험/placement 생성 후 삭제까지 확인했다.
+   - 현재 12기 준실험 운영은 계속 진행할 수 있지만, `run_migration.sh`는 적용 이력 테이블이 없어 같은 migration 재실행 시 중복 컬럼 에러가 날 수 있다.
+   - 특히 schema 변경과 seed 데이터가 같은 migration에 섞이면 운영에서 원치 않는 seed가 생성될 수 있으므로 후속 정리가 필요하다.
+
 ## 14. PR 반영 전 체크포인트
 
 PR에 push하기 전에 확인할 것:
@@ -357,6 +363,13 @@ PR에 push하기 전에 확인할 것:
 4. LVUP에서 운영 URL 기준 placement-only API 연결 smoke test와 기능 QA
 5. 별도 공식 staging/sandbox API를 둘지 결정
 6. 준실험 분석 계획 수립
+
+운영 안정화 후 후속 작업:
+
+1. D1 migration 적용 이력 테이블 도입
+2. 운영 DB에 이미 적용된 001~012 migration baseline 기록
+3. schema migration과 seed 데이터를 별도 파일/절차로 분리
+4. 배포 전 migration 적용 여부를 확인하는 체크리스트 또는 CI/CD 단계 추가
 
 정식 실험 플랫폼 전환 시 후속 작업:
 
