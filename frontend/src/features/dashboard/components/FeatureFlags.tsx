@@ -8,15 +8,18 @@ import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate, type FeatureF
 
 interface Props { lang: 'en' | 'ko'; }
 
+const PRODUCT_OPTIONS = ['lvup', 'demo-app', 'pseudo-lab'];
+
 const t = {
   ko: {
     title: 'Feature Flags',
-    colKey: 'Key', colDesc: '설명', colRollout: '롤아웃 %', colExposure: '노출', colStatus: '상태', colActions: '',
+    colKey: 'Key', colDesc: '설명', colRollout: '롤아웃 %', colExposure: '노출', colStatus: '상태', colProduct: '제품', colActions: '',
     enabled: '활성', disabled: '비활성', archived: '보관됨',
     includeArchived: '보관된 플래그 포함',
     addFlag: '플래그 추가',
     keyPlaceholder: 'flag-key',
     descPlaceholder: '설명 (선택)',
+    productPlaceholder: '제품 (선택)',
     rolloutLabel: '롤아웃 %',
     create: '생성',
     creating: '생성 중...',
@@ -46,12 +49,13 @@ const t = {
   },
   en: {
     title: 'Feature Flags',
-    colKey: 'Key', colDesc: 'Description', colRollout: 'Rollout %', colExposure: 'Exposure', colStatus: 'Status', colActions: '',
+    colKey: 'Key', colDesc: 'Description', colRollout: 'Rollout %', colExposure: 'Exposure', colStatus: 'Status', colProduct: 'Product', colActions: '',
     enabled: 'Enabled', disabled: 'Disabled', archived: 'Archived',
     includeArchived: 'Include archived flags',
     addFlag: 'Add Flag',
     keyPlaceholder: 'flag-key',
     descPlaceholder: 'Description (optional)',
+    productPlaceholder: 'Product (optional)',
     rolloutLabel: 'Rollout %',
     create: 'Create',
     creating: 'Creating...',
@@ -88,6 +92,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const [showForm, setShowForm] = useState(false);
   const [newKey, setNewKey] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [newProduct, setNewProduct] = useState('');
   const [newRollout, setNewRollout] = useState(0);
   const [includeArchived, setIncludeArchived] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -135,7 +140,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     setCreating(true);
     setError(null);
     try {
-      const data: FeatureFlagCreate = { flag_key: newKey.trim(), description: newDesc.trim() || undefined, rollout_pct: newRollout, enabled: false };
+      const data: FeatureFlagCreate = { flag_key: newKey.trim(), description: newDesc.trim() || undefined, rollout_pct: newRollout, enabled: false, product: newProduct.trim() || undefined };
       const created = await featureFlagApi.create(data);
       setFlags(prev => [created, ...prev]);
       setRolloutDrafts(prev => ({ ...prev, [created.flag_key]: created.rollout_pct }));
@@ -151,7 +156,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
           variant_counts: {},
         },
       }));
-      setNewKey(''); setNewDesc(''); setNewRollout(0); setShowForm(false);
+      setNewKey(''); setNewDesc(''); setNewProduct(''); setNewRollout(0); setShowForm(false);
     } catch {
       setError(tr.errorCreate);
     } finally {
@@ -304,6 +309,16 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
             <div className="flex gap-2">
               <Input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder={tr.keyPlaceholder} className="rounded-xl font-mono" />
               <Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder={tr.descPlaceholder} className="rounded-xl" />
+              <Input
+                value={newProduct}
+                onChange={e => setNewProduct(e.target.value)}
+                placeholder={tr.productPlaceholder}
+                className="rounded-xl w-36"
+                list="flag-product-options"
+              />
+              <datalist id="flag-product-options">
+                {PRODUCT_OPTIONS.map((p) => <option key={p} value={p} />)}
+              </datalist>
             </div>
             <div className="flex items-center gap-3">
               <label className="text-sm text-slate-500 shrink-0">{tr.rolloutLabel}</label>
@@ -329,6 +344,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                 <TableRow>
                   <TableHead className="font-bold text-slate-500">{tr.colKey}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colDesc}</TableHead>
+                  <TableHead className="font-bold text-slate-500">{tr.colProduct}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colRollout}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colExposure}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colStatus}</TableHead>
@@ -349,6 +365,13 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                   <TableRow key={flag.flag_key} className={isArchived ? 'bg-slate-50/70 opacity-75 dark:bg-slate-900/40' : undefined}>
                     <TableCell className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-200">{flag.flag_key}</TableCell>
                     <TableCell className="text-sm text-slate-500">{flag.description || '-'}</TableCell>
+                    <TableCell>
+                      {flag.product && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
+                          {flag.product}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <input type="range" min={0} max={100} value={draftRollout}

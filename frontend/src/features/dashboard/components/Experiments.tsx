@@ -32,6 +32,8 @@ interface ExperimentsProps {
   lang: 'en' | 'ko';
 }
 
+const PRODUCT_OPTIONS = ['lvup', 'demo-app', 'pseudo-lab'];
+
 const translations = {
   en: {
     title: 'Experiments',
@@ -44,6 +46,7 @@ const translations = {
     statusPaused: 'Paused',
     statusCompleted: 'Completed',
     statusArchived: 'Archived',
+    allProducts: 'All Products',
     colName: 'Experiment Name',
     colStatus: 'Status',
     colVariants: 'Variants',
@@ -66,6 +69,7 @@ const translations = {
     statusPaused: '일시정지',
     statusCompleted: '완료',
     statusArchived: '보관',
+    allProducts: '전체 제품',
     colName: '실험명',
     colStatus: '상태',
     colVariants: 'Variants',
@@ -96,6 +100,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ExperimentStatus>('all');
+  const [productFilter, setProductFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchExperiments = async () => {
@@ -126,9 +131,11 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
     }
   };
 
-  const filteredExperiments = experiments.filter((exp) =>
-    exp.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredExperiments = experiments.filter((exp) => {
+    const matchesSearch = exp.name.toLowerCase().includes(search.toLowerCase());
+    const matchesProduct = productFilter === 'all' || (exp.product ?? '') === productFilter;
+    return matchesSearch && matchesProduct;
+  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -166,6 +173,17 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
             <SelectItem value="archived">{t.statusArchived}</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={productFilter} onValueChange={setProductFilter}>
+          <SelectTrigger className="w-full sm:w-40 h-12 rounded-xl bg-white dark:bg-slate-900" aria-label={t.allProducts}>
+            <SelectValue placeholder={t.allProducts} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t.allProducts}</SelectItem>
+            {PRODUCT_OPTIONS.map((p) => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
@@ -185,6 +203,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                   <TableHead className="font-bold text-slate-500">{t.colStatus}</TableHead>
                   <TableHead className="font-bold text-slate-500">{t.colVariants}</TableHead>
                   <TableHead className="font-bold text-slate-500">{t.colCreatedAt}</TableHead>
+                  <TableHead className="w-12 font-bold text-slate-500">Product</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -213,6 +232,13 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                     </TableCell>
                     <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
                       {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                    </TableCell>
+                    <TableCell>
+                      {exp.product && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
+                          {exp.product}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
@@ -262,9 +288,16 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-400">{t.colVariants}: {exp.variants.length}</span>
-                  <span className="text-xs text-slate-400">
-                    {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {exp.product && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
+                        {exp.product}
+                      </span>
+                    )}
+                    <span className="text-xs text-slate-400">
+                      {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

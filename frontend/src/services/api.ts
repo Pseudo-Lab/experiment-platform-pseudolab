@@ -51,6 +51,7 @@ export interface FeatureFlag {
   description?: string;
   rollout_pct: number;
   enabled: boolean;
+  product?: string | null;
   archived_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -60,11 +61,13 @@ export interface FeatureFlagCreate {
   description?: string;
   rollout_pct?: number;
   enabled?: boolean;
+  product?: string;
 }
 export interface FeatureFlagUpdate {
   description?: string;
   rollout_pct?: number;
   enabled?: boolean;
+  product?: string;
 }
 
 export interface FeatureFlagExposureSummary {
@@ -166,6 +169,7 @@ export interface Experiment {
   experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
   cohort_id?: string;
   flag_key?: string | null;
+  product?: string | null;
   status: ExperimentStatus;
   owner_id?: string;
   start_at?: string;
@@ -188,6 +192,7 @@ export interface ExperimentCreate {
   cohort_id?: string;
   flag_key?: string;
   owner_id?: string;
+  product?: string;
   start_at?: string;
   end_at?: string;
   variants: { name: string; traffic_ratio: number; description?: string }[];
@@ -202,6 +207,7 @@ export interface ExperimentUpdate {
   experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
   cohort_id?: string;
   flag_key?: string;
+  product?: string;
   start_at?: string;
   end_at?: string;
   status?: ExperimentStatus;

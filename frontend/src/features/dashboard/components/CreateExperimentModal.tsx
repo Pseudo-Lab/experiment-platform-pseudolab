@@ -29,6 +29,9 @@ const translations = {
     labelName: '* Experiment Name',
     placeholderName: 'e.g. Button Color Test',
     requiredLegend: '* required',
+    labelProduct: 'Product',
+    placeholderProduct: 'e.g. lvup',
+    productHelp: 'Product or service this experiment belongs to.',
     labelType: 'Experiment type',
     labelHypothesis: 'Hypothesis',
     placeholderHypothesis: 'e.g. Changing the button color will increase CTR.',
@@ -108,6 +111,9 @@ const translations = {
     labelName: '* 실험 이름',
     placeholderName: '예: 버튼 색상 테스트',
     requiredLegend: '* 필수 입력',
+    labelProduct: '제품/서비스',
+    placeholderProduct: '예: lvup',
+    productHelp: '이 실험이 속한 제품 또는 서비스입니다.',
     labelType: '실험 유형',
     labelHypothesis: '가설',
     placeholderHypothesis: '예: 버튼 색상 변경이 클릭률을 높일 것이다.',
@@ -181,6 +187,7 @@ const translations = {
   },
 };
 
+const PRODUCT_OPTIONS = ['lvup', 'demo-app', 'pseudo-lab'];
 const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
 const experimentTypeOptions: { value: ExperimentType; en: string; ko: string }[] = [
   { value: 'quasi_experiment', en: 'Quasi experiment', ko: '준실험' },
@@ -210,6 +217,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     { name: 'control', traffic_ratio: '0.5' },
     { name: 'treatment', traffic_ratio: '0.5' },
   ]);
+  const [product, setProduct] = useState('');
   const [flagKey, setFlagKey] = useState<string>('');
   const [availableFlags, setAvailableFlags] = useState<FeatureFlag[]>([]);
   const [configurePlacement, setConfigurePlacement] = useState(false);
@@ -288,6 +296,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
         experiment_type: experimentType,
         cohort_id: cohortId.trim() || undefined,
         flag_key: flagKey || undefined,
+        product: product.trim() || undefined,
         start_at: toApiDatetime(startAt),
         end_at: toApiDatetime(endAt),
         variants: variants.map((v) => ({
@@ -373,6 +382,22 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                 className="rounded-xl"
                 aria-label={t.labelName}
               />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProduct}</label>
+            <Input
+              value={product}
+              onChange={(e) => setProduct(e.target.value)}
+              placeholder={t.placeholderProduct}
+              className="rounded-xl"
+              aria-label={t.labelProduct}
+              list="product-options"
+            />
+            <datalist id="product-options">
+              {PRODUCT_OPTIONS.map((p) => <option key={p} value={p} />)}
+            </datalist>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t.productHelp}</p>
           </div>
 
           <div className="space-y-1.5">

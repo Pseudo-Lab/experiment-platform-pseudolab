@@ -68,9 +68,9 @@ class ExperimentService:
         ok = await d1.execute(
             """INSERT INTO experiments
                (id, name, hypothesis, expected_effect, primary_metric, completion_event,
-                experiment_type, cohort_id, flag_key, variant_names_json,
+                experiment_type, cohort_id, flag_key, variant_names_json, product,
                 status, owner_id, start_at, end_at, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
             [
                 exp_id,
                 data.name,
@@ -82,6 +82,7 @@ class ExperimentService:
                 data.cohort_id,
                 data.flag_key,
                 variant_names_json,
+                data.product,
                 data.owner_id,
                 _serialize_datetime(data.start_at),
                 _serialize_datetime(data.end_at),
@@ -319,6 +320,7 @@ class ExperimentService:
             experiment_type=row.get("experiment_type") or "ab_test",
             cohort_id=row.get("cohort_id"),
             flag_key=row.get("flag_key"),
+            product=row.get("product"),
             status=row["status"],
             owner_id=row.get("owner_id"),
             start_at=row.get("start_at"),

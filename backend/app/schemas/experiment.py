@@ -62,6 +62,7 @@ class ExperimentCreate(BaseModel):
     cohort_id: Optional[str] = None
     flag_key: Optional[str] = None
     owner_id: Optional[str] = None
+    product: Optional[str] = None
     start_at: Optional[datetime] = None
     end_at: Optional[datetime] = None
     variants: List[VariantCreate] = []
@@ -96,6 +97,7 @@ class ExperimentUpdate(BaseModel):
     experiment_type: Optional[ExperimentType] = None
     cohort_id: Optional[str] = None
     flag_key: Optional[str] = None
+    product: Optional[str] = None
     status: Optional[ExperimentStatus] = None
     start_at: Optional[datetime] = None
     end_at: Optional[datetime] = None
@@ -119,6 +121,7 @@ class Experiment(BaseModel):
     experiment_type: ExperimentType = ExperimentType.AB_TEST
     cohort_id: Optional[str] = None
     flag_key: Optional[str] = None
+    product: Optional[str] = None
     status: ExperimentStatus
     owner_id: Optional[str] = None
     start_at: Optional[datetime] = None

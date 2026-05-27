@@ -57,9 +57,9 @@ class FeatureFlagService:
             raise HTTPException(status_code=409, detail=f"flag_key '{data.flag_key}' already exists")
         now = _now()
         ok = await d1.execute(
-            """INSERT INTO feature_flag (flag_key, description, rollout_pct, enabled, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            [data.flag_key, data.description, data.rollout_pct, int(data.enabled), now, now],
+            """INSERT INTO feature_flag (flag_key, description, rollout_pct, enabled, product, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            [data.flag_key, data.description, data.rollout_pct, int(data.enabled), data.product, now, now],
         )
         if not ok:
             raise HTTPException(status_code=502, detail="Failed to create feature flag")
@@ -426,6 +426,7 @@ class FeatureFlagService:
             description=row.get("description"),
             rollout_pct=int(row["rollout_pct"]),
             enabled=int(row["enabled"]) == 1,
+            product=row.get("product"),
             archived_at=row.get("archived_at"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
