@@ -12,11 +12,17 @@ BASE = "/api/v1/experiments"
 
 @pytest.fixture
 def created_experiment():
-    """실험 하나 생성 후 반환, 테스트 종료 후 삭제."""
+    """실험 하나 생성 후 반환, 테스트 종료 후 삭제.
+
+    상태 전환 검증을 통과하기 위해 quasi_experiment + primary_metric로 생성한다.
+    (ab_test는 running 전환 시 flag_key를 요구하므로 별도 fixture로 분리)
+    """
     payload = {
         "name": "테스트 실험",
         "hypothesis": "버튼 색상이 전환율에 영향을 준다",
         "owner_id": "user-001",
+        "experiment_type": "quasi_experiment",
+        "primary_metric": "button_clicked",
         "variants": [
             {"name": "control", "traffic_ratio": 0.5},
             {"name": "treatment", "traffic_ratio": 0.5},
@@ -175,8 +181,12 @@ class TestUpdateExperiment:
 
 class TestStatusTransition:
     def _make(self, name="전환 테스트"):
+        # 상태 전환만 검증하므로 ab_test의 flag_key 요구를 피하기 위해
+        # quasi_experiment + primary_metric로 생성.
         payload = {
             "name": name,
+            "experiment_type": "quasi_experiment",
+            "primary_metric": "button_clicked",
             "variants": [
                 {"name": "A", "traffic_ratio": 0.5},
                 {"name": "B", "traffic_ratio": 0.5},
@@ -248,6 +258,66 @@ class TestStatusTransition:
         exp_id = self._make()
         assert self._patch_status(exp_id, "paused").status_code == 422
         client.delete(f"{BASE}/{exp_id}")
+
+
+class TestRunningPreconditions:
+    """running 전환 시 primary_metric / flag_key 사전 조건 검증."""
+
+    def test_running_blocked_without_primary_metric(self):
+        # primary_metric 없이 quasi_experiment 생성
+        payload = {
+            "name": "metric 없는 실험",
+            "experiment_type": "quasi_experiment",
+            "variants": [
+                {"name": "control", "traffic_ratio": 0.5},
+                {"name": "treatment", "traffic_ratio": 0.5},
+            ],
+        }
+        exp_id = client.post(BASE + "/", json=payload).json()["id"]
+        try:
+            resp = client.patch(f"{BASE}/{exp_id}", json={"status": "running"})
+            assert resp.status_code == 422
+            assert "primary_metric" in resp.json()["detail"]
+        finally:
+            client.delete(f"{BASE}/{exp_id}")
+
+    def test_running_blocked_for_ab_test_without_flag_key(self):
+        # primary_metric은 있지만 flag_key 없는 ab_test
+        payload = {
+            "name": "flag 없는 A/B 테스트",
+            "experiment_type": "ab_test",
+            "primary_metric": "clicked",
+            "variants": [
+                {"name": "control", "traffic_ratio": 0.5},
+                {"name": "treatment", "traffic_ratio": 0.5},
+            ],
+        }
+        exp_id = client.post(BASE + "/", json=payload).json()["id"]
+        try:
+            resp = client.patch(f"{BASE}/{exp_id}", json={"status": "running"})
+            assert resp.status_code == 422
+            assert "Feature Flag" in resp.json()["detail"]
+        finally:
+            client.delete(f"{BASE}/{exp_id}")
+
+    def test_running_allowed_for_quasi_experiment_without_flag_key(self):
+        # quasi_experiment는 flag_key 없어도 running 가능 (placement 기반 운영 보존)
+        payload = {
+            "name": "quasi flag 없음",
+            "experiment_type": "quasi_experiment",
+            "primary_metric": "submitted",
+            "variants": [
+                {"name": "control", "traffic_ratio": 0.5},
+                {"name": "treatment", "traffic_ratio": 0.5},
+            ],
+        }
+        exp_id = client.post(BASE + "/", json=payload).json()["id"]
+        try:
+            resp = client.patch(f"{BASE}/{exp_id}", json={"status": "running"})
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "running"
+        finally:
+            client.delete(f"{BASE}/{exp_id}")
 
 
 class TestDeleteExperiment:
