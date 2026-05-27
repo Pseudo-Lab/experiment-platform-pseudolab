@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS experiments (
     cohort_id       TEXT,
     flag_key    TEXT,
     variant_names_json TEXT,
+    product     TEXT,
     status      TEXT NOT NULL DEFAULT 'draft',
     owner_id    TEXT,
     start_at    TEXT,
@@ -62,6 +63,7 @@ CREATE TABLE IF NOT EXISTS feature_flag (
     rollout_pct INTEGER NOT NULL DEFAULT 0,
     enabled     INTEGER NOT NULL DEFAULT 0,
     archived_at TEXT,
+    product     TEXT,
     created_at  TEXT    NOT NULL,
     updated_at  TEXT    NOT NULL
 );
