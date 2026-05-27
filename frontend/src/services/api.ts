@@ -6,7 +6,6 @@ export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed' | 'a
 // Experiment Result (Bayesian)
 // ────────────────────────────────────────────────────────────
 export interface VariantResult {
-  variant_id: string;
   variant_name: string;
   users: number;
   conversions: number;
@@ -153,12 +152,8 @@ export interface RetentionCell { cohort_week: string; week_num: number; retained
 export interface RetentionResponse { event_name: string; data: RetentionCell[]; }
 
 export interface Variant {
-  id: string;
   experiment_id: string;
   name: string;
-  traffic_ratio: number;
-  description?: string;
-  created_at: string;
 }
 
 export interface Experiment {

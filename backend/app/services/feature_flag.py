@@ -327,16 +327,12 @@ class FeatureFlagService:
     async def _record_experiment_assignments(
         self, flag_key: str, user_id: str, decision: FeatureFlagDecision
     ) -> None:
-        # flag_key로 연결된 running 실험을 찾아, decide의 variant 이름과 일치하는
-        # experiment_variants에 sticky assignment 기록. PK가 (experiment_id, user_id)이라
-        # INSERT OR IGNORE로 동일 사용자 반복 호출에도 안전(sticky).
+        # flag_key로 연결된 running 실험에 variant_name으로 sticky assignment 기록.
+        # PK가 (experiment_id, user_id)이라 INSERT OR IGNORE로 반복 호출 안전(sticky).
+        # variant_id FK 폐기 후 단순화: variant_name 문자열을 직접 저장.
         rows = await d1.query(
-            """SELECT e.id AS experiment_id, v.id AS variant_id
-                 FROM experiments e
-                 JOIN experiment_variants v
-                   ON v.experiment_id = e.id AND v.name = ?
-                WHERE e.flag_key = ? AND e.status = 'running'""",
-            [decision.variant, flag_key],
+            "SELECT id AS experiment_id FROM experiments WHERE flag_key = ? AND status = 'running'",
+            [flag_key],
         )
         if not rows:
             return
@@ -344,9 +340,9 @@ class FeatureFlagService:
         for row in rows:
             ok = await d1.execute(
                 """INSERT OR IGNORE INTO experiment_assignments
-                   (experiment_id, variant_id, user_id, assigned_at)
+                   (experiment_id, variant_name, user_id, assigned_at)
                    VALUES (?, ?, ?, ?)""",
-                [row["experiment_id"], row["variant_id"], user_id, now],
+                [row["experiment_id"], decision.variant, user_id, now],
             )
             if not ok:
                 print(

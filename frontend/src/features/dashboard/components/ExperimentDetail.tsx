@@ -851,34 +851,28 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         <CardHeader>
           <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">{t.sectionVariants}</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
-              <TableRow>
-                <TableHead className="font-bold text-slate-500">{t.colVariantName}</TableHead>
-                <TableHead className="font-bold text-slate-500">{t.colTrafficRatio}</TableHead>
-                <TableHead className="font-bold text-slate-500">{t.colDescription}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {experiment.variants.map((v) => (
-                <TableRow key={v.id}>
-                  <TableCell className="font-medium text-slate-800 dark:text-slate-200">{v.name}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-20 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${v.traffic_ratio * 100}%` }} />
-                      </div>
-                      <span className="text-xs font-bold text-slate-500">{(v.traffic_ratio * 100).toFixed(0)}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
-                    {v.description || t.none}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {experiment.variants.map((v) => (
+              <span
+                key={v.name}
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  v.name === 'control'
+                    ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                    : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+                }`}
+              >
+                {v.name}
+              </span>
+            ))}
+          </div>
+          {experiment.flag_key && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {lang === 'ko'
+                ? `Variants는 연결된 Feature Flag(${experiment.flag_key})의 rule에서 자동 동기화됩니다.`
+                : `Variants are auto-synced from the linked feature flag rules (${experiment.flag_key}).`}
+            </p>
+          )}
         </CardContent>
       </Card>
 

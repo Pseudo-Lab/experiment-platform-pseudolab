@@ -395,7 +395,7 @@ class TestAssign:
         exp_id = created_experiment["id"]
         r1 = client.get(f"{BASE}/{exp_id}/assign/user-det-01").json()
         r2 = client.get(f"{BASE}/{exp_id}/assign/user-det-01").json()
-        assert r1["variant_id"] == r2["variant_id"]
+        assert r1["variant_name"] == r2["variant_name"]
 
     def test_deterministic_different_users_can_differ(self, created_experiment):
         """여러 유저를 배정해서 두 variant 모두 실제로 사용되는지 확인."""

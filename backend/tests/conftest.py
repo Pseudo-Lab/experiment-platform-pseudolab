@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS experiments (
     experiment_type TEXT NOT NULL DEFAULT 'ab_test',
     cohort_id       TEXT,
     flag_key    TEXT,
+    variant_names_json TEXT,
     status      TEXT NOT NULL DEFAULT 'draft',
     owner_id    TEXT,
     start_at    TEXT,
@@ -27,18 +28,9 @@ CREATE TABLE IF NOT EXISTS experiments (
     updated_at  TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS experiment_variants (
-    id              TEXT PRIMARY KEY,
-    experiment_id   TEXT NOT NULL,
-    name            TEXT NOT NULL,
-    traffic_ratio   REAL NOT NULL,
-    description     TEXT,
-    created_at      TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS experiment_assignments (
     experiment_id   TEXT NOT NULL,
-    variant_id      TEXT NOT NULL,
+    variant_name    TEXT NOT NULL,
     user_id         TEXT NOT NULL,
     assigned_at     TEXT NOT NULL,
     PRIMARY KEY (experiment_id, user_id)

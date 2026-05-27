@@ -34,8 +34,9 @@ const translations = {
     placeholderHypothesis: 'e.g. Changing the button color will increase CTR.',
     labelExpectedEffect: 'Expected effect',
     placeholderExpectedEffect: 'e.g. Increase completed reflections',
-    labelPrimaryMetric: 'Primary Metric',
+    labelPrimaryMetric: '* Primary Metric',
     placeholderPrimaryMetric: 'e.g. weekly_session_attended',
+    primaryMetricHint: 'Required to transition the experiment to running.',
     labelCompletionEvent: 'Completion event',
     placeholderCompletionEvent: 'e.g. project_reflection_submitted',
     completionEventHelp: 'Event used to return completed=true from placement decide.',
@@ -112,8 +113,9 @@ const translations = {
     placeholderHypothesis: '예: 버튼 색상 변경이 클릭률을 높일 것이다.',
     labelExpectedEffect: '기대 효과',
     placeholderExpectedEffect: '예: 회고 제출 수 확보',
-    labelPrimaryMetric: 'Primary Metric',
+    labelPrimaryMetric: '* Primary Metric',
     placeholderPrimaryMetric: '예: weekly_session_attended',
+    primaryMetricHint: '실험을 running으로 전환하려면 필수입니다.',
     labelCompletionEvent: '완료 이벤트',
     placeholderCompletionEvent: '예: project_reflection_submitted',
     completionEventHelp: 'placement decide에서 completed=true를 판단할 이벤트입니다.',
@@ -199,7 +201,6 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   const [name, setName] = useState('');
   const [experimentType, setExperimentType] = useState<ExperimentType>('quasi_experiment');
   const [hypothesis, setHypothesis] = useState('');
-  const [expectedEffect, setExpectedEffect] = useState('');
   const [primaryMetric, setPrimaryMetric] = useState('');
   const [completionEvent, setCompletionEvent] = useState('');
   const [cohortId, setCohortId] = useState('');
@@ -282,7 +283,6 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
         id: experimentId.trim() || undefined,
         name: name.trim(),
         hypothesis: hypothesis.trim() || undefined,
-        expected_effect: expectedEffect.trim() || undefined,
         primary_metric: primaryMetric.trim() || undefined,
         completion_event: completionEvent.trim() || undefined,
         experiment_type: experimentType,
@@ -388,38 +388,15 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelExpectedEffect}</label>
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
             <Input
-              value={expectedEffect}
-              onChange={(e) => setExpectedEffect(e.target.value)}
-              placeholder={t.placeholderExpectedEffect}
+              value={primaryMetric}
+              onChange={(e) => setPrimaryMetric(e.target.value)}
+              placeholder={t.placeholderPrimaryMetric}
               className="rounded-xl"
-              aria-label={t.labelExpectedEffect}
+              aria-label={t.labelPrimaryMetric}
             />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
-              <Input
-                value={primaryMetric}
-                onChange={(e) => setPrimaryMetric(e.target.value)}
-                placeholder={t.placeholderPrimaryMetric}
-                className="rounded-xl"
-                aria-label={t.labelPrimaryMetric}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCompletionEvent}</label>
-              <Input
-                value={completionEvent}
-                onChange={(e) => setCompletionEvent(e.target.value)}
-                placeholder={t.placeholderCompletionEvent}
-                className="rounded-xl"
-                aria-label={t.labelCompletionEvent}
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t.completionEventHelp}</p>
-            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t.primaryMetricHint}</p>
           </div>
 
           <div className="space-y-1.5">
@@ -529,6 +506,18 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             {configurePlacement && (
               <div className="space-y-4">
                 <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementIntro}</p>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCompletionEvent}</label>
+                  <Input
+                    value={completionEvent}
+                    onChange={(e) => setCompletionEvent(e.target.value)}
+                    placeholder={t.placeholderCompletionEvent}
+                    className="rounded-xl"
+                    aria-label={t.labelCompletionEvent}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t.completionEventHelp}</p>
+                </div>
 
                 <section className="space-y-3">
                   <div className="space-y-1">
