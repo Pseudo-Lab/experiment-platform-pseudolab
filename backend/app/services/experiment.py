@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from app.schemas.experiment import (
     Experiment, ExperimentCreate, ExperimentUpdate,
+    ExperimentStatus, ExperimentType,
     Variant, AssignmentResponse, VALID_TRANSITIONS,
     ExperimentResult, VariantResult,
 )
@@ -126,6 +127,7 @@ class ExperimentService:
                     status_code=422,
                     detail=f"'{current.status}' → '{patch['status']}' 전환은 허용되지 않습니다."
                 )
+            self._validate_running_preconditions(current, patch)
 
         if patch.get("flag_key"):
             await self._require_flag(patch["flag_key"])
@@ -357,6 +359,34 @@ class ExperimentService:
             updated_at=row["updated_at"],
             variants=variants,
         )
+
+    def _validate_running_preconditions(self, current: Experiment, patch: dict) -> None:
+        """draft/paused → running 전환 시 사전 조건 검증.
+        - primary_metric: 모든 type 필수 (없으면 결과 계산 불가)
+        - flag_key: ab_test 필수 (quasi_experiment/rollout은 placement 기반이므로 예외)
+        """
+        next_status = patch["status"]
+        if hasattr(next_status, "value"):
+            next_status = next_status.value
+        if next_status != ExperimentStatus.RUNNING.value:
+            return
+
+        next_primary_metric = patch.get("primary_metric", current.primary_metric)
+        if not next_primary_metric:
+            raise HTTPException(
+                status_code=422,
+                detail="실험을 running으로 전환하려면 primary_metric을 먼저 설정해야 합니다.",
+            )
+
+        next_experiment_type = patch.get("experiment_type", current.experiment_type)
+        if hasattr(next_experiment_type, "value"):
+            next_experiment_type = next_experiment_type.value
+        next_flag_key = patch.get("flag_key", current.flag_key)
+        if next_experiment_type == ExperimentType.AB_TEST.value and not next_flag_key:
+            raise HTTPException(
+                status_code=422,
+                detail="A/B 테스트를 running으로 전환하려면 Feature Flag 연결이 필요합니다.",
+            )
 
     async def _require_flag(self, flag_key: str) -> None:
         rows = await d1.query(

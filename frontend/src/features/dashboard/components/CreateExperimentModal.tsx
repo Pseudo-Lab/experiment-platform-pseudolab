@@ -26,8 +26,9 @@ const translations = {
     labelId: 'Experiment ID',
     placeholderId: 'e.g. s12-mid-reflection',
     idHelp: 'Stable API slug. Leave empty to auto-generate.',
-    labelName: 'Experiment Name',
+    labelName: '* Experiment Name',
     placeholderName: 'e.g. Button Color Test',
+    requiredLegend: '* required',
     labelType: 'Experiment type',
     labelHypothesis: 'Hypothesis',
     placeholderHypothesis: 'e.g. Changing the button color will increase CTR.',
@@ -43,7 +44,7 @@ const translations = {
     labelStartAt: 'Exposure starts',
     labelEndAt: 'Exposure ends',
     scheduleHelp: 'Placement decide uses this experiment schedule. End time is exclusive.',
-    labelVariants: 'Variants',
+    labelVariants: '* Variants',
     placeholderVariantName: 'Variant name',
     placeholderRatio: 'Ratio',
     addVariant: 'Add Variant',
@@ -56,6 +57,9 @@ const translations = {
     flagKeyNone: '(none — use legacy SHA256 assignment)',
     flagKeyHelp: 'When linked, decide() writes both flag exposure and experiment assignment. Variant names must match flag rule variants.',
     variantsAutoFilled: 'Variants auto-filled from the flag rules. Traffic ratios are ignored when linked — the flag rollout drives bucketing.',
+    launchChecklist: 'To start (running) this experiment later, the following are required:',
+    checklistMetric: 'Set Primary Metric',
+    checklistFlag: 'Link a Feature Flag (required for A/B tests)',
     configurePlacement: 'Create placement with this experiment',
     placementIntro: 'A placement is a frontend-owned decision point. The product service renders the UI and owns routes; this platform decides eligibility and returns optional payload.',
     placementIdentity: 'Placement identity',
@@ -100,8 +104,9 @@ const translations = {
     labelId: '실험 ID',
     placeholderId: '예: s12-mid-reflection',
     idHelp: 'API와 운영 설정에서 쓰는 안정적인 slug입니다. 비워두면 자동 생성됩니다.',
-    labelName: '실험 이름',
+    labelName: '* 실험 이름',
     placeholderName: '예: 버튼 색상 테스트',
+    requiredLegend: '* 필수 입력',
     labelType: '실험 유형',
     labelHypothesis: '가설',
     placeholderHypothesis: '예: 버튼 색상 변경이 클릭률을 높일 것이다.',
@@ -117,7 +122,7 @@ const translations = {
     labelStartAt: '노출 시작',
     labelEndAt: '노출 종료',
     scheduleHelp: 'Placement decide는 이 실험 기간을 기준으로 노출 여부를 판단합니다. 종료 시각은 포함하지 않습니다.',
-    labelVariants: 'Variants',
+    labelVariants: '* Variants',
     placeholderVariantName: 'Variant 이름',
     placeholderRatio: '비율',
     addVariant: 'Variant 추가',
@@ -130,6 +135,9 @@ const translations = {
     flagKeyNone: '(연결 안 함 — 기존 SHA256 배정 사용)',
     flagKeyHelp: '연결하면 decide() 한 번으로 노출 기록과 실험 배정이 동시에 일어납니다. variant 이름이 Flag rule과 일치해야 합니다.',
     variantsAutoFilled: 'Flag rule에서 variants를 자동으로 가져왔습니다. 연결 시 traffic_ratio는 무시되고 Flag rollout이 분배를 결정합니다.',
+    launchChecklist: '나중에 running으로 전환하려면 다음이 필요합니다:',
+    checklistMetric: 'Primary Metric 설정',
+    checklistFlag: 'Feature Flag 연결 (A/B 테스트는 필수)',
     configurePlacement: '실험 생성과 함께 Placement 생성',
     placementIntro: 'Placement는 서비스 프론트가 소유한 노출 결정 지점입니다. 실제 UI 렌더링과 라우트는 각 서비스가 소유하고, 실험 플랫폼은 대상 여부와 응답 payload를 결정합니다.',
     placementIdentity: 'Placement 기본 정보',
@@ -317,7 +325,10 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h2>
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t.requiredLegend}</p>
+          </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -665,6 +676,21 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             )}
           </div>
         </div>
+
+        {(() => {
+          const missingMetric = !primaryMetric.trim();
+          const missingFlag = experimentType === 'ab_test' && !flagKey;
+          if (!missingMetric && !missingFlag) return null;
+          return (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+              <p className="font-semibold mb-1">{t.launchChecklist}</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {missingMetric && <li>{t.checklistMetric}</li>}
+                {missingFlag && <li>{t.checklistFlag}</li>}
+              </ul>
+            </div>
+          );
+        })()}
 
         {error && <p className="text-sm text-rose-500">{error}</p>}
 
