@@ -170,6 +170,7 @@ export interface Experiment {
   completion_event?: string;
   experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
   cohort_id?: string;
+  flag_key?: string | null;
   status: ExperimentStatus;
   owner_id?: string;
   start_at?: string;
@@ -190,6 +191,7 @@ export interface ExperimentCreate {
   completion_event?: string;
   experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
   cohort_id?: string;
+  flag_key?: string;
   owner_id?: string;
   start_at?: string;
   end_at?: string;
@@ -204,6 +206,7 @@ export interface ExperimentUpdate {
   completion_event?: string;
   experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
   cohort_id?: string;
+  flag_key?: string;
   start_at?: string;
   end_at?: string;
   status?: ExperimentStatus;

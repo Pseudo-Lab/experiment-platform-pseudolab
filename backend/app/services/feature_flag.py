@@ -200,6 +200,7 @@ class FeatureFlagService:
         decision = await self._decide(flag_key, user_id)
         if track and decision.reason != "unknown_flag":
             await self._record_exposure(flag_key, user_id, decision)
+            await self._record_experiment_assignments(flag_key, user_id, decision)
         return decision.variant
 
     async def list_exposures(
@@ -322,6 +323,36 @@ class FeatureFlagService:
         if not ok:
             # Decide must stay available even if exposure logging has a transient failure.
             print(f"Feature flag exposure logging failed: flag_key={flag_key}, user_id={user_id}")
+
+    async def _record_experiment_assignments(
+        self, flag_key: str, user_id: str, decision: FeatureFlagDecision
+    ) -> None:
+        # flag_key로 연결된 running 실험을 찾아, decide의 variant 이름과 일치하는
+        # experiment_variants에 sticky assignment 기록. PK가 (experiment_id, user_id)이라
+        # INSERT OR IGNORE로 동일 사용자 반복 호출에도 안전(sticky).
+        rows = await d1.query(
+            """SELECT e.id AS experiment_id, v.id AS variant_id
+                 FROM experiments e
+                 JOIN experiment_variants v
+                   ON v.experiment_id = e.id AND v.name = ?
+                WHERE e.flag_key = ? AND e.status = 'running'""",
+            [decision.variant, flag_key],
+        )
+        if not rows:
+            return
+        now = _now()
+        for row in rows:
+            ok = await d1.execute(
+                """INSERT OR IGNORE INTO experiment_assignments
+                   (experiment_id, variant_id, user_id, assigned_at)
+                   VALUES (?, ?, ?, ?)""",
+                [row["experiment_id"], row["variant_id"], user_id, now],
+            )
+            if not ok:
+                print(
+                    f"Experiment assignment write failed: experiment_id={row['experiment_id']}, "
+                    f"user_id={user_id}, flag_key={flag_key}, variant={decision.variant}"
+                )
 
     async def _require_flag(self, flag_key: str) -> FeatureFlag:
         flag = await self.get(flag_key, include_archived=False)

@@ -76,8 +76,8 @@ export const exampleCopy = {
     ko: '아직 decide 호출이 없습니다. 페이지를 새로고침 하거나 헤더의 새 사용자를 눌러보세요.',
   },
   noMappedExperiments: {
-    en: 'No mapped experiments. Check the mapping file:',
-    ko: '매핑된 실험이 없습니다. 매핑 파일을 확인하세요:',
+    en: 'No experiments linked to the decided flags. Set Experiment.flag_key in the admin console to link.',
+    ko: 'decide 호출이 발생한 Flag에 연결된 실험이 없습니다. 관리자 콘솔에서 실험의 flag_key를 지정해 연결하세요.',
   },
   unassigned: {
     en: 'Unassigned',

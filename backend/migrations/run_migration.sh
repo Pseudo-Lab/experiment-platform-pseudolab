@@ -63,7 +63,10 @@ run_file() {
     done < "$migration_file"
 }
 
-mapfile -t migration_files < <(find ./migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9]_*.sql' | sort)
+migration_files=()
+while IFS= read -r line; do
+    migration_files+=("$line")
+done < <(find ./migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9]_*.sql' | sort)
 
 if [ "${#migration_files[@]}" -eq 0 ]; then
     echo "실행할 migration 파일이 없습니다."

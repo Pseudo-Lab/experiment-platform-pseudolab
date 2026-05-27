@@ -74,12 +74,15 @@ class ExperimentService:
         if data.id and await self.get(exp_id):
             raise HTTPException(status_code=409, detail="Experiment id already exists")
 
+        if data.flag_key:
+            await self._require_flag(data.flag_key)
+
         now = _now()
         ok = await d1.execute(
             """INSERT INTO experiments
                (id, name, hypothesis, expected_effect, primary_metric, completion_event,
-                experiment_type, cohort_id, status, owner_id, start_at, end_at, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
+                experiment_type, cohort_id, flag_key, status, owner_id, start_at, end_at, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
             [
                 exp_id,
                 data.name,
@@ -89,6 +92,7 @@ class ExperimentService:
                 data.completion_event,
                 data.experiment_type.value,
                 data.cohort_id,
+                data.flag_key,
                 data.owner_id,
                 _serialize_datetime(data.start_at),
                 _serialize_datetime(data.end_at),
@@ -122,6 +126,9 @@ class ExperimentService:
                     status_code=422,
                     detail=f"'{current.status}' → '{patch['status']}' 전환은 허용되지 않습니다."
                 )
+
+        if patch.get("flag_key"):
+            await self._require_flag(patch["flag_key"])
 
         for field in ("start_at", "end_at", "reflection_start_date"):
             if field in patch and isinstance(patch[field], datetime):
@@ -162,6 +169,30 @@ class ExperimentService:
                 user_id=user_id,
                 assigned_at=row["assigned_at"],
             )
+
+        # Flag-linked experiment → flag decide가 단일 진실 공급원.
+        # decide()가 feature_flag_exposure + experiment_assignments 동시 기록.
+        exp_meta = await d1.query("SELECT flag_key FROM experiments WHERE id = ?", [experiment_id])
+        if exp_meta and exp_meta[0].get("flag_key"):
+            from app.services.feature_flag import feature_flag_service  # avoid circular import
+            await feature_flag_service.decide(exp_meta[0]["flag_key"], user_id)
+            assigned = await d1.query(
+                """SELECT a.*, v.name as variant_name
+                   FROM experiment_assignments a
+                   JOIN experiment_variants v ON a.variant_id = v.id
+                   WHERE a.experiment_id = ? AND a.user_id = ?""",
+                [experiment_id, user_id]
+            )
+            if assigned:
+                row = assigned[0]
+                return AssignmentResponse(
+                    experiment_id=experiment_id,
+                    variant_id=row["variant_id"],
+                    variant_name=row["variant_name"],
+                    user_id=user_id,
+                    assigned_at=row["assigned_at"],
+                )
+            # variant 이름 매칭 실패 등으로 기록 안 됨 → 레거시 폴백
 
         variants = await d1.query(
             "SELECT * FROM experiment_variants WHERE experiment_id = ?",
@@ -315,6 +346,7 @@ class ExperimentService:
             completion_event=row.get("completion_event"),
             experiment_type=row.get("experiment_type") or "ab_test",
             cohort_id=row.get("cohort_id"),
+            flag_key=row.get("flag_key"),
             status=row["status"],
             owner_id=row.get("owner_id"),
             start_at=row.get("start_at"),
@@ -325,6 +357,17 @@ class ExperimentService:
             updated_at=row["updated_at"],
             variants=variants,
         )
+
+    async def _require_flag(self, flag_key: str) -> None:
+        rows = await d1.query(
+            "SELECT 1 FROM feature_flag WHERE flag_key = ? AND archived_at IS NULL",
+            [flag_key],
+        )
+        if not rows:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Feature flag '{flag_key}'을(를) 찾을 수 없거나 아카이브 상태입니다",
+            )
 
 
 experiment_service = ExperimentService()

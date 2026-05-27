@@ -30,6 +30,7 @@ const translations = {
     labelCompletionEvent: 'Completion event',
     labelExperimentType: 'Experiment type',
     labelCohortId: 'Cohort ID',
+    labelFlagKey: 'Linked feature flag',
     labelStartAt: 'Exposure starts',
     labelEndAt: 'Exposure ends',
     labelSchedule: 'Exposure schedule',
@@ -138,6 +139,7 @@ const translations = {
     labelExpectedEffect: '기대 효과',
     labelPrimaryMetric: 'Primary metric',
     labelCompletionEvent: '완료 이벤트',
+    labelFlagKey: '연결된 Feature Flag',
     labelExperimentType: '실험 유형',
     labelCohortId: '코호트 ID',
     labelStartAt: '노출 시작',
@@ -816,6 +818,12 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelCohortId}</p>
               <p className="text-sm text-slate-700 dark:text-slate-300">{experiment.cohort_id || t.none}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelFlagKey}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300 font-mono">
+                {experiment.flag_key || t.none}
+              </p>
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelSchedule}</p>

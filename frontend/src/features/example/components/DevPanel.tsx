@@ -6,7 +6,7 @@ import {
   diagnoseExperiment,
   type Diagnosis as ExpDiagnosis,
 } from '../lib/experimentRegistry'
-import { FLAG_TO_EXPERIMENT } from '../lib/flagToExperiment'
+import type { ExperimentMeta } from '../lib/experimentRegistry'
 import { getUserId } from '../lib/userId'
 import { Button } from '@/components/ui/button'
 import { exampleCopy, type Lang } from '../i18n'
@@ -64,6 +64,7 @@ type Tab = 'flags' | 'experiments' | 'events'
 
 export function DevPanel({ lang }: { lang: Lang }) {
   const entries = useEntries()
+  const expRegistry = useExperimentRegistry()
   const [open, setOpen] = useState(true)
   const [tab, setTab] = useState<Tab>('flags')
   const uid = getUserId()
@@ -85,26 +86,18 @@ export function DevPanel({ lang }: { lang: Lang }) {
     return map
   }, [entries])
 
-  const assignState = useMemo(() => {
-    const map: Record<string, { variant: string; time: string }> = {}
-    for (let i = entries.length - 1; i >= 0; i--) {
-      const e = entries[i]
-      if (e.kind === 'assign' && e.status === 'ok') {
-        map[e.label] = { variant: String(e.response ?? '?'), time: e.time }
-      }
-    }
-    return map
-  }, [entries])
-
-  const mappedExperiments = useMemo(() => {
-    const set = new Set<string>()
-    Object.keys(flagState).forEach((flagKey) => {
-      const expName = FLAG_TO_EXPERIMENT[flagKey]
-      if (expName) set.add(expName)
+  const linkedExperiments = useMemo(() => {
+    // 백엔드: experiment.flag_key로 자동 연결.
+    // 데모: decide된 flag와 연결된 실험들을 registry에서 조회.
+    const out: Array<{ flagKey: string; variant: string; time: string; exp: ExperimentMeta }> = []
+    Object.entries(flagState).forEach(([flagKey, info]) => {
+      const exps = expRegistry.experimentsByFlagKey[flagKey] || []
+      exps.forEach((exp) => {
+        out.push({ flagKey, variant: info.variant, time: info.time, exp })
+      })
     })
-    Object.keys(assignState).forEach((n) => set.add(n))
-    return set
-  }, [flagState, assignState])
+    return out
+  }, [flagState, expRegistry])
 
   if (!open) {
     return (
@@ -148,14 +141,14 @@ export function DevPanel({ lang }: { lang: Lang }) {
 
       <nav className="flex border-b text-xs dark:border-slate-800">
         <TabBtn label={`Flags (${Object.keys(flagState).length})`} active={tab === 'flags'} onClick={() => setTab('flags')} />
-        <TabBtn label={`Experiments (${mappedExperiments.size})`} active={tab === 'experiments'} onClick={() => setTab('experiments')} />
+        <TabBtn label={`Experiments (${linkedExperiments.length})`} active={tab === 'experiments'} onClick={() => setTab('experiments')} />
         <TabBtn label={`API (${entries.length})`} active={tab === 'events'} onClick={() => setTab('events')} />
       </nav>
 
       <div className="flex-1 overflow-auto">
         {tab === 'flags' && <FlagsTab flagState={flagState} lang={lang} />}
         {tab === 'experiments' && (
-          <ExperimentsTab assignState={assignState} mappedExperiments={mappedExperiments} lang={lang} />
+          <ExperimentsTab linkedExperiments={linkedExperiments} lang={lang} />
         )}
         {tab === 'events' && <EventsTab entries={entries} lang={lang} />}
       </div>
@@ -223,12 +216,10 @@ function FlagsTab({
 }
 
 function ExperimentsTab({
-  assignState,
-  mappedExperiments,
+  linkedExperiments,
   lang,
 }: {
-  assignState: Record<string, { variant: string; time: string }>
-  mappedExperiments: Set<string>
+  linkedExperiments: Array<{ flagKey: string; variant: string; time: string; exp: ExperimentMeta }>
   lang: Lang
 }) {
   const registry = useExperimentRegistry()
@@ -244,30 +235,25 @@ function ExperimentsTab({
         onRefresh={() => experimentRegistry.refresh()}
         lang={lang}
       />
-      {mappedExperiments.size === 0 ? (
+      {linkedExperiments.length === 0 ? (
         <div className="p-4 text-xs text-slate-500 dark:text-slate-400">
-          {exampleCopy.noMappedExperiments[lang]} <code>src/lib/flagToExperiment.ts</code>
+          {exampleCopy.noMappedExperiments[lang]}
         </div>
       ) : (
         <ul className="divide-y dark:divide-slate-800">
-          {Array.from(mappedExperiments).map((expName) => {
-            const assign = assignState[expName]
-            const exp = registry.experimentsByName[expName]
-            const dx = diagnoseExperiment(expName, exp, lang)
+          {linkedExperiments.map(({ flagKey, variant, time, exp }) => {
+            const dx = diagnoseExperiment(exp.name, exp, lang)
             return (
-              <li key={expName} className="px-3 py-3 space-y-2">
-                <Header
-                  label={expName}
-                  value={assign?.variant ?? '-'}
-                  time={assign?.time ?? exampleCopy.unassigned[lang]}
-                />
+              <li key={`${flagKey}:${exp.id}`} className="px-3 py-3 space-y-2">
+                <Header label={exp.name} value={variant} time={time} />
+                <div className="text-[10.5px] text-slate-500">
+                  flag_key: <code className="font-mono">{flagKey}</code>
+                </div>
                 <DiagnosisBlock dx={dx} lang={lang} />
-                {assign && exp && (
-                  <div className="text-[10.5px] text-slate-500">
-                    {exampleCopy.experimentId[lang]}:{' '}
-                    <code className="font-mono">{exp.id.slice(0, 8)}...</code>
-                  </div>
-                )}
+                <div className="text-[10.5px] text-slate-500">
+                  {exampleCopy.experimentId[lang]}:{' '}
+                  <code className="font-mono">{exp.id.slice(0, 8)}...</code>
+                </div>
               </li>
             )
           })}

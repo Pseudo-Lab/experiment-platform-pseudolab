@@ -8,6 +8,7 @@ export type ExperimentMeta = {
   name: string
   status: ExperimentStatus
   primary_metric: string | null
+  flag_key: string | null
 }
 
 type Status = 'idle' | 'loading' | 'ok' | 'error'
@@ -15,11 +16,12 @@ type Status = 'idle' | 'loading' | 'ok' | 'error'
 type State = {
   status: Status
   experimentsByName: Record<string, ExperimentMeta>
+  experimentsByFlagKey: Record<string, ExperimentMeta[]>
   error?: string
   loadedAt?: string
 }
 
-let state: State = { status: 'idle', experimentsByName: {} }
+let state: State = { status: 'idle', experimentsByName: {}, experimentsByFlagKey: {} }
 const listeners = new Set<() => void>()
 
 function setState(next: State) {
@@ -42,19 +44,26 @@ export const experimentRegistry = {
     try {
       const res = await fetch(`${API_BASE_URL}/experiments/`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const items: ExperimentMeta[] = await res.json()
+      const items: Array<ExperimentMeta & { flag_key?: string | null }> = await res.json()
       const byName: Record<string, ExperimentMeta> = {}
+      const byFlagKey: Record<string, ExperimentMeta[]> = {}
       items.forEach((e) => {
-        byName[e.name] = {
+        const meta: ExperimentMeta = {
           id: e.id,
           name: e.name,
           status: e.status,
           primary_metric: e.primary_metric ?? null,
+          flag_key: e.flag_key ?? null,
+        }
+        byName[e.name] = meta
+        if (meta.flag_key) {
+          ;(byFlagKey[meta.flag_key] ||= []).push(meta)
         }
       })
       setState({
         status: 'ok',
         experimentsByName: byName,
+        experimentsByFlagKey: byFlagKey,
         loadedAt: new Date().toLocaleTimeString(),
       })
     } catch (e) {

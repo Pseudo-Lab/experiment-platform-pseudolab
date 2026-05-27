@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { X, Plus, Trash2 } from 'lucide-react';
-import { experimentApi, experimentPlacementApi } from '../../../services/api';
+import { experimentApi, experimentPlacementApi, featureFlagApi, type FeatureFlag } from '../../../services/api';
 
 interface VariantInput {
   name: string;
@@ -52,6 +52,9 @@ const translations = {
     create: 'Create',
     creating: 'Creating...',
     nameRequired: 'Experiment name is required.',
+    labelFlagKey: 'Linked feature flag',
+    flagKeyNone: '(none — use legacy SHA256 assignment)',
+    flagKeyHelp: 'When linked, decide() writes both flag exposure and experiment assignment. Variant names must match flag rule variants.',
     configurePlacement: 'Create placement with this experiment',
     placementIntro: 'A placement is a frontend-owned decision point. The product service renders the UI and owns routes; this platform decides eligibility and returns optional payload.',
     placementIdentity: 'Placement identity',
@@ -122,6 +125,9 @@ const translations = {
     create: '생성',
     creating: '생성 중...',
     nameRequired: '실험 이름을 입력해주세요.',
+    labelFlagKey: '연결할 Feature Flag',
+    flagKeyNone: '(연결 안 함 — 기존 SHA256 배정 사용)',
+    flagKeyHelp: '연결하면 decide() 한 번으로 노출 기록과 실험 배정이 동시에 일어납니다. variant 이름이 Flag rule과 일치해야 합니다.',
     configurePlacement: '실험 생성과 함께 Placement 생성',
     placementIntro: 'Placement는 서비스 프론트가 소유한 노출 결정 지점입니다. 실제 UI 렌더링과 라우트는 각 서비스가 소유하고, 실험 플랫폼은 대상 여부와 응답 payload를 결정합니다.',
     placementIdentity: 'Placement 기본 정보',
@@ -193,6 +199,8 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     { name: 'control', traffic_ratio: '0.5' },
     { name: 'treatment', traffic_ratio: '0.5' },
   ]);
+  const [flagKey, setFlagKey] = useState<string>('');
+  const [availableFlags, setAvailableFlags] = useState<FeatureFlag[]>([]);
   const [configurePlacement, setConfigurePlacement] = useState(false);
   const [placementKey, setPlacementKey] = useState('');
   const [uiId, setUiId] = useState('');
@@ -209,6 +217,10 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
   const ratioSum = variants.reduce((sum, v) => sum + (parseFloat(v.traffic_ratio) || 0), 0);
   const ratioValid = Math.abs(ratioSum - 1.0) <= 0.01;
+
+  useEffect(() => {
+    featureFlagApi.list(false).then(setAvailableFlags).catch(() => setAvailableFlags([]));
+  }, []);
 
   const addVariant = () => setVariants((prev) => [...prev, { name: '', traffic_ratio: '0' }]);
   const removeVariant = (i: number) => setVariants((prev) => prev.filter((_, idx) => idx !== i));
@@ -243,6 +255,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
         completion_event: completionEvent.trim() || undefined,
         experiment_type: experimentType,
         cohort_id: cohortId.trim() || undefined,
+        flag_key: flagKey || undefined,
         start_at: toApiDatetime(startAt),
         end_at: toApiDatetime(endAt),
         variants: variants.map((v) => ({
@@ -372,6 +385,24 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t.completionEventHelp}</p>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelFlagKey}</label>
+            <Select value={flagKey || '__none__'} onValueChange={(v) => setFlagKey(v === '__none__' ? '' : v)}>
+              <SelectTrigger className="rounded-xl" aria-label={t.labelFlagKey}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t.flagKeyNone}</SelectItem>
+                {availableFlags.map((flag) => (
+                  <SelectItem key={flag.flag_key} value={flag.flag_key}>
+                    {flag.flag_key}{flag.description ? ` — ${flag.description}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagKeyHelp}</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr]">
