@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS experiments (
     completion_event TEXT,
     experiment_type TEXT NOT NULL DEFAULT 'ab_test',
     cohort_id       TEXT,
+    flag_key    TEXT,
     status      TEXT NOT NULL DEFAULT 'draft',
     owner_id    TEXT,
     start_at    TEXT,
