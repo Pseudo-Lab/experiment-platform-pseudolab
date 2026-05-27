@@ -55,6 +55,7 @@ const translations = {
     labelFlagKey: 'Linked feature flag',
     flagKeyNone: '(none — use legacy SHA256 assignment)',
     flagKeyHelp: 'When linked, decide() writes both flag exposure and experiment assignment. Variant names must match flag rule variants.',
+    variantsAutoFilled: 'Variants auto-filled from the flag rules. Traffic ratios are ignored when linked — the flag rollout drives bucketing.',
     configurePlacement: 'Create placement with this experiment',
     placementIntro: 'A placement is a frontend-owned decision point. The product service renders the UI and owns routes; this platform decides eligibility and returns optional payload.',
     placementIdentity: 'Placement identity',
@@ -128,6 +129,7 @@ const translations = {
     labelFlagKey: '연결할 Feature Flag',
     flagKeyNone: '(연결 안 함 — 기존 SHA256 배정 사용)',
     flagKeyHelp: '연결하면 decide() 한 번으로 노출 기록과 실험 배정이 동시에 일어납니다. variant 이름이 Flag rule과 일치해야 합니다.',
+    variantsAutoFilled: 'Flag rule에서 variants를 자동으로 가져왔습니다. 연결 시 traffic_ratio는 무시되고 Flag rollout이 분배를 결정합니다.',
     configurePlacement: '실험 생성과 함께 Placement 생성',
     placementIntro: 'Placement는 서비스 프론트가 소유한 노출 결정 지점입니다. 실제 UI 렌더링과 라우트는 각 서비스가 소유하고, 실험 플랫폼은 대상 여부와 응답 payload를 결정합니다.',
     placementIdentity: 'Placement 기본 정보',
@@ -221,6 +223,28 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   useEffect(() => {
     featureFlagApi.list(false).then(setAvailableFlags).catch(() => setAvailableFlags([]));
   }, []);
+
+  // Flag 선택 시 그 Flag의 enabled rule variants로 variants 자동 채움.
+  // 연결 해제하거나 빈 값이면 사용자 입력 보존.
+  useEffect(() => {
+    if (!flagKey) return;
+    let cancelled = false;
+    featureFlagApi
+      .listRules(flagKey)
+      .then((rules) => {
+        if (cancelled) return;
+        const ruleVariants = Array.from(
+          new Set(rules.filter((r) => r.enabled).map((r) => r.variant)),
+        ).filter((v) => v !== 'control');
+        const names = ['control', ...ruleVariants];
+        const ratio = (1 / names.length).toFixed(2);
+        setVariants(names.map((name) => ({ name, traffic_ratio: ratio })));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [flagKey]);
 
   const addVariant = () => setVariants((prev) => [...prev, { name: '', traffic_ratio: '0' }]);
   const removeVariant = (i: number) => setVariants((prev) => prev.filter((_, idx) => idx !== i));
@@ -441,6 +465,9 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelVariants}</label>
+            {flagKey && (
+              <p className="text-xs text-indigo-600 dark:text-indigo-400">{t.variantsAutoFilled}</p>
+            )}
             {variants.map((v, i) => (
               <div key={i} className="flex items-center gap-2">
                 <Input
