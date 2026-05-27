@@ -167,6 +167,9 @@ export interface Experiment {
   hypothesis?: string;
   expected_effect?: string;
   primary_metric?: string;
+  completion_event?: string;
+  experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
+  cohort_id?: string;
   status: ExperimentStatus;
   owner_id?: string;
   start_at?: string;
@@ -179,11 +182,17 @@ export interface Experiment {
 }
 
 export interface ExperimentCreate {
+  id?: string;
   name: string;
   hypothesis?: string;
   expected_effect?: string;
   primary_metric?: string;
+  completion_event?: string;
+  experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
+  cohort_id?: string;
   owner_id?: string;
+  start_at?: string;
+  end_at?: string;
   variants: { name: string; traffic_ratio: number; description?: string }[];
 }
 
@@ -192,7 +201,53 @@ export interface ExperimentUpdate {
   hypothesis?: string;
   expected_effect?: string;
   primary_metric?: string;
+  completion_event?: string;
+  experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
+  cohort_id?: string;
+  start_at?: string;
+  end_at?: string;
   status?: ExperimentStatus;
+}
+
+export interface ExperimentPlacementConfig {
+  experiment_id: string;
+  placement_key: string;
+  ui_id: string;
+  ui_type: string;
+  title: string;
+  description: string;
+  target_url: string;
+  source: string;
+  target_cohort: string;
+  allowed_roles: string[];
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExperimentPlacementConfigUpdate {
+  ui_id?: string;
+  ui_type?: string;
+  title?: string;
+  description?: string;
+  target_url?: string;
+  source?: string;
+  target_cohort?: string;
+  allowed_roles?: string[];
+  enabled?: boolean;
+}
+
+export interface ExperimentPlacementConfigCreate extends ExperimentPlacementConfigUpdate {
+  placement_key: string;
+  ui_id: string;
+  ui_type: string;
+  title: string;
+  description: string;
+  target_url: string;
+  source: string;
+  target_cohort: string;
+  allowed_roles: string[];
+  enabled: boolean;
 }
 
 export const experimentApi = {
@@ -235,6 +290,52 @@ export const experimentApi = {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete experiment');
+  },
+};
+
+export const experimentPlacementApi = {
+  list: async (experimentId: string): Promise<ExperimentPlacementConfig[]> => {
+    const response = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`);
+    if (!response.ok) throw new Error('Failed to fetch experiment placements');
+    return response.json();
+  },
+
+  create: async (
+    experimentId: string,
+    data: ExperimentPlacementConfigCreate,
+  ): Promise<ExperimentPlacementConfig> => {
+    const response = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to create experiment placement');
+    return response.json();
+  },
+
+  update: async (
+    experimentId: string,
+    placementKey: string,
+    data: ExperimentPlacementConfigUpdate,
+  ): Promise<ExperimentPlacementConfig> => {
+    const response = await fetch(
+      `${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}/config`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      },
+    );
+    if (!response.ok) throw new Error('Failed to update experiment placement');
+    return response.json();
+  },
+
+  delete: async (experimentId: string, placementKey: string): Promise<void> => {
+    const response = await fetch(
+      `${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}`,
+      { method: 'DELETE' },
+    );
+    if (!response.ok) throw new Error('Failed to delete experiment placement');
   },
 };
 

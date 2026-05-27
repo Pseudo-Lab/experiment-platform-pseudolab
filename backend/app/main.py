@@ -26,19 +26,24 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
 def _is_public_api_path(path: str) -> bool:
+    api_prefix = settings.API_V1_STR
     public_exact_paths = {
-        f"{settings.API_V1_STR}/openapi.json",
-        f"{settings.API_V1_STR}/status",
-        f"{settings.API_V1_STR}/status/",
-        f"{settings.API_V1_STR}/capture",
-        f"{settings.API_V1_STR}/identify",
-        f"{settings.API_V1_STR}/feature-flags/decide",
+        f"{api_prefix}/openapi.json",
+        f"{api_prefix}/status",
+        f"{api_prefix}/status/",
+        f"{api_prefix}/capture",
+        f"{api_prefix}/identify",
+        f"{api_prefix}/feature-flags/decide",
     }
     if path in public_exact_paths:
         return True
-    if path.startswith(f"{settings.API_V1_STR}/auth/"):
+    if path.startswith(f"{api_prefix}/auth/"):
         return True
-    return path.startswith(f"{settings.API_V1_STR}/experiments/") and "/assign/" in path
+    if path.startswith(f"{api_prefix}/placements/") and path.endswith("/decide"):
+        return True
+    if path.startswith(f"{api_prefix}/experiments/") and "/placements/" in path and path.endswith("/decide"):
+        return True
+    return path.startswith(f"{api_prefix}/experiments/") and "/assign/" in path
 
 
 @app.middleware("http")

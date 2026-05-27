@@ -25,8 +25,8 @@ Owner: soo
 | Experiment DB | Cloudflare D1 `pseudolab-exp` |
 | Data source DB | Cloudflare D1 `pseudolab-main` |
 | Raw 운영 DB | Supabase raw DB. 실험 플랫폼/feature flag 분석에서는 직접 조회하지 않음 |
-| Demo app | `examples/demo-app/**` |
-| Local dev | `docker-compose.dev.yml`, backend `:8000`, frontend `:8081`, demo app `:8082` |
+| Example app | `frontend/src/features/example/**`, served by the main frontend at `/example` |
+| Local dev | `docker-compose.dev.yml`, backend `:8000`, frontend `:8081` |
 
 현재 주요 작업 흐름은 Feature Flag 운영 UI 확장입니다.
 
@@ -105,7 +105,7 @@ cd ../workspace-experiment-<task>
 |---|---|
 | Backend | `backend/app/**`, `backend/migrations/**`, `backend/tests/**`, `backend/requirements.txt` |
 | Frontend Dashboard | `frontend/src/**`, `frontend/package.json`, `frontend/vite.config.ts`, `frontend/tailwind.config.js` |
-| Demo App | `examples/demo-app/**` |
+| Example App | `frontend/src/features/example/**` |
 | Infra/Ops | `.github/**`, `docker-compose*.yml`, `backend/.env.sample`, `frontend/.env.sample`, 배포/운영 매니페스트, 런타임 설정 |
 | Docs/Process | `AGENTS.md`, `docs/**` |
 
@@ -161,7 +161,7 @@ Team Lead 책임:
 |---|---|
 | Backend API | FastAPI endpoint, schema, service, D1 migration, backend tests |
 | Frontend Dashboard | Dashboard UI, Feature Flag/Segment UI, API client, responsive states, frontend tests |
-| Demo App | `examples/demo-app` behavior, SDK usage, demo seed flow |
+| Example App | frontend `/example` behavior, SDK usage, demo seed flow |
 | Infra/Ops | Docker compose, CI, env vars, D1/R2 runtime connectivity, deployment notes |
 | Data/Analytics | D1 source tables, metric definitions, exposure/result connection |
 | Experiment Analyst | experiment hypothesis, primary/guardrail metrics, randomization unit, exposure quality, SRM/readout risk |
@@ -296,7 +296,7 @@ git diff --check
 |---|---|
 | Backend API/service | `cd backend && ./venv/bin/pytest` |
 | Frontend UI/API client | `cd frontend && npm test -- --run`, `cd frontend && npm run build` |
-| Demo app | `cd examples/demo-app && npm run build` |
+| Example app | `cd frontend && npm test -- --run`, `cd frontend && npm run build` |
 | Docs/process only | `git diff --check` |
 | D1 schema/query change | backend tests + 운영 D1에는 민감정보 값 없이 테이블/컬럼/row count만 확인 |
 | Feature Flag UI | frontend tests/build + `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md` 업데이트 여부 확인 |

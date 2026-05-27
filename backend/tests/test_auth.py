@@ -65,3 +65,24 @@ def test_configured_auth_protects_management_api(monkeypatch):
 
     authenticated = client.get("/api/v1/experiments/")
     assert authenticated.status_code == 200
+
+
+def test_configured_auth_keeps_placement_decide_public(monkeypatch):
+    _configure_auth(monkeypatch)
+    client.cookies.clear()
+
+    placement_only = client.get(
+        "/api/v1/placements/missing-placement/decide",
+        params={"user_id": "user-runner", "project_id": "project-s12"},
+    )
+    explicit_experiment = client.get(
+        "/api/v1/experiments/missing-experiment/placements/missing-placement/decide",
+        params={"user_id": "user-runner", "project_id": "project-s12"},
+    )
+    protected_config = client.get("/api/v1/experiments/missing-experiment/placements")
+
+    assert placement_only.status_code == 200
+    assert placement_only.json()["reason"] == "placement_not_found"
+    assert explicit_experiment.status_code == 200
+    assert explicit_experiment.json()["reason"] == "experiment_not_found"
+    assert protected_config.status_code == 401

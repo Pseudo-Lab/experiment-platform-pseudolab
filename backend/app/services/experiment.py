@@ -17,6 +17,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _serialize_datetime(value: datetime | None) -> str | None:
+    return value.isoformat() if value else None
+
+
 class ExperimentService:
 
     async def get_all(self, status: str | None = None) -> List[Experiment]:
@@ -66,16 +70,28 @@ class ExperimentService:
         return self._to_experiment(row)
 
     async def create(self, data: ExperimentCreate) -> Experiment:
-        exp_id = str(uuid.uuid4())
+        exp_id = data.id or str(uuid.uuid4())
+        if data.id and await self.get(exp_id):
+            raise HTTPException(status_code=409, detail="Experiment id already exists")
+
         now = _now()
         ok = await d1.execute(
             """INSERT INTO experiments
-               (id, name, hypothesis, status, owner_id, start_at, end_at, created_at, updated_at)
-               VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
+               (id, name, hypothesis, expected_effect, primary_metric, completion_event,
+                experiment_type, cohort_id, status, owner_id, start_at, end_at, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
             [
-                exp_id, data.name, data.hypothesis, data.owner_id,
-                data.start_at.isoformat() if data.start_at else None,
-                data.end_at.isoformat() if data.end_at else None,
+                exp_id,
+                data.name,
+                data.hypothesis,
+                data.expected_effect,
+                data.primary_metric,
+                data.completion_event,
+                data.experiment_type.value,
+                data.cohort_id,
+                data.owner_id,
+                _serialize_datetime(data.start_at),
+                _serialize_datetime(data.end_at),
                 now, now,
             ]
         )
@@ -106,6 +122,14 @@ class ExperimentService:
                     status_code=422,
                     detail=f"'{current.status}' → '{patch['status']}' 전환은 허용되지 않습니다."
                 )
+
+        for field in ("start_at", "end_at", "reflection_start_date"):
+            if field in patch and isinstance(patch[field], datetime):
+                patch[field] = patch[field].isoformat()
+        if "experiment_type" in patch and hasattr(patch["experiment_type"], "value"):
+            patch["experiment_type"] = patch["experiment_type"].value
+        if "status" in patch and hasattr(patch["status"], "value"):
+            patch["status"] = patch["status"].value
 
         patch["updated_at"] = _now()
 
@@ -288,6 +312,8 @@ class ExperimentService:
             hypothesis=row.get("hypothesis"),
             expected_effect=row.get("expected_effect"),
             primary_metric=row.get("primary_metric"),
+            completion_event=row.get("completion_event"),
+            experiment_type=row.get("experiment_type") or "ab_test",
             cohort_id=row.get("cohort_id"),
             status=row["status"],
             owner_id=row.get("owner_id"),

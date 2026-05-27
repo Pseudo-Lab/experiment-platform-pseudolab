@@ -1,0 +1,571 @@
+import json
+import os
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from fastapi import HTTPException
+
+from app.core.config import settings
+from app.db import d1
+from app.schemas.experiment_placement import (
+    ExperimentPlacementConfig,
+    ExperimentPlacementConfigCreate,
+    ExperimentPlacementConfigUpdate,
+    ExperimentPlacementDecisionResponse,
+    ExperimentPlacementLoggingContext,
+    ExperimentPlacementReason,
+    ExperimentPlacementUI,
+)
+
+
+DEFAULT_EXPERIMENT_ID = "s12-mid-reflection"
+DEFAULT_PLACEMENT_KEY = "project-detail-home-reflection-cta"
+DEFAULT_UI_ID = "s12-mid-reflection-banner"
+DEFAULT_UI_TYPE = "banner"
+DEFAULT_TITLE = "중간 회고 작성하기"
+DEFAULT_DESCRIPTION = "지금까지의 여정을 정리하고 남은 기간 방향을 잡아봐요"
+DEFAULT_TARGET_URL = "/reflection/s12-mid-reflection"
+DEFAULT_SOURCE = "project_detail_home"
+DEFAULT_ALLOWED_ROLES = ["builder", "runner"]
+DEFAULT_TARGET_COHORT = "12"
+
+
+def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    normalized = value.replace("Z", "+00:00")
+    parsed = datetime.fromisoformat(normalized)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _json_extract_experiment_id_filter() -> str:
+    return """
+      AND (
+        properties IS NULL
+        OR json_extract(properties, '$.experiment_id') IS NULL
+        OR json_extract(properties, '$.experiment_id') = ?
+      )
+    """
+
+
+class ExperimentPlacementService:
+    async def list_configs(self, experiment_id: str) -> list[ExperimentPlacementConfig]:
+        if not await self._experiment_exists(experiment_id):
+            raise HTTPException(status_code=404, detail="Experiment not found")
+
+        rows = await d1.query(
+            """SELECT *
+                 FROM experiment_placement_config
+                WHERE experiment_id = ?
+                ORDER BY placement_key""",
+            [experiment_id],
+        )
+        return [self._to_config(row) for row in rows]
+
+    async def create_config(
+        self,
+        experiment_id: str,
+        data: ExperimentPlacementConfigCreate,
+    ) -> ExperimentPlacementConfig:
+        if not await self._experiment_exists(experiment_id):
+            raise HTTPException(status_code=404, detail="Experiment not found")
+
+        placement_key = data.placement_key.strip()
+        if await self._placement_exists(experiment_id, placement_key):
+            raise HTTPException(status_code=409, detail="Experiment placement config already exists")
+
+        now = datetime.now(timezone.utc).isoformat()
+        ok = await d1.execute(
+            """INSERT INTO experiment_placement_config
+               (experiment_id, placement_key, ui_id, ui_type, title, description, target_url, source,
+                target_cohort, allowed_roles, enabled, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                experiment_id,
+                placement_key,
+                data.ui_id.strip(),
+                data.ui_type.strip(),
+                data.title.strip(),
+                data.description.strip(),
+                data.target_url.strip(),
+                data.source.strip(),
+                data.target_cohort.strip(),
+                json.dumps(data.allowed_roles),
+                1 if data.enabled else 0,
+                now,
+                now,
+            ],
+        )
+        if not ok:
+            raise HTTPException(status_code=502, detail="Failed to create experiment placement config")
+        return await self.get_config(experiment_id, placement_key)
+
+    async def get_config(self, experiment_id: str, placement_key: str) -> ExperimentPlacementConfig:
+        rows = await d1.query(
+            """SELECT *
+                 FROM experiment_placement_config
+                WHERE experiment_id = ?
+                  AND placement_key = ?""",
+            [experiment_id, placement_key],
+        )
+        if not rows:
+            raise HTTPException(status_code=404, detail="Experiment placement config not found")
+        return self._to_config(rows[0])
+
+    async def update_config(
+        self,
+        experiment_id: str,
+        placement_key: str,
+        data: ExperimentPlacementConfigUpdate,
+    ) -> ExperimentPlacementConfig:
+        existing = await d1.query(
+            """SELECT experiment_id
+                 FROM experiment_placement_config
+                WHERE experiment_id = ?
+                  AND placement_key = ?""",
+            [experiment_id, placement_key],
+        )
+        if not existing:
+            raise HTTPException(status_code=404, detail="Experiment placement config not found")
+
+        patch = {k: v for k, v in data.model_dump().items() if v is not None}
+        if "allowed_roles" in patch:
+            patch["allowed_roles"] = json.dumps(patch["allowed_roles"])
+        if patch:
+            patch["updated_at"] = datetime.now(timezone.utc).isoformat()
+            set_clause = ", ".join(f"{k} = ?" for k in patch)
+            values = [int(v) if isinstance(v, bool) else v for v in patch.values()]
+            values.extend([experiment_id, placement_key])
+            ok = await d1.execute(
+                f"""UPDATE experiment_placement_config
+                       SET {set_clause}
+                     WHERE experiment_id = ?
+                       AND placement_key = ?""",
+                values,
+            )
+            if not ok:
+                raise HTTPException(status_code=502, detail="Failed to update experiment placement config")
+        return await self.get_config(experiment_id, placement_key)
+
+    async def delete_config(self, experiment_id: str, placement_key: str) -> None:
+        if not await self._placement_exists(experiment_id, placement_key):
+            raise HTTPException(status_code=404, detail="Experiment placement config not found")
+
+        ok = await d1.execute(
+            """DELETE FROM experiment_placement_config
+                WHERE experiment_id = ?
+                  AND placement_key = ?""",
+            [experiment_id, placement_key],
+        )
+        if not ok:
+            raise HTTPException(status_code=502, detail="Failed to delete experiment placement config")
+
+    async def decide(
+        self,
+        experiment_id: str,
+        placement_key: str,
+        user_id: Optional[str],
+        project_id: str,
+        scenario: Optional[str] = None,
+    ) -> ExperimentPlacementDecisionResponse:
+        if scenario:
+            return self._decide_scenario(experiment_id, placement_key, project_id, scenario)
+
+        normalized_user_id = (user_id or "").strip()
+        if not normalized_user_id:
+            return self._hidden(ExperimentPlacementReason.NOT_AUTHENTICATED)
+
+        config = await self._get_decide_config(experiment_id, placement_key)
+        if not config:
+            if await self._experiment_exists(experiment_id):
+                return self._hidden(ExperimentPlacementReason.PLACEMENT_NOT_FOUND)
+            return self._hidden(ExperimentPlacementReason.EXPERIMENT_NOT_FOUND)
+        if config.get("experiment_status") != "running" or int(config.get("enabled") or 0) != 1:
+            return self._hidden(ExperimentPlacementReason.OUTSIDE_EXPOSURE_WINDOW)
+
+        target_cohort = str(config.get("target_cohort") or "*").strip()
+        allowed_roles = self._parse_allowed_roles(config.get("allowed_roles"))
+        project_membership = await self._get_project_membership(normalized_user_id, project_id)
+        if not project_membership:
+            return self._hidden(ExperimentPlacementReason.NOT_PROJECT_MEMBER)
+        project_cohort = str(project_membership.get("project_cohort") or "")
+        if target_cohort != "*" and project_cohort != target_cohort:
+            return self._hidden(ExperimentPlacementReason.NOT_TARGET_COHORT)
+
+        role = project_membership.get("user_project_role")
+        membership_status = project_membership.get("membership_status")
+        if not role:
+            return self._hidden(ExperimentPlacementReason.NOT_PROJECT_MEMBER)
+        if allowed_roles and role not in allowed_roles:
+            return self._hidden(ExperimentPlacementReason.UNSUPPORTED_ROLE)
+        if membership_status != "active":
+            return self._hidden(ExperimentPlacementReason.INACTIVE_MEMBERSHIP)
+
+        if not self._is_inside_exposure_window(config):
+            return self._hidden(ExperimentPlacementReason.OUTSIDE_EXPOSURE_WINDOW)
+
+        completed = await self._has_completed(experiment_id, normalized_user_id, config)
+        if completed:
+            return self._completed(
+                experiment_id=experiment_id,
+                placement_key=placement_key,
+                config=config,
+                project_id=project_id,
+                project_cohort=project_cohort,
+                user_project_role=role,
+            )
+
+        return self._eligible(
+            experiment_id=experiment_id,
+            placement_key=placement_key,
+            config=config,
+            project_id=project_id,
+            project_cohort=project_cohort,
+            user_project_role=role,
+        )
+
+    async def decide_by_placement(
+        self,
+        placement_key: str,
+        user_id: Optional[str],
+        project_id: str,
+    ) -> ExperimentPlacementDecisionResponse:
+        normalized_user_id = (user_id or "").strip()
+        if not normalized_user_id:
+            return self._hidden(ExperimentPlacementReason.NOT_AUTHENTICATED)
+
+        config = await self._get_active_decide_config_for_placement(placement_key)
+        if not config:
+            if await self._placement_key_exists(placement_key):
+                return self._hidden(ExperimentPlacementReason.OUTSIDE_EXPOSURE_WINDOW)
+            return self._hidden(ExperimentPlacementReason.PLACEMENT_NOT_FOUND)
+
+        return await self.decide(config["id"], placement_key, normalized_user_id, project_id)
+
+    async def _experiment_exists(self, experiment_id: str) -> bool:
+        rows = await d1.query("SELECT 1 FROM experiments WHERE id = ? LIMIT 1", [experiment_id])
+        return bool(rows)
+
+    async def _placement_exists(self, experiment_id: str, placement_key: str) -> bool:
+        rows = await d1.query(
+            """SELECT 1
+                 FROM experiment_placement_config
+                WHERE experiment_id = ?
+                  AND placement_key = ?
+                LIMIT 1""",
+            [experiment_id, placement_key],
+        )
+        return bool(rows)
+
+    async def _placement_key_exists(self, placement_key: str) -> bool:
+        rows = await d1.query(
+            """SELECT 1
+                 FROM experiment_placement_config
+                WHERE placement_key = ?
+                LIMIT 1""",
+            [placement_key],
+        )
+        return bool(rows)
+
+    async def _get_decide_config(self, experiment_id: str, placement_key: str) -> Optional[dict]:
+        rows = await d1.query(
+            """SELECT
+                    e.id,
+                    e.status AS experiment_status,
+                    e.start_at,
+                    e.end_at,
+                    e.reflection_start_date,
+                    e.reflection_window_days,
+                    e.completion_event,
+                    c.placement_key,
+                    c.ui_id,
+                    c.ui_type,
+                    c.title,
+                    c.description,
+                    c.target_url,
+                    c.source,
+                    c.enabled,
+                    c.target_cohort,
+                    c.allowed_roles
+                 FROM experiments e
+                 JOIN experiment_placement_config c
+                   ON c.experiment_id = e.id
+                  AND c.placement_key = ?
+                WHERE e.id = ?""",
+            [placement_key, experiment_id],
+        )
+        return rows[0] if rows else None
+
+    async def _get_active_decide_config_for_placement(self, placement_key: str) -> Optional[dict]:
+        rows = await d1.query(
+            """SELECT
+                    e.id,
+                    e.status AS experiment_status,
+                    e.start_at,
+                    e.end_at,
+                    e.reflection_start_date,
+                    e.reflection_window_days,
+                    e.completion_event,
+                    e.created_at AS experiment_created_at,
+                    c.placement_key,
+                    c.ui_id,
+                    c.ui_type,
+                    c.title,
+                    c.description,
+                    c.target_url,
+                    c.source,
+                    c.enabled,
+                    c.target_cohort,
+                    c.allowed_roles
+                 FROM experiment_placement_config c
+                 JOIN experiments e
+                   ON e.id = c.experiment_id
+                WHERE c.placement_key = ?
+                ORDER BY
+                    COALESCE(e.start_at, '') DESC,
+                    COALESCE(e.reflection_start_date, '') DESC,
+                    e.created_at DESC,
+                    e.id DESC""",
+            [placement_key],
+        )
+        for row in rows:
+            if row.get("experiment_status") != "running":
+                continue
+            if int(row.get("enabled") or 0) != 1:
+                continue
+            if not self._is_inside_exposure_window(row):
+                continue
+            return row
+        return None
+
+    async def _get_project_membership(self, user_id: str, project_id: str) -> Optional[dict]:
+        main_database_id = os.getenv("D1_MAIN_DATABASE_ID")
+        if not main_database_id:
+            raise HTTPException(
+                status_code=503,
+                detail="D1_MAIN_DATABASE_ID is required for experiment placement decide",
+            )
+
+        rows = await d1.query(
+            """
+            SELECT
+                p.cohort AS project_cohort,
+                p.status AS project_status,
+                m.role AS user_project_role,
+                m.status AS membership_status
+              FROM dl_projects p
+              LEFT JOIN dl_project_members m
+                ON m.project_id = p.id
+               AND m.user_id = ?
+               AND m.base_date = (SELECT MAX(base_date) FROM dl_project_members)
+             WHERE p.id = ?
+               AND p.base_date = (SELECT MAX(base_date) FROM dl_projects)
+             ORDER BY
+                CASE
+                    WHEN m.status = 'active' THEN 0
+                    ELSE 3
+                END
+             LIMIT 1
+            """,
+            [user_id, project_id],
+            database_id=main_database_id,
+        )
+        return rows[0] if rows else None
+
+    async def _has_completed(self, experiment_id: str, user_id: str, config: dict) -> bool:
+        completion_event = (config.get("completion_event") or "").strip()
+        if completion_event:
+            try:
+                rows = await d1.query(
+                    f"""SELECT 1 AS completed
+                          FROM event_log
+                         WHERE user_id = ?
+                           AND event_name = ?
+                           {_json_extract_experiment_id_filter()}
+                         LIMIT 1""",
+                    [user_id, completion_event, experiment_id],
+                )
+                if rows:
+                    return True
+            except Exception:
+                rows = await d1.query(
+                    """SELECT 1 AS completed
+                         FROM event_log
+                        WHERE user_id = ?
+                          AND event_name = ?
+                        LIMIT 1""",
+                    [user_id, completion_event],
+                )
+                if rows:
+                    return True
+
+        rows = await d1.query(
+            "SELECT 1 AS completed FROM reflection WHERE user_id = ? AND experiment_id = ? LIMIT 1",
+            [user_id, experiment_id],
+        )
+        return bool(rows)
+
+    def _is_inside_exposure_window(self, experiment: dict) -> bool:
+        now = datetime.now(timezone.utc)
+
+        start_at = _parse_datetime(experiment.get("start_at"))
+        end_at = _parse_datetime(experiment.get("end_at"))
+        if start_at or end_at:
+            if start_at and now < start_at:
+                return False
+            if end_at and now >= end_at:
+                return False
+            return True
+
+        start_at = _parse_datetime(experiment.get("reflection_start_date"))
+        if not start_at:
+            return False
+        try:
+            window_days = int(experiment.get("reflection_window_days") or 0)
+        except (TypeError, ValueError):
+            return False
+        if window_days <= 0:
+            return False
+
+        return start_at <= now < start_at + timedelta(days=window_days)
+
+    def _decide_scenario(
+        self,
+        experiment_id: str,
+        placement_key: str,
+        project_id: str,
+        scenario: str,
+    ) -> ExperimentPlacementDecisionResponse:
+        if not settings.EXPERIMENT_PLACEMENT_SCENARIO_OVERRIDE_ENABLED:
+            raise HTTPException(status_code=400, detail="scenario override is disabled")
+        if scenario == "server_error":
+            raise HTTPException(status_code=500, detail="forced server_error scenario")
+        if scenario == ExperimentPlacementReason.ELIGIBLE.value:
+            return self._eligible(
+                experiment_id=experiment_id,
+                placement_key=placement_key,
+                config=self._scenario_config(experiment_id, placement_key),
+                project_id=project_id,
+                project_cohort=DEFAULT_TARGET_COHORT,
+                user_project_role="runner",
+            )
+        if scenario in {ExperimentPlacementReason.ALREADY_COMPLETED.value, "already_submitted"}:
+            return self._completed(
+                experiment_id=experiment_id,
+                placement_key=placement_key,
+                config=self._scenario_config(experiment_id, placement_key),
+                project_id=project_id,
+                project_cohort=DEFAULT_TARGET_COHORT,
+                user_project_role="runner",
+            )
+
+        try:
+            reason = ExperimentPlacementReason(scenario)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"unsupported scenario '{scenario}'")
+        return self._hidden(reason)
+
+    def _scenario_config(self, experiment_id: str, placement_key: str) -> dict:
+        return {
+            "placement_key": placement_key,
+            "ui_id": DEFAULT_UI_ID if experiment_id == DEFAULT_EXPERIMENT_ID else f"{experiment_id}-ui",
+            "ui_type": DEFAULT_UI_TYPE,
+            "title": DEFAULT_TITLE,
+            "description": DEFAULT_DESCRIPTION,
+            "target_url": DEFAULT_TARGET_URL,
+            "source": DEFAULT_SOURCE,
+        }
+
+    def _hidden(self, reason: ExperimentPlacementReason) -> ExperimentPlacementDecisionResponse:
+        return ExperimentPlacementDecisionResponse(show=False, reason=reason)
+
+    def _completed(
+        self,
+        experiment_id: str,
+        placement_key: str,
+        config: dict,
+        project_id: str,
+        project_cohort: str,
+        user_project_role: str,
+    ) -> ExperimentPlacementDecisionResponse:
+        response = self._eligible(
+            experiment_id=experiment_id,
+            placement_key=placement_key,
+            config=config,
+            project_id=project_id,
+            project_cohort=project_cohort,
+            user_project_role=user_project_role,
+        )
+        response.reason = ExperimentPlacementReason.ALREADY_COMPLETED
+        response.completed = True
+        return response
+
+    def _eligible(
+        self,
+        experiment_id: str,
+        placement_key: str,
+        config: dict,
+        project_id: str,
+        project_cohort: str,
+        user_project_role: str,
+    ) -> ExperimentPlacementDecisionResponse:
+        ui = ExperimentPlacementUI(
+            id=config["ui_id"],
+            type=config["ui_type"],
+            title=config["title"],
+            description=config["description"],
+            target_url=config["target_url"],
+        )
+        logging_context = ExperimentPlacementLoggingContext(
+            experiment_id=experiment_id,
+            placement_key=placement_key,
+            ui_id=config["ui_id"],
+            ui_type=config["ui_type"],
+            project_id=project_id,
+            project_cohort=project_cohort,
+            user_project_role=user_project_role,
+            source=config["source"],
+        )
+        return ExperimentPlacementDecisionResponse(
+            show=True,
+            reason=ExperimentPlacementReason.ELIGIBLE,
+            completed=False,
+            experiment_id=experiment_id,
+            placement_key=placement_key,
+            ui=ui,
+            logging_context=logging_context,
+        )
+
+    def _parse_allowed_roles(self, raw_roles: Optional[str]) -> set[str]:
+        if not raw_roles:
+            return set()
+        try:
+            parsed = json.loads(raw_roles)
+        except json.JSONDecodeError:
+            return set()
+        if not isinstance(parsed, list):
+            return set()
+        return {str(role) for role in parsed if role}
+
+    def _to_config(self, row: dict) -> ExperimentPlacementConfig:
+        allowed_roles = sorted(self._parse_allowed_roles(row.get("allowed_roles")))
+        return ExperimentPlacementConfig(
+            experiment_id=row["experiment_id"],
+            placement_key=row["placement_key"],
+            ui_id=row["ui_id"],
+            ui_type=row["ui_type"],
+            title=row["title"],
+            description=row["description"],
+            target_url=row["target_url"],
+            source=row["source"],
+            target_cohort=str(row["target_cohort"]),
+            allowed_roles=allowed_roles,
+            enabled=int(row["enabled"]) == 1,
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+
+experiment_placement_service = ExperimentPlacementService()

@@ -17,6 +17,7 @@ import {
     Globe,
     ToggleLeft,
     BarChart2,
+    Code2,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -96,8 +97,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", settings: "Settings", logout: "Logout" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", settings: "설정", logout: "로그아웃" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", example: "Example App", settings: "Settings", logout: "Logout" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", example: "예제 앱", settings: "설정", logout: "로그아웃" }
     };
 
     const t = translations[lang];
@@ -113,6 +114,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         activePath === '/bug-report' ? t.bugReport :
         activePath === '/feature-flags' ? t.featureFlags :
         activePath === '/analytics' ? t.analytics :
+        activePath.startsWith('/example') ? t.example :
         t.dashboard;
 
     const onTouchStart = (e: React.TouchEvent) => {
@@ -198,6 +200,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} />
                     <SidebarItem icon={ToggleLeft} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
                     <SidebarItem icon={BarChart2} label={t.analytics} active={activePath === '/analytics'} expanded={isSidebarOpen} onClick={() => handleNav('/analytics')} />
+                    <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} />
                 </nav>
 
                 <div className="p-3 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">

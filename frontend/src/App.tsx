@@ -12,6 +12,7 @@ import { GitHubDashboard } from './features/dashboard/components/GitHubDashboard
 import { DiscordDashboard } from './features/dashboard/components/DiscordDashboard';
 import { FeatureFlags } from './features/dashboard/components/FeatureFlags';
 import { Analytics } from './features/dashboard/components/Analytics';
+import { ExampleApp } from './features/example/ExampleApp';
 
 export default function App() {
   return (
@@ -102,6 +103,7 @@ function AppShell() {
         <Route path="/bug-report/:id" element={<BugReportDetail lang={lang} />} />
         <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
         <Route path="/analytics" element={<Analytics lang={lang} />} />
+        <Route path="/example/*" element={<ExampleApp lang={lang} />} />
       </Routes>
     </MainLayout>
   );
