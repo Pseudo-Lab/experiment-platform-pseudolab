@@ -191,6 +191,7 @@ class TestFeatureFlagExposure:
         first = client.get(f"{BASE}/decide", params={"flag_key": "summary_flag", "user_id": "user-1"})
         assert first.status_code == 200
         assert client.patch(f"{BASE}/summary_flag", json={"rollout_pct": 0}).status_code == 200
+        # upsert: user-1's row is overwritten from treatment → control
         second = client.get(f"{BASE}/decide", params={"flag_key": "summary_flag", "user_id": "user-1"})
         assert second.status_code == 200
         third = client.get(f"{BASE}/decide", params={"flag_key": "summary_flag", "user_id": "user-2"})
@@ -199,10 +200,11 @@ class TestFeatureFlagExposure:
         summary = client.get(f"{BASE}/summary_flag/exposure-summary")
         assert summary.status_code == 200
         body = summary.json()
-        assert body["total_exposures"] == 3
+        # upsert keeps one row per (user, flag): 2 rows total, both control
+        assert body["total_exposures"] == 2
         assert body["unique_users"] == 2
         assert body["first_exposure_users"] == 2
-        assert body["variant_counts"] == {"treatment": 1, "control": 1}
+        assert body["variant_counts"] == {"control": 2}
 
     def test_first_only_exposures_returns_period_first_exposure_per_user(self):
         assert _create_flag("first_only_flag", rollout_pct=100, enabled=True).status_code == 201

@@ -109,7 +109,8 @@ CREATE TABLE IF NOT EXISTS feature_flag_exposure (
     variant      TEXT NOT NULL,
     reason       TEXT,
     evaluated_at TEXT NOT NULL,
-    context_json TEXT
+    context_json TEXT,
+    UNIQUE(user_id, flag_key)
 );
 
 CREATE TABLE IF NOT EXISTS event_log (

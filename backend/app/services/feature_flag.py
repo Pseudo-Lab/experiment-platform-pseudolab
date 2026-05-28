@@ -309,7 +309,12 @@ class FeatureFlagService:
         ok = await d1.execute(
             """INSERT INTO feature_flag_exposure
                (id, flag_key, user_id, variant, reason, evaluated_at, context_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(user_id, flag_key) DO UPDATE SET
+                   variant      = excluded.variant,
+                   reason       = excluded.reason,
+                   evaluated_at = excluded.evaluated_at,
+                   context_json = excluded.context_json""",
             [
                 str(uuid.uuid4()),
                 flag_key,
