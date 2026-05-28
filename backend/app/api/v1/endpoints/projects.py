@@ -23,3 +23,8 @@ async def get_project(project_id: str):
     if not p:
         raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
     return p
+
+
+@router.delete("/{project_id}", status_code=204)
+async def delete_project(project_id: str):
+    await project_service.delete(project_id)

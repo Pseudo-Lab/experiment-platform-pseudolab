@@ -51,6 +51,40 @@ class TestProjectsCRUD:
         assert res.status_code == 404
 
 
+class TestProjectsDelete:
+    def test_delete_unreferenced_project(self, mock_d1):
+        _seed_project("to-delete", "To Delete", "pk_live_todelete", mock_d1)
+        res = client.delete("/api/v1/projects/to-delete")
+        assert res.status_code == 204
+        assert client.get("/api/v1/projects/to-delete").status_code == 404
+
+    def test_delete_unknown_returns_404(self, mock_d1):
+        res = client.delete("/api/v1/projects/no-such")
+        assert res.status_code == 404
+
+    def test_delete_fails_409_when_experiment_references_it(self, mock_d1):
+        _seed_project("locked-exp", "Locked Exp", "pk_live_locked_exp", mock_d1)
+        mock_d1.execute(
+            "INSERT INTO experiments (id, name, created_at, updated_at, project_id)"
+            " VALUES ('exp-1', 'Exp 1', '2024-01-01', '2024-01-01', 'locked-exp')"
+        )
+        mock_d1.commit()
+        res = client.delete("/api/v1/projects/locked-exp")
+        assert res.status_code == 409
+        assert "experiments" in res.json()["detail"]
+
+    def test_delete_fails_409_when_flag_references_it(self, mock_d1):
+        _seed_project("locked-flag", "Locked Flag", "pk_live_locked_flag", mock_d1)
+        mock_d1.execute(
+            "INSERT INTO feature_flag (flag_key, created_at, updated_at, project_id)"
+            " VALUES ('my-flag', '2024-01-01', '2024-01-01', 'locked-flag')"
+        )
+        mock_d1.commit()
+        res = client.delete("/api/v1/projects/locked-flag")
+        assert res.status_code == 409
+        assert "feature flags" in res.json()["detail"]
+
+
 class TestDecideWithApiKey:
     def _setup(self, mock_d1):
         _seed_project("lvup", "LVUP", "pk_live_lvup_test", mock_d1)

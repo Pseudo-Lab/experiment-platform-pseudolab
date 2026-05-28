@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Copy, Check, Plus, FolderOpen } from 'lucide-react';
+import { Copy, Check, Plus, FolderOpen, Trash2 } from 'lucide-react';
 import { projectApi, type Project } from '../../../services/api';
 
 interface Props { lang: 'en' | 'ko'; }
@@ -28,6 +28,10 @@ const t = {
     loading: '불러오는 중...',
     empty: '등록된 프로젝트가 없습니다.',
     errorCreate: '생성에 실패했습니다.',
+    delete: '삭제',
+    deleting: '삭제 중...',
+    deleteConfirm: (name: string) => `"${name}" 프로젝트를 삭제하시겠습니까?\n연결된 실험이나 플래그가 있으면 삭제되지 않습니다.`,
+    errorDelete: '삭제에 실패했습니다.',
   },
   en: {
     title: 'Projects',
@@ -47,6 +51,10 @@ const t = {
     loading: 'Loading...',
     empty: 'No projects yet.',
     errorCreate: 'Failed to create project.',
+    delete: 'Delete',
+    deleting: 'Deleting...',
+    deleteConfirm: (name: string) => `Delete project "${name}"?\nProjects with linked experiments or flags cannot be deleted.`,
+    errorDelete: 'Failed to delete project.',
   },
 };
 
@@ -74,6 +82,8 @@ export function Projects({ lang }: Props) {
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     projectApi.list().then(setProjects).finally(() => setLoading(false));
@@ -98,6 +108,20 @@ export function Projects({ lang }: Props) {
       setCreateError(e instanceof Error ? e.message : tr.errorCreate);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDelete = async (p: Project) => {
+    if (!window.confirm(tr.deleteConfirm(p.name))) return;
+    setDeletingId(p.id);
+    setDeleteError(null);
+    try {
+      await projectApi.delete(p.id);
+      setProjects(prev => prev.filter(x => x.id !== p.id));
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : tr.errorDelete);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -147,6 +171,8 @@ export function Projects({ lang }: Props) {
         </Card>
       )}
 
+      {deleteError && <p className="text-xs text-rose-500">{deleteError}</p>}
+
       {loading ? (
         <p className="text-sm text-slate-400">{tr.loading}</p>
       ) : projects.length === 0 ? (
@@ -164,9 +190,21 @@ export function Projects({ lang }: Props) {
                     <CardTitle className="text-base">{p.name}</CardTitle>
                     <p className="text-xs text-slate-400 font-mono mt-0.5">{p.id}</p>
                   </div>
-                  <span className="text-xs text-slate-400">
-                    {new Date(p.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">
+                      {new Date(p.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-slate-400 hover:text-rose-600"
+                      disabled={deletingId === p.id}
+                      onClick={() => handleDelete(p)}
+                      aria-label={tr.delete}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

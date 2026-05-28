@@ -13,6 +13,7 @@ vi.mock('@/services/api', () => ({
   },
   projectApi: {
     list: vi.fn().mockResolvedValue([]),
+    delete: vi.fn(),
   },
 }));
 

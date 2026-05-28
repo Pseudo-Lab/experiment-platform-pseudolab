@@ -23,6 +23,31 @@ class ProjectService:
             return None
         return Project(**rows[0])
 
+    async def delete(self, project_id: str) -> None:
+        existing = await d1.query("SELECT 1 FROM projects WHERE id = ?", [project_id])
+        if not existing:
+            raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+
+        exp_refs = await d1.query(
+            "SELECT 1 FROM experiments WHERE project_id = ? LIMIT 1", [project_id]
+        )
+        if exp_refs:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot delete project '{project_id}': referenced by one or more experiments",
+            )
+
+        flag_refs = await d1.query(
+            "SELECT 1 FROM feature_flag WHERE project_id = ? LIMIT 1", [project_id]
+        )
+        if flag_refs:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot delete project '{project_id}': referenced by one or more feature flags",
+            )
+
+        await d1.execute("DELETE FROM projects WHERE id = ?", [project_id])
+
     async def create(self, data: ProjectCreate) -> ProjectWithKey:
         existing = await d1.query("SELECT 1 FROM projects WHERE id = ?", [data.id])
         if existing:

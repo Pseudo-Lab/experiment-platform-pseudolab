@@ -42,6 +42,21 @@ export const projectApi = {
     }
     return res.json();
   },
+  delete: async (id: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/projects/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      let detail = 'Failed to delete project';
+      try {
+        const b = await res.json();
+        if (Array.isArray(b?.detail)) {
+          detail = b.detail.map((e: { msg: string }) => e.msg).join('; ');
+        } else if (b?.detail) {
+          detail = b.detail;
+        }
+      } catch { /* */ }
+      throw new Error(detail);
+    }
+  },
 };
 
 // ────────────────────────────────────────────────────────────

@@ -12,7 +12,8 @@ interface Props { lang: 'en' | 'ko'; }
 const t = {
   ko: {
     title: 'Feature Flags',
-    colKey: 'Key', colDesc: '설명', colRollout: '롤아웃 %', colExposure: '노출', colStatus: '상태', colProduct: '제품', colActions: '',
+    colKey: 'Key', colDesc: '설명', colRollout: '롤아웃 %', colExposure: '노출', colStatus: '상태', colProject: '프로젝트', colActions: '',
+    allProjects: '모든 프로젝트',
     enabled: '활성', disabled: '비활성', archived: '보관됨',
     includeArchived: '보관된 플래그 포함',
     addFlag: '플래그 추가',
@@ -48,7 +49,8 @@ const t = {
   },
   en: {
     title: 'Feature Flags',
-    colKey: 'Key', colDesc: 'Description', colRollout: 'Rollout %', colExposure: 'Exposure', colStatus: 'Status', colProduct: 'Product', colActions: '',
+    colKey: 'Key', colDesc: 'Description', colRollout: 'Rollout %', colExposure: 'Exposure', colStatus: 'Status', colProject: 'Project', colActions: '',
+    allProjects: 'All Projects',
     enabled: 'Enabled', disabled: 'Disabled', archived: 'Archived',
     includeArchived: 'Include archived flags',
     addFlag: 'Add Flag',
@@ -95,6 +97,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [newRollout, setNewRollout] = useState(0);
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [filterProjectId, setFilterProjectId] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rolloutDrafts, setRolloutDrafts] = useState<Record<string, number>>({});
@@ -282,6 +285,10 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     );
   };
 
+  const filteredFlags = filterProjectId
+    ? flags.filter(f => (f.project_id || f.product) === filterProjectId)
+    : flags;
+
   if (loading) return <p className="text-slate-500 text-sm p-8">{tr.loading}</p>;
 
   return (
@@ -298,6 +305,19 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
             />
             {tr.includeArchived}
           </label>
+          {availableProjects.length > 0 && (
+            <Select value={filterProjectId || '__all__'} onValueChange={(v) => setFilterProjectId(v === '__all__' ? '' : v)}>
+              <SelectTrigger className="rounded-xl w-40" aria-label={tr.colProject}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">{tr.allProjects}</SelectItem>
+                {availableProjects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button
             variant="outline"
             className="gap-2 rounded-xl"
@@ -351,7 +371,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
       <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
         <CardContent className="p-0">
           {error && !showForm && <p className="text-xs text-rose-500 px-6 pt-4">{error}</p>}
-          {flags.length === 0 ? (
+          {filteredFlags.length === 0 ? (
             <p className="text-sm text-slate-400 p-6">{tr.empty}</p>
           ) : (
             <Table>
@@ -359,7 +379,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                 <TableRow>
                   <TableHead className="font-bold text-slate-500">{tr.colKey}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colDesc}</TableHead>
-                  <TableHead className="font-bold text-slate-500">{tr.colProduct}</TableHead>
+                  <TableHead className="font-bold text-slate-500">{tr.colProject}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colRollout}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colExposure}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colStatus}</TableHead>
@@ -367,7 +387,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {flags.map(flag => {
+                {filteredFlags.map(flag => {
                   const draftRollout = rolloutDrafts[flag.flag_key] ?? flag.rollout_pct;
                   const rolloutChanged = draftRollout !== flag.rollout_pct;
                   const isSavingRollout = savingRolloutKey === flag.flag_key;
