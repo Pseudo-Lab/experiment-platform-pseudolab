@@ -33,6 +33,7 @@ interface SidebarItemProps {
     label: string;
     active?: boolean;
     expanded?: boolean;
+    secondary?: boolean;
     onClick: () => void;
 }
 
@@ -41,18 +42,22 @@ const SidebarItem = ({
     label,
     active = false,
     expanded = true,
+    secondary = false,
     onClick
 }: SidebarItemProps) => (
     <button
         onClick={onClick}
         className={cn(
-            "flex items-center w-full gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 rounded-lg group relative",
+            "flex items-center w-full gap-3 px-3 rounded-lg group relative transition-all duration-200",
+            secondary ? "py-1.5 text-xs font-medium" : "py-2.5 text-sm font-medium",
             active
                 ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400 shadow-sm"
-                : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
+                : secondary
+                  ? "text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300"
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
         )}
     >
-        <Icon size={20} className="shrink-0" />
+        <Icon size={secondary ? 17 : 20} className="shrink-0" />
         <span className={cn(
             "flex-1 text-left whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out",
             expanded ? "opacity-100 max-w-[200px] ml-0" : "opacity-0 max-w-0 -ml-4"
@@ -61,6 +66,21 @@ const SidebarItem = ({
         </span>
         {active && expanded && <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
     </button>
+);
+
+const SectionDivider = ({ label, expanded }: { label: string; expanded: boolean }) => (
+    <div className={cn("flex items-center gap-2 px-2 pb-1", expanded ? "pt-5" : "pt-4")}>
+        {expanded ? (
+            <>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600 whitespace-nowrap shrink-0">
+                    {label}
+                </span>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+            </>
+        ) : (
+            <div className="w-full h-px bg-slate-200 dark:bg-slate-700" />
+        )}
+    </div>
 );
 
 interface MainLayoutProps {
@@ -94,8 +114,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", example: "Example App", settings: "Settings" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", example: "예제 앱", settings: "설정" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", example: "Example App", settings: "Settings", sectionOther: "Analytics & Other" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", example: "예제 앱", settings: "설정", sectionOther: "분석 / 기타" }
     };
 
     const t = translations[lang];
@@ -190,19 +210,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     </button>
                 </div>
 
-                <nav className="flex-1 px-3 py-6 space-y-2">
+                <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+                    {/* Primary */}
                     <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => handleNav('/dashboard')} />
-                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments'} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
-                    <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/github')} />
-                    <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/discord')} />
-                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} />
-                    <SidebarItem icon={ToggleLeft} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
-                    <SidebarItem icon={BarChart2} label={t.analytics} active={activePath === '/analytics'} expanded={isSidebarOpen} onClick={() => handleNav('/analytics')} />
                     <SidebarItem icon={FolderOpen} label={t.projects} active={activePath === '/projects'} expanded={isSidebarOpen} onClick={() => handleNav('/projects')} />
-                    <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} />
+                    <SidebarItem icon={ToggleLeft} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
+                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
+
+                    {/* Secondary */}
+                    <SectionDivider label={t.sectionOther} expanded={isSidebarOpen} />
+                    <SidebarItem icon={BarChart2} label={t.analytics} active={activePath === '/analytics'} expanded={isSidebarOpen} onClick={() => handleNav('/analytics')} secondary />
+                    <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/github')} secondary />
+                    <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/discord')} secondary />
+                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />
                 </nav>
 
-                <div className="p-3 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
+                    <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} secondary />
                     <SidebarItem icon={Settings} label={t.settings} expanded={isSidebarOpen} onClick={() => { }} />
                 </div>
             </aside>
