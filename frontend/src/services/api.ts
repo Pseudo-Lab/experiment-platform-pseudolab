@@ -285,7 +285,14 @@ export const experimentApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error('Failed to update experiment');
+    if (!response.ok) {
+      let detail = 'Failed to update experiment';
+      try {
+        const body = await response.json();
+        if (body?.detail) detail = body.detail;
+      } catch { /* ignore parse error */ }
+      throw new Error(detail);
+    }
     return response.json();
   },
 

@@ -370,6 +370,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [editEndAt, setEditEndAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   const [result, setResult] = useState<ExperimentResult | null>(null);
   const [resultLoading, setResultLoading] = useState(false);
@@ -494,12 +495,13 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     if (!experiment) return;
     const label = statusConfig[to][lang];
     if (!window.confirm(t.statusChangeConfirm(label))) return;
+    setStatusError(null);
     setTransitioning(true);
     try {
       const updated = await experimentApi.update(experiment.id, { status: to });
       setExperiment(updated);
-    } catch {
-      // silent — status badge reflects current state
+    } catch (e) {
+      setStatusError(e instanceof Error ? e.message : String(e));
     } finally {
       setTransitioning(false);
     }
@@ -802,6 +804,9 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                   </Button>
                 ))}
               </div>
+              {statusError && (
+                <p className="text-xs text-rose-500 mt-1">{statusError}</p>
+              )}
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelExperimentType}</p>

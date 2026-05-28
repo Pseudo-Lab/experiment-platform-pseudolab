@@ -333,14 +333,18 @@ class ExperimentService:
         )
 
     def _validate_running_preconditions(self, current: Experiment, patch: dict) -> None:
-        """draft/paused → running 전환 시 사전 조건 검증.
+        """draft → running 전환 시 사전 조건 검증.
         - primary_metric: 모든 type 필수 (없으면 결과 계산 불가)
         - flag_key: ab_test 필수 (quasi_experiment/rollout은 placement 기반이므로 예외)
+        paused → running(재개)은 이미 draft → running 시 검증을 통과한 상태이므로 재검증 생략.
         """
         next_status = patch["status"]
         if hasattr(next_status, "value"):
             next_status = next_status.value
         if next_status != ExperimentStatus.RUNNING.value:
+            return
+        # 재개(paused → running)는 최초 진입 시 이미 검증 완료
+        if current.status == ExperimentStatus.PAUSED:
             return
 
         next_primary_metric = patch.get("primary_metric", current.primary_metric)

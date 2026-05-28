@@ -332,11 +332,11 @@ class FeatureFlagService:
     async def _record_experiment_assignments(
         self, flag_key: str, user_id: str, decision: FeatureFlagDecision
     ) -> None:
-        # flag_key로 연결된 running 실험에 variant_name으로 sticky assignment 기록.
+        # flag_key로 연결된 running/paused 실험에 variant_name으로 sticky assignment 기록.
+        # paused 상태도 포함: 재개 시 사용자들이 기록 없이 결과에서 누락되는 문제 방지.
         # PK가 (experiment_id, user_id)이라 INSERT OR IGNORE로 반복 호출 안전(sticky).
-        # variant_id FK 폐기 후 단순화: variant_name 문자열을 직접 저장.
         rows = await d1.query(
-            "SELECT id AS experiment_id FROM experiments WHERE flag_key = ? AND status = 'running'",
+            "SELECT id AS experiment_id FROM experiments WHERE flag_key = ? AND status IN ('running', 'paused')",
             [flag_key],
         )
         if not rows:
