@@ -3,6 +3,41 @@ const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api/v1';
 export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed' | 'archived';
 
 // ────────────────────────────────────────────────────────────
+// Projects
+// ────────────────────────────────────────────────────────────
+export interface Project {
+  id: string;
+  name: string;
+  api_key: string;
+  created_at: string;
+}
+export interface ProjectCreate {
+  id: string;
+  name: string;
+}
+
+export const projectApi = {
+  list: async (): Promise<Project[]> => {
+    const res = await fetch(`${API_BASE_URL}/projects/`);
+    if (!res.ok) throw new Error('Failed to fetch projects');
+    return res.json();
+  },
+  create: async (data: ProjectCreate): Promise<Project> => {
+    const res = await fetch(`${API_BASE_URL}/projects/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      let detail = 'Failed to create project';
+      try { const b = await res.json(); if (b?.detail) detail = b.detail; } catch { /* */ }
+      throw new Error(detail);
+    }
+    return res.json();
+  },
+};
+
+// ────────────────────────────────────────────────────────────
 // Experiment Result (Bayesian)
 // ────────────────────────────────────────────────────────────
 export interface VariantResult {
@@ -52,6 +87,7 @@ export interface FeatureFlag {
   rollout_pct: number;
   enabled: boolean;
   product?: string | null;
+  project_id?: string | null;
   archived_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -62,12 +98,14 @@ export interface FeatureFlagCreate {
   rollout_pct?: number;
   enabled?: boolean;
   product?: string;
+  project_id?: string;
 }
 export interface FeatureFlagUpdate {
   description?: string;
   rollout_pct?: number;
   enabled?: boolean;
   product?: string;
+  project_id?: string;
 }
 
 export interface FeatureFlagExposureSummary {
@@ -170,6 +208,7 @@ export interface Experiment {
   cohort_id?: string;
   flag_key?: string | null;
   product?: string | null;
+  project_id?: string | null;
   status: ExperimentStatus;
   owner_id?: string;
   start_at?: string;
@@ -193,6 +232,7 @@ export interface ExperimentCreate {
   flag_key?: string;
   owner_id?: string;
   product?: string;
+  project_id?: string;
   start_at?: string;
   end_at?: string;
   variants: { name: string; traffic_ratio: number; description?: string }[];
@@ -208,6 +248,7 @@ export interface ExperimentUpdate {
   cohort_id?: string;
   flag_key?: string;
   product?: string;
+  project_id?: string;
   start_at?: string;
   end_at?: string;
   status?: ExperimentStatus;

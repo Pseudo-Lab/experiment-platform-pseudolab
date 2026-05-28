@@ -5,7 +5,7 @@ import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { X, Plus, Trash2 } from 'lucide-react';
-import { experimentApi, experimentPlacementApi, featureFlagApi, type FeatureFlag } from '../../../services/api';
+import { experimentApi, experimentPlacementApi, featureFlagApi, projectApi, type FeatureFlag, type Project } from '../../../services/api';
 
 interface VariantInput {
   name: string;
@@ -217,7 +217,8 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     { name: 'control', traffic_ratio: '0.5' },
     { name: 'treatment', traffic_ratio: '0.5' },
   ]);
-  const [product, setProduct] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [flagKey, setFlagKey] = useState<string>('');
   const [availableFlags, setAvailableFlags] = useState<FeatureFlag[]>([]);
   const [configurePlacement, setConfigurePlacement] = useState(false);
@@ -239,6 +240,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
   useEffect(() => {
     featureFlagApi.list(false).then(setAvailableFlags).catch(() => setAvailableFlags([]));
+    projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
   }, []);
 
   // Flag 선택 시 그 Flag의 enabled rule variants로 variants 자동 채움.
@@ -296,7 +298,8 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
         experiment_type: experimentType,
         cohort_id: cohortId.trim() || undefined,
         flag_key: flagKey || undefined,
-        product: product.trim() || undefined,
+        project_id: projectId || undefined,
+        product: projectId || undefined,
         start_at: toApiDatetime(startAt),
         end_at: toApiDatetime(endAt),
         variants: variants.map((v) => ({
@@ -386,17 +389,17 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProduct}</label>
-            <Input
-              value={product}
-              onChange={(e) => setProduct(e.target.value)}
-              placeholder={t.placeholderProduct}
-              className="rounded-xl"
-              aria-label={t.labelProduct}
-              list="product-options"
-            />
-            <datalist id="product-options">
-              {PRODUCT_OPTIONS.map((p) => <option key={p} value={p} />)}
-            </datalist>
+            <Select value={projectId} onValueChange={setProjectId}>
+              <SelectTrigger className="rounded-xl" aria-label={t.labelProduct}>
+                <SelectValue placeholder={t.placeholderProduct} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
+                {availableProjects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name} ({p.id})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-xs text-slate-500 dark:text-slate-400">{t.productHelp}</p>
           </div>
 

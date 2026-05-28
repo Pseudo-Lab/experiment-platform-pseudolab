@@ -2,12 +2,15 @@ import { getUserId } from './userId'
 import { devLog } from './devLog'
 import { API_BASE_URL } from './apiBase'
 
-export async function decideFlag(flagKey: string): Promise<string> {
+export async function decideFlag(flagKey: string, apiKey?: string): Promise<string> {
   const uid = getUserId()
   const logId = devLog.add('decide', flagKey, { user_id: uid })
   try {
+    const headers: Record<string, string> = {}
+    if (apiKey) headers['x-api-key'] = apiKey
     const res = await fetch(
       `${API_BASE_URL}/feature-flags/decide?flag_key=${encodeURIComponent(flagKey)}&user_id=${encodeURIComponent(uid)}`,
+      { headers },
     )
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = await res.json()
@@ -24,12 +27,15 @@ export async function decideFlag(flagKey: string): Promise<string> {
 export async function track(
   eventName: string,
   properties?: Record<string, unknown>,
+  apiKey?: string,
 ): Promise<void> {
   const logId = devLog.add('track', eventName, properties)
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (apiKey) headers['x-api-key'] = apiKey
     const res = await fetch(`${API_BASE_URL}/capture`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         user_id: getUserId(),
         event_name: eventName,

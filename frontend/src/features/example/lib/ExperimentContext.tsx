@@ -7,15 +7,18 @@ type Variants = Record<string, string>
 export interface ExperimentContextValue {
   variants: Variants
   isLoading: boolean
+  apiKey?: string
 }
 
 export const ExperimentContext = createContext<ExperimentContextValue>({ variants: {}, isLoading: true })
 
 export function ExperimentProvider({
   flagKeys,
+  apiKey,
   children,
 }: {
   flagKeys: readonly string[]
+  apiKey?: string
   children: ReactNode
 }) {
   const [variants, setVariants] = useState<Variants>(() => {
@@ -40,7 +43,7 @@ export function ExperimentProvider({
 
     const tasks = missing.map(async (key) => {
       try {
-        const variant = await decideFlag(key)
+        const variant = await decideFlag(key, apiKey)
         sessionStorage.setItem(`flag:${key}:${uid}`, variant)
         return { key, variant }
       } catch {
@@ -58,7 +61,7 @@ export function ExperimentProvider({
   }, []) // flagKeys is stable at mount; effect runs once
 
   return (
-    <ExperimentContext.Provider value={{ variants, isLoading }}>
+    <ExperimentContext.Provider value={{ variants, isLoading, apiKey }}>
       {children}
     </ExperimentContext.Provider>
   )

@@ -4,11 +4,10 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Archive, RotateCcw, ToggleLeft, ToggleRight, Plus, RefreshCcw, X } from 'lucide-react';
-import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate, type FeatureFlagExposureSummary } from '../../../services/api';
+import { featureFlagApi, projectApi, type FeatureFlag, type FeatureFlagCreate, type FeatureFlagExposureSummary, type Project } from '../../../services/api';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 
 interface Props { lang: 'en' | 'ko'; }
-
-const PRODUCT_OPTIONS = ['lvup', 'demo-app', 'pseudo-lab'];
 
 const t = {
   ko: {
@@ -92,7 +91,8 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const [showForm, setShowForm] = useState(false);
   const [newKey, setNewKey] = useState('');
   const [newDesc, setNewDesc] = useState('');
-  const [newProduct, setNewProduct] = useState('');
+  const [newProjectId, setNewProjectId] = useState('');
+  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [newRollout, setNewRollout] = useState(0);
   const [includeArchived, setIncludeArchived] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -119,6 +119,10 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   };
 
   useEffect(() => {
+    projectApi.list().then(setAvailableProjects).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     setLoading(true);
     featureFlagApi.list(includeArchived)
       .then(items => {
@@ -140,7 +144,14 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     setCreating(true);
     setError(null);
     try {
-      const data: FeatureFlagCreate = { flag_key: newKey.trim(), description: newDesc.trim() || undefined, rollout_pct: newRollout, enabled: false, product: newProduct.trim() || undefined };
+      const data: FeatureFlagCreate = {
+        flag_key: newKey.trim(),
+        description: newDesc.trim() || undefined,
+        rollout_pct: newRollout,
+        enabled: false,
+        project_id: newProjectId || undefined,
+        product: newProjectId || undefined,
+      };
       const created = await featureFlagApi.create(data);
       setFlags(prev => [created, ...prev]);
       setRolloutDrafts(prev => ({ ...prev, [created.flag_key]: created.rollout_pct }));
@@ -156,7 +167,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
           variant_counts: {},
         },
       }));
-      setNewKey(''); setNewDesc(''); setNewProduct(''); setNewRollout(0); setShowForm(false);
+      setNewKey(''); setNewDesc(''); setNewProjectId(''); setNewRollout(0); setShowForm(false);
     } catch {
       setError(tr.errorCreate);
     } finally {
@@ -306,19 +317,20 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
       {showForm && (
         <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
           <CardContent className="pt-5 space-y-3">
-            <div className="flex gap-2">
-              <Input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder={tr.keyPlaceholder} className="rounded-xl font-mono" />
-              <Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder={tr.descPlaceholder} className="rounded-xl" />
-              <Input
-                value={newProduct}
-                onChange={e => setNewProduct(e.target.value)}
-                placeholder={tr.productPlaceholder}
-                className="rounded-xl w-36"
-                list="flag-product-options"
-              />
-              <datalist id="flag-product-options">
-                {PRODUCT_OPTIONS.map((p) => <option key={p} value={p} />)}
-              </datalist>
+            <div className="flex gap-2 flex-wrap">
+              <Input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder={tr.keyPlaceholder} className="rounded-xl font-mono flex-1 min-w-32" />
+              <Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder={tr.descPlaceholder} className="rounded-xl flex-1 min-w-32" />
+              <Select value={newProjectId} onValueChange={setNewProjectId}>
+                <SelectTrigger className="rounded-xl w-40">
+                  <SelectValue placeholder={tr.productPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
+                  {availableProjects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-3">
               <label className="text-sm text-slate-500 shrink-0">{tr.rolloutLabel}</label>
@@ -366,9 +378,9 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                     <TableCell className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-200">{flag.flag_key}</TableCell>
                     <TableCell className="text-sm text-slate-500">{flag.description || '-'}</TableCell>
                     <TableCell>
-                      {flag.product && (
+                      {(flag.project_id || flag.product) && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
-                          {flag.product}
+                          {flag.project_id || flag.product}
                         </span>
                       )}
                     </TableCell>

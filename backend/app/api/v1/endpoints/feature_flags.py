@@ -1,6 +1,6 @@
 from datetime import datetime
-from fastapi import APIRouter, Path, Query
-from typing import List
+from fastapi import APIRouter, Depends, Path, Query
+from typing import List, Optional
 from app.schemas.feature_flag import (
     FLAG_KEY_PATTERN,
     FeatureFlag,
@@ -14,7 +14,9 @@ from app.schemas.feature_flag_rule import (
     FeatureFlagRuleCreate,
     FeatureFlagRuleUpdate,
 )
+from app.schemas.project import Project
 from app.services.feature_flag import feature_flag_service
+from app.api.deps import get_project_from_api_key
 
 router = APIRouter()
 
@@ -24,8 +26,10 @@ async def decide(
     flag_key: str = Query(..., pattern=FLAG_KEY_PATTERN),
     user_id: str = Query(..., min_length=1),
     track: bool = Query(default=True),
+    project: Optional[Project] = Depends(get_project_from_api_key),
 ):
-    variant = await feature_flag_service.decide(flag_key, user_id, track=track)
+    project_id = project.id if project else None
+    variant = await feature_flag_service.decide(flag_key, user_id, track=track, project_id=project_id)
     return {"success": True, "data": {"variant": variant}}
 
 

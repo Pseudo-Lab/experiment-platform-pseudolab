@@ -7,6 +7,13 @@ import pytest
 
 # 마이그레이션 001~003을 합친 스키마 (ALTER TABLE → 컬럼을 처음부터 포함)
 _SCHEMA = """
+CREATE TABLE IF NOT EXISTS projects (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    api_key    TEXT NOT NULL UNIQUE,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS experiments (
     id          TEXT PRIMARY KEY,
     name        TEXT NOT NULL,
@@ -19,6 +26,7 @@ CREATE TABLE IF NOT EXISTS experiments (
     flag_key    TEXT,
     variant_names_json TEXT,
     product     TEXT,
+    project_id  TEXT REFERENCES projects(id),
     status      TEXT NOT NULL DEFAULT 'draft',
     owner_id    TEXT,
     start_at    TEXT,
@@ -64,6 +72,7 @@ CREATE TABLE IF NOT EXISTS feature_flag (
     enabled     INTEGER NOT NULL DEFAULT 0,
     archived_at TEXT,
     product     TEXT,
+    project_id  TEXT REFERENCES projects(id),
     created_at  TEXT    NOT NULL,
     updated_at  TEXT    NOT NULL
 );
@@ -110,6 +119,7 @@ CREATE TABLE IF NOT EXISTS feature_flag_exposure (
     reason       TEXT,
     evaluated_at TEXT NOT NULL,
     context_json TEXT,
+    project_id   TEXT REFERENCES projects(id),
     UNIQUE(user_id, flag_key)
 );
 
@@ -120,7 +130,8 @@ CREATE TABLE IF NOT EXISTS event_log (
     event_name TEXT   NOT NULL,
     properties TEXT,
     event_time TEXT   NOT NULL,
-    created_at TEXT   NOT NULL
+    created_at TEXT   NOT NULL,
+    project_id TEXT   REFERENCES projects(id)
 );
 
 CREATE TABLE IF NOT EXISTS person (

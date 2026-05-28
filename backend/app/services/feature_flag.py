@@ -57,9 +57,9 @@ class FeatureFlagService:
             raise HTTPException(status_code=409, detail=f"flag_key '{data.flag_key}' already exists")
         now = _now()
         ok = await d1.execute(
-            """INSERT INTO feature_flag (flag_key, description, rollout_pct, enabled, product, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            [data.flag_key, data.description, data.rollout_pct, int(data.enabled), data.product, now, now],
+            """INSERT INTO feature_flag (flag_key, description, rollout_pct, enabled, product, project_id, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            [data.flag_key, data.description, data.rollout_pct, int(data.enabled), data.product, data.project_id, now, now],
         )
         if not ok:
             raise HTTPException(status_code=502, detail="Failed to create feature flag")
@@ -196,10 +196,10 @@ class FeatureFlagService:
             raise HTTPException(status_code=502, detail="Feature flag rule update did not persist")
         return updated
 
-    async def decide(self, flag_key: str, user_id: str, track: bool = True) -> str:
+    async def decide(self, flag_key: str, user_id: str, track: bool = True, project_id: str | None = None) -> str:
         decision = await self._decide(flag_key, user_id)
         if track and decision.reason != "unknown_flag":
-            await self._record_exposure(flag_key, user_id, decision)
+            await self._record_exposure(flag_key, user_id, decision, project_id=project_id)
             await self._record_experiment_assignments(flag_key, user_id, decision)
         return decision.variant
 
@@ -304,17 +304,20 @@ class FeatureFlagService:
             {"rollout_pct": rollout_pct},
         )
 
-    async def _record_exposure(self, flag_key: str, user_id: str, decision: FeatureFlagDecision) -> None:
+    async def _record_exposure(
+        self, flag_key: str, user_id: str, decision: FeatureFlagDecision, project_id: str | None = None
+    ) -> None:
         now = _now()
         ok = await d1.execute(
             """INSERT INTO feature_flag_exposure
-               (id, flag_key, user_id, variant, reason, evaluated_at, context_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?)
+               (id, flag_key, user_id, variant, reason, evaluated_at, context_json, project_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(user_id, flag_key) DO UPDATE SET
                    variant      = excluded.variant,
                    reason       = excluded.reason,
                    evaluated_at = excluded.evaluated_at,
-                   context_json = excluded.context_json""",
+                   context_json = excluded.context_json,
+                   project_id   = COALESCE(excluded.project_id, project_id)""",
             [
                 str(uuid.uuid4()),
                 flag_key,
@@ -323,6 +326,7 @@ class FeatureFlagService:
                 decision.reason,
                 now,
                 json.dumps(decision.context, ensure_ascii=False) if decision.context else None,
+                project_id,
             ],
         )
         if not ok:
@@ -432,6 +436,7 @@ class FeatureFlagService:
             rollout_pct=int(row["rollout_pct"]),
             enabled=int(row["enabled"]) == 1,
             product=row.get("product"),
+            project_id=row.get("project_id"),
             archived_at=row.get("archived_at"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
