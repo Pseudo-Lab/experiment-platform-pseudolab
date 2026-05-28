@@ -362,7 +362,6 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                 <TableRow>
                   <TableHead className="font-bold text-slate-500">{tr.colKey}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colDesc}</TableHead>
-                  <TableHead className="font-bold text-slate-500">{tr.colProject}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colRollout}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colExposure}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colStatus}</TableHead>
@@ -383,13 +382,6 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                   <TableRow key={flag.flag_key} className={isArchived ? 'bg-slate-50/70 opacity-75 dark:bg-slate-900/40' : undefined}>
                     <TableCell className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-200">{flag.flag_key}</TableCell>
                     <TableCell className="text-sm text-slate-500">{flag.description || '-'}</TableCell>
-                    <TableCell>
-                      {(flag.project_id || flag.product) && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
-                          {flag.project_id || flag.product}
-                        </span>
-                      )}
-                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <input type="range" min={0} max={100} value={draftRollout}

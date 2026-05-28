@@ -191,7 +191,6 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                   <TableHead className="font-bold text-slate-500">{t.colStatus}</TableHead>
                   <TableHead className="font-bold text-slate-500">{t.colVariants}</TableHead>
                   <TableHead className="font-bold text-slate-500">{t.colCreatedAt}</TableHead>
-                  <TableHead className="w-12 font-bold text-slate-500">Product</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -220,13 +219,6 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                     </TableCell>
                     <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
                       {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
-                    </TableCell>
-                    <TableCell>
-                      {(exp.project_id || exp.product) && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
-                          {exp.project_id || exp.product}
-                        </span>
-                      )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
@@ -276,16 +268,9 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-400">{t.colVariants}: {exp.variants.length}</span>
-                  <div className="flex items-center gap-2">
-                    {(exp.project_id || exp.product) && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
-                        {exp.project_id || exp.product}
-                      </span>
-                    )}
-                    <span className="text-xs text-slate-400">
-                      {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
-                    </span>
-                  </div>
+                  <span className="text-xs text-slate-400">
+                    {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                  </span>
                 </div>
               </div>
             ))}
