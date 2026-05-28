@@ -8,10 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus } from 'lucide-react';
 import {
-  experimentApi, experimentResultApi, decisionApi, experimentPlacementApi,
+  experimentApi, experimentResultApi, decisionApi, experimentPlacementApi, projectApi,
   type Experiment, type ExperimentStatus,
   type ExperimentResult, type Decision, type LearningNote, type DecisionType,
-  type ExperimentPlacementConfig,
+  type ExperimentPlacementConfig, type Project,
 } from '../../../services/api';
 
 interface ExperimentDetailProps {
@@ -29,6 +29,8 @@ const translations = {
     labelPrimaryMetric: 'Primary metric',
     labelCompletionEvent: 'Completion event',
     labelExperimentType: 'Experiment type',
+    labelProject: 'Project',
+    projectNone: '(none)',
     labelCohortId: 'Cohort ID',
     labelFlagKey: 'Linked feature flag',
     labelStartAt: 'Exposure starts',
@@ -141,6 +143,8 @@ const translations = {
     labelCompletionEvent: '완료 이벤트',
     labelFlagKey: '연결된 Feature Flag',
     labelExperimentType: '실험 유형',
+    labelProject: '프로젝트',
+    projectNone: '(없음)',
     labelCohortId: '코호트 ID',
     labelStartAt: '노출 시작',
     labelEndAt: '노출 종료',
@@ -365,6 +369,8 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [editPrimaryMetric, setEditPrimaryMetric] = useState('');
   const [editCompletionEvent, setEditCompletionEvent] = useState('');
   const [editExperimentType, setEditExperimentType] = useState<ExperimentType>('ab_test');
+  const [editProjectId, setEditProjectId] = useState('');
+  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [editCohortId, setEditCohortId] = useState('');
   const [editStartAt, setEditStartAt] = useState('');
   const [editEndAt, setEditEndAt] = useState('');
@@ -416,6 +422,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       .finally(() => setPlacementsLoading(false));
     decisionApi.list(id).then(setDecisions).catch(() => {});
     decisionApi.listNotes(id).then(setNotes).catch(() => {});
+    projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
   }, [id]);
 
   const loadResult = () => {
@@ -461,6 +468,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     setEditPrimaryMetric(experiment.primary_metric || '');
     setEditCompletionEvent(experiment.completion_event || '');
     setEditExperimentType((experiment.experiment_type || 'ab_test') as ExperimentType);
+    setEditProjectId(experiment.project_id || '');
     setEditCohortId(experiment.cohort_id || '');
     setEditStartAt(toLocalDateTimeInput(experiment.start_at));
     setEditEndAt(toLocalDateTimeInput(experiment.end_at));
@@ -478,6 +486,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         primary_metric: editPrimaryMetric.trim() || undefined,
         completion_event: editCompletionEvent.trim() || undefined,
         experiment_type: editExperimentType,
+        project_id: editProjectId || undefined,
         cohort_id: editCohortId.trim() || undefined,
         start_at: toApiDatetime(editStartAt),
         end_at: toApiDatetime(editEndAt),
@@ -670,6 +679,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const experimentTypeLabel = experimentTypeOptions.find(
     (option) => option.value === (experiment.experiment_type || 'ab_test'),
   )?.[lang] ?? experiment.experiment_type ?? t.none;
+  const matchedProject = availableProjects.find((p) => p.id === experiment.project_id);
+  const projectLabel = matchedProject
+    ? `${matchedProject.name} (${matchedProject.id})`
+    : experiment.project_id || t.none;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -716,6 +729,21 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProject}</label>
+                <Select value={editProjectId || '__none__'} onValueChange={(value) => setEditProjectId(value === '__none__' ? '' : value)}>
+                  <SelectTrigger className="rounded-xl" aria-label={t.labelProject}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t.projectNone}</SelectItem>
+                    {availableProjects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name} ({p.id})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
@@ -811,6 +839,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelExperimentType}</p>
               <p className="text-sm text-slate-700 dark:text-slate-300">{experimentTypeLabel}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelProject}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300">{projectLabel}</p>
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelPrimaryMetric}</p>
