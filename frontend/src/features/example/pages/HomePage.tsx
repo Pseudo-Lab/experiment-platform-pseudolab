@@ -1,5 +1,5 @@
-import { useFlag } from '../hooks/useFlag'
-import { track } from '../lib/sdk'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
+import { useTrack } from '../hooks/useTrack'
 import { mockStudies, type Study } from '../data/mockStudies'
 import { StudyGrid } from '../components/StudyGrid'
 import { StudyList } from '../components/StudyList'
@@ -19,8 +19,10 @@ function Skeleton() {
 }
 
 export function HomePage({ lang }: { lang: Lang }) {
-  const variant = useFlag('home_layout_v1')
-  if (!variant) return <Skeleton />
+  const { variant, isLoading } = useFeatureFlag('home_layout_v1')
+  const track = useTrack()
+
+  if (isLoading) return <Skeleton />
 
   const onCardClick = (study: Study) => {
     track('study_card_clicked', {

@@ -1,5 +1,5 @@
-import { useFlag } from '../hooks/useFlag'
-import { track } from '../lib/sdk'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
+import { useTrack } from '../hooks/useTrack'
 import { mockStudies } from '../data/mockStudies'
 import { mockSponsors, type Sponsor } from '../data/mockSponsors'
 import { StudyCard } from '../components/StudyCard'
@@ -20,8 +20,10 @@ function Skeleton() {
 }
 
 export function StudyListPage({ lang }: { lang: Lang }) {
-  const variant = useFlag('sponsor_slot_v1')
-  if (!variant) return <Skeleton />
+  const { variant, isLoading } = useFeatureFlag('sponsor_slot_v1')
+  const track = useTrack()
+
+  if (isLoading) return <Skeleton />
 
   const onSponsorClick = (sponsor: Sponsor) => {
     track('sponsor_clicked', {
