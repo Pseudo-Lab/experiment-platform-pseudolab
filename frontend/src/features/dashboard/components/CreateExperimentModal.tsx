@@ -389,12 +389,15 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProduct}</label>
-            <Select value={projectId} onValueChange={setProjectId}>
+            <Select
+              value={projectId || '__none__'}
+              onValueChange={(v) => setProjectId(v === '__none__' ? '' : v)}
+            >
               <SelectTrigger className="rounded-xl" aria-label={t.labelProduct}>
                 <SelectValue placeholder={t.placeholderProduct} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
+                <SelectItem value="__none__">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
                 {availableProjects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name} ({p.id})</SelectItem>
                 ))}

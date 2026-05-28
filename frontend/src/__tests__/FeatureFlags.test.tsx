@@ -11,6 +11,9 @@ vi.mock('@/services/api', () => ({
     restore: vi.fn(),
     exposureSummary: vi.fn(),
   },
+  projectApi: {
+    list: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 describe('FeatureFlags', () => {

@@ -320,12 +320,15 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
             <div className="flex gap-2 flex-wrap">
               <Input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder={tr.keyPlaceholder} className="rounded-xl font-mono flex-1 min-w-32" />
               <Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder={tr.descPlaceholder} className="rounded-xl flex-1 min-w-32" />
-              <Select value={newProjectId} onValueChange={setNewProjectId}>
+              <Select
+                value={newProjectId || '__none__'}
+                onValueChange={(v) => setNewProjectId(v === '__none__' ? '' : v)}
+              >
                 <SelectTrigger className="rounded-xl w-40">
                   <SelectValue placeholder={tr.productPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
+                  <SelectItem value="__none__">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
                   {availableProjects.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}

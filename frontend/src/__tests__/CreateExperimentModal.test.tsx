@@ -12,6 +12,9 @@ vi.mock('@/services/api', () => ({
   featureFlagApi: {
     list: vi.fn().mockResolvedValue([]),
   },
+  projectApi: {
+    list: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 describe('CreateExperimentModal', () => {
