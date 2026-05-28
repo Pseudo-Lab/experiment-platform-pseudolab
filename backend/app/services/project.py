@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import HTTPException
 from app.schemas.project import Project, ProjectCreate, ProjectWithKey
@@ -22,6 +23,23 @@ class ProjectService:
         if not rows:
             return None
         return Project(**rows[0])
+
+    async def sdk_status(self, project_id: str) -> dict:
+        existing = await d1.query("SELECT 1 FROM projects WHERE id = ?", [project_id])
+        if not existing:
+            raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        events = await d1.query(
+            "SELECT 1 FROM event_log WHERE project_id = ? AND created_at >= ? LIMIT 1",
+            [project_id, cutoff],
+        )
+        exposures = await d1.query(
+            "SELECT 1 FROM feature_flag_exposure WHERE project_id = ? AND evaluated_at >= ? LIMIT 1",
+            [project_id, cutoff],
+        )
+        connected = bool(events or exposures)
+        return {"project_id": project_id, "status": "connected" if connected else "not_connected"}
 
     async def delete(self, project_id: str) -> None:
         existing = await d1.query("SELECT 1 FROM projects WHERE id = ?", [project_id])

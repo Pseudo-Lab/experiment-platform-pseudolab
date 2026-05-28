@@ -23,6 +23,8 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { useProject } from '../contexts/ProjectContext';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -105,6 +107,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
     const location = useLocation();
     const navigate = useNavigate();
+    const { projects, currentProjectId, setCurrentProjectId } = useProject();
 
     const activePath = location.pathname;
 
@@ -114,8 +117,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", example: "Example App", settings: "Settings", sectionOther: "Analytics & Other" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", example: "예제 앱", settings: "설정", sectionOther: "분석 / 기타" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", example: "Example App", settings: "Settings", sectionOther: "Analytics & Other", allProjects: "All Projects", selectProject: "Select a project" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", example: "예제 앱", settings: "설정", sectionOther: "분석 / 기타", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요" }
     };
 
     const t = translations[lang];
@@ -210,6 +213,37 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     </button>
                 </div>
 
+                {isSidebarOpen && (
+                    <div className="px-3 pt-4">
+                        {projects.length === 0 ? (
+                            <button
+                                onClick={() => handleNav('/projects')}
+                                className="w-full rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-3 py-2.5 text-left text-sm font-medium text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                            >
+                                {t.selectProject}
+                            </button>
+                        ) : (
+                            <Select
+                                value={currentProjectId ?? '__all__'}
+                                onValueChange={(v) => setCurrentProjectId(v === '__all__' ? null : v)}
+                            >
+                                <SelectTrigger className="w-full rounded-xl border-slate-200 dark:border-slate-700" aria-label={t.projects}>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <FolderOpen size={15} className="shrink-0 text-indigo-500" />
+                                        <SelectValue />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__all__">{t.allProjects}</SelectItem>
+                                    {projects.map((p) => (
+                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    </div>
+                )}
+
                 <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
                     {/* Primary */}
                     <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => handleNav('/dashboard')} />
@@ -226,7 +260,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 </nav>
 
                 <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
-                    <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} secondary />
+                    {currentProjectId === 'demo-app' && (
+                        <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} secondary />
+                    )}
                     <SidebarItem icon={Settings} label={t.settings} expanded={isSidebarOpen} onClick={() => { }} />
                 </div>
             </aside>

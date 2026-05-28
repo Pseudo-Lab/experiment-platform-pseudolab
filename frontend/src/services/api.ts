@@ -15,6 +15,10 @@ export interface ProjectCreate {
   id: string;
   name: string;
 }
+export interface ProjectSdkStatus {
+  project_id: string;
+  status: 'connected' | 'not_connected';
+}
 
 export const projectApi = {
   list: async (): Promise<Project[]> => {
@@ -56,6 +60,11 @@ export const projectApi = {
       } catch { /* */ }
       throw new Error(detail);
     }
+  },
+  sdkStatus: async (id: string): Promise<ProjectSdkStatus> => {
+    const res = await fetch(`${API_BASE_URL}/projects/${id}/sdk-status`);
+    if (!res.ok) throw new Error('Failed to fetch SDK status');
+    return res.json();
   },
 };
 

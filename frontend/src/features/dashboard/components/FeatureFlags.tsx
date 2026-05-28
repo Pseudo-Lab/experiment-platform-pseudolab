@@ -4,8 +4,9 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Archive, RotateCcw, ToggleLeft, ToggleRight, Plus, RefreshCcw, X } from 'lucide-react';
-import { featureFlagApi, projectApi, type FeatureFlag, type FeatureFlagCreate, type FeatureFlagExposureSummary, type Project } from '../../../services/api';
+import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate, type FeatureFlagExposureSummary } from '../../../services/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { useProject } from '../../../contexts/ProjectContext';
 
 interface Props { lang: 'en' | 'ko'; }
 
@@ -88,16 +89,15 @@ const t = {
 
 export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const tr = t[lang];
+  const { currentProjectId, projects: availableProjects } = useProject();
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [newKey, setNewKey] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newProjectId, setNewProjectId] = useState('');
-  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [newRollout, setNewRollout] = useState(0);
   const [includeArchived, setIncludeArchived] = useState(false);
-  const [filterProjectId, setFilterProjectId] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rolloutDrafts, setRolloutDrafts] = useState<Record<string, number>>({});
@@ -120,10 +120,6 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
       setExposureLoading(false);
     }
   };
-
-  useEffect(() => {
-    projectApi.list().then(setAvailableProjects).catch(() => {});
-  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -285,8 +281,8 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     );
   };
 
-  const filteredFlags = filterProjectId
-    ? flags.filter(f => (f.project_id || f.product) === filterProjectId)
+  const filteredFlags = currentProjectId
+    ? flags.filter(f => (f.project_id || f.product) === currentProjectId)
     : flags;
 
   if (loading) return <p className="text-slate-500 text-sm p-8">{tr.loading}</p>;
@@ -305,19 +301,6 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
             />
             {tr.includeArchived}
           </label>
-          {availableProjects.length > 0 && (
-            <Select value={filterProjectId || '__all__'} onValueChange={(v) => setFilterProjectId(v === '__all__' ? '' : v)}>
-              <SelectTrigger className="rounded-xl w-40" aria-label={tr.colProject}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">{tr.allProjects}</SelectItem>
-                {availableProjects.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
           <Button
             variant="outline"
             className="gap-2 rounded-xl"

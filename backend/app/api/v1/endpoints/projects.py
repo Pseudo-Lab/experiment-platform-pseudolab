@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from typing import List
-from app.schemas.project import Project, ProjectCreate, ProjectWithKey
+from app.schemas.project import Project, ProjectCreate, ProjectWithKey, ProjectSdkStatus
 from app.services.project import project_service
 
 router = APIRouter()
@@ -23,6 +23,11 @@ async def get_project(project_id: str):
     if not p:
         raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
     return p
+
+
+@router.get("/{project_id}/sdk-status", response_model=ProjectSdkStatus)
+async def get_sdk_status(project_id: str):
+    return await project_service.sdk_status(project_id)
 
 
 @router.delete("/{project_id}", status_code=204)

@@ -12,6 +12,7 @@ import { FeatureFlags } from './features/dashboard/components/FeatureFlags';
 import { Analytics } from './features/dashboard/components/Analytics';
 import { Projects } from './features/dashboard/components/Projects';
 import { ExampleApp } from './features/example/ExampleApp';
+import { ProjectProvider } from './contexts/ProjectContext';
 
 export default function App() {
   const [lang, setLang] = useState<'en' | 'ko'>(() => {
@@ -53,6 +54,7 @@ export default function App() {
   }, [theme]);
 
   return (
+    <ProjectProvider>
     <MainLayout
       lang={lang}
       setLang={setLang}
@@ -76,5 +78,6 @@ export default function App() {
         <Route path="/example/*" element={<ExampleApp lang={lang} />} />
       </Routes>
     </MainLayout>
+    </ProjectProvider>
   );
 }

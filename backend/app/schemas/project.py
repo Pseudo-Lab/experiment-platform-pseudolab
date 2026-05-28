@@ -17,3 +17,8 @@ class Project(BaseModel):
 
 class ProjectWithKey(Project):
     api_key: str
+
+
+class ProjectSdkStatus(BaseModel):
+    project_id: str
+    status: str  # "connected" | "not_connected"

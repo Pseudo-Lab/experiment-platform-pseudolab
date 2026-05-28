@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -49,6 +50,54 @@ class TestProjectsCRUD:
     def test_get_unknown_returns_404(self, mock_d1):
         res = client.get("/api/v1/projects/no-such-project")
         assert res.status_code == 404
+
+
+class TestSdkStatus:
+    def test_unknown_project_returns_404(self, mock_d1):
+        res = client.get("/api/v1/projects/no-such/sdk-status")
+        assert res.status_code == 404
+
+    def test_not_connected_when_no_data(self, mock_d1):
+        _seed_project("quiet", "Quiet", "pk_live_quiet", mock_d1)
+        res = client.get("/api/v1/projects/quiet/sdk-status")
+        assert res.status_code == 200
+        assert res.json()["status"] == "not_connected"
+
+    def test_connected_when_recent_event(self, mock_d1):
+        _seed_project("live-evt", "Live Evt", "pk_live_evt", mock_d1)
+        now = datetime.now(timezone.utc).isoformat()
+        mock_d1.execute(
+            "INSERT INTO event_log (user_id, event_name, event_time, created_at, project_id)"
+            " VALUES ('u1', 'click', ?, ?, 'live-evt')",
+            (now, now),
+        )
+        mock_d1.commit()
+        res = client.get("/api/v1/projects/live-evt/sdk-status")
+        assert res.json()["status"] == "connected"
+
+    def test_connected_when_recent_exposure(self, mock_d1):
+        _seed_project("live-exp", "Live Exp", "pk_live_exp_sdk", mock_d1)
+        now = datetime.now(timezone.utc).isoformat()
+        mock_d1.execute(
+            "INSERT INTO feature_flag_exposure (id, flag_key, user_id, variant, evaluated_at, project_id)"
+            " VALUES ('e1', 'f1', 'u1', 'control', ?, 'live-exp')",
+            (now,),
+        )
+        mock_d1.commit()
+        res = client.get("/api/v1/projects/live-exp/sdk-status")
+        assert res.json()["status"] == "connected"
+
+    def test_not_connected_when_event_too_old(self, mock_d1):
+        _seed_project("stale", "Stale", "pk_live_stale", mock_d1)
+        old = (datetime.now(timezone.utc) - timedelta(days=45)).isoformat()
+        mock_d1.execute(
+            "INSERT INTO event_log (user_id, event_name, event_time, created_at, project_id)"
+            " VALUES ('u1', 'click', ?, ?, 'stale')",
+            (old, old),
+        )
+        mock_d1.commit()
+        res = client.get("/api/v1/projects/stale/sdk-status")
+        assert res.json()["status"] == "not_connected"
 
 
 class TestProjectsDelete:

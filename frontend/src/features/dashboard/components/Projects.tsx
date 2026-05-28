@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Copy, Check, Plus, FolderOpen, Trash2 } from 'lucide-react';
-import { projectApi, type Project } from '../../../services/api';
+import { projectApi, type Project, type ProjectSdkStatus } from '../../../services/api';
+import { useProject } from '../../../contexts/ProjectContext';
 
 interface Props { lang: 'en' | 'ko'; }
 
@@ -32,6 +33,9 @@ const t = {
     deleting: '삭제 중...',
     deleteConfirm: (name: string) => `"${name}" 프로젝트를 삭제하시겠습니까?\n연결된 실험이나 플래그가 있으면 삭제되지 않습니다.`,
     errorDelete: '삭제에 실패했습니다.',
+    sdkConnected: '연결됨',
+    sdkNotConnected: 'SDK 미설치',
+    sdkChecking: '확인 중...',
   },
   en: {
     title: 'Projects',
@@ -55,6 +59,9 @@ const t = {
     deleting: 'Deleting...',
     deleteConfirm: (name: string) => `Delete project "${name}"?\nProjects with linked experiments or flags cannot be deleted.`,
     errorDelete: 'Failed to delete project.',
+    sdkConnected: 'Connected',
+    sdkNotConnected: 'SDK not installed',
+    sdkChecking: 'Checking...',
   },
 };
 
@@ -75,8 +82,7 @@ function CopyButton({ value, labels }: { value: string; labels: { copy: string; 
 
 export function Projects({ lang }: Props) {
   const tr = t[lang];
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { projects, loading, reloadProjects } = useProject();
   const [showForm, setShowForm] = useState(false);
   const [newId, setNewId] = useState('');
   const [newName, setNewName] = useState('');
@@ -84,10 +90,21 @@ export function Projects({ lang }: Props) {
   const [createError, setCreateError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [sdkStatuses, setSdkStatuses] = useState<Record<string, ProjectSdkStatus['status']>>({});
 
   useEffect(() => {
-    projectApi.list().then(setProjects).finally(() => setLoading(false));
-  }, []);
+    if (projects.length === 0) { setSdkStatuses({}); return; }
+    let cancelled = false;
+    Promise.allSettled(projects.map((p) => projectApi.sdkStatus(p.id))).then((results) => {
+      if (cancelled) return;
+      const next: Record<string, ProjectSdkStatus['status']> = {};
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled') next[projects[i].id] = r.value.status;
+      });
+      setSdkStatuses(next);
+    });
+    return () => { cancelled = true; };
+  }, [projects]);
 
   const handleCreate = async () => {
     if (!newId.trim() || !newName.trim()) return;
@@ -99,8 +116,8 @@ export function Projects({ lang }: Props) {
       return;
     }
     try {
-      const p = await projectApi.create({ id: newId.trim(), name: newName.trim() });
-      setProjects((prev) => [p, ...prev]);
+      await projectApi.create({ id: newId.trim(), name: newName.trim() });
+      await reloadProjects();
       setNewId('');
       setNewName('');
       setShowForm(false);
@@ -117,12 +134,23 @@ export function Projects({ lang }: Props) {
     setDeleteError(null);
     try {
       await projectApi.delete(p.id);
-      setProjects(prev => prev.filter(x => x.id !== p.id));
+      await reloadProjects();
     } catch (e) {
       setDeleteError(e instanceof Error ? e.message : tr.errorDelete);
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const renderSdkBadge = (id: string) => {
+    const s = sdkStatuses[id];
+    if (s === undefined) {
+      return <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-400 dark:bg-slate-800">{tr.sdkChecking}</span>;
+    }
+    if (s === 'connected') {
+      return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400">● {tr.sdkConnected}</span>;
+    }
+    return <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-400 dark:bg-slate-800 dark:text-slate-500">○ {tr.sdkNotConnected}</span>;
   };
 
   return (
@@ -187,7 +215,10 @@ export function Projects({ lang }: Props) {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-base">{p.name}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base">{p.name}</CardTitle>
+                      {renderSdkBadge(p.id)}
+                    </div>
                     <p className="text-xs text-slate-400 font-mono mt-0.5">{p.id}</p>
                   </div>
                   <div className="flex items-center gap-2">
