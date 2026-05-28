@@ -4,7 +4,8 @@
 FROM node:22-bookworm-slim AS dev
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm config set registry https://registry.npmjs.org/ \
+ && npm ci --retry 2
 
 # 2. Build stage (used by production CI; context is repo root)
 # Use the builder's native platform for the Vite build so multi-arch image
@@ -15,7 +16,8 @@ WORKDIR /app/frontend
 
 # Copy package files and install dependencies
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm config set registry https://registry.npmjs.org/ \
+ && npm ci --retry 2
 
 # Copy frontend sources
 COPY frontend/ ./
