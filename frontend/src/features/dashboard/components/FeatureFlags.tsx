@@ -407,7 +407,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                     </TableCell>
                     <TableCell>{renderExposureSummary(flag.flag_key)}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${isArchived ? 'bg-amber-100 text-amber-700' : flag.enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`inline-block whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-bold ${isArchived ? 'bg-amber-100 text-amber-700' : flag.enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                         {isArchived ? tr.archived : flag.enabled ? tr.enabled : tr.disabled}
                       </span>
                     </TableCell>
