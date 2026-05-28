@@ -134,6 +134,17 @@ CREATE TABLE IF NOT EXISTS event_log (
     project_id TEXT   REFERENCES projects(id)
 );
 
+CREATE TABLE IF NOT EXISTS visual_changes (
+    id          TEXT PRIMARY KEY,
+    project_id  TEXT NOT NULL REFERENCES projects(id),
+    flag_key    TEXT,
+    variant     TEXT NOT NULL,
+    selector    TEXT NOT NULL,
+    property    TEXT NOT NULL,
+    value       TEXT NOT NULL,
+    created_at  TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS person (
     user_id     TEXT PRIMARY KEY,
     cohort_id   TEXT,

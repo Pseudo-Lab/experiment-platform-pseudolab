@@ -19,6 +19,23 @@ export interface ProjectSdkStatus {
   project_id: string;
   status: 'connected' | 'not_connected';
 }
+export interface VisualChange {
+  id: string;
+  project_id: string;
+  flag_key?: string | null;
+  variant: string;
+  selector: string;
+  property: string;
+  value: string;
+  created_at: string;
+}
+export interface VisualChangeCreate {
+  flag_key?: string;
+  variant: string;
+  selector: string;
+  property: string;
+  value: string;
+}
 
 export const projectApi = {
   list: async (): Promise<Project[]> => {
@@ -65,6 +82,28 @@ export const projectApi = {
     const res = await fetch(`${API_BASE_URL}/projects/${id}/sdk-status`);
     if (!res.ok) throw new Error('Failed to fetch SDK status');
     return res.json();
+  },
+};
+
+export const visualChangeApi = {
+  list: async (projectId: string, variant?: string): Promise<VisualChange[]> => {
+    const q = variant ? `?variant=${encodeURIComponent(variant)}` : '';
+    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/visual-changes${q}`);
+    if (!res.ok) throw new Error('Failed to fetch visual changes');
+    return res.json();
+  },
+  create: async (projectId: string, data: VisualChangeCreate): Promise<VisualChange> => {
+    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/visual-changes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to save visual change');
+    return res.json();
+  },
+  delete: async (projectId: string, changeId: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/visual-changes/${changeId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete visual change');
   },
 };
 

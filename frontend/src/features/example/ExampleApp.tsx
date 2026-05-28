@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import { Navigate, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { HomePage } from './pages/HomePage'
 import { StudyListPage } from './pages/StudyListPage'
 import { ExperimentShowcase } from './components/ExperimentShowcase'
 import { ExperimentProvider } from './lib/ExperimentContext'
+import { initVisualEditor } from './lib/visualEditor'
 import type { Lang } from './i18n'
 
 const FLAG_KEYS = ['home_layout_v1', 'sponsor_slot_v1'] as const
@@ -13,6 +15,10 @@ type Props = {
 }
 
 export function ExampleApp({ lang }: Props) {
+  useEffect(() => {
+    initVisualEditor()
+  }, [])
+
   return (
     <ExperimentProvider flagKeys={FLAG_KEYS}>
       <Layout lang={lang}>

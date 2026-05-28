@@ -11,6 +11,7 @@ import { DiscordDashboard } from './features/dashboard/components/DiscordDashboa
 import { FeatureFlags } from './features/dashboard/components/FeatureFlags';
 import { Analytics } from './features/dashboard/components/Analytics';
 import { Projects } from './features/dashboard/components/Projects';
+import { VisualEditor } from './features/dashboard/components/VisualEditor';
 import { ExampleApp } from './features/example/ExampleApp';
 import { ProjectProvider } from './contexts/ProjectContext';
 
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
         <Route path="/analytics" element={<Analytics lang={lang} />} />
         <Route path="/projects" element={<Projects lang={lang} />} />
+        <Route path="/projects/:id/visual-editor" element={<VisualEditor lang={lang} />} />
         <Route path="/example/*" element={<ExampleApp lang={lang} />} />
       </Routes>
     </MainLayout>

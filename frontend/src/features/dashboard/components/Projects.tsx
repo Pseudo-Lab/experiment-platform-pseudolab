@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Copy, Check, Plus, FolderOpen, Trash2 } from 'lucide-react';
+import { Copy, Check, Plus, FolderOpen, Trash2, Wand2 } from 'lucide-react';
 import { projectApi, type Project, type ProjectSdkStatus } from '../../../services/api';
 import { useProject } from '../../../contexts/ProjectContext';
 
@@ -36,6 +37,7 @@ const t = {
     sdkConnected: '연결됨',
     sdkNotConnected: 'SDK 미설치',
     sdkChecking: '확인 중...',
+    openVisualEditor: 'Visual Editor 열기',
   },
   en: {
     title: 'Projects',
@@ -62,6 +64,7 @@ const t = {
     sdkConnected: 'Connected',
     sdkNotConnected: 'SDK not installed',
     sdkChecking: 'Checking...',
+    openVisualEditor: 'Open Visual Editor',
   },
 };
 
@@ -82,6 +85,7 @@ function CopyButton({ value, labels }: { value: string; labels: { copy: string; 
 
 export function Projects({ lang }: Props) {
   const tr = t[lang];
+  const navigate = useNavigate();
   const { projects, loading, reloadProjects } = useProject();
   const [showForm, setShowForm] = useState(false);
   const [newId, setNewId] = useState('');
@@ -238,13 +242,21 @@ export function Projects({ lang }: Props) {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-md px-3 py-2">
                   <code className="text-xs font-mono text-slate-600 dark:text-slate-300 flex-1 truncate">
                     {p.api_key}
                   </code>
                   <CopyButton value={p.api_key} labels={{ copy: tr.copy, copied: tr.copied }} />
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 rounded-xl"
+                  onClick={() => navigate(`/projects/${p.id}/visual-editor`)}
+                >
+                  <Wand2 size={14} /> {tr.openVisualEditor}
+                </Button>
               </CardContent>
             </Card>
           ))}
