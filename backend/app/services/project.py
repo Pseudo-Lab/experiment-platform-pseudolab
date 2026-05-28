@@ -29,10 +29,12 @@ class ProjectService:
             raise HTTPException(status_code=409, detail=f"Project '{data.id}' already exists")
 
         api_key = f"pk_live_{data.id}_{secrets.token_hex(8)}"
-        await d1.execute(
+        ok = await d1.execute(
             "INSERT INTO projects (id, name, api_key) VALUES (?, ?, ?)",
             [data.id, data.name, api_key],
         )
+        if not ok:
+            raise HTTPException(status_code=500, detail="Database error: project insert failed")
         result = await self.get(data.id)
         if not result:
             raise HTTPException(status_code=500, detail="Project creation failed")

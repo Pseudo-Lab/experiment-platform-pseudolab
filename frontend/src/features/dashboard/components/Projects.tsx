@@ -7,6 +7,8 @@ import { projectApi, type Project } from '../../../services/api';
 
 interface Props { lang: 'en' | 'ko'; }
 
+const PROJECT_ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,39}$/;
+
 const t = {
   ko: {
     title: 'Projects',
@@ -18,6 +20,7 @@ const t = {
     idPlaceholder: 'e.g. my-app',
     namePlaceholder: 'e.g. My App',
     idHelp: '영문 소문자, 숫자, 하이픈. 2~40자.',
+    idError: 'ID는 영문 소문자·숫자·하이픈만 허용되며 2~40자여야 합니다.',
     create: '생성',
     creating: '생성 중...',
     copied: '복사됨!',
@@ -36,6 +39,7 @@ const t = {
     idPlaceholder: 'e.g. my-app',
     namePlaceholder: 'e.g. My App',
     idHelp: 'Lowercase letters, numbers, hyphens. 2–40 chars.',
+    idError: 'ID must be 2–40 chars: lowercase letters, numbers, hyphens only.',
     create: 'Create',
     creating: 'Creating...',
     copied: 'Copied!',
@@ -79,6 +83,11 @@ export function Projects({ lang }: Props) {
     if (!newId.trim() || !newName.trim()) return;
     setCreating(true);
     setCreateError(null);
+    if (!PROJECT_ID_PATTERN.test(newId.trim())) {
+      setCreateError(tr.idError);
+      setCreating(false);
+      return;
+    }
     try {
       const p = await projectApi.create({ id: newId.trim(), name: newName.trim() });
       setProjects((prev) => [p, ...prev]);

@@ -30,7 +30,14 @@ export const projectApi = {
     });
     if (!res.ok) {
       let detail = 'Failed to create project';
-      try { const b = await res.json(); if (b?.detail) detail = b.detail; } catch { /* */ }
+      try {
+        const b = await res.json();
+        if (Array.isArray(b?.detail)) {
+          detail = b.detail.map((e: { msg: string }) => e.msg).join('; ');
+        } else if (b?.detail) {
+          detail = b.detail;
+        }
+      } catch { /* */ }
       throw new Error(detail);
     }
     return res.json();
