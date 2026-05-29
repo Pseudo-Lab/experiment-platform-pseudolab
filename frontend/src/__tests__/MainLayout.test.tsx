@@ -1,7 +1,11 @@
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
-// import { Button } from '@/components/ui/button'; // Not directly needed for MainLayout tests
+import { useProject } from '@/contexts/ProjectContext';
+
+vi.mock('@/contexts/ProjectContext', () => ({
+  useProject: vi.fn(),
+}));
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -54,14 +58,23 @@ describe('MainLayout Component', () => {
     backendStatus: 'Online',
   };
 
+  const defaultProjectContext = {
+    projects: [],
+    loading: false,
+    currentProjectId: null,
+    currentProject: null,
+    setCurrentProjectId: vi.fn(),
+    reloadProjects: vi.fn(),
+  };
+
   beforeEach(() => {
     localStorage.clear();
     mockProps.setLang.mockClear();
     mockProps.setTheme.mockClear();
     (global.fetch as any).mockClear();
     (window.matchMedia as any).mockClear();
-    mockedUseNavigate.mockClear(); // Clear mock calls for useNavigate
-    // Reset window.innerWidth for each test
+    mockedUseNavigate.mockClear();
+    (useProject as ReturnType<typeof vi.fn>).mockReturnValue(defaultProjectContext);
     Object.defineProperty(window, 'innerWidth', { writable: true, value: 1024 });
   });
 
@@ -131,17 +144,31 @@ describe('MainLayout Component', () => {
   });
 
   it('navigates correctly when sidebar item is clicked', async () => {
+    const abTestProject = {
+      id: 'test-project',
+      name: 'Test Project',
+      api_key: 'pk_live_test',
+      project_type: 'ab_test' as const,
+      created_at: '2024-01-01',
+    };
+    (useProject as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultProjectContext,
+      projects: [abTestProject],
+      currentProjectId: 'test-project',
+      currentProject: abTestProject,
+    });
+
     await act(async () => {
       renderMainLayout(['/dashboard']);
     });
 
-    const dashboardLink = screen.getByRole('button', { name: '개요' }); // Find Overview button
-    expect(dashboardLink).toBeInTheDocument(); // Ensure Dashboard link is found
+    const dashboardLink = screen.getByRole('button', { name: '개요' });
+    expect(dashboardLink).toBeInTheDocument();
 
     const experimentsLink = screen.getByRole('button', { name: '실험 관리' });
     await act(async () => {
       fireEvent.click(experimentsLink);
     });
-    expect(mockedUseNavigate).toHaveBeenCalledWith('/experiments'); // Assert useNavigate was called
+    expect(mockedUseNavigate).toHaveBeenCalledWith('/experiments');
   });
 });
