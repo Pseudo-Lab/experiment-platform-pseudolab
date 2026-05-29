@@ -24,6 +24,7 @@ import {
     MapPin,
     Plug,
     Flag,
+    Plus,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -238,23 +239,32 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                                 {t.selectProject}
                             </button>
                         ) : (
-                            <Select
-                                value={currentProjectId ?? '__all__'}
-                                onValueChange={(v) => setCurrentProjectId(v === '__all__' ? null : v)}
-                            >
-                                <SelectTrigger className="w-full rounded-xl border-slate-200 dark:border-slate-700" aria-label={t.projects}>
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <FolderOpen size={15} className="shrink-0 text-indigo-500" />
-                                        <SelectValue />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__all__">{t.allProjects}</SelectItem>
-                                    {projects.map((p) => (
-                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-2">
+                                <Select
+                                    value={currentProjectId ?? '__all__'}
+                                    onValueChange={(v) => setCurrentProjectId(v === '__all__' ? null : v)}
+                                >
+                                    <SelectTrigger className="flex-1 rounded-xl border-slate-200 dark:border-slate-700" aria-label={t.projects}>
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <FolderOpen size={15} className="shrink-0 text-indigo-500" />
+                                            <SelectValue />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__all__">{t.allProjects}</SelectItem>
+                                        {projects.map((p) => (
+                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <button
+                                    onClick={() => handleNav('/projects')}
+                                    className="shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400 transition-colors"
+                                    aria-label="프로젝트 추가"
+                                >
+                                    <Plus size={14} />
+                                </button>
+                            </div>
                         )}
                     </div>
                 )}

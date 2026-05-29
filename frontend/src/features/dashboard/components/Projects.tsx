@@ -272,7 +272,7 @@ export function Projects({ lang }: Props) {
             <Card
               key={p.id}
               className="cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
-              onClick={() => { setCurrentProjectId(p.id); navigate('/api-key'); }}
+              onClick={() => { setCurrentProjectId(p.id); navigate(p.project_type === 'quasi_experiment' ? '/experiments' : '/api-key'); }}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
@@ -315,14 +315,16 @@ export function Projects({ lang }: Props) {
                   </code>
                   <CopyButton value={p.api_key} labels={{ copy: tr.copy, copied: tr.copied }} />
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 rounded-xl"
-                  onClick={(e) => { e.stopPropagation(); navigate(`/projects/${p.id}/visual-editor`); }}
-                >
-                  <Wand2 size={14} /> {tr.openVisualEditor}
-                </Button>
+                {p.project_type !== 'quasi_experiment' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 rounded-xl"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/projects/${p.id}/visual-editor`); }}
+                  >
+                    <Wand2 size={14} /> {tr.openVisualEditor}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
