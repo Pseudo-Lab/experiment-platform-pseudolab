@@ -8,11 +8,12 @@ import pytest
 # 마이그레이션 001~003을 합친 스키마 (ALTER TABLE → 컬럼을 처음부터 포함)
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS projects (
-    id         TEXT PRIMARY KEY,
-    name       TEXT NOT NULL,
-    api_key    TEXT NOT NULL UNIQUE,
-    base_url   TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    api_key      TEXT NOT NULL UNIQUE,
+    base_url     TEXT,
+    project_type TEXT NOT NULL DEFAULT 'ab_test',
+    created_at   TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS experiments (

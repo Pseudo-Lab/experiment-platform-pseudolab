@@ -22,6 +22,8 @@ import {
     Wand2,
     Key,
     MapPin,
+    Plug,
+    Flag,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -108,9 +110,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const [toolsVisible, setToolsVisible] = useState(true);
     const location = useLocation();
     const navigate = useNavigate();
-    const { projects, currentProjectId, setCurrentProjectId } = useProject();
+    const { projects, currentProjectId, currentProject, setCurrentProjectId } = useProject();
+
+    useEffect(() => {
+        setToolsVisible(false);
+        const timer = setTimeout(() => setToolsVisible(true), 60);
+        return () => clearTimeout(timer);
+    }, [currentProject?.project_type]);
 
     const activePath = location.pathname;
 
@@ -120,8 +129,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", placements: "Placements", analytics: "Analytics", projects: "Projects", apiKey: "SDK Integration", visualEditor: "Visual Editor", example: "Example App", settings: "Settings", sectionOther: "Analytics & Other", allProjects: "All Projects", selectProject: "Select a project" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", placements: "Placements", analytics: "Analytics", projects: "Projects", apiKey: "SDK 연동", visualEditor: "Visual Editor", example: "예제 앱", settings: "설정", sectionOther: "분석 / 기타", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "SDK Integration", visualEditor: "Visual Editor", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "SDK 연동", visualEditor: "Visual Editor", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다" }
     };
 
     const t = translations[lang];
@@ -251,15 +260,40 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 )}
 
                 <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
-                    {/* Primary */}
-                    <SidebarItem icon={Key} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
-                    <SidebarItem icon={ToggleLeft} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
-                    {currentProjectId && (
-                        <SidebarItem icon={MapPin} label={t.placements} active={activePath === '/placements'} expanded={isSidebarOpen} onClick={() => handleNav('/placements')} />
-                    )}
-                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
-                    {currentProjectId && (
-                        <SidebarItem icon={Wand2} label={t.visualEditor} active={activePath.includes('/visual-editor')} expanded={isSidebarOpen} onClick={() => handleNav(`/projects/${currentProjectId}/visual-editor`)} />
+                    {/* Project Tools Section */}
+                    <SectionDivider label={currentProject ? t.sectionProjectTools : t.sectionNoProject} expanded={isSidebarOpen} />
+
+                    {!currentProject ? (
+                        <>
+                            <div className="opacity-40 pointer-events-none">
+                                <SidebarItem icon={FlaskConical} label={t.experiments} active={false} expanded={isSidebarOpen} onClick={() => {}} />
+                            </div>
+                            {isSidebarOpen && (
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 px-3 pt-1 leading-relaxed">
+                                    {t.noProjectHint}
+                                </p>
+                            )}
+                        </>
+                    ) : (
+                        <div className={cn(
+                            "space-y-1 transition-all duration-200 ease-out",
+                            toolsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+                        )}>
+                            {currentProject.project_type === 'ab_test' && (
+                                <>
+                                    <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
+                                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
+                                    <SidebarItem icon={Wand2} label={t.visualEditor} active={activePath.includes('/visual-editor')} expanded={isSidebarOpen} onClick={() => handleNav(`/projects/${currentProjectId}/visual-editor`)} />
+                                    <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
+                                </>
+                            )}
+                            {currentProject.project_type === 'quasi_experiment' && (
+                                <>
+                                    <SidebarItem icon={MapPin} label={t.placements} active={activePath === '/placements'} expanded={isSidebarOpen} onClick={() => handleNav('/placements')} />
+                                    <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
+                                </>
+                            )}
+                        </div>
                     )}
 
                     {/* Secondary */}

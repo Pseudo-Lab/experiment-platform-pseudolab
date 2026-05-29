@@ -73,8 +73,8 @@ class ProjectService:
 
         api_key = f"pk_live_{data.id}_{secrets.token_hex(8)}"
         ok = await d1.execute(
-            "INSERT INTO projects (id, name, api_key, base_url) VALUES (?, ?, ?, ?)",
-            [data.id, data.name, api_key, data.base_url],
+            "INSERT INTO projects (id, name, api_key, base_url, project_type) VALUES (?, ?, ?, ?, ?)",
+            [data.id, data.name, api_key, data.base_url, data.project_type],
         )
         if not ok:
             raise HTTPException(status_code=500, detail="Database error: project insert failed")

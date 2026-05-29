@@ -10,12 +10,14 @@ export interface Project {
   name: string;
   api_key: string;
   base_url?: string | null;
+  project_type: 'ab_test' | 'quasi_experiment';
   created_at: string;
 }
 export interface ProjectCreate {
   id: string;
   name: string;
   base_url?: string;
+  project_type?: 'ab_test' | 'quasi_experiment';
 }
 export interface ProjectSdkStatus {
   project_id: string;
