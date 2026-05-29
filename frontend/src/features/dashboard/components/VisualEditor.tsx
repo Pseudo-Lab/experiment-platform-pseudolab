@@ -142,7 +142,7 @@ export function VisualEditor({ lang }: Props) {
     projectApi.get(projectId).then((p) => {
       if (p.base_url) {
         setBaseUrl(p.base_url);
-        setUrl(`${p.base_url}/example`);
+        setUrl(p.base_url);
       }
     }).catch(() => {});
   }, [projectId]);
@@ -216,7 +216,7 @@ export function VisualEditor({ lang }: Props) {
     try {
       const updated = await projectApi.patch(projectId, { base_url: baseUrlInput || null });
       setBaseUrl(updated.base_url ?? null);
-      if (updated.base_url) setUrl(`${updated.base_url}/example`);
+      if (updated.base_url) setUrl(updated.base_url);
       setEditingBaseUrl(false);
     } catch { /* ignore */ }
   };
