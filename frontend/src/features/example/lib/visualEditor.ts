@@ -106,6 +106,7 @@ export function initVisualEditor(): void {
   document.addEventListener(
     'click',
     (e) => {
+      if (window === window.parent) return;
       const target = e.target as Element | null;
       if (!target) return;
       e.preventDefault();
@@ -121,5 +122,7 @@ export function initVisualEditor(): void {
   );
 
   // Tell the parent we're ready so it can push existing changes.
-  window.parent.postMessage({ type: MSG_READY }, '*');
+  if (window !== window.parent) {
+    window.parent.postMessage({ type: MSG_READY }, '*');
+  }
 }
