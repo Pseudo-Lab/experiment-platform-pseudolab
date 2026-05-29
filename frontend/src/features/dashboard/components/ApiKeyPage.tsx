@@ -5,7 +5,7 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import {
   Copy, Check, Eye, EyeOff, Key, Pencil, X, Trash2, Plus,
-  FolderOpen, Wand2, CheckCircle2, XCircle, Loader2,
+  FolderOpen, Wand2, CheckCircle2, Clock, Loader2,
 } from 'lucide-react';
 import { projectApi, type Project, type ProjectSdkStatus } from '../../../services/api';
 import { useProject } from '../../../contexts/ProjectContext';
@@ -33,10 +33,10 @@ const tr = {
     baseUrlCancel: '취소',
     sdkStatus: 'SDK 연결 상태',
     sdkConnected: '연결됨',
-    sdkNotConnected: 'SDK 미설치',
+    sdkNotConnected: 'SDK 대기 중',
     sdkChecking: '확인 중...',
     sdkConnectedDesc: 'SDK가 정상적으로 연결되어 실험 데이터를 수집하고 있습니다.',
-    sdkNotConnectedDesc: '아직 SDK가 연결되지 않았습니다. 아래 설정 예시를 참고해 설치하세요.',
+    sdkNotConnectedDesc: '아직 수신된 이벤트가 없습니다. 아래 설정 예시를 참고해 SDK를 설치하고, 앱을 방문하면 자동으로 연결됩니다.',
     openVisualEditor: 'Visual Editor 열기',
     dangerZone: 'Danger Zone',
     deleteProject: '프로젝트 삭제',
@@ -65,10 +65,10 @@ const tr = {
     baseUrlCancel: 'Cancel',
     sdkStatus: 'SDK Connection',
     sdkConnected: 'Connected',
-    sdkNotConnected: 'SDK not installed',
+    sdkNotConnected: 'Awaiting connection',
     sdkChecking: 'Checking...',
     sdkConnectedDesc: 'The SDK is connected and collecting experiment data.',
-    sdkNotConnectedDesc: 'The SDK is not connected yet. See the setup example below.',
+    sdkNotConnectedDesc: 'No events received yet. Install the SDK using the example below — once your app is visited, it will connect automatically.',
     openVisualEditor: 'Open Visual Editor',
     dangerZone: 'Danger Zone',
     deleteProject: 'Delete Project',
@@ -243,8 +243,8 @@ export function ApiKeyPage({ lang }: Props) {
               </>
             ) : (
               <>
-                <XCircle size={16} className="text-slate-400" />
-                <span className="text-sm text-slate-500">{t.sdkNotConnected}</span>
+                <Clock size={16} className="text-amber-400" />
+                <span className="text-sm text-amber-600 dark:text-amber-400">{t.sdkNotConnected}</span>
               </>
             )}
           </div>
