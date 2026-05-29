@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from typing import List
-from app.schemas.project import Project, ProjectCreate, ProjectWithKey, ProjectSdkStatus
+from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectWithKey, ProjectSdkStatus
 from app.services.project import project_service
 
 router = APIRouter()
@@ -28,6 +28,11 @@ async def get_project(project_id: str):
 @router.get("/{project_id}/sdk-status", response_model=ProjectSdkStatus)
 async def get_sdk_status(project_id: str):
     return await project_service.sdk_status(project_id)
+
+
+@router.patch("/{project_id}", response_model=ProjectWithKey)
+async def update_project(project_id: str, data: ProjectUpdate):
+    return await project_service.update(project_id, data)
 
 
 @router.delete("/{project_id}", status_code=204)

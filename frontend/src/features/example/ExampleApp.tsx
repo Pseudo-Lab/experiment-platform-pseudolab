@@ -20,7 +20,7 @@ export function ExampleApp({ lang }: Props) {
   }, [])
 
   return (
-    <ExperimentProvider flagKeys={FLAG_KEYS}>
+    <ExperimentProvider flagKeys={FLAG_KEYS} projectId="demo-app">
       <Layout lang={lang}>
         <Routes>
           <Route index element={<HomePage lang={lang} />} />
