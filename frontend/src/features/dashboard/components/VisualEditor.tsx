@@ -40,7 +40,7 @@ const t = {
   ko: {
     back: 'Projects로',
     title: 'Visual Editor',
-    urlPlaceholder: '앱 URL (예: http://localhost:8081/example)',
+    urlPlaceholder: '앱 URL (예: https://sub.pseudolab-devfactory.com/example)',
     load: '로드',
     ctaTitle: '왼쪽 앱에서 수정할 요소를 클릭하세요',
     ctaSubtitle: '버튼, 텍스트, 이미지 등 어떤 요소든 클릭하면 여기서 편집할 수 있어요',
@@ -69,12 +69,12 @@ const t = {
     baseUrlEdit: '앱 URL 설정',
     baseUrlSave: '저장',
     baseUrlCancel: '취소',
-    baseUrlPlaceholder: 'http://localhost:8081',
+    baseUrlPlaceholder: 'https://sub.pseudolab-devfactory.com/example',
   },
   en: {
     back: 'To Projects',
     title: 'Visual Editor',
-    urlPlaceholder: 'App URL (e.g. http://localhost:8081/example)',
+    urlPlaceholder: 'App URL (e.g. https://sub.pseudolab-devfactory.com/example)',
     load: 'Load',
     ctaTitle: 'Click an element in the app on the left to edit it',
     ctaSubtitle: 'Buttons, text, images — click anything and edit it here',
@@ -103,7 +103,7 @@ const t = {
     baseUrlEdit: 'Set app URL',
     baseUrlSave: 'Save',
     baseUrlCancel: 'Cancel',
-    baseUrlPlaceholder: 'http://localhost:8081',
+    baseUrlPlaceholder: 'https://sub.pseudolab-devfactory.com/example',
   },
 };
 
