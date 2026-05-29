@@ -290,7 +290,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             {currentProject.project_type === 'quasi_experiment' && (
                                 <>
                                     <SidebarItem icon={MapPin} label={t.placements} active={activePath === '/placements'} expanded={isSidebarOpen} onClick={() => handleNav('/placements')} />
-                                    <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
+                                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
                                 </>
                             )}
                         </div>
