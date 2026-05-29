@@ -20,6 +20,7 @@ import {
     Code2,
     FolderOpen,
     Wand2,
+    Key,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -118,8 +119,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", visualEditor: "Visual Editor", example: "Example App", settings: "Settings", sectionOther: "Analytics & Other", allProjects: "All Projects", selectProject: "Select a project" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", visualEditor: "Visual Editor", example: "예제 앱", settings: "설정", sectionOther: "분석 / 기타", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "API Key", visualEditor: "Visual Editor", example: "Example App", settings: "Settings", sectionOther: "Analytics & Other", allProjects: "All Projects", selectProject: "Select a project" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "API 키", visualEditor: "Visual Editor", example: "예제 앱", settings: "설정", sectionOther: "분석 / 기타", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요" }
     };
 
     const t = translations[lang];
@@ -136,6 +137,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         activePath === '/feature-flags' ? t.featureFlags :
         activePath === '/analytics' ? t.analytics :
         activePath === '/projects' ? t.projects :
+        activePath === '/api-key' ? t.apiKey :
         activePath.includes('/visual-editor') ? t.visualEditor :
         activePath.startsWith('/example') ? t.example :
         t.dashboard;
@@ -249,7 +251,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
                     {/* Primary */}
                     <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => handleNav('/dashboard')} />
-                    <SidebarItem icon={FolderOpen} label={t.projects} active={activePath === '/projects'} expanded={isSidebarOpen} onClick={() => handleNav('/projects')} />
+                    <SidebarItem icon={Key} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
                     <SidebarItem icon={ToggleLeft} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
                     <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
                     {currentProjectId && (
