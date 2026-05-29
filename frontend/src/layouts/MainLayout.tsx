@@ -130,8 +130,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "SDK Integration", visualEditor: "Visual Editor", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "SDK 연동", visualEditor: "Visual Editor", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "SDK Integration", visualEditor: "Visual Editor", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "SDK 연동", visualEditor: "Visual Editor", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트" }
     };
 
     const t = translations[lang];
@@ -239,12 +239,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                                 {t.selectProject}
                             </button>
                         ) : (
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-col gap-2">
                                 <Select
                                     value={currentProjectId ?? '__all__'}
                                     onValueChange={(v) => setCurrentProjectId(v === '__all__' ? null : v)}
                                 >
-                                    <SelectTrigger className="flex-1 rounded-xl border-slate-200 dark:border-slate-700" aria-label={t.projects}>
+                                    <SelectTrigger className="w-full rounded-xl border-slate-200 dark:border-slate-700" aria-label={t.projects}>
                                         <div className="flex items-center gap-2 min-w-0">
                                             <FolderOpen size={15} className="shrink-0 text-indigo-500" />
                                             <SelectValue />
@@ -259,10 +259,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                                 </Select>
                                 <button
                                     onClick={() => handleNav('/projects')}
-                                    className="shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400 transition-colors"
-                                    aria-label="프로젝트 추가"
+                                    className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 py-1.5 text-xs font-medium text-slate-400 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-600 dark:hover:text-indigo-400 transition-colors"
                                 >
-                                    <Plus size={14} />
+                                    <Plus size={13} />{t.newProject}
                                 </button>
                             </div>
                         )}
