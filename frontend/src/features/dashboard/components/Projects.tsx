@@ -86,7 +86,7 @@ function CopyButton({ value, labels }: { value: string; labels: { copy: string; 
 export function Projects({ lang }: Props) {
   const tr = t[lang];
   const navigate = useNavigate();
-  const { projects, loading, reloadProjects } = useProject();
+  const { projects, loading, reloadProjects, setCurrentProjectId } = useProject();
   const [showForm, setShowForm] = useState(false);
   const [newId, setNewId] = useState('');
   const [newName, setNewName] = useState('');
@@ -215,7 +215,11 @@ export function Projects({ lang }: Props) {
       ) : (
         <div className="grid gap-4">
           {projects.map((p) => (
-            <Card key={p.id}>
+            <Card
+              key={p.id}
+              className="cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
+              onClick={() => { setCurrentProjectId(p.id); navigate('/api-key'); }}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div>
@@ -234,7 +238,7 @@ export function Projects({ lang }: Props) {
                       size="sm"
                       className="h-7 px-2 text-slate-400 hover:text-rose-600"
                       disabled={deletingId === p.id}
-                      onClick={() => handleDelete(p)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(p); }}
                       aria-label={tr.delete}
                     >
                       <Trash2 size={14} />
@@ -243,7 +247,7 @@ export function Projects({ lang }: Props) {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-md px-3 py-2">
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-md px-3 py-2" onClick={(e) => e.stopPropagation()}>
                   <code className="text-xs font-mono text-slate-600 dark:text-slate-300 flex-1 truncate">
                     {p.api_key}
                   </code>
@@ -253,7 +257,7 @@ export function Projects({ lang }: Props) {
                   variant="outline"
                   size="sm"
                   className="gap-2 rounded-xl"
-                  onClick={() => navigate(`/projects/${p.id}/visual-editor`)}
+                  onClick={(e) => { e.stopPropagation(); navigate(`/projects/${p.id}/visual-editor`); }}
                 >
                   <Wand2 size={14} /> {tr.openVisualEditor}
                 </Button>
