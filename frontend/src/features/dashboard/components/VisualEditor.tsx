@@ -17,7 +17,7 @@ const t = {
   ko: {
     back: 'Projects로',
     title: 'Visual Editor',
-    urlPlaceholder: '앱 URL (예: http://localhost:8081/example)',
+    urlPlaceholder: '앱 URL (예: https://sub.pseudolab-devfactory.com/example)',
     load: '로드',
     selectHint: '왼쪽 앱에서 편집할 요소를 클릭하세요.',
     selectedElement: '선택된 요소',
@@ -38,7 +38,7 @@ const t = {
   en: {
     back: 'To Projects',
     title: 'Visual Editor',
-    urlPlaceholder: 'App URL (e.g. http://localhost:8081/example)',
+    urlPlaceholder: 'App URL (e.g. https://sub.pseudolab-devfactory.com/example)',
     load: 'Load',
     selectHint: 'Click an element in the app on the left to edit it.',
     selectedElement: 'Selected element',
