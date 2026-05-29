@@ -128,6 +128,7 @@ export function VisualEditor({ lang }: Props) {
   const [baseUrl, setBaseUrl] = useState<string | null>(null);
   const [editingBaseUrl, setEditingBaseUrl] = useState(false);
   const [baseUrlInput, setBaseUrlInput] = useState('');
+  const editPanelRef = useRef<HTMLDivElement>(null);
 
   const loadChanges = useCallback(() => {
     if (!projectId) return;
@@ -165,6 +166,10 @@ export function VisualEditor({ lang }: Props) {
         setEditType('text');
         setValue('');
         setSelectorExpanded(false);
+        // on mobile, scroll edit panel into view
+        if (window.innerWidth < 1024) {
+          setTimeout(() => editPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        }
       } else if (d.type === MSG_READY) {
         changes.filter((c) => c.variant === variant).forEach((c) => postToIframe(c.selector, c.property, c.value));
       }
@@ -281,40 +286,44 @@ export function VisualEditor({ lang }: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        {/* iframe */}
-        <Card className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+        {/* iframe — shown below edit panel on mobile (order-2), left on desktop */}
+        <Card className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 order-2 lg:order-1">
           <CardContent className="p-0">
             {loadedSrc ? (
               <iframe
                 ref={iframeRef}
                 src={loadedSrc}
                 title="visual-editor-preview"
-                className="w-full h-[600px] border-0 bg-white"
+                className="w-full h-[50vh] min-h-[320px] lg:h-[600px] border-0 bg-white"
               />
             ) : (
-              <div className="h-[600px] flex items-center justify-center text-sm text-slate-400">
+              <div className="h-[50vh] min-h-[320px] lg:h-[600px] flex items-center justify-center text-sm text-slate-400">
                 {tr.loadFirst}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Right panel */}
-        <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
+        {/* Right panel — shown above iframe on mobile (order-1), right on desktop */}
+        <Card ref={editPanelRef} className="rounded-2xl border border-slate-200 dark:border-slate-800 order-1 lg:order-2">
           <CardContent className="pt-5 space-y-4">
             {/* Element selection state */}
             {!selector ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
-                <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
-                  <MousePointerClick className="h-7 w-7 text-indigo-500" />
+              <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                  <MousePointerClick className="h-8 w-8 text-indigo-500" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm text-slate-700 dark:text-slate-200 leading-snug">
+                  <p className="font-semibold text-base text-slate-700 dark:text-slate-200 leading-snug">
                     {tr.ctaTitle}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  <p className="text-sm text-slate-400 mt-2 leading-relaxed max-w-xs mx-auto">
                     {tr.ctaSubtitle}
                   </p>
+                </div>
+                <div className="lg:hidden flex items-center gap-1.5 text-xs text-indigo-400 font-medium bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 rounded-full">
+                  <span>↓</span>
+                  <span>아래 앱을 스크롤해서 클릭하세요</span>
                 </div>
               </div>
             ) : (

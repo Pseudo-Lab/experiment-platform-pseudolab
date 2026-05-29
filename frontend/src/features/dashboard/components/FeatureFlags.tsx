@@ -15,6 +15,8 @@ const t = {
     title: 'Feature Flags',
     colKey: 'Key', colDesc: '설명', colRollout: '롤아웃 %', colExposure: '노출', colStatus: '상태', colProject: '프로젝트', colActions: '',
     allProjects: '모든 프로젝트',
+    noProject: '(없음)',
+    assignProject: '프로젝트 지정',
     enabled: '활성', disabled: '비활성', archived: '보관됨',
     includeArchived: '보관된 플래그 포함',
     addFlag: '플래그 추가',
@@ -52,6 +54,8 @@ const t = {
     title: 'Feature Flags',
     colKey: 'Key', colDesc: 'Description', colRollout: 'Rollout %', colExposure: 'Exposure', colStatus: 'Status', colProject: 'Project', colActions: '',
     allProjects: 'All Projects',
+    noProject: '(none)',
+    assignProject: 'Assign project',
     enabled: 'Enabled', disabled: 'Disabled', archived: 'Archived',
     includeArchived: 'Include archived flags',
     addFlag: 'Add Flag',
@@ -105,6 +109,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
   const [archivingKey, setArchivingKey] = useState<string | null>(null);
   const [restoringKey, setRestoringKey] = useState<string | null>(null);
+  const [assigningProjectKey, setAssigningProjectKey] = useState<string | null>(null);
   const [exposureSummaries, setExposureSummaries] = useState<Record<string, FeatureFlagExposureSummary | null>>({});
   const [exposureLoading, setExposureLoading] = useState(false);
 
@@ -245,6 +250,19 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     }
   };
 
+  const handleAssignProject = async (flag: FeatureFlag, projectId: string | null) => {
+    setAssigningProjectKey(flag.flag_key);
+    setError(null);
+    try {
+      const updated = await featureFlagApi.update(flag.flag_key, { project_id: projectId ?? undefined });
+      replaceFlag(updated);
+    } catch {
+      setError(tr.errorUpdate);
+    } finally {
+      setAssigningProjectKey(null);
+    }
+  };
+
   const renderExposureSummary = (flagKey: string) => {
     const summary = exposureSummaries[flagKey];
     if (summary === undefined) return <span className="text-xs text-slate-400">{tr.exposureLoading}</span>;
@@ -365,6 +383,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                   <TableHead className="font-bold text-slate-500">{tr.colRollout}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colExposure}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colStatus}</TableHead>
+                  <TableHead className="font-bold text-slate-500">{tr.colProject}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -405,6 +424,23 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                       <span className={`inline-block whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-bold ${isArchived ? 'bg-amber-100 text-amber-700' : flag.enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                         {isArchived ? tr.archived : flag.enabled ? tr.enabled : tr.disabled}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={flag.project_id || flag.product || '__none__'}
+                        onValueChange={(v) => handleAssignProject(flag, v === '__none__' ? null : v)}
+                        disabled={assigningProjectKey === flag.flag_key || isArchived}
+                      >
+                        <SelectTrigger className="h-7 rounded-lg text-xs w-32 border-slate-200 dark:border-slate-700">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">{tr.noProject}</SelectItem>
+                          {availableProjects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
