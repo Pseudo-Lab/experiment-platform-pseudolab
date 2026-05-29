@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { decideFlag } from './sdk'
+import { decideFlag, applyVisualChanges } from './sdk'
 import { getUserId } from './userId'
 
 type Variants = Record<string, string>
@@ -15,10 +15,12 @@ export const ExperimentContext = createContext<ExperimentContextValue>({ variant
 export function ExperimentProvider({
   flagKeys,
   apiKey,
+  projectId,
   children,
 }: {
   flagKeys: readonly string[]
   apiKey?: string
+  projectId?: string
   children: ReactNode
 }) {
   const [variants, setVariants] = useState<Variants>(() => {
@@ -59,6 +61,11 @@ export function ExperimentProvider({
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // flagKeys is stable at mount; effect runs once
+
+  useEffect(() => {
+    if (isLoading || !projectId) return
+    applyVisualChanges(projectId, apiKey).catch(() => {})
+  }, [isLoading, projectId, apiKey])
 
   return (
     <ExperimentContext.Provider value={{ variants, isLoading, apiKey }}>

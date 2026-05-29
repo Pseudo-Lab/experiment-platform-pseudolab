@@ -3,15 +3,38 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Card, CardContent } from '../../../components/ui/card';
-import { ArrowLeft, Play, Save, Trash2, MousePointerClick } from 'lucide-react';
-import { visualChangeApi, type VisualChange } from '../../../services/api';
+import {
+  ArrowLeft, Play, Save, Trash2, MousePointerClick, ChevronDown, ChevronUp, Pencil, Check, X,
+} from 'lucide-react';
+import { visualChangeApi, projectApi, type VisualChange } from '../../../services/api';
 
 interface Props { lang: 'en' | 'ko'; }
 
-// postMessage contract shared with the example-app SDK (see features/example/lib/visualEditor.ts)
 const MSG_APPLY = 'exp:apply-change';
 const MSG_SELECTED = 'exp:element-selected';
 const MSG_READY = 'exp:editor-ready';
+
+type EditType = 'text' | 'color' | 'background-color' | 'font-size' | 'display' | 'custom';
+
+interface ElementInfo {
+  tagName: string;
+  textContent: string;
+}
+
+const TAG_KOREAN: Record<string, string> = {
+  button: '버튼', h1: '제목', h2: '제목', h3: '제목', h4: '제목', h5: '제목', h6: '제목',
+  p: '문단', img: '이미지', a: '링크', div: '영역', span: '텍스트',
+  input: '입력', label: '라벨', li: '목록 항목', ul: '목록', section: '섹션', nav: '내비게이션',
+};
+
+const EDIT_TYPES: { type: EditType; emoji: string; label: string }[] = [
+  { type: 'text', emoji: '📝', label: '텍스트 변경' },
+  { type: 'color', emoji: '🎨', label: '글자 색상' },
+  { type: 'background-color', emoji: '🖼', label: '배경 색상' },
+  { type: 'font-size', emoji: '📏', label: '글자 크기' },
+  { type: 'display', emoji: '👁', label: '보이기/숨기기' },
+  { type: 'custom', emoji: '⚙️', label: '직접 입력' },
+];
 
 const t = {
   ko: {
@@ -19,14 +42,22 @@ const t = {
     title: 'Visual Editor',
     urlPlaceholder: '앱 URL (예: http://localhost:8081/example)',
     load: '로드',
-    selectHint: '왼쪽 앱에서 편집할 요소를 클릭하세요.',
-    selectedElement: '선택된 요소',
-    none: '선택 안 됨',
+    ctaTitle: '왼쪽 앱에서 수정할 요소를 클릭하세요',
+    ctaSubtitle: '버튼, 텍스트, 이미지 등 어떤 요소든 클릭하면 여기서 편집할 수 있어요',
+    selectorLabel: 'CSS 선택자',
+    selectorExpand: '선택자 보기',
+    selectorCollapse: '접기',
+    editType: '편집 유형',
+    value: '값',
+    colorPlaceholder: '#000000 또는 색상명',
+    fontSizeUnit: 'px',
+    displayShow: '보이기',
+    displayHide: '숨기기',
+    customProperty: 'CSS 속성명 또는 text',
+    customPropertyHint: '예: color, background-color, font-size, text',
+    customValue: '값',
     variant: 'Variant',
     flagKey: 'Flag key (선택)',
-    property: 'Property',
-    propertyHint: 'CSS 속성명 또는 text (예: color, background-color, font-size, text)',
-    value: 'Value',
     preview: '미리보기',
     save: '저장',
     saving: '저장 중...',
@@ -34,20 +65,33 @@ const t = {
     noChanges: '저장된 변경사항이 없습니다.',
     delete: '삭제',
     loadFirst: '앱 URL을 입력하고 로드하세요.',
+    baseUrlLabel: '기본 앱 URL',
+    baseUrlEdit: '앱 URL 설정',
+    baseUrlSave: '저장',
+    baseUrlCancel: '취소',
+    baseUrlPlaceholder: 'http://localhost:8081',
   },
   en: {
     back: 'To Projects',
     title: 'Visual Editor',
     urlPlaceholder: 'App URL (e.g. http://localhost:8081/example)',
     load: 'Load',
-    selectHint: 'Click an element in the app on the left to edit it.',
-    selectedElement: 'Selected element',
-    none: 'Nothing selected',
+    ctaTitle: 'Click an element in the app on the left to edit it',
+    ctaSubtitle: 'Buttons, text, images — click anything and edit it here',
+    selectorLabel: 'CSS selector',
+    selectorExpand: 'Show selector',
+    selectorCollapse: 'Collapse',
+    editType: 'Edit type',
+    value: 'Value',
+    colorPlaceholder: '#000000 or color name',
+    fontSizeUnit: 'px',
+    displayShow: 'Show',
+    displayHide: 'Hide',
+    customProperty: 'CSS property or text',
+    customPropertyHint: 'e.g. color, background-color, font-size, text',
+    customValue: 'Value',
     variant: 'Variant',
     flagKey: 'Flag key (optional)',
-    property: 'Property',
-    propertyHint: 'CSS property name or text (e.g. color, background-color, font-size, text)',
-    value: 'Value',
     preview: 'Preview',
     save: 'Save',
     saving: 'Saving...',
@@ -55,6 +99,11 @@ const t = {
     noChanges: 'No saved changes yet.',
     delete: 'Delete',
     loadFirst: 'Enter an app URL and load it.',
+    baseUrlLabel: 'Default app URL',
+    baseUrlEdit: 'Set app URL',
+    baseUrlSave: 'Save',
+    baseUrlCancel: 'Cancel',
+    baseUrlPlaceholder: 'http://localhost:8081',
   },
 };
 
@@ -67,12 +116,18 @@ export function VisualEditor({ lang }: Props) {
   const [url, setUrl] = useState('');
   const [loadedSrc, setLoadedSrc] = useState('');
   const [selector, setSelector] = useState('');
+  const [elementInfo, setElementInfo] = useState<ElementInfo | null>(null);
+  const [selectorExpanded, setSelectorExpanded] = useState(false);
+  const [editType, setEditType] = useState<EditType>('text');
+  const [customProperty, setCustomProperty] = useState('');
   const [variant, setVariant] = useState('treatment');
   const [flagKey, setFlagKey] = useState('');
-  const [property, setProperty] = useState('');
   const [value, setValue] = useState('');
   const [changes, setChanges] = useState<VisualChange[]>([]);
   const [saving, setSaving] = useState(false);
+  const [baseUrl, setBaseUrl] = useState<string | null>(null);
+  const [editingBaseUrl, setEditingBaseUrl] = useState(false);
+  const [baseUrlInput, setBaseUrlInput] = useState('');
 
   const loadChanges = useCallback(() => {
     if (!projectId) return;
@@ -81,6 +136,18 @@ export function VisualEditor({ lang }: Props) {
 
   useEffect(() => { loadChanges(); }, [loadChanges]);
 
+  useEffect(() => {
+    if (!projectId) return;
+    projectApi.get(projectId).then((p) => {
+      if (p.base_url) {
+        setBaseUrl(p.base_url);
+        setUrl(`${p.base_url}/example`);
+      }
+    }).catch(() => {});
+  }, [projectId]);
+
+  const effectiveProperty = editType === 'custom' ? customProperty : editType;
+
   const postToIframe = useCallback((sel: string, prop: string, val: string) => {
     iframeRef.current?.contentWindow?.postMessage(
       { type: MSG_APPLY, selector: sel, property: prop, value: val },
@@ -88,13 +155,16 @@ export function VisualEditor({ lang }: Props) {
     );
   }, []);
 
-  // Receive selection + ready signals from the embedded app.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const d = e.data;
       if (!d || typeof d !== 'object') return;
       if (d.type === MSG_SELECTED && typeof d.selector === 'string') {
         setSelector(d.selector);
+        setElementInfo({ tagName: d.tagName || '', textContent: d.textContent || '' });
+        setEditType('text');
+        setValue('');
+        setSelectorExpanded(false);
       } else if (d.type === MSG_READY) {
         changes.filter((c) => c.variant === variant).forEach((c) => postToIframe(c.selector, c.property, c.value));
       }
@@ -111,20 +181,19 @@ export function VisualEditor({ lang }: Props) {
   };
 
   const handlePreview = () => {
-    if (!selector || !property) return;
-    postToIframe(selector, property, value);
+    if (!selector || !effectiveProperty) return;
+    postToIframe(selector, effectiveProperty, value);
   };
 
   const handleSave = async () => {
-    if (!projectId || !selector || !property) return;
+    if (!projectId || !selector || !effectiveProperty) return;
     setSaving(true);
     try {
       await visualChangeApi.create(projectId, {
-        selector, property, value, variant, flag_key: flagKey || undefined,
+        selector, property: effectiveProperty, value, variant, flag_key: flagKey || undefined,
       });
-      postToIframe(selector, property, value);
+      postToIframe(selector, effectiveProperty, value);
       await loadChanges();
-      setProperty('');
       setValue('');
     } finally {
       setSaving(false);
@@ -137,6 +206,23 @@ export function VisualEditor({ lang }: Props) {
     await loadChanges();
   };
 
+  const handleSaveBaseUrl = async () => {
+    if (!projectId) return;
+    try {
+      const updated = await projectApi.patch(projectId, { base_url: baseUrlInput || null });
+      setBaseUrl(updated.base_url ?? null);
+      if (updated.base_url) setUrl(`${updated.base_url}/example`);
+      setEditingBaseUrl(false);
+    } catch { /* ignore */ }
+  };
+
+  const isValidHex = (v: string) => /^#[0-9a-fA-F]{6}$/.test(v);
+
+  const koreanTag = elementInfo ? (TAG_KOREAN[elementInfo.tagName] || '텍스트') : '';
+  const previewText = elementInfo?.textContent
+    ? elementInfo.textContent.slice(0, 30) + (elementInfo.textContent.length > 30 ? '…' : '')
+    : '';
+
   return (
     <div className="max-w-7xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
@@ -148,15 +234,50 @@ export function VisualEditor({ lang }: Props) {
       </div>
 
       {/* URL bar */}
-      <div className="flex gap-2">
-        <Input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder={tr.urlPlaceholder}
-          className="rounded-xl"
-          onKeyDown={(e) => { if (e.key === 'Enter') handleLoad(); }}
-        />
-        <Button className="rounded-xl shrink-0" onClick={handleLoad} disabled={!url.trim()}>{tr.load}</Button>
+      <div className="space-y-1.5">
+        <div className="flex gap-2">
+          <Input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder={tr.urlPlaceholder}
+            className="rounded-xl"
+            onKeyDown={(e) => { if (e.key === 'Enter') handleLoad(); }}
+          />
+          <Button className="rounded-xl shrink-0" onClick={handleLoad} disabled={!url.trim()}>{tr.load}</Button>
+        </div>
+        {/* Base URL inline editor */}
+        <div className="flex items-center gap-2 px-1">
+          {editingBaseUrl ? (
+            <>
+              <Input
+                value={baseUrlInput}
+                onChange={(e) => setBaseUrlInput(e.target.value)}
+                placeholder={tr.baseUrlPlaceholder}
+                className="rounded-lg text-xs h-7 font-mono"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveBaseUrl(); if (e.key === 'Escape') setEditingBaseUrl(false); }}
+                autoFocus
+              />
+              <Button size="sm" variant="default" className="h-7 px-2 rounded-lg text-xs gap-1" onClick={handleSaveBaseUrl}>
+                <Check className="h-3 w-3" />{tr.baseUrlSave}
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 px-2 rounded-lg text-xs" onClick={() => setEditingBaseUrl(false)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </>
+          ) : (
+            <button
+              className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-indigo-500 transition-colors"
+              onClick={() => { setBaseUrlInput(baseUrl || ''); setEditingBaseUrl(true); }}
+            >
+              <Pencil className="h-3 w-3" />
+              {baseUrl ? (
+                <span><span className="text-slate-500 font-mono">{baseUrl}</span></span>
+              ) : (
+                <span>{tr.baseUrlEdit}</span>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
@@ -180,47 +301,202 @@ export function VisualEditor({ lang }: Props) {
 
         {/* Right panel */}
         <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
-          <CardContent className="pt-5 space-y-3">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{tr.selectedElement}</p>
-              {selector ? (
-                <code className="block text-xs font-mono break-all rounded-lg bg-slate-50 dark:bg-slate-800 px-2 py-1.5 text-indigo-600 dark:text-indigo-300">
-                  {selector}
-                </code>
-              ) : (
-                <p className="flex items-center gap-1.5 text-sm text-slate-400">
-                  <MousePointerClick className="h-4 w-4" /> {tr.none}
-                </p>
-              )}
-              <p className="text-[11px] text-slate-400">{tr.selectHint}</p>
-            </div>
+          <CardContent className="pt-5 space-y-4">
+            {/* Element selection state */}
+            {!selector ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                  <MousePointerClick className="h-7 w-7 text-indigo-500" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-slate-700 dark:text-slate-200 leading-snug">
+                    {tr.ctaTitle}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    {tr.ctaSubtitle}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Element info */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-0.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300">
+                      {koreanTag}
+                    </span>
+                    {previewText && (
+                      <span className="text-sm text-slate-600 dark:text-slate-300 truncate max-w-[160px]">
+                        "{previewText}"
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 transition-colors"
+                    onClick={() => setSelectorExpanded((v) => !v)}
+                  >
+                    {selectorExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    {selectorExpanded ? tr.selectorCollapse : tr.selectorExpand}
+                  </button>
+                  {selectorExpanded && (
+                    <code className="block text-[11px] font-mono break-all rounded-lg bg-slate-50 dark:bg-slate-800 px-2 py-1.5 text-indigo-600 dark:text-indigo-300">
+                      {selector}
+                    </code>
+                  )}
+                </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.variant}</label>
-              <Input value={variant} onChange={(e) => setVariant(e.target.value)} className="rounded-xl text-sm" aria-label={tr.variant} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.flagKey}</label>
-              <Input value={flagKey} onChange={(e) => setFlagKey(e.target.value)} className="rounded-xl text-sm font-mono" aria-label={tr.flagKey} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.property}</label>
-              <Input value={property} onChange={(e) => setProperty(e.target.value)} className="rounded-xl text-sm font-mono" aria-label={tr.property} />
-              <p className="text-[11px] text-slate-400">{tr.propertyHint}</p>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.value}</label>
-              <Input value={value} onChange={(e) => setValue(e.target.value)} className="rounded-xl text-sm font-mono" aria-label={tr.value} />
-            </div>
+                {/* Edit type selector */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.editType}</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {EDIT_TYPES.map(({ type, emoji, label }) => (
+                      <button
+                        key={type}
+                        onClick={() => { setEditType(type); setValue(''); }}
+                        className={[
+                          'flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-medium transition-colors text-left',
+                          editType === type
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800',
+                        ].join(' ')}
+                      >
+                        <span>{emoji}</span>
+                        <span className="leading-tight">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="flex gap-2 pt-1">
-              <Button variant="outline" size="sm" className="gap-1.5 rounded-xl flex-1" onClick={handlePreview} disabled={!selector || !property}>
-                <Play className="h-3.5 w-3.5" /> {tr.preview}
-              </Button>
-              <Button size="sm" className="gap-1.5 rounded-xl flex-1" onClick={handleSave} disabled={saving || !selector || !property}>
-                <Save className="h-3.5 w-3.5" /> {saving ? tr.saving : tr.save}
-              </Button>
-            </div>
+                {/* Value input — changes by editType */}
+                <div className="space-y-1.5">
+                  {editType === 'text' && (
+                    <>
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.value}</label>
+                      <Input
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="rounded-xl text-sm"
+                        placeholder={previewText || '변경할 텍스트'}
+                      />
+                    </>
+                  )}
+
+                  {(editType === 'color' || editType === 'background-color') && (
+                    <>
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.value}</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={isValidHex(value) ? value : '#000000'}
+                          onChange={(e) => setValue(e.target.value)}
+                          className="w-10 h-9 rounded-lg cursor-pointer border border-slate-200 dark:border-slate-700 shrink-0"
+                        />
+                        <Input
+                          value={value}
+                          onChange={(e) => setValue(e.target.value)}
+                          className="rounded-xl text-sm font-mono"
+                          placeholder={tr.colorPlaceholder}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {editType === 'font-size' && (
+                    <>
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.value}</label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={value.replace(/[^0-9.]/g, '')}
+                          onChange={(e) => setValue(e.target.value ? `${e.target.value}px` : '')}
+                          className="rounded-xl text-sm w-24"
+                          placeholder="16"
+                        />
+                        <span className="text-sm text-slate-500 shrink-0">{tr.fontSizeUnit}</span>
+                      </div>
+                    </>
+                  )}
+
+                  {editType === 'display' && (
+                    <>
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.value}</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setValue('block')}
+                          className={[
+                            'flex-1 rounded-xl border py-2 text-sm font-medium transition-colors',
+                            value === 'block'
+                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50',
+                          ].join(' ')}
+                        >
+                          👁 {tr.displayShow}
+                        </button>
+                        <button
+                          onClick={() => setValue('none')}
+                          className={[
+                            'flex-1 rounded-xl border py-2 text-sm font-medium transition-colors',
+                            value === 'none'
+                              ? 'border-rose-500 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50',
+                          ].join(' ')}
+                        >
+                          🚫 {tr.displayHide}
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {editType === 'custom' && (
+                    <>
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.customProperty}</label>
+                      <Input
+                        value={customProperty}
+                        onChange={(e) => setCustomProperty(e.target.value)}
+                        className="rounded-xl text-sm font-mono"
+                        placeholder="color, background-color, text …"
+                      />
+                      <p className="text-[11px] text-slate-400">{tr.customPropertyHint}</p>
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.customValue}</label>
+                      <Input
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="rounded-xl text-sm font-mono"
+                      />
+                    </>
+                  )}
+                </div>
+
+                {/* Variant + Flag key */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.variant}</label>
+                  <Input value={variant} onChange={(e) => setVariant(e.target.value)} className="rounded-xl text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400">{tr.flagKey}</label>
+                  <Input value={flagKey} onChange={(e) => setFlagKey(e.target.value)} className="rounded-xl text-sm font-mono" />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="outline" size="sm" className="gap-1.5 rounded-xl flex-1"
+                    onClick={handlePreview}
+                    disabled={!selector || !effectiveProperty}
+                  >
+                    <Play className="h-3.5 w-3.5" /> {tr.preview}
+                  </Button>
+                  <Button
+                    size="sm" className="gap-1.5 rounded-xl flex-1"
+                    onClick={handleSave}
+                    disabled={saving || !selector || !effectiveProperty}
+                  >
+                    <Save className="h-3.5 w-3.5" /> {saving ? tr.saving : tr.save}
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -240,7 +516,10 @@ export function VisualEditor({ lang }: Props) {
                   </span>
                   <code className="font-mono text-slate-500 dark:text-slate-400 truncate flex-1">{c.selector}</code>
                   <span className="font-mono text-slate-700 dark:text-slate-200 shrink-0">{c.property}: {c.value}</span>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-slate-400 hover:text-rose-600 shrink-0" onClick={() => handleDelete(c.id)} aria-label={tr.delete}>
+                  <Button
+                    variant="ghost" size="sm" className="h-7 px-2 text-slate-400 hover:text-rose-600 shrink-0"
+                    onClick={() => handleDelete(c.id)} aria-label={tr.delete}
+                  >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>

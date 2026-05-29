@@ -110,7 +110,12 @@ export function initVisualEditor(): void {
       if (!target) return;
       e.preventDefault();
       e.stopPropagation();
-      window.parent.postMessage({ type: MSG_SELECTED, selector: cssSelector(target) }, '*');
+      window.parent.postMessage({
+        type: MSG_SELECTED,
+        selector: cssSelector(target),
+        tagName: target.tagName.toLowerCase(),
+        textContent: (target as HTMLElement).textContent?.trim().slice(0, 100) || '',
+      }, '*');
     },
     true,
   );

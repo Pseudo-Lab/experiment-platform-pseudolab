@@ -9,11 +9,13 @@ export interface Project {
   id: string;
   name: string;
   api_key: string;
+  base_url?: string | null;
   created_at: string;
 }
 export interface ProjectCreate {
   id: string;
   name: string;
+  base_url?: string;
 }
 export interface ProjectSdkStatus {
   project_id: string;
@@ -41,6 +43,20 @@ export const projectApi = {
   list: async (): Promise<Project[]> => {
     const res = await fetch(`${API_BASE_URL}/projects/`);
     if (!res.ok) throw new Error('Failed to fetch projects');
+    return res.json();
+  },
+  get: async (id: string): Promise<Project> => {
+    const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error('Failed to fetch project');
+    return res.json();
+  },
+  patch: async (id: string, data: { base_url?: string | null }): Promise<Project> => {
+    const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update project');
     return res.json();
   },
   create: async (data: ProjectCreate): Promise<Project> => {

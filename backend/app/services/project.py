@@ -2,7 +2,7 @@ import secrets
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import HTTPException
-from app.schemas.project import Project, ProjectCreate, ProjectWithKey
+from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectWithKey
 from app.db import d1
 
 
@@ -73,14 +73,27 @@ class ProjectService:
 
         api_key = f"pk_live_{data.id}_{secrets.token_hex(8)}"
         ok = await d1.execute(
-            "INSERT INTO projects (id, name, api_key) VALUES (?, ?, ?)",
-            [data.id, data.name, api_key],
+            "INSERT INTO projects (id, name, api_key, base_url) VALUES (?, ?, ?, ?)",
+            [data.id, data.name, api_key, data.base_url],
         )
         if not ok:
             raise HTTPException(status_code=500, detail="Database error: project insert failed")
         result = await self.get(data.id)
         if not result:
             raise HTTPException(status_code=500, detail="Project creation failed")
+        return result
+
+    async def update(self, project_id: str, data: ProjectUpdate) -> ProjectWithKey:
+        existing = await self.get(project_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+        await d1.execute(
+            "UPDATE projects SET base_url = ? WHERE id = ?",
+            [data.base_url, project_id],
+        )
+        result = await self.get(project_id)
+        if not result:
+            raise HTTPException(status_code=500, detail="Update failed")
         return result
 
 
