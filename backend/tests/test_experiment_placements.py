@@ -177,9 +177,9 @@ def _insert_placement(
     conn.commit()
 
 
-def _decide_by_placement(user_id="user-runner", role="runner", cohort="12"):
-    body = {"user_id": user_id, "role": role, "cohort": cohort}
-    return client.post(PLACEMENT_ONLY_BASE, json=body)
+def _decide_by_placement(user_id="user-runner", role="runner", cohort="12", **params):
+    query = {"user_id": user_id, "role": role, "cohort": cohort, **params}
+    return client.get(PLACEMENT_ONLY_BASE, params=query)
 
 
 class TestExperimentPlacementDecide:
@@ -444,9 +444,9 @@ class TestPlacementOnlyDecide:
         assert body["key"] == PLACEMENT_KEY
 
     def test_returns_not_found_when_placement_missing(self, mock_d1):
-        resp = client.post(
+        resp = client.get(
             "/api/v1/placements/missing-placement/decide",
-            json={"user_id": "user-runner", "role": "runner", "cohort": "12"},
+            params={"user_id": "user-runner", "role": "runner", "cohort": "12"},
         )
 
         assert resp.status_code == 200

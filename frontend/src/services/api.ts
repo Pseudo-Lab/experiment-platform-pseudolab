@@ -547,13 +547,11 @@ export const placementApi = {
   },
   decide: async (
     key: string,
-    data: { user_id: string; role?: string; cohort?: string },
+    params: { user_id: string; role?: string; cohort?: string; scenario?: string },
   ): Promise<PlacementDecideResponse> => {
-    const res = await fetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}/decide`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined) qs.set(k, v); });
+    const res = await fetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}/decide?${qs}`);
     if (!res.ok) throw new Error('Failed to decide placement');
     return res.json();
   },

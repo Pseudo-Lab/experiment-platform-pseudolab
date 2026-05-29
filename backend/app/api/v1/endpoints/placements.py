@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Path, Query
 
-from app.schemas.placement import Placement, PlacementCreate, PlacementDecideRequest, PlacementDecideResponse
+from app.schemas.placement import Placement, PlacementCreate, PlacementDecideResponse
 from app.services.placement import placement_service
 
 router = APIRouter()
@@ -28,6 +28,12 @@ async def delete_placement(key: str = Path(...)):
     await placement_service.delete(key)
 
 
-@router.post("/{key}/decide", response_model=PlacementDecideResponse)
-async def decide_placement(key: str, req: PlacementDecideRequest):
-    return await placement_service.decide(key, req)
+@router.get("/{key}/decide", response_model=PlacementDecideResponse)
+async def decide_placement(
+    key: str,
+    user_id: str = Query(..., min_length=1),
+    role: Optional[str] = Query(None),
+    cohort: Optional[str] = Query(None),
+    scenario: Optional[str] = Query(None),
+):
+    return await placement_service.decide(key, user_id=user_id, role=role, cohort=cohort, scenario=scenario)

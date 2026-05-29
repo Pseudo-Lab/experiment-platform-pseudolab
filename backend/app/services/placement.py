@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import HTTPException
 
 from app.db import d1
-from app.schemas.placement import Placement, PlacementCreate, PlacementDecideRequest, PlacementDecideResponse
+from app.schemas.placement import Placement, PlacementCreate, PlacementDecideResponse
 
 
 def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
@@ -98,7 +98,14 @@ class PlacementService:
         if not ok:
             raise HTTPException(status_code=502, detail="Failed to delete placement")
 
-    async def decide(self, key: str, req: PlacementDecideRequest) -> PlacementDecideResponse:
+    async def decide(
+        self,
+        key: str,
+        user_id: str,
+        role: Optional[str] = None,
+        cohort: Optional[str] = None,
+        scenario: Optional[str] = None,
+    ) -> PlacementDecideResponse:
         rows = await d1.query("SELECT * FROM placements WHERE key = ?", [key])
         if not rows:
             return PlacementDecideResponse(key=key, show=False, reason="not_found")
@@ -115,17 +122,28 @@ class PlacementService:
         if end_at and now >= end_at:
             return PlacementDecideResponse(key=key, show=False, reason="outside_window")
 
+        # If role/cohort not supplied by caller, look up from person table
+        if role is None or cohort is None:
+            person = await self._get_person(user_id)
+            if person:
+                role = role or person.get("role")
+                cohort = cohort or person.get("cohort_id")
+
         target_cohort = (row.get("target_cohort") or "").strip()
         if target_cohort and target_cohort != "*":
-            if req.cohort != target_cohort:
+            if cohort != target_cohort:
                 return PlacementDecideResponse(key=key, show=False, reason="wrong_cohort")
 
         allowed_roles = _parse_allowed_roles(row.get("allowed_roles"))
-        if allowed_roles and req.role not in allowed_roles:
+        if allowed_roles and role not in allowed_roles:
             return PlacementDecideResponse(key=key, show=False, reason="wrong_role")
 
-        completed = await self._has_completed(req.user_id)
+        completed = await self._has_completed(user_id)
         return PlacementDecideResponse(key=key, show=True, completed=completed, reason="active")
+
+    async def _get_person(self, user_id: str) -> Optional[dict]:
+        rows = await d1.query("SELECT * FROM person WHERE user_id = ? LIMIT 1", [user_id])
+        return rows[0] if rows else None
 
     async def _has_completed(self, user_id: str) -> bool:
         rows = await d1.query(

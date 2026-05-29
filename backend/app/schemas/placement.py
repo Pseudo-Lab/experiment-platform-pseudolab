@@ -29,13 +29,6 @@ class PlacementCreate(BaseModel):
     end_at: Optional[str] = None
 
 
-class PlacementDecideRequest(BaseModel):
-    user_id: str
-    role: Optional[str] = None
-    cohort: Optional[str] = None
-    scenario: Optional[str] = None
-
-
 class PlacementDecideResponse(BaseModel):
     key: str
     show: bool
