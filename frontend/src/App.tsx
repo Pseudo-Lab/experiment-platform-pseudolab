@@ -13,6 +13,7 @@ import { Analytics } from './features/dashboard/components/Analytics';
 import { Projects } from './features/dashboard/components/Projects';
 import { ApiKeyPage } from './features/dashboard/components/ApiKeyPage';
 import { VisualEditor } from './features/dashboard/components/VisualEditor';
+import { Placements } from './features/dashboard/components/Placements';
 import { ExampleApp } from './features/example/ExampleApp';
 import { ProjectProvider } from './contexts/ProjectContext';
 
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/bug-report" element={<BugReport lang={lang} />} />
         <Route path="/bug-report/:id" element={<BugReportDetail lang={lang} />} />
         <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
+        <Route path="/placements" element={<Placements lang={lang} />} />
         <Route path="/analytics" element={<Analytics lang={lang} />} />
         <Route path="/projects" element={<Projects lang={lang} />} />
         <Route path="/api-key" element={<ApiKeyPage lang={lang} />} />

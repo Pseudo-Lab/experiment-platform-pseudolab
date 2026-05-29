@@ -154,11 +154,32 @@ def _decide(user_id="user-runner", project_id="project-s12", **params):
     return client.get(BASE, params=query)
 
 
-def _decide_by_placement(user_id="user-runner", project_id="project-s12"):
-    query = {"project_id": project_id}
-    if user_id is not None:
-        query["user_id"] = user_id
-    return client.get(PLACEMENT_ONLY_BASE, params=query)
+def _insert_placement(
+    conn,
+    key=PLACEMENT_KEY,
+    name="12기 중간 회고 배너",
+    status="active",
+    target_cohort="12",
+    allowed_roles=None,
+    start_days=-1,
+    end_days=6,
+):
+    now = datetime.now(timezone.utc).isoformat()
+    start_at = _iso(start_days) if start_days is not None else None
+    end_at = _iso(end_days) if end_days is not None else None
+    roles = json.dumps(allowed_roles or ["builder", "runner"])
+    conn.execute(
+        """INSERT INTO placements
+           (key, name, status, target_cohort, allowed_roles, start_at, end_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        [key, name, status, target_cohort, roles, start_at, end_at, now, now],
+    )
+    conn.commit()
+
+
+def _decide_by_placement(user_id="user-runner", role="runner", cohort="12"):
+    body = {"user_id": user_id, "role": role, "cohort": cohort}
+    return client.post(PLACEMENT_ONLY_BASE, json=body)
 
 
 class TestExperimentPlacementDecide:
@@ -410,65 +431,79 @@ class TestExperimentPlacementDecide:
 
 
 class TestPlacementOnlyDecide:
-    def test_resolves_active_experiment_by_placement(self, mock_d1):
-        _insert_experiment(conn=mock_d1)
-        _insert_project(mock_d1)
-        _insert_member(mock_d1)
+    def test_eligible_active_placement(self, mock_d1):
+        _insert_placement(conn=mock_d1)
 
         resp = _decide_by_placement()
 
         assert resp.status_code == 200
         body = resp.json()
         assert body["show"] is True
-        assert body["reason"] == "eligible"
+        assert body["reason"] == "active"
         assert body["completed"] is False
-        assert body["experiment_id"] == EXPERIMENT_ID
-        assert body["placement_key"] == PLACEMENT_KEY
-        assert body["logging_context"]["experiment_id"] == EXPERIMENT_ID
-        assert body["logging_context"]["placement_key"] == PLACEMENT_KEY
+        assert body["key"] == PLACEMENT_KEY
 
-    def test_returns_placement_not_found_when_no_config_uses_placement(self, mock_d1):
-        resp = client.get(
+    def test_returns_not_found_when_placement_missing(self, mock_d1):
+        resp = client.post(
             "/api/v1/placements/missing-placement/decide",
-            params={"user_id": "user-runner", "project_id": "project-s12"},
+            json={"user_id": "user-runner", "role": "runner", "cohort": "12"},
         )
 
         assert resp.status_code == 200
-        assert resp.json()["reason"] == "placement_not_found"
+        assert resp.json()["reason"] == "not_found"
+        assert resp.json()["show"] is False
 
-    def test_returns_outside_window_when_placement_has_no_active_experiment(self, mock_d1):
-        _insert_experiment(conn=mock_d1, status="paused")
+    def test_returns_inactive_when_placement_paused(self, mock_d1):
+        _insert_placement(conn=mock_d1, status="paused")
 
         resp = _decide_by_placement()
 
         assert resp.status_code == 200
-        assert resp.json()["reason"] == "outside_exposure_window"
+        assert resp.json()["reason"] == "inactive"
+        assert resp.json()["show"] is False
 
-    def test_chooses_latest_active_experiment_for_placement(self, mock_d1):
-        _insert_experiment(
-            conn=mock_d1,
-            experiment_id="older-reflection",
-            start_days=-3,
-            ui_id="older-reflection-banner",
-            target_url="/reflection/older",
+    def test_returns_outside_window_before_start(self, mock_d1):
+        _insert_placement(conn=mock_d1, start_days=1, end_days=8)
+
+        resp = _decide_by_placement()
+
+        assert resp.status_code == 200
+        assert resp.json()["reason"] == "outside_window"
+        assert resp.json()["show"] is False
+
+    def test_returns_wrong_cohort(self, mock_d1):
+        _insert_placement(conn=mock_d1, target_cohort="11")
+
+        resp = _decide_by_placement(cohort="12")
+
+        assert resp.status_code == 200
+        assert resp.json()["reason"] == "wrong_cohort"
+        assert resp.json()["show"] is False
+
+    def test_returns_wrong_role(self, mock_d1):
+        _insert_placement(conn=mock_d1, allowed_roles=["builder"])
+
+        resp = _decide_by_placement(role="runner")
+
+        assert resp.status_code == 200
+        assert resp.json()["reason"] == "wrong_role"
+        assert resp.json()["show"] is False
+
+    def test_completed_when_event_exists(self, mock_d1):
+        _insert_placement(conn=mock_d1)
+        now = datetime.now(timezone.utc).isoformat()
+        mock_d1.execute(
+            "INSERT INTO event_log (user_id, event_name, event_time, created_at) VALUES (?, ?, ?, ?)",
+            ["user-runner", "project_reflection_submitted", now, now],
         )
-        _insert_experiment(
-            conn=mock_d1,
-            experiment_id="newer-reflection",
-            start_days=-1,
-            ui_id="newer-reflection-banner",
-            target_url="/reflection/newer",
-        )
-        _insert_project(mock_d1)
-        _insert_member(mock_d1)
+        mock_d1.commit()
 
         resp = _decide_by_placement()
 
         assert resp.status_code == 200
         body = resp.json()
-        assert body["experiment_id"] == "newer-reflection"
-        assert body["ui"]["id"] == "newer-reflection-banner"
-        assert body["ui"]["target_url"] == "/reflection/newer"
+        assert body["show"] is True
+        assert body["completed"] is True
 
 
 class TestExperimentPlacementCapture:

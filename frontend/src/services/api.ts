@@ -477,6 +477,88 @@ export const experimentPlacementApi = {
   },
 };
 
+// ────────────────────────────────────────────────────────────
+// Placements (quasi-experiments)
+// ────────────────────────────────────────────────────────────
+export interface Placement {
+  key: string;
+  name: string;
+  description?: string | null;
+  project_id?: string | null;
+  status: string;
+  target_cohort?: string | null;
+  allowed_roles?: string[] | null;
+  start_at?: string | null;
+  end_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface PlacementCreate {
+  key: string;
+  name: string;
+  description?: string;
+  project_id?: string;
+  status?: string;
+  target_cohort?: string;
+  allowed_roles?: string[];
+  start_at?: string;
+  end_at?: string;
+}
+
+export interface PlacementDecideResponse {
+  key: string;
+  show: boolean;
+  completed: boolean;
+  reason?: string | null;
+}
+
+export const placementApi = {
+  list: async (projectId?: string): Promise<Placement[]> => {
+    const params = projectId ? `?project_id=${encodeURIComponent(projectId)}` : '';
+    const res = await fetch(`${API_BASE_URL}/placements/${params}`);
+    if (!res.ok) throw new Error('Failed to fetch placements');
+    return res.json();
+  },
+  get: async (key: string): Promise<Placement> => {
+    const res = await fetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}`);
+    if (!res.ok) throw new Error('Failed to fetch placement');
+    return res.json();
+  },
+  create: async (data: PlacementCreate): Promise<Placement> => {
+    const res = await fetch(`${API_BASE_URL}/placements/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      let detail = 'Failed to create placement';
+      try {
+        const b = await res.json();
+        if (b?.detail) detail = b.detail;
+      } catch { /* */ }
+      throw new Error(detail);
+    }
+    return res.json();
+  },
+  delete: async (key: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete placement');
+  },
+  decide: async (
+    key: string,
+    data: { user_id: string; role?: string; cohort?: string },
+  ): Promise<PlacementDecideResponse> => {
+    const res = await fetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}/decide`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to decide placement');
+    return res.json();
+  },
+};
+
 export type BugCategory = 'ui' | 'functional' | 'performance' | 'feature_request' | 'other';
 export type BugStatus = 'reported' | 'in_progress' | 'resolved';
 export type BugSeverity = 'minor' | 'major' | 'critical';

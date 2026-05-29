@@ -188,6 +188,20 @@ CREATE TABLE IF NOT EXISTS experiment_placement_config (
     PRIMARY KEY (experiment_id, placement_key)
 );
 
+CREATE TABLE IF NOT EXISTS placements (
+    key          TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    description  TEXT,
+    project_id   TEXT REFERENCES projects(id),
+    status       TEXT NOT NULL DEFAULT 'active',
+    target_cohort TEXT,
+    allowed_roles TEXT,
+    start_at     TEXT,
+    end_at       TEXT,
+    created_at   TEXT DEFAULT (datetime('now')),
+    updated_at   TEXT DEFAULT (datetime('now'))
+);
+
 """
 
 
