@@ -6,12 +6,12 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus, Link2 } from 'lucide-react';
 import {
-  experimentApi, experimentResultApi, decisionApi, experimentPlacementApi, projectApi,
+  experimentApi, experimentResultApi, decisionApi, experimentPlacementApi, projectApi, featureFlagApi,
   type Experiment, type ExperimentStatus,
   type ExperimentResult, type Decision, type LearningNote, type DecisionType,
-  type ExperimentPlacementConfig, type Project,
+  type ExperimentPlacementConfig, type Project, type FeatureFlag,
 } from '../../../services/api';
 
 interface ExperimentDetailProps {
@@ -52,6 +52,9 @@ const translations = {
     saving: 'Saving...',
     labelName: 'Name',
     none: '-',
+    flagNone: '(none)',
+    flagEditTitle: 'Link feature flag',
+    flagSaving: 'Saving...',
     actionStart: 'Start',
     actionPause: 'Pause',
     actionResume: 'Resume',
@@ -165,6 +168,9 @@ const translations = {
     saving: '저장 중...',
     labelName: '실험 이름',
     none: '-',
+    flagNone: '(없음)',
+    flagEditTitle: 'Feature Flag 연결',
+    flagSaving: '저장 중...',
     actionStart: '시작',
     actionPause: '일시정지',
     actionResume: '재개',
@@ -392,6 +398,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [placementDeleting, setPlacementDeleting] = useState(false);
   const [placementSaveMessage, setPlacementSaveMessage] = useState<string | null>(null);
 
+  const [flagEditing, setFlagEditing] = useState(false);
+  const [availableFlags, setAvailableFlags] = useState<FeatureFlag[]>([]);
+  const [flagSaving, setFlagSaving] = useState(false);
+
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [notes, setNotes] = useState<LearningNote[]>([]);
   const [decisionType, setDecisionType] = useState<DecisionType>('SHIP');
@@ -432,6 +442,28 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       .then(setResult)
       .catch(() => {})
       .finally(() => setResultLoading(false));
+  };
+
+  const startFlagEdit = () => {
+    if (availableFlags.length === 0) {
+      featureFlagApi.list(false).then(setAvailableFlags).catch(() => {});
+    }
+    setFlagEditing(true);
+  };
+
+  const handleFlagSave = async (newFlagKey: string) => {
+    if (!experiment) return;
+    const flagKeyValue = newFlagKey === '__none__' ? undefined : newFlagKey;
+    setFlagSaving(true);
+    try {
+      const updated = await experimentApi.update(experiment.id, { flag_key: flagKeyValue });
+      setExperiment(updated);
+      setFlagEditing(false);
+    } catch {
+      // silent — user can retry
+    } finally {
+      setFlagSaving(false);
+    }
   };
 
   const handleAddDecision = async () => {
@@ -857,10 +889,58 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
               <p className="text-sm text-slate-700 dark:text-slate-300">{experiment.cohort_id || t.none}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelFlagKey}</p>
-              <p className="text-sm text-slate-700 dark:text-slate-300 font-mono">
-                {experiment.flag_key || t.none}
-              </p>
+              <div className="flex items-center gap-1.5 mb-1">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.labelFlagKey}</p>
+                {!editing && !flagEditing && (
+                  <button
+                    type="button"
+                    onClick={startFlagEdit}
+                    className="text-slate-400 hover:text-indigo-500 transition-colors"
+                    aria-label={t.flagEditTitle}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              {flagEditing ? (
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={experiment.flag_key || '__none__'}
+                    onValueChange={handleFlagSave}
+                    disabled={flagSaving}
+                  >
+                    <SelectTrigger className="rounded-xl h-8 text-sm w-56" aria-label={t.flagEditTitle}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">{t.flagNone}</SelectItem>
+                      {availableFlags.map((f) => (
+                        <SelectItem key={f.flag_key} value={f.flag_key}>{f.flag_key}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <button
+                    type="button"
+                    onClick={() => setFlagEditing(false)}
+                    disabled={flagSaving}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                    aria-label={t.cancel}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : experiment.flag_key ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/feature-flags')}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 transition-colors font-mono"
+                >
+                  <Link2 className="h-3 w-3 shrink-0" />
+                  {experiment.flag_key}
+                </button>
+              ) : (
+                <p className="text-sm text-slate-700 dark:text-slate-300">{t.none}</p>
+              )}
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelSchedule}</p>
