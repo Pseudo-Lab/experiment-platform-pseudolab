@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { decideFlag } from '../lib/sdk'
+import { applyVisualChanges } from '../lib/visualEditor'
 import { getUserId } from '../lib/userId'
 
-// 백엔드의 decide()가 노출 기록과 함께 연결된 실험의 assignment까지 동시에 기록.
-// 데모 SDK는 decide() 하나만 호출하면 됨.
 export function useFlag(flagKey: string): string | null {
   const [variant, setVariant] = useState<string | null>(null)
 
@@ -17,10 +16,13 @@ export function useFlag(flagKey: string): string | null {
     }
     let cancelled = false
     decideFlag(flagKey)
-      .then((v) => {
+      .then(({ variant: v, visual_changes }) => {
         if (cancelled) return
         sessionStorage.setItem(cacheKey, v)
         setVariant(v)
+        if (visual_changes.length > 0) {
+          applyVisualChanges(visual_changes)
+        }
       })
       .catch(() => {
         if (cancelled) return

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { decideFlag, applyVisualChanges } from './sdk'
+import { decideFlag } from './sdk'
+import { applyVisualChanges, type VisualChangePayload } from './visualEditor'
 import { getUserId } from './userId'
 
 type Variants = Record<string, string>
@@ -15,7 +16,7 @@ export const ExperimentContext = createContext<ExperimentContextValue>({ variant
 export function ExperimentProvider({
   flagKeys,
   apiKey,
-  projectId,
+  projectId: _projectId,
   children,
 }: {
   flagKeys: readonly string[]
@@ -45,27 +46,29 @@ export function ExperimentProvider({
 
     const tasks = missing.map(async (key) => {
       try {
-        const variant = await decideFlag(key, apiKey)
+        const { variant, visual_changes } = await decideFlag(key, apiKey)
         sessionStorage.setItem(`flag:${key}:${uid}`, variant)
-        return { key, variant }
+        return { key, variant, visual_changes }
       } catch {
-        return { key, variant: 'control' }
+        return { key, variant: 'control', visual_changes: [] as VisualChangePayload[] }
       }
     })
 
     Promise.all(tasks).then((resolved) => {
       const map: Variants = {}
-      for (const { key, variant } of resolved) map[key] = variant
+      const allChanges: VisualChangePayload[] = []
+      for (const { key, variant, visual_changes } of resolved) {
+        map[key] = variant
+        allChanges.push(...visual_changes)
+      }
       setVariants((prev) => ({ ...prev, ...map }))
       setIsLoading(false)
+      if (allChanges.length > 0) {
+        applyVisualChanges(allChanges)
+      }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // flagKeys is stable at mount; effect runs once
-
-  useEffect(() => {
-    if (isLoading || !projectId) return
-    applyVisualChanges(projectId, apiKey).catch(() => {})
-  }, [isLoading, projectId, apiKey])
 
   return (
     <ExperimentContext.Provider value={{ variants, isLoading, apiKey }}>

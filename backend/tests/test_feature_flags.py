@@ -221,7 +221,7 @@ class TestDecideFeatureFlag:
         resp = client.get(f"{BASE}/decide", params={"flag_key": "unknown_flag", "user_id": "user-1"})
 
         assert resp.status_code == 200
-        assert resp.json() == {"success": True, "data": {"variant": "control"}}
+        assert resp.json() == {"success": True, "data": {"variant": "control", "visual_changes": []}}
 
     def test_disabled_flag_always_returns_control(self):
         created = _create_flag("disabled_flag", rollout_pct=100, enabled=False)

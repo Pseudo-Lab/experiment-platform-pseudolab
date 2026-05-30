@@ -3,19 +3,20 @@ from typing import List, Optional
 from app.schemas.visual_change import VisualChange, VisualChangeCreate
 from app.services.visual_change import visual_change_service
 
-router = APIRouter()
+experiment_router = APIRouter()
+standalone_router = APIRouter()
 
 
-@router.get("/{project_id}/visual-changes", response_model=List[VisualChange])
-async def list_visual_changes(project_id: str, variant: Optional[str] = None):
-    return await visual_change_service.list(project_id, variant)
+@experiment_router.get("/{experiment_id}/visual-changes", response_model=List[VisualChange])
+async def list_visual_changes(experiment_id: str, variation_key: Optional[str] = None):
+    return await visual_change_service.list(experiment_id, variation_key)
 
 
-@router.post("/{project_id}/visual-changes", response_model=VisualChange, status_code=201)
-async def create_visual_change(project_id: str, data: VisualChangeCreate):
-    return await visual_change_service.create(project_id, data)
+@experiment_router.post("/{experiment_id}/visual-changes", response_model=VisualChange, status_code=201)
+async def create_visual_change(experiment_id: str, data: VisualChangeCreate):
+    return await visual_change_service.create(experiment_id, data)
 
 
-@router.delete("/{project_id}/visual-changes/{change_id}", status_code=204)
-async def delete_visual_change(project_id: str, change_id: str):
-    await visual_change_service.delete(project_id, change_id)
+@standalone_router.delete("/{change_id}", status_code=204)
+async def delete_visual_change(change_id: str):
+    await visual_change_service.delete(change_id)

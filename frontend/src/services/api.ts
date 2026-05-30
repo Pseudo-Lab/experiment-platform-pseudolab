@@ -25,19 +25,17 @@ export interface ProjectSdkStatus {
 }
 export interface VisualChange {
   id: string;
-  project_id: string;
-  flag_key?: string | null;
-  variant: string;
+  experiment_id: string;
+  variation_key: string;
   selector: string;
-  property: string;
+  type: string;
   value: string;
   created_at: string;
 }
 export interface VisualChangeCreate {
-  flag_key?: string;
-  variant: string;
+  variation_key: string;
   selector: string;
-  property: string;
+  type: string;
   value: string;
 }
 
@@ -104,14 +102,14 @@ export const projectApi = {
 };
 
 export const visualChangeApi = {
-  list: async (projectId: string, variant?: string): Promise<VisualChange[]> => {
-    const q = variant ? `?variant=${encodeURIComponent(variant)}` : '';
-    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/visual-changes${q}`);
+  list: async (experimentId: string, variationKey?: string): Promise<VisualChange[]> => {
+    const q = variationKey ? `?variation_key=${encodeURIComponent(variationKey)}` : '';
+    const res = await fetch(`${API_BASE_URL}/experiments/${experimentId}/visual-changes${q}`);
     if (!res.ok) throw new Error('Failed to fetch visual changes');
     return res.json();
   },
-  create: async (projectId: string, data: VisualChangeCreate): Promise<VisualChange> => {
-    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/visual-changes`, {
+  create: async (experimentId: string, data: VisualChangeCreate): Promise<VisualChange> => {
+    const res = await fetch(`${API_BASE_URL}/experiments/${experimentId}/visual-changes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -119,8 +117,8 @@ export const visualChangeApi = {
     if (!res.ok) throw new Error('Failed to save visual change');
     return res.json();
   },
-  delete: async (projectId: string, changeId: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/visual-changes/${changeId}`, { method: 'DELETE' });
+  delete: async (changeId: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/visual-changes/${changeId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete visual change');
   },
 };

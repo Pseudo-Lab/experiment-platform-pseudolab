@@ -137,14 +137,14 @@ CREATE TABLE IF NOT EXISTS event_log (
 );
 
 CREATE TABLE IF NOT EXISTS visual_changes (
-    id          TEXT PRIMARY KEY,
-    project_id  TEXT NOT NULL REFERENCES projects(id),
-    flag_key    TEXT,
-    variant     TEXT NOT NULL,
-    selector    TEXT NOT NULL,
-    property    TEXT NOT NULL,
-    value       TEXT NOT NULL,
-    created_at  TEXT DEFAULT (datetime('now'))
+    id            TEXT PRIMARY KEY,
+    experiment_id TEXT NOT NULL,
+    variation_key TEXT NOT NULL,
+    selector      TEXT NOT NULL,
+    type          TEXT NOT NULL,
+    value         TEXT NOT NULL,
+    created_at    TEXT DEFAULT (datetime('now')),
+    updated_at    TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS person (

@@ -1,14 +1,20 @@
 // Visual Editor SDK hooks for the example app.
 //
-// Two responsibilities:
-//   1. Always: listen for `exp:apply-change` messages and mutate the DOM
-//      (used by the dashboard editor preview, and could be reused in prod).
-//   2. Editor mode only (?__exp_editor=true): highlight elements on hover,
+// Responsibilities:
+//   1. Always: listen for `exp:apply-change` postMessages and mutate the DOM.
+//   2. Export applyVisualChanges() to apply changes from the decide API response.
+//   3. Editor mode only (?__exp_editor=true): highlight elements on hover,
 //      and on click report the element's CSS selector to the parent window.
 
 const MSG_APPLY = 'exp:apply-change';
 const MSG_SELECTED = 'exp:element-selected';
 const MSG_READY = 'exp:editor-ready';
+
+export interface VisualChangePayload {
+  selector: string;
+  type: string;
+  value: string;
+}
 
 export function isEditorMode(): boolean {
   try {
@@ -44,7 +50,7 @@ export function cssSelector(el: Element): string {
   return parts.join(' > ');
 }
 
-function applyChange(selector: string, property: string, value: string): void {
+function applyChange(selector: string, changeType: string, value: string): void {
   let el: Element | null = null;
   try {
     el = document.querySelector(selector);
@@ -53,10 +59,75 @@ function applyChange(selector: string, property: string, value: string): void {
   }
   if (!el) return;
 
-  if (property === 'text' || property === 'textContent') {
-    (el as HTMLElement).textContent = value;
-  } else {
-    (el as HTMLElement).style.setProperty(property, value);
+  const html = el as HTMLElement;
+  switch (changeType) {
+    case 'text':
+      html.textContent = value;
+      break;
+    case 'color':
+      html.style.color = value;
+      break;
+    case 'backgroundColor':
+      html.style.backgroundColor = value;
+      break;
+    case 'fontSize':
+      html.style.fontSize = value;
+      break;
+    case 'visibility':
+      html.style.display = value;
+      break;
+    case 'size': {
+      try {
+        const { width, height } = JSON.parse(value) as Record<string, string>;
+        if (width) html.style.width = width;
+        if (height) html.style.height = height;
+      } catch { /* ignore */ }
+      break;
+    }
+    case 'spacing': {
+      try {
+        const s = JSON.parse(value) as Record<string, string>;
+        Object.entries(s).forEach(([k, v]) => {
+          (html.style as unknown as Record<string, string>)[k] = v;
+        });
+      } catch { /* ignore */ }
+      break;
+    }
+    case 'position': {
+      try {
+        const { position, top, left, right, bottom } = JSON.parse(value) as Record<string, string>;
+        if (position) html.style.position = position;
+        if (top !== undefined) html.style.top = top;
+        if (left !== undefined) html.style.left = left;
+        if (right !== undefined) html.style.right = right;
+        if (bottom !== undefined) html.style.bottom = bottom;
+      } catch { /* ignore */ }
+      break;
+    }
+    case 'css': {
+      try {
+        const { property: prop, value: val } = JSON.parse(value) as { property: string; value: string };
+        if (prop) html.style.setProperty(prop, val);
+      } catch { /* ignore */ }
+      break;
+    }
+    default:
+      // Legacy: treat changeType as a CSS property name
+      if (changeType === 'display') {
+        html.style.display = value;
+      } else if (changeType === 'background-color') {
+        html.style.backgroundColor = value;
+      } else if (changeType === 'font-size') {
+        html.style.fontSize = value;
+      } else {
+        html.style.setProperty(changeType, value);
+      }
+  }
+}
+
+export function applyVisualChanges(changes: VisualChangePayload[]): void {
+  for (const change of changes) {
+    applyChange(change.selector, change.type, change.value);
   }
 }
 
@@ -66,12 +137,12 @@ export function initVisualEditor(): void {
   if (initialized || typeof window === 'undefined') return;
   initialized = true;
 
-  // Always apply changes pushed by the parent (dashboard preview).
   window.addEventListener('message', (e: MessageEvent) => {
     const d = e.data;
     if (!d || typeof d !== 'object') return;
     if (d.type === MSG_APPLY && typeof d.selector === 'string') {
-      applyChange(d.selector, d.property, d.value);
+      const changeType: string = d.changeType ?? d.property ?? '';
+      applyChange(d.selector, changeType, d.value ?? '');
     }
   });
 
@@ -102,7 +173,6 @@ export function initVisualEditor(): void {
     true,
   );
 
-  // Intercept clicks: select the element instead of activating it.
   document.addEventListener(
     'click',
     (e) => {
@@ -121,7 +191,6 @@ export function initVisualEditor(): void {
     true,
   );
 
-  // Tell the parent we're ready so it can push existing changes.
   if (window !== window.parent) {
     window.parent.postMessage({ type: MSG_READY }, '*');
   }

@@ -1,21 +1,18 @@
 from pydantic import BaseModel
-from typing import Optional
 
 
 class VisualChangeCreate(BaseModel):
-    flag_key: Optional[str] = None
-    variant: str
+    variation_key: str
     selector: str
-    property: str
+    type: str
     value: str
 
 
 class VisualChange(BaseModel):
     id: str
-    project_id: str
-    flag_key: Optional[str] = None
-    variant: str
+    experiment_id: str
+    variation_key: str
     selector: str
-    property: str
+    type: str
     value: str
     created_at: str

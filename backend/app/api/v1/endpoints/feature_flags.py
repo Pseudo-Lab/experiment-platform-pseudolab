@@ -16,6 +16,7 @@ from app.schemas.feature_flag_rule import (
 )
 from app.schemas.project import Project
 from app.services.feature_flag import feature_flag_service
+from app.services.visual_change import visual_change_service
 from app.api.deps import get_project_from_api_key
 
 router = APIRouter()
@@ -30,7 +31,8 @@ async def decide(
 ):
     project_id = project.id if project else None
     variant = await feature_flag_service.decide(flag_key, user_id, track=track, project_id=project_id)
-    return {"success": True, "data": {"variant": variant}}
+    visual_changes = await visual_change_service.list_by_flag_key(flag_key, variant)
+    return {"success": True, "data": {"variant": variant, "visual_changes": visual_changes}}
 
 
 @router.get("/", response_model=List[FeatureFlag])
