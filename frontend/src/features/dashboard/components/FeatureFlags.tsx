@@ -307,6 +307,14 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+        <span className="shrink-0 mt-0.5">ℹ️</span>
+        <span>
+          {lang === 'ko'
+            ? '이 탭은 실험에 연결되지 않은 독립 Feature Flag를 관리합니다. 실험과 연결된 Flag의 롤아웃·활성 여부는 실험 상세 페이지에서 바로 조작할 수 있습니다.'
+            : 'This tab manages standalone feature flags not linked to any experiment. Flags linked to an experiment can be toggled and adjusted directly on the experiment detail page.'}
+        </span>
+      </div>
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{tr.title}</h1>
         <div className="flex flex-wrap items-center justify-end gap-2">

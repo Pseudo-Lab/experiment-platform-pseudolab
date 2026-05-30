@@ -6,12 +6,12 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus, Link2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight } from 'lucide-react';
 import {
   experimentApi, experimentResultApi, decisionApi, experimentPlacementApi, projectApi, featureFlagApi,
   type Experiment, type ExperimentStatus,
   type ExperimentResult, type Decision, type LearningNote, type DecisionType,
-  type ExperimentPlacementConfig, type Project, type FeatureFlag,
+  type ExperimentPlacementConfig, type Project, type FeatureFlag, type FeatureFlagExposureSummary,
 } from '../../../services/api';
 
 interface ExperimentDetailProps {
@@ -55,6 +55,12 @@ const translations = {
     flagNone: '(none)',
     flagEditTitle: 'Link feature flag',
     flagSaving: 'Saving...',
+    flagRollout: 'Rollout %',
+    flagEnabled: 'Enabled',
+    flagDisabled: 'Disabled',
+    flagErrorUpdate: 'Failed to update flag.',
+    flagTotalExposure: 'Total',
+    flagFirstExposure: 'Analysis users',
     actionStart: 'Start',
     actionPause: 'Pause',
     actionResume: 'Resume',
@@ -171,6 +177,12 @@ const translations = {
     flagNone: '(없음)',
     flagEditTitle: 'Feature Flag 연결',
     flagSaving: '저장 중...',
+    flagRollout: '롤아웃 %',
+    flagEnabled: '활성',
+    flagDisabled: '비활성',
+    flagErrorUpdate: 'Flag 업데이트에 실패했습니다.',
+    flagTotalExposure: '전체',
+    flagFirstExposure: '분석 대상',
     actionStart: '시작',
     actionPause: '일시정지',
     actionResume: '재개',
@@ -401,6 +413,12 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [flagEditing, setFlagEditing] = useState(false);
   const [availableFlags, setAvailableFlags] = useState<FeatureFlag[]>([]);
   const [flagSaving, setFlagSaving] = useState(false);
+  const [linkedFlag, setLinkedFlag] = useState<FeatureFlag | null>(null);
+  const [linkedFlagLoading, setLinkedFlagLoading] = useState(false);
+  const [flagRolloutDraft, setFlagRolloutDraft] = useState(0);
+  const [flagRolloutSaving, setFlagRolloutSaving] = useState(false);
+  const [flagToggling, setFlagToggling] = useState(false);
+  const [linkedFlagExposure, setLinkedFlagExposure] = useState<FeatureFlagExposureSummary | null | undefined>(undefined);
 
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [notes, setNotes] = useState<LearningNote[]>([]);
@@ -435,6 +453,32 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
   }, [id]);
 
+  useEffect(() => {
+    const flagKey = experiment?.flag_key;
+    if (!flagKey) {
+      setLinkedFlag(null);
+      setLinkedFlagExposure(undefined);
+      return;
+    }
+    setLinkedFlagLoading(true);
+    Promise.all([
+      featureFlagApi.list(false),
+      featureFlagApi.exposureSummary(flagKey).catch(() => null),
+    ])
+      .then(([flags, exposure]) => {
+        const flag = flags.find(f => f.flag_key === flagKey) ?? null;
+        setLinkedFlag(flag);
+        if (flag) setFlagRolloutDraft(flag.rollout_pct);
+        setAvailableFlags(flags);
+        setLinkedFlagExposure(exposure);
+      })
+      .catch(() => {
+        setLinkedFlag(null);
+        setLinkedFlagExposure(null);
+      })
+      .finally(() => setLinkedFlagLoading(false));
+  }, [experiment?.flag_key]);
+
   const loadResult = () => {
     if (!id || resultLoading) return;
     setResultLoading(true);
@@ -464,6 +508,55 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     } finally {
       setFlagSaving(false);
     }
+  };
+
+  const handleFlagToggle = async () => {
+    if (!linkedFlag) return;
+    setFlagToggling(true);
+    try {
+      const updated = await featureFlagApi.update(linkedFlag.flag_key, { enabled: !linkedFlag.enabled });
+      setLinkedFlag(updated);
+    } catch {
+      // silent
+    } finally {
+      setFlagToggling(false);
+    }
+  };
+
+  const handleFlagRolloutSave = async () => {
+    if (!linkedFlag || flagRolloutDraft === linkedFlag.rollout_pct) return;
+    setFlagRolloutSaving(true);
+    try {
+      const updated = await featureFlagApi.update(linkedFlag.flag_key, { rollout_pct: flagRolloutDraft });
+      setLinkedFlag(updated);
+    } catch {
+      setFlagRolloutDraft(linkedFlag.rollout_pct);
+    } finally {
+      setFlagRolloutSaving(false);
+    }
+  };
+
+  const renderLinkedFlagExposure = (summary: FeatureFlagExposureSummary | null) => {
+    if (!summary || summary.total_exposures === 0) return null;
+    const variantEntries = Object.entries(summary.variant_counts)
+      .filter(([, count]) => count > 0)
+      .sort(([a], [b]) => (a === 'control' ? -1 : b === 'control' ? 1 : a.localeCompare(b)));
+    const controlChip = 'rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+    const variantChip = 'rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300';
+    return (
+      <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+        <div className="font-semibold text-slate-600 dark:text-slate-300">
+          {t.flagTotalExposure} {summary.total_exposures.toLocaleString()} · {t.flagFirstExposure} {summary.first_exposure_users.toLocaleString()}
+        </div>
+        <div className="flex flex-wrap gap-x-2 gap-y-1">
+          {variantEntries.map(([key, count]) => (
+            <span key={key} className={key === 'control' ? controlChip : variantChip}>
+              {key} {count.toLocaleString()}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const handleAddDecision = async () => {
@@ -888,8 +981,8 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelCohortId}</p>
               <p className="text-sm text-slate-700 dark:text-slate-300">{experiment.cohort_id || t.none}</p>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5 mb-1">
+            <div className={experiment.flag_key && !flagEditing ? 'w-full' : undefined}>
+              <div className="flex items-center gap-1.5 mb-2">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.labelFlagKey}</p>
                 {!editing && !flagEditing && (
                   <button
@@ -930,14 +1023,57 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                   </button>
                 </div>
               ) : experiment.flag_key ? (
-                <button
-                  type="button"
-                  onClick={() => navigate('/feature-flags')}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 transition-colors font-mono"
-                >
-                  <Link2 className="h-3 w-3 shrink-0" />
-                  {experiment.flag_key}
-                </button>
+                <div className="space-y-3">
+                  {/* Flag key badge + toggle */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300 font-mono">
+                      <Link2 className="h-3 w-3 shrink-0" />
+                      {experiment.flag_key}
+                    </span>
+                    {linkedFlagLoading && <span className="text-xs text-slate-400">...</span>}
+                    {linkedFlag && (
+                      <button
+                        onClick={handleFlagToggle}
+                        disabled={flagToggling}
+                        className="flex items-center gap-1 disabled:opacity-50 transition-opacity"
+                        aria-label={linkedFlag.enabled ? t.flagDisabled : t.flagEnabled}
+                      >
+                        {linkedFlag.enabled
+                          ? <ToggleRight className="h-5 w-5 text-indigo-500" />
+                          : <ToggleLeft className="h-5 w-5 text-slate-400" />}
+                        <span className={`text-xs font-medium ${linkedFlag.enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                          {linkedFlag.enabled ? t.flagEnabled : t.flagDisabled}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                  {/* Rollout slider */}
+                  {linkedFlag && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 shrink-0">{t.flagRollout}</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={flagRolloutDraft}
+                        onChange={e => setFlagRolloutDraft(Number(e.target.value))}
+                        className="w-32 accent-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-9 text-right">{flagRolloutDraft}%</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 rounded-lg px-2 text-xs"
+                        onClick={handleFlagRolloutSave}
+                        disabled={flagRolloutDraft === linkedFlag.rollout_pct || flagRolloutSaving}
+                      >
+                        {flagRolloutSaving ? t.saving : t.save}
+                      </Button>
+                    </div>
+                  )}
+                  {/* Variant exposure distribution */}
+                  {linkedFlag && linkedFlagExposure !== undefined && renderLinkedFlagExposure(linkedFlagExposure)}
+                </div>
               ) : (
                 <p className="text-sm text-slate-700 dark:text-slate-300">{t.none}</p>
               )}
