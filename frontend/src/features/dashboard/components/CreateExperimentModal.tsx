@@ -102,6 +102,12 @@ const translations = {
     placementEnabled: 'Enable placement immediately',
     placementRequired: 'Fill all placement fields or turn off placement creation.',
     placementCreateFailed: 'Experiment was created, but placement creation failed. Add the placement from the experiment detail page.',
+    flagModeNone: 'No flag',
+    flagModeExisting: 'Select existing',
+    flagModeAuto: 'Auto-generate',
+    flagAutoKeyLabel: 'Auto-generated Flag Key',
+    flagAutoKeyHelp: 'A new flag will be created and linked when the experiment is created. The key is editable.',
+    flagAutoCreateFailed: 'Failed to auto-create flag.',
   },
   ko: {
     title: '새 실험 생성',
@@ -184,10 +190,34 @@ const translations = {
     placementEnabled: 'Placement 즉시 활성화',
     placementRequired: 'Placement 필드를 모두 입력하거나 Placement 생성을 끄세요.',
     placementCreateFailed: '실험은 생성됐지만 Placement 생성에 실패했습니다. 실험 상세 화면에서 Placement를 추가하세요.',
+    flagModeNone: '연결 안 함',
+    flagModeExisting: '기존 플래그 선택',
+    flagModeAuto: '자동 생성',
+    flagAutoKeyLabel: '자동 생성 Flag Key',
+    flagAutoKeyHelp: '실험 생성 시 새 Flag를 자동으로 만들어 연결합니다. 키를 직접 수정할 수 있습니다.',
+    flagAutoCreateFailed: 'Flag 자동 생성에 실패했습니다.',
   },
 };
 
 const PRODUCT_OPTIONS = ['lvup', 'demo-app', 'pseudo-lab'];
+
+const generateFlagKey = (experimentName: string, experimentId?: string): string => {
+  const slug = experimentName
+    .toLowerCase()
+    .replace(/experiment/g, '')
+    .replace(/\bexp\b/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  if (slug.length >= 3) return slug;
+  const idSlug = (experimentId || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return idSlug.length >= 3 ? idSlug : 'new-flag';
+};
 const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
 const experimentTypeOptions: { value: ExperimentType; en: string; ko: string }[] = [
   { value: 'quasi_experiment', en: 'Quasi experiment', ko: '준실험' },
@@ -219,7 +249,9 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   ]);
   const [projectId, setProjectId] = useState('');
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
+  const [flagMode, setFlagMode] = useState<'none' | 'existing' | 'auto'>('none');
   const [flagKey, setFlagKey] = useState<string>('');
+  const [autoFlagKey, setAutoFlagKey] = useState('');
   const [availableFlags, setAvailableFlags] = useState<FeatureFlag[]>([]);
   const [configurePlacement, setConfigurePlacement] = useState(false);
   const [placementKey, setPlacementKey] = useState('');
@@ -242,6 +274,11 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     featureFlagApi.list(false).then(setAvailableFlags).catch(() => setAvailableFlags([]));
     projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
   }, []);
+
+  useEffect(() => {
+    if (flagMode !== 'auto') return;
+    setAutoFlagKey(generateFlagKey(name, experimentId));
+  }, [name, experimentId, flagMode]);
 
   // Flag 선택 시 그 Flag의 enabled rule variants로 variants 자동 채움.
   // 연결 해제하거나 빈 값이면 사용자 입력 보존.
@@ -288,6 +325,24 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
     setSubmitting(true);
     setError(null);
+
+    let resolvedFlagKey: string | undefined = flagMode === 'existing' ? (flagKey || undefined) : undefined;
+    if (flagMode === 'auto' && autoFlagKey.trim()) {
+      try {
+        const newFlag = await featureFlagApi.create({
+          flag_key: autoFlagKey.trim(),
+          description: `${name.trim()}`,
+          rollout_pct: 0,
+          enabled: false,
+        });
+        resolvedFlagKey = newFlag.flag_key;
+      } catch {
+        setError(t.flagAutoCreateFailed);
+        setSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const created = await experimentApi.create({
         id: experimentId.trim() || undefined,
@@ -297,7 +352,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
         completion_event: completionEvent.trim() || undefined,
         experiment_type: experimentType,
         cohort_id: cohortId.trim() || undefined,
-        flag_key: flagKey || undefined,
+        flag_key: resolvedFlagKey,
         project_id: projectId || undefined,
         product: projectId || undefined,
         start_at: toApiDatetime(startAt),
@@ -430,22 +485,58 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             <p className="text-xs text-slate-500 dark:text-slate-400">{t.primaryMetricHint}</p>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelFlagKey}</label>
-            <Select value={flagKey || '__none__'} onValueChange={(v) => setFlagKey(v === '__none__' ? '' : v)}>
-              <SelectTrigger className="rounded-xl" aria-label={t.labelFlagKey}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">{t.flagKeyNone}</SelectItem>
-                {availableFlags.map((flag) => (
-                  <SelectItem key={flag.flag_key} value={flag.flag_key}>
-                    {flag.flag_key}{flag.description ? ` — ${flag.description}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagKeyHelp}</p>
+            <div className="flex gap-1.5">
+              {(['none', 'existing', 'auto'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setFlagMode(mode)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    flagMode === mode
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                  }`}
+                >
+                  {mode === 'none' ? t.flagModeNone : mode === 'existing' ? t.flagModeExisting : t.flagModeAuto}
+                </button>
+              ))}
+            </div>
+            {flagMode === 'existing' && (
+              <>
+                <Select value={flagKey || '__none__'} onValueChange={(v) => setFlagKey(v === '__none__' ? '' : v)}>
+                  <SelectTrigger className="rounded-xl" aria-label={t.labelFlagKey}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t.flagKeyNone}</SelectItem>
+                    {availableFlags.map((flag) => (
+                      <SelectItem key={flag.flag_key} value={flag.flag_key}>
+                        {flag.flag_key}{flag.description ? ` — ${flag.description}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagKeyHelp}</p>
+              </>
+            )}
+            {flagMode === 'auto' && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.flagAutoKeyLabel}</label>
+                  <input
+                    type="text"
+                    value={autoFlagKey}
+                    onChange={(e) => setAutoFlagKey(e.target.value)}
+                    placeholder="flag-key"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagAutoKeyHelp}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagKeyHelp}</p>
+              </>
+            )}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr]">

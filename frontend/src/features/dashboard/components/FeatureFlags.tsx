@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { Archive, RotateCcw, ToggleLeft, ToggleRight, Plus, RefreshCcw, X } from 'lucide-react';
+import { Archive, RotateCcw, ToggleLeft, ToggleRight, Plus, RefreshCcw, X, Info } from 'lucide-react';
 import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate, type FeatureFlagExposureSummary } from '../../../services/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { useProject } from '../../../contexts/ProjectContext';
@@ -376,6 +376,15 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
           </CardContent>
         </Card>
       )}
+
+      <div className="flex items-start gap-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 p-3 text-xs text-indigo-700 dark:text-indigo-300">
+        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        <span>
+          {lang === 'ko'
+            ? '실험에 연결된 플래그는 각 실험 상세 페이지에서 롤아웃(%) 및 활성 상태를 바로 관리할 수 있습니다.'
+            : 'Flags linked to experiments can be managed directly (rollout %, enabled state) from the experiment detail page.'}
+        </span>
+      </div>
 
       <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
         <CardContent className="p-0">
