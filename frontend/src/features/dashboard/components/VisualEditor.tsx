@@ -178,7 +178,7 @@ export function VisualEditor({ lang }: Props) {
   // Load experiments for this project
   useEffect(() => {
     experimentApi.list().then((exps) => {
-      const filtered = projectId ? exps.filter((e) => !e.project_id || e.project_id === projectId) : exps;
+      const filtered = projectId ? exps.filter((e) => e.project_id === projectId) : exps;
       const unique = filtered.filter((e, i, arr) => arr.findIndex((x) => x.id === e.id) === i);
       setExperiments(unique);
     }).catch(() => {});
@@ -469,9 +469,9 @@ export function VisualEditor({ lang }: Props) {
                 </div>
                 <div>
                   <p className="font-semibold text-base text-slate-700 dark:text-slate-200 leading-snug">
-                    {hasExpAndVariant ? tr.ctaTitle : tr.ctaSelectExp}
+                    {selectedExperiment ? tr.ctaTitle : tr.ctaSelectExp}
                   </p>
-                  {hasExpAndVariant && (
+                  {selectedExperiment && (
                     <p className="text-sm text-slate-400 mt-2 leading-relaxed max-w-xs mx-auto">
                       {tr.ctaSubtitle}
                     </p>
