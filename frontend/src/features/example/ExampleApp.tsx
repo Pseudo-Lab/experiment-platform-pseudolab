@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Navigate, Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { HomePage } from './pages/HomePage'
 import { StudyListPage } from './pages/StudyListPage'
@@ -14,6 +14,11 @@ type Props = {
   lang: Lang
 }
 
+function ExampleRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={`/example${search}`} replace />
+}
+
 export function ExampleApp({ lang }: Props) {
   useEffect(() => {
     initVisualEditor()
@@ -26,7 +31,7 @@ export function ExampleApp({ lang }: Props) {
           <Route index element={<HomePage lang={lang} />} />
           <Route path="studies" element={<StudyListPage lang={lang} />} />
           <Route path="experiments" element={<ExperimentShowcase lang={lang} />} />
-          <Route path="*" element={<Navigate to="/example" replace />} />
+          <Route path="*" element={<ExampleRedirect />} />
         </Routes>
       </Layout>
     </ExperimentProvider>

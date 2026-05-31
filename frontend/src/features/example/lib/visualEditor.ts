@@ -131,22 +131,26 @@ export function applyVisualChanges(changes: VisualChangePayload[]): void {
   }
 }
 
-let initialized = false;
+let messageListenerReady = false;
+let editorModeReady = false;
 
 export function initVisualEditor(): void {
-  if (initialized || typeof window === 'undefined') return;
-  initialized = true;
+  if (typeof window === 'undefined') return;
 
-  window.addEventListener('message', (e: MessageEvent) => {
-    const d = e.data;
-    if (!d || typeof d !== 'object') return;
-    if (d.type === MSG_APPLY && typeof d.selector === 'string') {
-      const changeType: string = d.changeType ?? d.property ?? '';
-      applyChange(d.selector, changeType, d.value ?? '');
-    }
-  });
+  if (!messageListenerReady) {
+    messageListenerReady = true;
+    window.addEventListener('message', (e: MessageEvent) => {
+      const d = e.data;
+      if (!d || typeof d !== 'object') return;
+      if (d.type === MSG_APPLY && typeof d.selector === 'string') {
+        const changeType: string = d.changeType ?? d.property ?? '';
+        applyChange(d.selector, changeType, d.value ?? '');
+      }
+    });
+  }
 
-  if (!isEditorMode()) return;
+  if (editorModeReady || !isEditorMode()) return;
+  editorModeReady = true;
 
   const style = document.createElement('style');
   style.textContent =

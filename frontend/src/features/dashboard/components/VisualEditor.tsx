@@ -272,7 +272,7 @@ export function VisualEditor({ lang }: Props) {
 
   const handleLoad = () => {
     if (!url.trim()) return;
-    const trimmed = url.trim();
+    const trimmed = url.trim().replace(/\/$/, '');
     const sep = trimmed.includes('?') ? '&' : '?';
     setLoadedSrc(`${trimmed}${sep}__exp_editor=true`);
   };
@@ -322,7 +322,8 @@ export function VisualEditor({ lang }: Props) {
     ? elementInfo.textContent.slice(0, 30) + (elementInfo.textContent.length > 30 ? '…' : '')
     : '';
 
-  const canSave = !!selectedExperimentId && !!selectedVariationKey && !!selector;
+  const hasExpAndVariant = !!selectedExperimentId && !!selectedVariationKey;
+  const canSave = hasExpAndVariant && !!selector;
 
   const selectClass = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors';
 
@@ -466,9 +467,9 @@ export function VisualEditor({ lang }: Props) {
                 </div>
                 <div>
                   <p className="font-semibold text-base text-slate-700 dark:text-slate-200 leading-snug">
-                    {canSave ? tr.ctaTitle : tr.ctaSelectExp}
+                    {hasExpAndVariant ? tr.ctaTitle : tr.ctaSelectExp}
                   </p>
-                  {canSave && (
+                  {hasExpAndVariant && (
                     <p className="text-sm text-slate-400 mt-2 leading-relaxed max-w-xs mx-auto">
                       {tr.ctaSubtitle}
                     </p>
