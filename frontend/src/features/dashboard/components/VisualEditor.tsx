@@ -15,6 +15,9 @@ interface Props { lang: 'en' | 'ko'; }
 const MSG_APPLY = 'exp:apply-change';
 const MSG_SELECTED = 'exp:element-selected';
 const MSG_READY = 'exp:editor-ready';
+const MSG_APPLY_CHANGES = 'exp:apply-changes';
+const MSG_CLEAR_CHANGES = 'exp:clear-changes';
+const MSG_HIGHLIGHT = 'exp:highlight-element';
 
 type EditType = 'text' | 'color' | 'backgroundColor' | 'fontSize' | 'visibility' | 'size' | 'spacing' | 'position' | 'css';
 
@@ -84,8 +87,8 @@ const t = {
     preview: '미리보기',
     save: '저장',
     saving: '저장 중...',
-    savedChanges: '저장된 변경사항',
-    noChanges: '저장된 변경사항이 없습니다.',
+    savedChanges: '이 Variant의 변경사항',
+    noChanges: '아직 변경사항이 없습니다.',
     delete: '삭제',
     loadFirst: '앱 URL을 입력하고 로드하세요.',
     baseUrlEdit: '앱 URL 설정',
@@ -125,8 +128,8 @@ const t = {
     preview: 'Preview',
     save: 'Save',
     saving: 'Saving...',
-    savedChanges: 'Saved changes',
-    noChanges: 'No saved changes yet.',
+    savedChanges: 'Changes in this Variant',
+    noChanges: 'No changes yet.',
     delete: 'Delete',
     loadFirst: 'Enter an app URL and load it.',
     baseUrlEdit: 'Set app URL',
@@ -199,7 +202,7 @@ export function VisualEditor({ lang }: Props) {
       .catch(() => setChanges([]));
   }, [selectedExperimentId, selectedVariationKey]);
 
-  useEffect(() => { loadChanges(); }, [loadChanges]);
+  useEffect(() => { setChanges([]); loadChanges(); }, [loadChanges]);
 
   // Reset variant when experiment changes
   useEffect(() => { setSelectedVariationKey(''); }, [selectedExperimentId]);
@@ -251,6 +254,18 @@ export function VisualEditor({ lang }: Props) {
     );
   }, []);
 
+  const postApplyChanges = useCallback((ch: VisualChange[]) => {
+    iframeRef.current?.contentWindow?.postMessage({ type: MSG_APPLY_CHANGES, changes: ch }, '*');
+  }, []);
+
+  const postClearChanges = useCallback(() => {
+    iframeRef.current?.contentWindow?.postMessage({ type: MSG_CLEAR_CHANGES }, '*');
+  }, []);
+
+  const postHighlightElement = useCallback((sel: string) => {
+    iframeRef.current?.contentWindow?.postMessage({ type: MSG_HIGHLIGHT, selector: sel }, '*');
+  }, []);
+
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const d = e.data;
@@ -265,12 +280,22 @@ export function VisualEditor({ lang }: Props) {
           setTimeout(() => editPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
         }
       } else if (d.type === MSG_READY) {
-        changes.forEach((c) => postToIframe(c.selector, c.type, c.value));
+        if (selectedVariationKey) postApplyChanges(changes);
       }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [changes, postToIframe, resetValueState]);
+  }, [changes, selectedVariationKey, postApplyChanges, resetValueState]);
+
+  // Apply or clear variant changes in iframe whenever variant or changes update
+  useEffect(() => {
+    if (!loadedSrc) return;
+    if (selectedVariationKey) {
+      postApplyChanges(changes);
+    } else {
+      postClearChanges();
+    }
+  }, [changes, selectedVariationKey, loadedSrc, postApplyChanges, postClearChanges]);
 
   const handleLoad = () => {
     if (!url.trim()) return;
@@ -316,6 +341,23 @@ export function VisualEditor({ lang }: Props) {
       if (updated.base_url) setUrl(updated.base_url);
       setEditingBaseUrl(false);
     } catch { /* ignore */ }
+  };
+
+  const summarizeValue = (type: string, val: string): string => {
+    switch (type) {
+      case 'text': return `"${val.slice(0, 20)}${val.length > 20 ? '…' : ''}"`;
+      case 'color': case 'backgroundColor': return val;
+      case 'fontSize': return val;
+      case 'visibility': return val === 'none' ? (lang === 'ko' ? '숨김' : 'hidden') : (lang === 'ko' ? '보임' : 'visible');
+      case 'css': { try { const { property: p, value: v2 } = JSON.parse(val) as { property: string; value: string }; return `${p}: ${v2}`; } catch { return val.slice(0, 24); } }
+      case 'size': case 'spacing': case 'position': {
+        try {
+          const obj = JSON.parse(val) as Record<string, string>;
+          return Object.entries(obj).slice(0, 2).map(([k, v2]) => `${k}:${v2}`).join(', ');
+        } catch { return val.slice(0, 24); }
+      }
+      default: return val.slice(0, 24);
+    }
   };
 
   const isValidHex = (v: string) => /^#[0-9a-fA-F]{6}$/.test(v);
@@ -693,13 +735,18 @@ export function VisualEditor({ lang }: Props) {
                 ) : (
                   <div className="space-y-1.5">
                     {changes.map((c) => (
-                      <div key={c.id} className="flex items-start gap-2 rounded-xl border border-slate-100 dark:border-slate-800 px-2.5 py-2 text-[11px]">
+                      <div
+                        key={c.id}
+                        className="flex items-start gap-2 rounded-xl border border-slate-100 dark:border-slate-800 px-2.5 py-2 text-[11px] cursor-default transition-colors hover:border-indigo-200 dark:hover:border-indigo-700 hover:bg-indigo-50/40 dark:hover:bg-indigo-500/5"
+                        onMouseEnter={() => postHighlightElement(c.selector)}
+                        onMouseLeave={() => postHighlightElement('')}
+                      >
                         <span className="inline-flex items-center rounded-full bg-indigo-50 px-1.5 py-0.5 font-semibold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 shrink-0">
-                          {c.variation_key}
+                          {c.type}
                         </span>
                         <div className="flex-1 min-w-0 space-y-0.5">
                           <code className="block font-mono text-slate-500 dark:text-slate-400 truncate">{c.selector}</code>
-                          <span className="text-slate-600 dark:text-slate-300">{c.type}</span>
+                          <span className="text-slate-600 dark:text-slate-300 truncate block">{summarizeValue(c.type, c.value)}</span>
                         </div>
                         <Button
                           variant="ghost" size="sm" className="h-6 w-6 p-0 text-slate-400 hover:text-rose-600 shrink-0"

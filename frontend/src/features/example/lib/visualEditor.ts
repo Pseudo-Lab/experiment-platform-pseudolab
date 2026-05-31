@@ -9,6 +9,9 @@
 const MSG_APPLY = 'exp:apply-change';
 const MSG_SELECTED = 'exp:element-selected';
 const MSG_READY = 'exp:editor-ready';
+const MSG_APPLY_CHANGES = 'exp:apply-changes';
+const MSG_CLEAR_CHANGES = 'exp:clear-changes';
+const MSG_HIGHLIGHT = 'exp:highlight-element';
 
 export interface VisualChangePayload {
   selector: string;
@@ -131,6 +134,107 @@ export function applyVisualChanges(changes: VisualChangePayload[]): void {
   }
 }
 
+interface AppliedRecord {
+  el: HTMLElement;
+  origOutline: string;
+  origOutlineOffset: string;
+  origText?: string;
+  origStyles: Record<string, string>;
+}
+
+let appliedStore: AppliedRecord[] = [];
+let hlEl: HTMLElement | null = null;
+let hlPrevOutline = '';
+let hlPrevOffset = '';
+let hlTimer: ReturnType<typeof setTimeout> | null = null;
+
+function styleKeysForType(changeType: string, value: string): string[] {
+  switch (changeType) {
+    case 'color': return ['color'];
+    case 'backgroundColor': return ['backgroundColor'];
+    case 'fontSize': return ['fontSize'];
+    case 'visibility': return ['display'];
+    case 'size': return ['width', 'height'];
+    case 'spacing': return ['marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'];
+    case 'position': return ['position', 'top', 'left', 'right', 'bottom'];
+    case 'css': {
+      try {
+        const { property: prop } = JSON.parse(value) as { property: string; value: string };
+        return prop ? [prop] : [];
+      } catch { return []; }
+    }
+    default: return [];
+  }
+}
+
+function applyChangesWithHighlight(changes: VisualChangePayload[]): void {
+  clearAppliedChanges();
+  for (const change of changes) {
+    let el: Element | null = null;
+    try { el = document.querySelector(change.selector); } catch { continue; }
+    if (!el) continue;
+    const html = el as HTMLElement;
+
+    const keys = styleKeysForType(change.type, change.value);
+    const origStyles: Record<string, string> = {};
+    for (const k of keys) {
+      origStyles[k] = (html.style as unknown as Record<string, string>)[k] || '';
+    }
+
+    const record: AppliedRecord = {
+      el: html,
+      origOutline: html.style.outline,
+      origOutlineOffset: html.style.outlineOffset,
+      origStyles,
+    };
+    if (change.type === 'text') record.origText = html.textContent ?? '';
+
+    applyChange(change.selector, change.type, change.value);
+    html.style.outline = '2px solid #6366f1';
+    html.style.outlineOffset = '2px';
+    appliedStore.push(record);
+  }
+}
+
+function clearAppliedChanges(): void {
+  for (const r of appliedStore) {
+    r.el.style.outline = r.origOutline;
+    r.el.style.outlineOffset = r.origOutlineOffset;
+    if (r.origText !== undefined) r.el.textContent = r.origText;
+    for (const [k, v] of Object.entries(r.origStyles)) {
+      (r.el.style as unknown as Record<string, string>)[k] = v;
+    }
+  }
+  appliedStore = [];
+}
+
+function highlightElement(selector: string): void {
+  if (hlTimer) { clearTimeout(hlTimer); hlTimer = null; }
+  if (hlEl) {
+    hlEl.style.outline = hlPrevOutline;
+    hlEl.style.outlineOffset = hlPrevOffset;
+    hlEl = null;
+  }
+  if (!selector) return;
+  let el: Element | null = null;
+  try { el = document.querySelector(selector); } catch { return; }
+  if (!el) return;
+  const html = el as HTMLElement;
+  hlPrevOutline = html.style.outline;
+  hlPrevOffset = html.style.outlineOffset;
+  hlEl = html;
+  html.style.outline = '3px solid #4f46e5';
+  html.style.outlineOffset = '3px';
+  hlTimer = setTimeout(() => {
+    if (hlEl === html) {
+      html.style.outline = hlPrevOutline;
+      html.style.outlineOffset = hlPrevOffset;
+      hlEl = null;
+    }
+    hlTimer = null;
+  }, 1500);
+}
+
 let messageListenerReady = false;
 let editorModeReady = false;
 
@@ -145,6 +249,12 @@ export function initVisualEditor(): void {
       if (d.type === MSG_APPLY && typeof d.selector === 'string') {
         const changeType: string = d.changeType ?? d.property ?? '';
         applyChange(d.selector, changeType, d.value ?? '');
+      } else if (d.type === MSG_APPLY_CHANGES && Array.isArray(d.changes)) {
+        applyChangesWithHighlight(d.changes as VisualChangePayload[]);
+      } else if (d.type === MSG_CLEAR_CHANGES) {
+        clearAppliedChanges();
+      } else if (d.type === MSG_HIGHLIGHT) {
+        highlightElement(typeof d.selector === 'string' ? d.selector : '');
       }
     });
   }
