@@ -173,12 +173,14 @@ export function VisualEditor({ lang }: Props) {
   const [saving, setSaving] = useState(false);
 
   const selectedExperiment = experiments.find((e) => e.id === selectedExperimentId);
+  const selectedVariant = selectedExperiment?.variants.find((v) => v.name === selectedVariationKey);
 
   // Load experiments for this project
   useEffect(() => {
     experimentApi.list().then((exps) => {
       const filtered = projectId ? exps.filter((e) => !e.project_id || e.project_id === projectId) : exps;
-      setExperiments(filtered);
+      const unique = filtered.filter((e, i, arr) => arr.findIndex((x) => x.id === e.id) === i);
+      setExperiments(unique);
     }).catch(() => {});
   }, [projectId]);
 
@@ -322,7 +324,7 @@ export function VisualEditor({ lang }: Props) {
     ? elementInfo.textContent.slice(0, 30) + (elementInfo.textContent.length > 30 ? '…' : '')
     : '';
 
-  const hasExpAndVariant = !!selectedExperimentId && !!selectedVariationKey;
+  const hasExpAndVariant = !!selectedExperiment && !!selectedVariant;
   const canSave = hasExpAndVariant && !!selector;
 
   const selectClass = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors';
