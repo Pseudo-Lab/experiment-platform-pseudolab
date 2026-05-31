@@ -12,6 +12,7 @@ const MSG_READY = 'exp:editor-ready';
 const MSG_APPLY_CHANGES = 'exp:apply-changes';
 const MSG_CLEAR_CHANGES = 'exp:clear-changes';
 const MSG_HIGHLIGHT = 'exp:highlight-element';
+const MSG_INIT_EDITOR = 'exp:init-editor-mode';
 
 export interface VisualChangePayload {
   selector: string;
@@ -238,28 +239,8 @@ function highlightElement(selector: string): void {
 let messageListenerReady = false;
 let editorModeReady = false;
 
-export function initVisualEditor(): void {
-  if (typeof window === 'undefined') return;
-
-  if (!messageListenerReady) {
-    messageListenerReady = true;
-    window.addEventListener('message', (e: MessageEvent) => {
-      const d = e.data;
-      if (!d || typeof d !== 'object') return;
-      if (d.type === MSG_APPLY && typeof d.selector === 'string') {
-        const changeType: string = d.changeType ?? d.property ?? '';
-        applyChange(d.selector, changeType, d.value ?? '');
-      } else if (d.type === MSG_APPLY_CHANGES && Array.isArray(d.changes)) {
-        applyChangesWithHighlight(d.changes as VisualChangePayload[]);
-      } else if (d.type === MSG_CLEAR_CHANGES) {
-        clearAppliedChanges();
-      } else if (d.type === MSG_HIGHLIGHT) {
-        highlightElement(typeof d.selector === 'string' ? d.selector : '');
-      }
-    });
-  }
-
-  if (editorModeReady || !isEditorMode()) return;
+function setupEditorListeners(): void {
+  if (editorModeReady) return;
   editorModeReady = true;
 
   const style = document.createElement('style');
@@ -304,8 +285,40 @@ export function initVisualEditor(): void {
     },
     true,
   );
+}
 
-  if (window !== window.parent) {
-    window.parent.postMessage({ type: MSG_READY }, '*');
+export function initVisualEditor(): void {
+  if (typeof window === 'undefined') return;
+
+  if (!messageListenerReady) {
+    messageListenerReady = true;
+    window.addEventListener('message', (e: MessageEvent) => {
+      const d = e.data;
+      if (!d || typeof d !== 'object') return;
+      if (d.type === MSG_INIT_EDITOR) {
+        // Parent explicitly requests editor mode (e.g. URL param was stripped by redirect)
+        setupEditorListeners();
+        return;
+      }
+      if (d.type === MSG_APPLY && typeof d.selector === 'string') {
+        const changeType: string = d.changeType ?? d.property ?? '';
+        applyChange(d.selector, changeType, d.value ?? '');
+      } else if (d.type === MSG_APPLY_CHANGES && Array.isArray(d.changes)) {
+        applyChangesWithHighlight(d.changes as VisualChangePayload[]);
+      } else if (d.type === MSG_CLEAR_CHANGES) {
+        clearAppliedChanges();
+      } else if (d.type === MSG_HIGHLIGHT) {
+        highlightElement(typeof d.selector === 'string' ? d.selector : '');
+      }
+    });
+
+    // Always notify parent that the message listener is active.
+    // The parent will respond with MSG_INIT_EDITOR to activate editor mode.
+    if (window !== window.parent) {
+      window.parent.postMessage({ type: MSG_READY }, '*');
+    }
   }
+
+  // Also activate immediately if URL param is present (no round-trip needed)
+  if (isEditorMode()) setupEditorListeners();
 }

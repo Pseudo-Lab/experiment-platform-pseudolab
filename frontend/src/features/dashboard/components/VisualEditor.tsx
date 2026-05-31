@@ -18,6 +18,7 @@ const MSG_READY = 'exp:editor-ready';
 const MSG_APPLY_CHANGES = 'exp:apply-changes';
 const MSG_CLEAR_CHANGES = 'exp:clear-changes';
 const MSG_HIGHLIGHT = 'exp:highlight-element';
+const MSG_INIT_EDITOR = 'exp:init-editor-mode';
 
 type EditType = 'text' | 'color' | 'backgroundColor' | 'fontSize' | 'visibility' | 'size' | 'spacing' | 'position' | 'css';
 
@@ -280,6 +281,8 @@ export function VisualEditor({ lang }: Props) {
           setTimeout(() => editPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
         }
       } else if (d.type === MSG_READY) {
+        // iframe message listener is up — tell it to enter editor mode regardless of its URL
+        iframeRef.current?.contentWindow?.postMessage({ type: MSG_INIT_EDITOR }, '*');
         if (selectedVariationKey) postApplyChanges(changes);
       }
     };
