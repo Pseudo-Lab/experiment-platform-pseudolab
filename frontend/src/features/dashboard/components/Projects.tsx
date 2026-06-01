@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Copy, Check, Plus, FolderOpen, Trash2, Wand2, FlaskConical, Target } from 'lucide-react';
+import { Copy, Check, Plus, FolderOpen, Trash2, FlaskConical, Target } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { projectApi, type Project, type ProjectSdkStatus } from '../../../services/api';
@@ -315,16 +315,6 @@ export function Projects({ lang }: Props) {
                   </code>
                   <CopyButton value={p.api_key} labels={{ copy: tr.copy, copied: tr.copied }} />
                 </div>
-                {p.project_type !== 'quasi_experiment' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 rounded-xl"
-                    onClick={(e) => { e.stopPropagation(); navigate(`/projects/${p.id}/visual-editor`); }}
-                  >
-                    <Wand2 size={14} /> {tr.openVisualEditor}
-                  </Button>
-                )}
               </CardContent>
             </Card>
           ))}

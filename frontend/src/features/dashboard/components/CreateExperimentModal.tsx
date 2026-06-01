@@ -6,6 +6,7 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { experimentApi, experimentPlacementApi, featureFlagApi, projectApi, type FeatureFlag, type Project } from '../../../services/api';
+import { useProject } from '../../../contexts/ProjectContext';
 
 interface VariantInput {
   name: string;
@@ -33,6 +34,7 @@ const translations = {
     placeholderProduct: 'e.g. lvup',
     productHelp: 'Product or service this experiment belongs to.',
     labelType: 'Experiment type',
+    typeFromProject: 'Follows project type',
     labelHypothesis: 'Hypothesis',
     placeholderHypothesis: 'e.g. Changing the button color will increase CTR.',
     labelExpectedEffect: 'Expected effect',
@@ -121,6 +123,7 @@ const translations = {
     placeholderProduct: '예: lvup',
     productHelp: '이 실험이 속한 제품 또는 서비스입니다.',
     labelType: '실험 유형',
+    typeFromProject: '프로젝트 유형을 따릅니다',
     labelHypothesis: '가설',
     placeholderHypothesis: '예: 버튼 색상 변경이 클릭률을 높일 것이다.',
     labelExpectedEffect: '기대 효과',
@@ -234,6 +237,7 @@ const parseCsvList = (value: string) => value
 
 export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ lang, onClose, onCreated }) => {
   const t = translations[lang];
+  const { currentProject } = useProject();
   const [experimentId, setExperimentId] = useState('');
   const [name, setName] = useState('');
   const [experimentType, setExperimentType] = useState<ExperimentType>('quasi_experiment');
@@ -247,7 +251,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     { name: 'control', traffic_ratio: '0.5' },
     { name: 'treatment', traffic_ratio: '0.5' },
   ]);
-  const [projectId, setProjectId] = useState('');
+  const [projectId, setProjectId] = useState(currentProject?.id ?? '');
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [flagMode, setFlagMode] = useState<'none' | 'existing' | 'auto'>('none');
   const [flagKey, setFlagKey] = useState<string>('');
@@ -274,6 +278,14 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     featureFlagApi.list(false).then(setAvailableFlags).catch(() => setAvailableFlags([]));
     projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
   }, []);
+
+  useEffect(() => {
+    const project = availableProjects.find(p => p.id === projectId) ?? currentProject;
+    const type = project?.project_type;
+    if (type === 'ab_test' || type === 'quasi_experiment') {
+      setExperimentType(type);
+    }
+  }, [projectId, availableProjects, currentProject]);
 
   useEffect(() => {
     if (flagMode !== 'auto') return;
@@ -416,18 +428,31 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelType}</label>
-              <Select value={experimentType} onValueChange={(value) => setExperimentType(value as ExperimentType)}>
-                <SelectTrigger className="rounded-xl" aria-label={t.labelType}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {experimentTypeOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option[lang]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {projectId ? (
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2">
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    experimentType === 'quasi_experiment'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                      : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                  }`}>
+                    {experimentTypeOptions.find(o => o.value === experimentType)?.[lang] ?? experimentType}
+                  </span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">{t.typeFromProject}</span>
+                </div>
+              ) : (
+                <Select value={experimentType} onValueChange={(value) => setExperimentType(value as ExperimentType)}>
+                  <SelectTrigger className="rounded-xl" aria-label={t.labelType}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {experimentTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option[lang]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
@@ -485,6 +510,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             <p className="text-xs text-slate-500 dark:text-slate-400">{t.primaryMetricHint}</p>
           </div>
 
+          {experimentType !== 'quasi_experiment' && (
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelFlagKey}</label>
             <div className="flex gap-1.5">
@@ -538,6 +564,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               </>
             )}
           </div>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr]">
             <div className="space-y-1.5">
