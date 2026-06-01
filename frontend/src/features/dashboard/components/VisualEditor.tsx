@@ -495,6 +495,10 @@ export function VisualEditor({ lang }: Props) {
                 src={loadedSrc}
                 title="visual-editor-preview"
                 className="w-full h-[50vh] min-h-[320px] lg:h-[600px] border-0 bg-white"
+                onLoad={() => {
+                  iframeRef.current?.contentWindow?.postMessage({ type: MSG_INIT_EDITOR }, '*');
+                  if (selectedVariationKey) postApplyChanges(changes);
+                }}
               />
             ) : (
               <div className="h-[50vh] min-h-[320px] lg:h-[600px] flex items-center justify-center text-sm text-slate-400">
