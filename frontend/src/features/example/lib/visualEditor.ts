@@ -13,6 +13,13 @@ const MSG_APPLY_CHANGES = 'exp:apply-changes';
 const MSG_CLEAR_CHANGES = 'exp:clear-changes';
 const MSG_HIGHLIGHT = 'exp:highlight-element';
 const MSG_INIT_EDITOR = 'exp:init-editor-mode';
+const MSG_SET_VARIANT = 'exp:set-variant';
+
+const editorForcedVariants: Record<string, string> = {};
+
+export function getEditorForcedVariant(flagKey: string): string | null {
+  return editorForcedVariants[flagKey] ?? null;
+}
 
 export interface VisualChangePayload {
   selector: string;
@@ -298,6 +305,11 @@ export function initVisualEditor(): void {
       if (d.type === MSG_INIT_EDITOR) {
         // Parent explicitly requests editor mode (e.g. URL param was stripped by redirect)
         setupEditorListeners();
+        return;
+      }
+      if (d.type === MSG_SET_VARIANT && typeof d.flagKey === 'string' && typeof d.variant === 'string') {
+        editorForcedVariants[d.flagKey] = d.variant;
+        window.dispatchEvent(new CustomEvent('exp:variant-forced', { detail: { flagKey: d.flagKey, variant: d.variant } }));
         return;
       }
       if (d.type === MSG_APPLY && typeof d.selector === 'string') {

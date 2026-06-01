@@ -1,12 +1,24 @@
 import { useEffect, useState } from 'react'
 import { decideFlag } from '../lib/sdk'
-import { applyVisualChanges } from '../lib/visualEditor'
+import { applyVisualChanges, isEditorMode, getEditorForcedVariant } from '../lib/visualEditor'
 import { getUserId } from '../lib/userId'
 
 export function useFlag(flagKey: string): string | null {
-  const [variant, setVariant] = useState<string | null>(null)
+  const [variant, setVariant] = useState<string | null>(() => {
+    if (isEditorMode()) return getEditorForcedVariant(flagKey) ?? 'control'
+    return null
+  })
 
   useEffect(() => {
+    if (isEditorMode()) {
+      const handler = (e: Event) => {
+        const detail = (e as CustomEvent<{ flagKey: string; variant: string }>).detail
+        if (detail.flagKey === flagKey) setVariant(detail.variant)
+      }
+      window.addEventListener('exp:variant-forced', handler)
+      return () => window.removeEventListener('exp:variant-forced', handler)
+    }
+
     const uid = getUserId()
     const cacheKey = `flag:${flagKey}:${uid}`
     const cached = sessionStorage.getItem(cacheKey)

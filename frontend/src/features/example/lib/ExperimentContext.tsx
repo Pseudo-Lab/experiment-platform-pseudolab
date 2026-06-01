@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { decideFlag } from './sdk'
-import { applyVisualChanges, type VisualChangePayload } from './visualEditor'
+import { applyVisualChanges, isEditorMode, getEditorForcedVariant, type VisualChangePayload } from './visualEditor'
 import { getUserId } from './userId'
 
 type Variants = Record<string, string>
@@ -25,6 +25,13 @@ export function ExperimentProvider({
   children: ReactNode
 }) {
   const [variants, setVariants] = useState<Variants>(() => {
+    if (isEditorMode()) {
+      const seeded: Variants = {}
+      for (const key of flagKeys) {
+        seeded[key] = getEditorForcedVariant(key) ?? 'control'
+      }
+      return seeded
+    }
     const uid = getUserId()
     const seeded: Variants = {}
     for (const key of flagKeys) {
@@ -35,11 +42,24 @@ export function ExperimentProvider({
   })
 
   const [isLoading, setIsLoading] = useState(() => {
+    if (isEditorMode()) return false
     const uid = getUserId()
     return flagKeys.some((k) => !sessionStorage.getItem(`flag:${k}:${uid}`))
   })
 
+  // In editor mode, listen for forced variant updates from the parent dashboard
   useEffect(() => {
+    if (!isEditorMode()) return
+    const handler = (e: Event) => {
+      const { flagKey, variant } = (e as CustomEvent<{ flagKey: string; variant: string }>).detail
+      setVariants((prev) => ({ ...prev, [flagKey]: variant }))
+    }
+    window.addEventListener('exp:variant-forced', handler)
+    return () => window.removeEventListener('exp:variant-forced', handler)
+  }, [])
+
+  useEffect(() => {
+    if (isEditorMode()) return
     const uid = getUserId()
     const missing = flagKeys.filter((k) => !sessionStorage.getItem(`flag:${k}:${uid}`))
     if (missing.length === 0) return

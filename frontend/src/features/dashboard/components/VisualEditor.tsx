@@ -19,6 +19,7 @@ const MSG_APPLY_CHANGES = 'exp:apply-changes';
 const MSG_CLEAR_CHANGES = 'exp:clear-changes';
 const MSG_HIGHLIGHT = 'exp:highlight-element';
 const MSG_INIT_EDITOR = 'exp:init-editor-mode';
+const MSG_SET_VARIANT = 'exp:set-variant';
 
 type EditType = 'text' | 'color' | 'backgroundColor' | 'fontSize' | 'visibility' | 'size' | 'spacing' | 'position' | 'css';
 
@@ -255,6 +256,10 @@ export function VisualEditor({ lang }: Props) {
     );
   }, []);
 
+  const postSetVariant = useCallback((flagKey: string, variant: string) => {
+    iframeRef.current?.contentWindow?.postMessage({ type: MSG_SET_VARIANT, flagKey, variant }, '*');
+  }, []);
+
   const postApplyChanges = useCallback((ch: VisualChange[]) => {
     iframeRef.current?.contentWindow?.postMessage({ type: MSG_APPLY_CHANGES, changes: ch }, '*');
   }, []);
@@ -283,12 +288,15 @@ export function VisualEditor({ lang }: Props) {
       } else if (d.type === MSG_READY) {
         // iframe message listener is up — tell it to enter editor mode regardless of its URL
         iframeRef.current?.contentWindow?.postMessage({ type: MSG_INIT_EDITOR }, '*');
+        if (selectedExperiment?.flag_key) {
+          postSetVariant(selectedExperiment.flag_key, selectedVariationKey || 'control');
+        }
         if (selectedVariationKey) postApplyChanges(changes);
       }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [changes, selectedVariationKey, postApplyChanges, resetValueState]);
+  }, [changes, selectedVariationKey, selectedExperiment, postApplyChanges, postSetVariant, resetValueState]);
 
   // Apply or clear variant changes in iframe whenever variant or changes update
   useEffect(() => {
@@ -299,6 +307,12 @@ export function VisualEditor({ lang }: Props) {
       postClearChanges();
     }
   }, [changes, selectedVariationKey, loadedSrc, postApplyChanges, postClearChanges]);
+
+  // Notify iframe of the forced variant whenever selection changes
+  useEffect(() => {
+    if (!loadedSrc || !selectedExperiment?.flag_key) return;
+    postSetVariant(selectedExperiment.flag_key, selectedVariationKey || 'control');
+  }, [selectedVariationKey, selectedExperiment, loadedSrc, postSetVariant]);
 
   const handleLoad = () => {
     if (!url.trim()) return;
@@ -497,6 +511,9 @@ export function VisualEditor({ lang }: Props) {
                 className="w-full h-[50vh] min-h-[320px] lg:h-[600px] border-0 bg-white"
                 onLoad={() => {
                   iframeRef.current?.contentWindow?.postMessage({ type: MSG_INIT_EDITOR }, '*');
+                  if (selectedExperiment?.flag_key) {
+                    postSetVariant(selectedExperiment.flag_key, selectedVariationKey || 'control');
+                  }
                   if (selectedVariationKey) postApplyChanges(changes);
                 }}
               />
