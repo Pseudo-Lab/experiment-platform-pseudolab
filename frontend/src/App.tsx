@@ -12,7 +12,6 @@ import { FeatureFlags } from './features/dashboard/components/FeatureFlags';
 import { Analytics } from './features/dashboard/components/Analytics';
 import { Projects } from './features/dashboard/components/Projects';
 import { ApiKeyPage } from './features/dashboard/components/ApiKeyPage';
-import { VisualEditor } from './features/dashboard/components/VisualEditor';
 import { Placements } from './features/dashboard/components/Placements';
 import { ExampleApp } from './features/example/ExampleApp';
 import { ProjectProvider } from './contexts/ProjectContext';
@@ -80,7 +79,6 @@ export default function App() {
         <Route path="/analytics" element={<Analytics lang={lang} />} />
         <Route path="/projects" element={<Projects lang={lang} />} />
         <Route path="/api-key" element={<ApiKeyPage lang={lang} />} />
-        <Route path="/projects/:id/visual-editor" element={<VisualEditor lang={lang} />} />
         <Route path="/example/*" element={<ExampleApp lang={lang} />} />
       </Routes>
     </MainLayout>

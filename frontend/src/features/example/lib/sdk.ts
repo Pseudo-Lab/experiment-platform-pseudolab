@@ -8,6 +8,36 @@ export interface DecideResult {
   visual_changes: VisualChangePayload[]
 }
 
+export interface UnifiedDecideResult {
+  key: string
+  type: 'flag' | 'placement'
+  show: boolean
+  variant: string
+  payload: Record<string, unknown> | null
+}
+
+export async function decide(key: string, apiKey?: string): Promise<UnifiedDecideResult> {
+  const uid = getUserId()
+  const logId = devLog.add('decide', key, { user_id: uid })
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (apiKey) headers['x-api-key'] = apiKey
+    const res = await fetch(`${API_BASE_URL}/decide`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ key, user_id: uid }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const json = await res.json() as UnifiedDecideResult
+    devLog.update(logId, { status: 'ok', response: json.variant })
+    return json
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    devLog.update(logId, { status: 'error', error: msg })
+    throw e
+  }
+}
+
 export async function decideFlag(flagKey: string, apiKey?: string): Promise<DecideResult> {
   const uid = getUserId()
   const logId = devLog.add('decide', flagKey, { user_id: uid })
