@@ -332,7 +332,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError(t.nameRequired); return; }
-    if (variants.length > 0 && !ratioValid) { setError(t.ratioWarning.replace('{sum}', ratioSum.toFixed(2))); return; }
+    if (experimentType !== 'quasi_experiment' && variants.length > 0 && !ratioValid) { setError(t.ratioWarning.replace('{sum}', ratioSum.toFixed(2))); return; }
     if (configurePlacement && !placementValid) { setError(t.placementRequired); return; }
 
     setSubmitting(true);
@@ -369,7 +369,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
         product: projectId || undefined,
         start_at: toApiDatetime(startAt),
         end_at: toApiDatetime(endAt),
-        variants: variants.map((v) => ({
+        variants: experimentType === 'quasi_experiment' ? [] : variants.map((v) => ({
           name: v.name,
           traffic_ratio: parseFloat(v.traffic_ratio) || 0,
         })),
@@ -600,6 +600,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             <p className="text-xs text-slate-500 dark:text-slate-400 sm:col-span-3">{t.scheduleHelp}</p>
           </div>
 
+          {experimentType !== 'quasi_experiment' && (
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelVariants}</label>
             {flagKey && (
@@ -640,6 +641,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               {t.addVariant}
             </Button>
           </div>
+          )}
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/60 space-y-4">
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
