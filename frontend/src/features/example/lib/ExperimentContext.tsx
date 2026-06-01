@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { decideFlag } from './sdk'
+import { devLog } from './devLog'
 import { applyVisualChanges, isEditorMode, getEditorForcedVariant, type VisualChangePayload } from './visualEditor'
 import { getUserId } from './userId'
 
@@ -47,12 +48,14 @@ export function ExperimentProvider({
     return flagKeys.some((k) => !sessionStorage.getItem(`flag:${k}:${uid}`))
   })
 
-  // In editor mode, listen for forced variant updates from the parent dashboard
+  // Always listen for forced-variant updates (editor postMessage path works regardless of URL params)
   useEffect(() => {
-    if (!isEditorMode()) return
     const handler = (e: Event) => {
       const { flagKey, variant } = (e as CustomEvent<{ flagKey: string; variant: string }>).detail
       setVariants((prev) => ({ ...prev, [flagKey]: variant }))
+      // Mirror to devLog so DevPanel reflects the forced variant
+      const id = devLog.add('decide', flagKey, { source: 'editor-forced' })
+      devLog.update(id, { status: 'ok', response: variant })
     }
     window.addEventListener('exp:variant-forced', handler)
     return () => window.removeEventListener('exp:variant-forced', handler)

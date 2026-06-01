@@ -10,12 +10,14 @@ export function useFlag(flagKey: string): string | null {
   })
 
   useEffect(() => {
+    // Always listen for forced-variant updates regardless of editor mode
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ flagKey: string; variant: string }>).detail
+      if (detail.flagKey === flagKey) setVariant(detail.variant)
+    }
+    window.addEventListener('exp:variant-forced', handler)
+
     if (isEditorMode()) {
-      const handler = (e: Event) => {
-        const detail = (e as CustomEvent<{ flagKey: string; variant: string }>).detail
-        if (detail.flagKey === flagKey) setVariant(detail.variant)
-      }
-      window.addEventListener('exp:variant-forced', handler)
       return () => window.removeEventListener('exp:variant-forced', handler)
     }
 
@@ -24,7 +26,7 @@ export function useFlag(flagKey: string): string | null {
     const cached = sessionStorage.getItem(cacheKey)
     if (cached) {
       setVariant(cached)
-      return
+      return () => window.removeEventListener('exp:variant-forced', handler)
     }
     let cancelled = false
     decideFlag(flagKey)
@@ -42,6 +44,7 @@ export function useFlag(flagKey: string): string | null {
       })
     return () => {
       cancelled = true
+      window.removeEventListener('exp:variant-forced', handler)
     }
   }, [flagKey])
 
