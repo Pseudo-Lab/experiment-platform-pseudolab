@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - '.github/workflows/ci.yml'
+      - '.github/workflows/gitops-ci.yml'
       - 'frontend/**'
       - 'backend/**'
   pull_request:
@@ -13,6 +14,7 @@ on:
       - main
     paths:
       - '.github/workflows/ci.yml'
+      - '.github/workflows/gitops-ci.yml'
       - 'frontend/**'
       - 'backend/**'
   workflow_dispatch:

@@ -71,3 +71,9 @@ Last-Validated: 2026-05-27
 - Why: 운영 생성 실패 원인은 코드 배포 후 운영 D1에 일부 schema migration이 누락된 것이었고, 현재 필요한 DDL은 적용되어 12기 준실험 생성은 가능하다. 다만 현재 `run_migration.sh`는 적용 이력 테이블이 없어 재실행/중복 컬럼/seed 혼입 위험이 있다.
 - Impact: 지금은 실험 생성과 LVUP 연동 검증을 계속 진행한다. 후속 작업으로 `schema_migrations` 같은 적용 이력, 운영 baseline, seed/schema 분리, 배포 전 migration 체크를 정리한다.
 - Owner: soo
+
+- Date: 2026-06-02
+- Decision: GitOps 이미지 빌드는 GitHub-hosted Linux ARM64 runner(`ubuntu-24.04-arm`)에서 `linux/arm64` 단일 플랫폼으로 수행하고, frontend/backend Buildx GHA cache를 분리 적용한다.
+- Why: 운영 서버가 ARM64이고, 기존 x64 runner + QEMU 기반 ARM64 backend 이미지 빌드가 배포 시간의 critical path였기 때문이다.
+- Impact: 이 서비스는 더 이상 `linux/amd64` 이미지를 publish하지 않는다. QEMU 설정은 제거되며, 첫 빌드는 cache miss가 날 수 있지만 이후 빌드는 dependency/build layer 재사용으로 단축될 수 있다.
+- Owner: soo
