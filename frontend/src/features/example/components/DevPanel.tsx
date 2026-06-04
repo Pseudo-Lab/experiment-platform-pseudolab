@@ -3,10 +3,9 @@ import { devLog, type LogEntry } from '../lib/devLog'
 import { flagRegistry, diagnoseFlag, type Diagnosis as FlagDiagnosis } from '../lib/flagRegistry'
 import {
   experimentRegistry,
-  diagnoseExperiment,
-  type Diagnosis as ExpDiagnosis,
+  type ExperimentMeta,
+  type ExperimentStatus,
 } from '../lib/experimentRegistry'
-import { FLAG_TO_EXPERIMENT } from '../lib/flagToExperiment'
 import { getUserId } from '../lib/userId'
 import { Button } from '@/components/ui/button'
 import { exampleCopy, type Lang } from '../i18n'
@@ -42,28 +41,35 @@ const STATUS_COLOR: Record<LogEntry['status'], string> = {
   error: 'text-red-600',
 }
 
-type AnyDiagnosis = FlagDiagnosis | ExpDiagnosis
-
-const LEVEL_BADGE: Record<AnyDiagnosis['level'], string> = {
+const LEVEL_BADGE: Record<FlagDiagnosis['level'], string> = {
   ok: 'bg-emerald-100 text-emerald-800',
   warn: 'bg-amber-100 text-amber-800',
   error: 'bg-red-100 text-red-800',
 }
-const LEVEL_BLOCK: Record<AnyDiagnosis['level'], string> = {
+const LEVEL_BLOCK: Record<FlagDiagnosis['level'], string> = {
   ok: 'border-emerald-200 bg-emerald-50',
   warn: 'border-amber-300 bg-amber-50',
   error: 'border-red-300 bg-red-50',
 }
-const LEVEL_ICON: Record<AnyDiagnosis['level'], string> = {
+const LEVEL_ICON: Record<FlagDiagnosis['level'], string> = {
   ok: '✓',
   warn: '⚠️',
   error: '⛔',
 }
 
-type Tab = 'flags' | 'experiments' | 'events'
+const EXP_STATUS_ICON: Record<ExperimentStatus, string> = {
+  running: '🟢',
+  paused: '🟡',
+  draft: '⚪',
+  completed: '⚫',
+  archived: '🔴',
+}
+
+type Tab = 'flags' | 'events'
 
 export function DevPanel({ lang }: { lang: Lang }) {
   const entries = useEntries()
+  const expRegistry = useExperimentRegistry()
   const [open, setOpen] = useState(true)
   const [tab, setTab] = useState<Tab>('flags')
   const uid = getUserId()
@@ -84,27 +90,6 @@ export function DevPanel({ lang }: { lang: Lang }) {
     }
     return map
   }, [entries])
-
-  const assignState = useMemo(() => {
-    const map: Record<string, { variant: string; time: string }> = {}
-    for (let i = entries.length - 1; i >= 0; i--) {
-      const e = entries[i]
-      if (e.kind === 'assign' && e.status === 'ok') {
-        map[e.label] = { variant: String(e.response ?? '?'), time: e.time }
-      }
-    }
-    return map
-  }, [entries])
-
-  const mappedExperiments = useMemo(() => {
-    const set = new Set<string>()
-    Object.keys(flagState).forEach((flagKey) => {
-      const expName = FLAG_TO_EXPERIMENT[flagKey]
-      if (expName) set.add(expName)
-    })
-    Object.keys(assignState).forEach((n) => set.add(n))
-    return set
-  }, [flagState, assignState])
 
   if (!open) {
     return (
@@ -147,15 +132,25 @@ export function DevPanel({ lang }: { lang: Lang }) {
       </div>
 
       <nav className="flex border-b text-xs dark:border-slate-800">
-        <TabBtn label={`Flags (${Object.keys(flagState).length})`} active={tab === 'flags'} onClick={() => setTab('flags')} />
-        <TabBtn label={`Experiments (${mappedExperiments.size})`} active={tab === 'experiments'} onClick={() => setTab('experiments')} />
-        <TabBtn label={`API (${entries.length})`} active={tab === 'events'} onClick={() => setTab('events')} />
+        <TabBtn
+          label={`Flags (${Object.keys(flagState).length})`}
+          active={tab === 'flags'}
+          onClick={() => setTab('flags')}
+        />
+        <TabBtn
+          label={`API (${entries.length})`}
+          active={tab === 'events'}
+          onClick={() => setTab('events')}
+        />
       </nav>
 
       <div className="flex-1 overflow-auto">
-        {tab === 'flags' && <FlagsTab flagState={flagState} lang={lang} />}
-        {tab === 'experiments' && (
-          <ExperimentsTab assignState={assignState} mappedExperiments={mappedExperiments} lang={lang} />
+        {tab === 'flags' && (
+          <FlagsTab
+            flagState={flagState}
+            expsByFlagKey={expRegistry.experimentsByFlagKey}
+            lang={lang}
+          />
         )}
         {tab === 'events' && <EventsTab entries={entries} lang={lang} />}
       </div>
@@ -180,9 +175,11 @@ function TabBtn({ label, active, onClick }: { label: string; active: boolean; on
 
 function FlagsTab({
   flagState,
+  expsByFlagKey,
   lang,
 }: {
   flagState: Record<string, { variant: string; time: string }>
+  expsByFlagKey: Record<string, ExperimentMeta[]>
   lang: Lang
 }) {
   const registry = useFlagRegistry()
@@ -209,9 +206,19 @@ function FlagsTab({
             const { variant, time } = flagState[flagKey]
             const flag = registry.flagsByKey[flagKey]
             const dx = diagnoseFlag(flagKey, variant, flag, lang)
+            const linkedExps = expsByFlagKey[flagKey] || []
             return (
-              <li key={flagKey} className="px-3 py-3 space-y-2">
-                <Header label={flagKey} value={variant} time={time} />
+              <li key={flagKey} className="px-3 py-3 space-y-1.5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-semibold text-slate-800 dark:text-slate-100">{flagKey}</span>
+                  <span className="rounded bg-slate-900 px-2 py-0.5 font-mono text-xs text-white dark:bg-slate-100 dark:text-slate-900">
+                    {variant}
+                  </span>
+                  {linkedExps.map((exp) => (
+                    <ExpInlineBadge key={exp.id} exp={exp} />
+                  ))}
+                </div>
+                <div className="text-[10.5px] text-slate-400">{time}</div>
                 <DiagnosisBlock dx={dx} lang={lang} />
               </li>
             )
@@ -222,74 +229,17 @@ function FlagsTab({
   )
 }
 
-function ExperimentsTab({
-  assignState,
-  mappedExperiments,
-  lang,
-}: {
-  assignState: Record<string, { variant: string; time: string }>
-  mappedExperiments: Set<string>
-  lang: Lang
-}) {
-  const registry = useExperimentRegistry()
-
+function ExpInlineBadge({ exp }: { exp: ExperimentMeta }) {
+  const icon = EXP_STATUS_ICON[exp.status] ?? '⚫'
   return (
-    <div>
-      <RegistryStatus
-        kind="Experiment"
-        status={registry.status}
-        error={registry.error}
-        loadedAt={registry.loadedAt}
-        count={Object.keys(registry.experimentsByName).length}
-        onRefresh={() => experimentRegistry.refresh()}
-        lang={lang}
-      />
-      {mappedExperiments.size === 0 ? (
-        <div className="p-4 text-xs text-slate-500 dark:text-slate-400">
-          {exampleCopy.noMappedExperiments[lang]} <code>src/lib/flagToExperiment.ts</code>
-        </div>
-      ) : (
-        <ul className="divide-y dark:divide-slate-800">
-          {Array.from(mappedExperiments).map((expName) => {
-            const assign = assignState[expName]
-            const exp = registry.experimentsByName[expName]
-            const dx = diagnoseExperiment(expName, exp, lang)
-            return (
-              <li key={expName} className="px-3 py-3 space-y-2">
-                <Header
-                  label={expName}
-                  value={assign?.variant ?? '-'}
-                  time={assign?.time ?? exampleCopy.unassigned[lang]}
-                />
-                <DiagnosisBlock dx={dx} lang={lang} />
-                {assign && exp && (
-                  <div className="text-[10.5px] text-slate-500">
-                    {exampleCopy.experimentId[lang]}:{' '}
-                    <code className="font-mono">{exp.id.slice(0, 8)}...</code>
-                  </div>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </div>
+    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+      {icon} {exp.status}
+      {exp.primary_metric && <> · {exp.primary_metric}</>}
+    </span>
   )
 }
 
-function Header({ label, value, time }: { label: string; value: string; time: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <div className="font-medium text-slate-800 dark:text-slate-100">{label}</div>
-        <div className="text-[11px] text-slate-400">{time}</div>
-      </div>
-      <span className="rounded bg-slate-900 px-2 py-1 font-mono text-xs text-white dark:bg-slate-100 dark:text-slate-900">{value}</span>
-    </div>
-  )
-}
-
-function DiagnosisBlock({ dx, lang }: { dx: AnyDiagnosis; lang: Lang }) {
+function DiagnosisBlock({ dx, lang }: { dx: FlagDiagnosis; lang: Lang }) {
   return (
     <div className={`border rounded px-2 py-2 text-[11px] ${LEVEL_BLOCK[dx.level]}`}>
       <div className="flex items-center gap-1.5 mb-1">

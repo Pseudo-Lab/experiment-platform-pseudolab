@@ -33,6 +33,7 @@ def _is_public_api_path(path: str) -> bool:
         f"{api_prefix}/status/",
         f"{api_prefix}/capture",
         f"{api_prefix}/identify",
+        f"{api_prefix}/decide",
         f"{api_prefix}/feature-flags/decide",
     }
     if path in public_exact_paths:

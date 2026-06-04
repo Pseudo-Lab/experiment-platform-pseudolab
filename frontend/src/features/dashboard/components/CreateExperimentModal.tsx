@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { X, Plus, Trash2 } from 'lucide-react';
-import { experimentApi, experimentPlacementApi } from '../../../services/api';
+import { experimentApi, experimentPlacementApi, featureFlagApi, projectApi, type FeatureFlag, type Project } from '../../../services/api';
+import { useProject } from '../../../contexts/ProjectContext';
 
 interface VariantInput {
   name: string;
@@ -26,15 +27,21 @@ const translations = {
     labelId: 'Experiment ID',
     placeholderId: 'e.g. s12-mid-reflection',
     idHelp: 'Stable API slug. Leave empty to auto-generate.',
-    labelName: 'Experiment Name',
+    labelName: '* Experiment Name',
     placeholderName: 'e.g. Button Color Test',
+    requiredLegend: '* required',
+    labelProduct: 'Product',
+    placeholderProduct: 'e.g. lvup',
+    productHelp: 'Product or service this experiment belongs to.',
     labelType: 'Experiment type',
+    typeFromProject: 'Follows project type',
     labelHypothesis: 'Hypothesis',
     placeholderHypothesis: 'e.g. Changing the button color will increase CTR.',
     labelExpectedEffect: 'Expected effect',
     placeholderExpectedEffect: 'e.g. Increase completed reflections',
-    labelPrimaryMetric: 'Primary Metric',
+    labelPrimaryMetric: '* Primary Metric',
     placeholderPrimaryMetric: 'e.g. weekly_session_attended',
+    primaryMetricHint: 'Required to transition the experiment to running.',
     labelCompletionEvent: 'Completion event',
     placeholderCompletionEvent: 'e.g. project_reflection_submitted',
     completionEventHelp: 'Event used to return completed=true from placement decide.',
@@ -43,7 +50,7 @@ const translations = {
     labelStartAt: 'Exposure starts',
     labelEndAt: 'Exposure ends',
     scheduleHelp: 'Placement decide uses this experiment schedule. End time is exclusive.',
-    labelVariants: 'Variants',
+    labelVariants: '* Variants',
     placeholderVariantName: 'Variant name',
     placeholderRatio: 'Ratio',
     addVariant: 'Add Variant',
@@ -52,6 +59,13 @@ const translations = {
     create: 'Create',
     creating: 'Creating...',
     nameRequired: 'Experiment name is required.',
+    labelFlagKey: 'Linked feature flag',
+    flagKeyNone: '(none — use legacy SHA256 assignment)',
+    flagKeyHelp: 'When linked, decide() writes both flag exposure and experiment assignment. Variant names must match flag rule variants.',
+    variantsAutoFilled: 'Variants auto-filled from the flag rules. Traffic ratios are ignored when linked — the flag rollout drives bucketing.',
+    launchChecklist: 'To start (running) this experiment later, the following are required:',
+    checklistMetric: 'Set Primary Metric',
+    checklistFlag: 'Link a Feature Flag (required for A/B tests)',
     configurePlacement: 'Create placement with this experiment',
     placementIntro: 'A placement is a frontend-owned decision point. The product service renders the UI and owns routes; this platform decides eligibility and returns optional payload.',
     placementIdentity: 'Placement identity',
@@ -90,21 +104,33 @@ const translations = {
     placementEnabled: 'Enable placement immediately',
     placementRequired: 'Fill all placement fields or turn off placement creation.',
     placementCreateFailed: 'Experiment was created, but placement creation failed. Add the placement from the experiment detail page.',
+    flagModeNone: 'No flag',
+    flagModeExisting: 'Select existing',
+    flagModeAuto: 'Auto-generate',
+    flagAutoKeyLabel: 'Auto-generated Flag Key',
+    flagAutoKeyHelp: 'A new flag will be created and linked when the experiment is created. The key is editable.',
+    flagAutoCreateFailed: 'Failed to auto-create flag.',
   },
   ko: {
     title: '새 실험 생성',
     labelId: '실험 ID',
     placeholderId: '예: s12-mid-reflection',
     idHelp: 'API와 운영 설정에서 쓰는 안정적인 slug입니다. 비워두면 자동 생성됩니다.',
-    labelName: '실험 이름',
+    labelName: '* 실험 이름',
     placeholderName: '예: 버튼 색상 테스트',
+    requiredLegend: '* 필수 입력',
+    labelProduct: '제품/서비스',
+    placeholderProduct: '예: lvup',
+    productHelp: '이 실험이 속한 제품 또는 서비스입니다.',
     labelType: '실험 유형',
+    typeFromProject: '프로젝트 유형을 따릅니다',
     labelHypothesis: '가설',
     placeholderHypothesis: '예: 버튼 색상 변경이 클릭률을 높일 것이다.',
     labelExpectedEffect: '기대 효과',
     placeholderExpectedEffect: '예: 회고 제출 수 확보',
-    labelPrimaryMetric: 'Primary Metric',
+    labelPrimaryMetric: '* Primary Metric',
     placeholderPrimaryMetric: '예: weekly_session_attended',
+    primaryMetricHint: '실험을 running으로 전환하려면 필수입니다.',
     labelCompletionEvent: '완료 이벤트',
     placeholderCompletionEvent: '예: project_reflection_submitted',
     completionEventHelp: 'placement decide에서 completed=true를 판단할 이벤트입니다.',
@@ -113,7 +139,7 @@ const translations = {
     labelStartAt: '노출 시작',
     labelEndAt: '노출 종료',
     scheduleHelp: 'Placement decide는 이 실험 기간을 기준으로 노출 여부를 판단합니다. 종료 시각은 포함하지 않습니다.',
-    labelVariants: 'Variants',
+    labelVariants: '* Variants',
     placeholderVariantName: 'Variant 이름',
     placeholderRatio: '비율',
     addVariant: 'Variant 추가',
@@ -122,6 +148,13 @@ const translations = {
     create: '생성',
     creating: '생성 중...',
     nameRequired: '실험 이름을 입력해주세요.',
+    labelFlagKey: '연결할 Feature Flag',
+    flagKeyNone: '(연결 안 함 — 기존 SHA256 배정 사용)',
+    flagKeyHelp: '연결하면 decide() 한 번으로 노출 기록과 실험 배정이 동시에 일어납니다. variant 이름이 Flag rule과 일치해야 합니다.',
+    variantsAutoFilled: 'Flag rule에서 variants를 자동으로 가져왔습니다. 연결 시 traffic_ratio는 무시되고 Flag rollout이 분배를 결정합니다.',
+    launchChecklist: '나중에 running으로 전환하려면 다음이 필요합니다:',
+    checklistMetric: 'Primary Metric 설정',
+    checklistFlag: 'Feature Flag 연결 (A/B 테스트는 필수)',
     configurePlacement: '실험 생성과 함께 Placement 생성',
     placementIntro: 'Placement는 서비스 프론트가 소유한 노출 결정 지점입니다. 실제 UI 렌더링과 라우트는 각 서비스가 소유하고, 실험 플랫폼은 대상 여부와 응답 payload를 결정합니다.',
     placementIdentity: 'Placement 기본 정보',
@@ -160,9 +193,34 @@ const translations = {
     placementEnabled: 'Placement 즉시 활성화',
     placementRequired: 'Placement 필드를 모두 입력하거나 Placement 생성을 끄세요.',
     placementCreateFailed: '실험은 생성됐지만 Placement 생성에 실패했습니다. 실험 상세 화면에서 Placement를 추가하세요.',
+    flagModeNone: '연결 안 함',
+    flagModeExisting: '기존 플래그 선택',
+    flagModeAuto: '자동 생성',
+    flagAutoKeyLabel: '자동 생성 Flag Key',
+    flagAutoKeyHelp: '실험 생성 시 새 Flag를 자동으로 만들어 연결합니다. 키를 직접 수정할 수 있습니다.',
+    flagAutoCreateFailed: 'Flag 자동 생성에 실패했습니다.',
   },
 };
 
+const PRODUCT_OPTIONS = ['lvup', 'demo-app', 'pseudo-lab'];
+
+const generateFlagKey = (experimentName: string, experimentId?: string): string => {
+  const slug = experimentName
+    .toLowerCase()
+    .replace(/experiment/g, '')
+    .replace(/\bexp\b/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  if (slug.length >= 3) return slug;
+  const idSlug = (experimentId || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return idSlug.length >= 3 ? idSlug : 'new-flag';
+};
 const uiTypeOptions = ['banner', 'card', 'modal', 'cta'];
 const experimentTypeOptions: { value: ExperimentType; en: string; ko: string }[] = [
   { value: 'quasi_experiment', en: 'Quasi experiment', ko: '준실험' },
@@ -179,11 +237,11 @@ const parseCsvList = (value: string) => value
 
 export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ lang, onClose, onCreated }) => {
   const t = translations[lang];
+  const { currentProject } = useProject();
   const [experimentId, setExperimentId] = useState('');
   const [name, setName] = useState('');
   const [experimentType, setExperimentType] = useState<ExperimentType>('quasi_experiment');
   const [hypothesis, setHypothesis] = useState('');
-  const [expectedEffect, setExpectedEffect] = useState('');
   const [primaryMetric, setPrimaryMetric] = useState('');
   const [completionEvent, setCompletionEvent] = useState('');
   const [cohortId, setCohortId] = useState('');
@@ -193,6 +251,12 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     { name: 'control', traffic_ratio: '0.5' },
     { name: 'treatment', traffic_ratio: '0.5' },
   ]);
+  const [projectId, setProjectId] = useState(currentProject?.id ?? '');
+  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
+  const [flagMode, setFlagMode] = useState<'none' | 'existing' | 'auto'>('none');
+  const [flagKey, setFlagKey] = useState<string>('');
+  const [autoFlagKey, setAutoFlagKey] = useState('');
+  const [availableFlags, setAvailableFlags] = useState<FeatureFlag[]>([]);
   const [configurePlacement, setConfigurePlacement] = useState(false);
   const [placementKey, setPlacementKey] = useState('');
   const [uiId, setUiId] = useState('');
@@ -209,6 +273,46 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
   const ratioSum = variants.reduce((sum, v) => sum + (parseFloat(v.traffic_ratio) || 0), 0);
   const ratioValid = Math.abs(ratioSum - 1.0) <= 0.01;
+
+  useEffect(() => {
+    featureFlagApi.list(false).then(setAvailableFlags).catch(() => setAvailableFlags([]));
+    projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
+  }, []);
+
+  useEffect(() => {
+    const project = availableProjects.find(p => p.id === projectId) ?? currentProject;
+    const type = project?.project_type;
+    if (type === 'ab_test' || type === 'quasi_experiment') {
+      setExperimentType(type);
+    }
+  }, [projectId, availableProjects, currentProject]);
+
+  useEffect(() => {
+    if (flagMode !== 'auto') return;
+    setAutoFlagKey(generateFlagKey(name, experimentId));
+  }, [name, experimentId, flagMode]);
+
+  // Flag 선택 시 그 Flag의 enabled rule variants로 variants 자동 채움.
+  // 연결 해제하거나 빈 값이면 사용자 입력 보존.
+  useEffect(() => {
+    if (!flagKey) return;
+    let cancelled = false;
+    featureFlagApi
+      .listRules(flagKey)
+      .then((rules) => {
+        if (cancelled) return;
+        const ruleVariants = Array.from(
+          new Set(rules.filter((r) => r.enabled).map((r) => r.variant)),
+        ).filter((v) => v !== 'control');
+        const names = ['control', ...ruleVariants];
+        const ratio = (1 / names.length).toFixed(2);
+        setVariants(names.map((name) => ({ name, traffic_ratio: ratio })));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [flagKey]);
 
   const addVariant = () => setVariants((prev) => [...prev, { name: '', traffic_ratio: '0' }]);
   const removeVariant = (i: number) => setVariants((prev) => prev.filter((_, idx) => idx !== i));
@@ -228,24 +332,44 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError(t.nameRequired); return; }
-    if (variants.length > 0 && !ratioValid) { setError(t.ratioWarning.replace('{sum}', ratioSum.toFixed(2))); return; }
+    if (experimentType !== 'quasi_experiment' && variants.length > 0 && !ratioValid) { setError(t.ratioWarning.replace('{sum}', ratioSum.toFixed(2))); return; }
     if (configurePlacement && !placementValid) { setError(t.placementRequired); return; }
 
     setSubmitting(true);
     setError(null);
+
+    let resolvedFlagKey: string | undefined = flagMode === 'existing' ? (flagKey || undefined) : undefined;
+    if (flagMode === 'auto' && autoFlagKey.trim()) {
+      try {
+        const newFlag = await featureFlagApi.create({
+          flag_key: autoFlagKey.trim(),
+          description: `${name.trim()}`,
+          rollout_pct: 0,
+          enabled: false,
+        });
+        resolvedFlagKey = newFlag.flag_key;
+      } catch {
+        setError(t.flagAutoCreateFailed);
+        setSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const created = await experimentApi.create({
         id: experimentId.trim() || undefined,
         name: name.trim(),
         hypothesis: hypothesis.trim() || undefined,
-        expected_effect: expectedEffect.trim() || undefined,
         primary_metric: primaryMetric.trim() || undefined,
         completion_event: completionEvent.trim() || undefined,
         experiment_type: experimentType,
         cohort_id: cohortId.trim() || undefined,
+        flag_key: resolvedFlagKey,
+        project_id: projectId || undefined,
+        product: projectId || undefined,
         start_at: toApiDatetime(startAt),
         end_at: toApiDatetime(endAt),
-        variants: variants.map((v) => ({
+        variants: experimentType === 'quasi_experiment' ? [] : variants.map((v) => ({
           name: v.name,
           traffic_ratio: parseFloat(v.traffic_ratio) || 0,
         })),
@@ -280,7 +404,10 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h2>
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t.requiredLegend}</p>
+          </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -301,18 +428,31 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelType}</label>
-              <Select value={experimentType} onValueChange={(value) => setExperimentType(value as ExperimentType)}>
-                <SelectTrigger className="rounded-xl" aria-label={t.labelType}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {experimentTypeOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option[lang]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {projectId ? (
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2">
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    experimentType === 'quasi_experiment'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                      : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                  }`}>
+                    {experimentTypeOptions.find(o => o.value === experimentType)?.[lang] ?? experimentType}
+                  </span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">{t.typeFromProject}</span>
+                </div>
+              ) : (
+                <Select value={experimentType} onValueChange={(value) => setExperimentType(value as ExperimentType)}>
+                  <SelectTrigger className="rounded-xl" aria-label={t.labelType}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {experimentTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option[lang]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
@@ -328,6 +468,25 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
           </div>
 
           <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProduct}</label>
+            <Select
+              value={projectId || '__none__'}
+              onValueChange={(v) => setProjectId(v === '__none__' ? '' : v)}
+            >
+              <SelectTrigger className="rounded-xl" aria-label={t.labelProduct}>
+                <SelectValue placeholder={t.placeholderProduct} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
+                {availableProjects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name} ({p.id})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t.productHelp}</p>
+          </div>
+
+          <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelHypothesis}</label>
             <Textarea
               value={hypothesis}
@@ -340,39 +499,72 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelExpectedEffect}</label>
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
             <Input
-              value={expectedEffect}
-              onChange={(e) => setExpectedEffect(e.target.value)}
-              placeholder={t.placeholderExpectedEffect}
+              value={primaryMetric}
+              onChange={(e) => setPrimaryMetric(e.target.value)}
+              placeholder={t.placeholderPrimaryMetric}
               className="rounded-xl"
-              aria-label={t.labelExpectedEffect}
+              aria-label={t.labelPrimaryMetric}
             />
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t.primaryMetricHint}</p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
-              <Input
-                value={primaryMetric}
-                onChange={(e) => setPrimaryMetric(e.target.value)}
-                placeholder={t.placeholderPrimaryMetric}
-                className="rounded-xl"
-                aria-label={t.labelPrimaryMetric}
-              />
+          {experimentType !== 'quasi_experiment' && (
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelFlagKey}</label>
+            <div className="flex gap-1.5">
+              {(['none', 'existing', 'auto'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setFlagMode(mode)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    flagMode === mode
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                  }`}
+                >
+                  {mode === 'none' ? t.flagModeNone : mode === 'existing' ? t.flagModeExisting : t.flagModeAuto}
+                </button>
+              ))}
             </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCompletionEvent}</label>
-              <Input
-                value={completionEvent}
-                onChange={(e) => setCompletionEvent(e.target.value)}
-                placeholder={t.placeholderCompletionEvent}
-                className="rounded-xl"
-                aria-label={t.labelCompletionEvent}
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t.completionEventHelp}</p>
-            </div>
+            {flagMode === 'existing' && (
+              <>
+                <Select value={flagKey || '__none__'} onValueChange={(v) => setFlagKey(v === '__none__' ? '' : v)}>
+                  <SelectTrigger className="rounded-xl" aria-label={t.labelFlagKey}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t.flagKeyNone}</SelectItem>
+                    {availableFlags.map((flag) => (
+                      <SelectItem key={flag.flag_key} value={flag.flag_key}>
+                        {flag.flag_key}{flag.description ? ` — ${flag.description}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagKeyHelp}</p>
+              </>
+            )}
+            {flagMode === 'auto' && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.flagAutoKeyLabel}</label>
+                  <input
+                    type="text"
+                    value={autoFlagKey}
+                    onChange={(e) => setAutoFlagKey(e.target.value)}
+                    placeholder="flag-key"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagAutoKeyHelp}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagKeyHelp}</p>
+              </>
+            )}
           </div>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr]">
             <div className="space-y-1.5">
@@ -408,8 +600,12 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             <p className="text-xs text-slate-500 dark:text-slate-400 sm:col-span-3">{t.scheduleHelp}</p>
           </div>
 
+          {experimentType !== 'quasi_experiment' && (
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelVariants}</label>
+            {flagKey && (
+              <p className="text-xs text-indigo-600 dark:text-indigo-400">{t.variantsAutoFilled}</p>
+            )}
             {variants.map((v, i) => (
               <div key={i} className="flex items-center gap-2">
                 <Input
@@ -445,6 +641,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               {t.addVariant}
             </Button>
           </div>
+          )}
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/60 space-y-4">
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -460,6 +657,18 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             {configurePlacement && (
               <div className="space-y-4">
                 <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementIntro}</p>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCompletionEvent}</label>
+                  <Input
+                    value={completionEvent}
+                    onChange={(e) => setCompletionEvent(e.target.value)}
+                    placeholder={t.placeholderCompletionEvent}
+                    className="rounded-xl"
+                    aria-label={t.labelCompletionEvent}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t.completionEventHelp}</p>
+                </div>
 
                 <section className="space-y-3">
                   <div className="space-y-1">
@@ -607,6 +816,21 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             )}
           </div>
         </div>
+
+        {(() => {
+          const missingMetric = !primaryMetric.trim();
+          const missingFlag = experimentType === 'ab_test' && !flagKey;
+          if (!missingMetric && !missingFlag) return null;
+          return (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+              <p className="font-semibold mb-1">{t.launchChecklist}</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {missingMetric && <li>{t.checklistMetric}</li>}
+                {missingFlag && <li>{t.checklistFlag}</li>}
+              </ul>
+            </div>
+          );
+        })()}
 
         {error && <p className="text-sm text-rose-500">{error}</p>}
 

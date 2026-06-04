@@ -50,6 +50,7 @@ class ExperimentPlacementDecisionResponse(BaseModel):
 class ExperimentPlacementConfig(BaseModel):
     experiment_id: str
     placement_key: str
+    variant_key: Optional[str] = None
     ui_id: str
     ui_type: str
     title: str
@@ -65,6 +66,7 @@ class ExperimentPlacementConfig(BaseModel):
 
 class ExperimentPlacementConfigCreate(BaseModel):
     placement_key: str = Field(..., min_length=1)
+    variant_key: Optional[str] = None
     ui_id: str = Field(..., min_length=1)
     ui_type: str = Field("banner", min_length=1)
     title: str = Field(..., min_length=1)

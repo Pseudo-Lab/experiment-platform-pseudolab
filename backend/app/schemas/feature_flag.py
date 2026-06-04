@@ -10,12 +10,16 @@ class FeatureFlagCreate(BaseModel):
     description: Optional[str] = None
     rollout_pct: int = Field(default=0, ge=0, le=100)
     enabled: bool = False
+    product: Optional[str] = None
+    project_id: Optional[str] = None
 
 
 class FeatureFlagUpdate(BaseModel):
     description: Optional[str] = None
     rollout_pct: Optional[int] = Field(default=None, ge=0, le=100)
     enabled: Optional[bool] = None
+    product: Optional[str] = None
+    project_id: Optional[str] = None
 
 
 class FeatureFlag(BaseModel):
@@ -23,6 +27,8 @@ class FeatureFlag(BaseModel):
     description: Optional[str] = None
     rollout_pct: int
     enabled: bool
+    product: Optional[str] = None
+    project_id: Optional[str] = None
     archived_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime

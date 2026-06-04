@@ -32,14 +32,19 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
 # Variant schemas
 class VariantCreate(BaseModel):
     name: str
-    traffic_ratio: float = Field(..., ge=0, le=1)
+    # traffic_ratio는 flag-linked 실험에서는 무시됨 (flag rollout이 분배 결정).
+    # unlinked 실험에서는 입력은 받지만 우리 모델에선 사용 안 함 (PostHog 정합).
+    traffic_ratio: float = Field(default=0.5, ge=0, le=1)
     description: Optional[str] = None
 
 
-class Variant(VariantCreate):
-    id: str
+class Variant(BaseModel):
+    """API 응답용. experiment_variants 테이블 폐기 후 합성됨.
+    - linked: feature_flag_rule에서 derive
+    - unlinked: experiments.variant_names_json에서 derive
+    """
+    name: str
     experiment_id: str
-    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -55,7 +60,10 @@ class ExperimentCreate(BaseModel):
     completion_event: Optional[str] = None
     experiment_type: ExperimentType = ExperimentType.AB_TEST
     cohort_id: Optional[str] = None
+    flag_key: Optional[str] = None
     owner_id: Optional[str] = None
+    product: Optional[str] = None
+    project_id: Optional[str] = None
     start_at: Optional[datetime] = None
     end_at: Optional[datetime] = None
     variants: List[VariantCreate] = []
@@ -89,6 +97,9 @@ class ExperimentUpdate(BaseModel):
     completion_event: Optional[str] = None
     experiment_type: Optional[ExperimentType] = None
     cohort_id: Optional[str] = None
+    flag_key: Optional[str] = None
+    product: Optional[str] = None
+    project_id: Optional[str] = None
     status: Optional[ExperimentStatus] = None
     start_at: Optional[datetime] = None
     end_at: Optional[datetime] = None
@@ -111,6 +122,9 @@ class Experiment(BaseModel):
     completion_event: Optional[str] = None
     experiment_type: ExperimentType = ExperimentType.AB_TEST
     cohort_id: Optional[str] = None
+    flag_key: Optional[str] = None
+    product: Optional[str] = None
+    project_id: Optional[str] = None
     status: ExperimentStatus
     owner_id: Optional[str] = None
     start_at: Optional[datetime] = None
@@ -128,7 +142,6 @@ class Experiment(BaseModel):
 # Assignment schemas
 class AssignmentResponse(BaseModel):
     experiment_id: str
-    variant_id: str
     variant_name: str
     user_id: str
     assigned_at: datetime
@@ -136,7 +149,6 @@ class AssignmentResponse(BaseModel):
 
 # Experiment result schemas
 class VariantResult(BaseModel):
-    variant_id: str
     variant_name: str
     users: int
     conversions: int

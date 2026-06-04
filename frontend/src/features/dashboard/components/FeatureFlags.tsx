@@ -3,20 +3,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { Archive, RotateCcw, ToggleLeft, ToggleRight, Plus, RefreshCcw, X } from 'lucide-react';
+import { Archive, RotateCcw, ToggleLeft, ToggleRight, Plus, RefreshCcw, X, Info } from 'lucide-react';
 import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate, type FeatureFlagExposureSummary } from '../../../services/api';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { useProject } from '../../../contexts/ProjectContext';
 
 interface Props { lang: 'en' | 'ko'; }
 
 const t = {
   ko: {
     title: 'Feature Flags',
-    colKey: 'Key', colDesc: '설명', colRollout: '롤아웃 %', colExposure: '노출', colStatus: '상태', colActions: '',
+    colKey: 'Key', colDesc: '설명', colRollout: '롤아웃 %', colExposure: '노출', colStatus: '상태', colProject: '프로젝트', colActions: '',
+    allProjects: '모든 프로젝트',
+    noProject: '(없음)',
+    assignProject: '프로젝트 지정',
     enabled: '활성', disabled: '비활성', archived: '보관됨',
     includeArchived: '보관된 플래그 포함',
     addFlag: '플래그 추가',
     keyPlaceholder: 'flag-key',
     descPlaceholder: '설명 (선택)',
+    productPlaceholder: '제품 (선택)',
     rolloutLabel: '롤아웃 %',
     create: '생성',
     creating: '생성 중...',
@@ -46,12 +52,16 @@ const t = {
   },
   en: {
     title: 'Feature Flags',
-    colKey: 'Key', colDesc: 'Description', colRollout: 'Rollout %', colExposure: 'Exposure', colStatus: 'Status', colActions: '',
+    colKey: 'Key', colDesc: 'Description', colRollout: 'Rollout %', colExposure: 'Exposure', colStatus: 'Status', colProject: 'Project', colActions: '',
+    allProjects: 'All Projects',
+    noProject: '(none)',
+    assignProject: 'Assign project',
     enabled: 'Enabled', disabled: 'Disabled', archived: 'Archived',
     includeArchived: 'Include archived flags',
     addFlag: 'Add Flag',
     keyPlaceholder: 'flag-key',
     descPlaceholder: 'Description (optional)',
+    productPlaceholder: 'Product (optional)',
     rolloutLabel: 'Rollout %',
     create: 'Create',
     creating: 'Creating...',
@@ -83,11 +93,13 @@ const t = {
 
 export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const tr = t[lang];
+  const { currentProjectId, projects: availableProjects } = useProject();
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [newKey, setNewKey] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [newProjectId, setNewProjectId] = useState('');
   const [newRollout, setNewRollout] = useState(0);
   const [includeArchived, setIncludeArchived] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -97,6 +109,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
   const [archivingKey, setArchivingKey] = useState<string | null>(null);
   const [restoringKey, setRestoringKey] = useState<string | null>(null);
+  const [assigningProjectKey, setAssigningProjectKey] = useState<string | null>(null);
   const [exposureSummaries, setExposureSummaries] = useState<Record<string, FeatureFlagExposureSummary | null>>({});
   const [exposureLoading, setExposureLoading] = useState(false);
 
@@ -135,7 +148,14 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     setCreating(true);
     setError(null);
     try {
-      const data: FeatureFlagCreate = { flag_key: newKey.trim(), description: newDesc.trim() || undefined, rollout_pct: newRollout, enabled: false };
+      const data: FeatureFlagCreate = {
+        flag_key: newKey.trim(),
+        description: newDesc.trim() || undefined,
+        rollout_pct: newRollout,
+        enabled: false,
+        project_id: newProjectId || undefined,
+        product: newProjectId || undefined,
+      };
       const created = await featureFlagApi.create(data);
       setFlags(prev => [created, ...prev]);
       setRolloutDrafts(prev => ({ ...prev, [created.flag_key]: created.rollout_pct }));
@@ -151,7 +171,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
           variant_counts: {},
         },
       }));
-      setNewKey(''); setNewDesc(''); setNewRollout(0); setShowForm(false);
+      setNewKey(''); setNewDesc(''); setNewProjectId(''); setNewRollout(0); setShowForm(false);
     } catch {
       setError(tr.errorCreate);
     } finally {
@@ -230,6 +250,19 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     }
   };
 
+  const handleAssignProject = async (flag: FeatureFlag, projectId: string | null) => {
+    setAssigningProjectKey(flag.flag_key);
+    setError(null);
+    try {
+      const updated = await featureFlagApi.update(flag.flag_key, { project_id: projectId ?? undefined });
+      replaceFlag(updated);
+    } catch {
+      setError(tr.errorUpdate);
+    } finally {
+      setAssigningProjectKey(null);
+    }
+  };
+
   const renderExposureSummary = (flagKey: string) => {
     const summary = exposureSummaries[flagKey];
     if (summary === undefined) return <span className="text-xs text-slate-400">{tr.exposureLoading}</span>;
@@ -266,10 +299,22 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
     );
   };
 
+  const filteredFlags = currentProjectId
+    ? flags.filter(f => (f.project_id || f.product) === currentProjectId)
+    : flags;
+
   if (loading) return <p className="text-slate-500 text-sm p-8">{tr.loading}</p>;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+        <span className="shrink-0 mt-0.5">ℹ️</span>
+        <span>
+          {lang === 'ko'
+            ? '이 탭은 실험에 연결되지 않은 독립 Feature Flag를 관리합니다. 실험과 연결된 Flag의 롤아웃·활성 여부는 실험 상세 페이지에서 바로 조작할 수 있습니다.'
+            : 'This tab manages standalone feature flags not linked to any experiment. Flags linked to an experiment can be toggled and adjusted directly on the experiment detail page.'}
+        </span>
+      </div>
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{tr.title}</h1>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -301,9 +346,23 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
       {showForm && (
         <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
           <CardContent className="pt-5 space-y-3">
-            <div className="flex gap-2">
-              <Input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder={tr.keyPlaceholder} className="rounded-xl font-mono" />
-              <Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder={tr.descPlaceholder} className="rounded-xl" />
+            <div className="flex gap-2 flex-wrap">
+              <Input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder={tr.keyPlaceholder} className="rounded-xl font-mono flex-1 min-w-32" />
+              <Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder={tr.descPlaceholder} className="rounded-xl flex-1 min-w-32" />
+              <Select
+                value={newProjectId || '__none__'}
+                onValueChange={(v) => setNewProjectId(v === '__none__' ? '' : v)}
+              >
+                <SelectTrigger className="rounded-xl w-40">
+                  <SelectValue placeholder={tr.productPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
+                  {availableProjects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-3">
               <label className="text-sm text-slate-500 shrink-0">{tr.rolloutLabel}</label>
@@ -318,10 +377,19 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
         </Card>
       )}
 
+      <div className="flex items-start gap-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 p-3 text-xs text-indigo-700 dark:text-indigo-300">
+        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        <span>
+          {lang === 'ko'
+            ? '실험에 연결된 플래그는 각 실험 상세 페이지에서 롤아웃(%) 및 활성 상태를 바로 관리할 수 있습니다.'
+            : 'Flags linked to experiments can be managed directly (rollout %, enabled state) from the experiment detail page.'}
+        </span>
+      </div>
+
       <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
         <CardContent className="p-0">
           {error && !showForm && <p className="text-xs text-rose-500 px-6 pt-4">{error}</p>}
-          {flags.length === 0 ? (
+          {filteredFlags.length === 0 ? (
             <p className="text-sm text-slate-400 p-6">{tr.empty}</p>
           ) : (
             <Table>
@@ -332,11 +400,12 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                   <TableHead className="font-bold text-slate-500">{tr.colRollout}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colExposure}</TableHead>
                   <TableHead className="font-bold text-slate-500">{tr.colStatus}</TableHead>
+                  <TableHead className="font-bold text-slate-500">{tr.colProject}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {flags.map(flag => {
+                {filteredFlags.map(flag => {
                   const draftRollout = rolloutDrafts[flag.flag_key] ?? flag.rollout_pct;
                   const rolloutChanged = draftRollout !== flag.rollout_pct;
                   const isSavingRollout = savingRolloutKey === flag.flag_key;
@@ -369,9 +438,26 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                     </TableCell>
                     <TableCell>{renderExposureSummary(flag.flag_key)}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${isArchived ? 'bg-amber-100 text-amber-700' : flag.enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`inline-block whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-bold ${isArchived ? 'bg-amber-100 text-amber-700' : flag.enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                         {isArchived ? tr.archived : flag.enabled ? tr.enabled : tr.disabled}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={flag.project_id || flag.product || '__none__'}
+                        onValueChange={(v) => handleAssignProject(flag, v === '__none__' ? null : v)}
+                        disabled={assigningProjectKey === flag.flag_key || isArchived}
+                      >
+                        <SelectTrigger className="h-7 rounded-lg text-xs w-32 border-slate-200 dark:border-slate-700">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">{tr.noProject}</SelectItem>
+                          {availableProjects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

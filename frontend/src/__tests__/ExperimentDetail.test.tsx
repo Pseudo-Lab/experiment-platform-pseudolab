@@ -6,6 +6,7 @@ import {
   experimentApi,
   experimentPlacementApi,
   experimentResultApi,
+  projectApi,
 } from '@/services/api';
 
 vi.mock('@/services/api', () => ({
@@ -29,6 +30,9 @@ vi.mock('@/services/api', () => ({
     create: vi.fn(),
     createNote: vi.fn(),
   },
+  projectApi: {
+    list: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 const experiment = {
@@ -37,6 +41,7 @@ const experiment = {
   hypothesis: '회고 UI 노출은 제출을 늘린다.',
   expected_effect: '',
   primary_metric: 'project_reflection_ui_clicked',
+  experiment_type: 'quasi_experiment',
   status: 'running',
   created_at: '2026-05-25T00:00:00Z',
   updated_at: '2026-05-25T00:00:00Z',
@@ -46,6 +51,7 @@ const experiment = {
 const placement = {
   experiment_id: 's12-mid-reflection',
   placement_key: 'project-detail-home-reflection-cta',
+  variant_key: null,
   ui_id: 's12-mid-reflection-banner',
   ui_type: 'banner',
   title: '중간 회고 작성하기',
@@ -170,6 +176,28 @@ describe('ExperimentDetail placements', () => {
       }),
     );
     expect(await screen.findByText('Placement를 생성했습니다.')).toBeInTheDocument();
+  });
+
+  it('includes project_id when saving experiment edits', async () => {
+    (experimentApi.get as any).mockResolvedValue({ ...experiment, project_id: 'lvup' });
+    (projectApi.list as any).mockResolvedValue([
+      { id: 'lvup', name: 'LVUP', api_key: 'pk_live_lvup_x', created_at: '2026-05-25T00:00:00Z' },
+    ]);
+    (experimentApi.update as any).mockResolvedValue({ ...experiment, project_id: 'lvup' });
+
+    await renderDetail();
+
+    const editButtons = await screen.findAllByRole('button', { name: /수정/ });
+    fireEvent.click(editButtons[0]);
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: /저장/ })[0]);
+    });
+
+    expect(experimentApi.update).toHaveBeenCalledWith(
+      's12-mid-reflection',
+      expect.objectContaining({ project_id: 'lvup' }),
+    );
   });
 
   it('deletes a placement after confirmation', async () => {

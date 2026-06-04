@@ -76,8 +76,8 @@ export const exampleCopy = {
     ko: '아직 decide 호출이 없습니다. 페이지를 새로고침 하거나 헤더의 새 사용자를 눌러보세요.',
   },
   noMappedExperiments: {
-    en: 'No mapped experiments. Check the mapping file:',
-    ko: '매핑된 실험이 없습니다. 매핑 파일을 확인하세요:',
+    en: 'No experiments linked to the decided flags. Set Experiment.flag_key in the admin console to link.',
+    ko: 'decide 호출이 발생한 Flag에 연결된 실험이 없습니다. 관리자 콘솔에서 실험의 flag_key를 지정해 연결하세요.',
   },
   unassigned: {
     en: 'Unassigned',
@@ -120,5 +120,25 @@ export const exampleCopy = {
   noCalls: {
     en: 'No calls yet. Click a card or banner.',
     ko: '아직 호출이 없습니다. 카드나 배너를 클릭해보세요.',
+  },
+  experiments: {
+    en: 'Experiments',
+    ko: '실험 현황',
+  },
+  experimentShowcaseTitle: {
+    en: 'Experiment Showcase',
+    ko: '실험 현황',
+  },
+  experimentShowcaseDescription: {
+    en: 'See how flags are assigned to your user and send test events from here.',
+    ko: '현재 사용자에게 배정된 실험 variant를 확인하고 이벤트를 직접 발생시켜보세요.',
+  },
+  sendTestEvent: {
+    en: 'Send test event',
+    ko: '테스트 이벤트 전송',
+  },
+  eventSent: {
+    en: 'Event sent!',
+    ko: '전송됨!',
   },
 } as const

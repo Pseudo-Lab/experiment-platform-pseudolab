@@ -12,7 +12,11 @@ import { GitHubDashboard } from './features/dashboard/components/GitHubDashboard
 import { DiscordDashboard } from './features/dashboard/components/DiscordDashboard';
 import { FeatureFlags } from './features/dashboard/components/FeatureFlags';
 import { Analytics } from './features/dashboard/components/Analytics';
+import { Projects } from './features/dashboard/components/Projects';
+import { ApiKeyPage } from './features/dashboard/components/ApiKeyPage';
+import { Placements } from './features/dashboard/components/Placements';
 import { ExampleApp } from './features/example/ExampleApp';
+import { ProjectProvider } from './contexts/ProjectContext';
 
 export default function App() {
   return (
@@ -81,30 +85,35 @@ function AppShell() {
   }
 
   return (
-    <MainLayout
-      lang={lang}
-      setLang={setLang}
-      theme={theme}
-      setTheme={setTheme}
-      backendStatus={backendStatus}
-      userLabel={user?.username}
-      onLogout={logout}
-    >
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard lang={lang} />} />
-        <Route path="/experiments" element={<Experiments lang={lang} />} />
-        <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} />} />
-        <Route path="/metrics" element={<Navigate to="/metrics/github" replace />} />
-        <Route path="/metrics/github" element={<GitHubDashboard lang={lang} />} />
-        <Route path="/metrics/discord" element={<DiscordDashboard lang={lang} />} />
-        <Route path="/bug-report" element={<BugReport lang={lang} />} />
-        <Route path="/bug-report/:id" element={<BugReportDetail lang={lang} />} />
-        <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
-        <Route path="/analytics" element={<Analytics lang={lang} />} />
-        <Route path="/example/*" element={<ExampleApp lang={lang} />} />
-      </Routes>
-    </MainLayout>
+    <ProjectProvider>
+      <MainLayout
+        lang={lang}
+        setLang={setLang}
+        theme={theme}
+        setTheme={setTheme}
+        backendStatus={backendStatus}
+        userLabel={user?.username}
+        onLogout={logout}
+      >
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard lang={lang} />} />
+          <Route path="/experiments" element={<Experiments lang={lang} />} />
+          <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} />} />
+          <Route path="/metrics" element={<Navigate to="/metrics/github" replace />} />
+          <Route path="/metrics/github" element={<GitHubDashboard lang={lang} />} />
+          <Route path="/metrics/discord" element={<DiscordDashboard lang={lang} />} />
+          <Route path="/bug-report" element={<BugReport lang={lang} />} />
+          <Route path="/bug-report/:id" element={<BugReportDetail lang={lang} />} />
+          <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
+          <Route path="/placements" element={<Placements lang={lang} />} />
+          <Route path="/analytics" element={<Analytics lang={lang} />} />
+          <Route path="/projects" element={<Projects lang={lang} />} />
+          <Route path="/api-key" element={<ApiKeyPage lang={lang} />} />
+          <Route path="/example/*" element={<ExampleApp lang={lang} />} />
+        </Routes>
+      </MainLayout>
+    </ProjectProvider>
   );
 }

@@ -71,6 +71,10 @@ def test_configured_auth_keeps_placement_decide_public(monkeypatch):
     _configure_auth(monkeypatch)
     client.cookies.clear()
 
+    unified_decide = client.post(
+        "/api/v1/decide",
+        json={"key": "missing-placement", "user_id": "user-runner"},
+    )
     placement_only = client.get(
         "/api/v1/placements/missing-placement/decide",
         params={"user_id": "user-runner", "project_id": "project-s12"},
@@ -81,8 +85,10 @@ def test_configured_auth_keeps_placement_decide_public(monkeypatch):
     )
     protected_config = client.get("/api/v1/experiments/missing-experiment/placements")
 
+    assert unified_decide.status_code == 200
+    assert unified_decide.json()["payload"]["reason"] == "not_found"
     assert placement_only.status_code == 200
-    assert placement_only.json()["reason"] == "placement_not_found"
+    assert placement_only.json()["reason"] == "not_found"
     assert explicit_experiment.status_code == 200
     assert explicit_experiment.json()["reason"] == "experiment_not_found"
     assert protected_config.status_code == 401

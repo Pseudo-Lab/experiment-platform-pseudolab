@@ -37,6 +37,9 @@ export function Layout({ children, lang }: { children: ReactNode; lang: Lang }) 
             <NavLink to="/example/studies" className={linkClass}>
               {t.studies[lang]}
             </NavLink>
+            <NavLink to="/example/experiments" className={linkClass}>
+              {t.experiments[lang]}
+            </NavLink>
           </nav>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <span title={uid}>

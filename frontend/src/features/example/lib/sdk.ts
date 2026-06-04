@@ -1,19 +1,59 @@
 import { getUserId } from './userId'
 import { devLog } from './devLog'
 import { API_BASE_URL } from './apiBase'
+import { type VisualChangePayload } from './visualEditor'
 
-export async function decideFlag(flagKey: string): Promise<string> {
+export interface DecideResult {
+  variant: string
+  visual_changes: VisualChangePayload[]
+}
+
+export interface UnifiedDecideResult {
+  key: string
+  type: 'flag' | 'placement'
+  show: boolean
+  variant: string
+  payload: Record<string, unknown> | null
+}
+
+export async function decide(key: string, apiKey?: string): Promise<UnifiedDecideResult> {
+  const uid = getUserId()
+  const logId = devLog.add('decide', key, { user_id: uid })
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (apiKey) headers['x-api-key'] = apiKey
+    const res = await fetch(`${API_BASE_URL}/decide`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ key, user_id: uid }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const json = await res.json() as UnifiedDecideResult
+    devLog.update(logId, { status: 'ok', response: json.variant })
+    return json
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    devLog.update(logId, { status: 'error', error: msg })
+    throw e
+  }
+}
+
+export async function decideFlag(flagKey: string, apiKey?: string): Promise<DecideResult> {
   const uid = getUserId()
   const logId = devLog.add('decide', flagKey, { user_id: uid })
   try {
+    const headers: Record<string, string> = {}
+    if (apiKey) headers['x-api-key'] = apiKey
     const res = await fetch(
       `${API_BASE_URL}/feature-flags/decide?flag_key=${encodeURIComponent(flagKey)}&user_id=${encodeURIComponent(uid)}`,
+      { headers },
     )
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = await res.json()
     const variant = json?.data?.variant as string
+    const visual_changes = (json?.data?.visual_changes ?? []) as VisualChangePayload[]
     devLog.update(logId, { status: 'ok', response: variant })
-    return variant
+    return { variant, visual_changes }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     devLog.update(logId, { status: 'error', error: msg })
@@ -24,12 +64,15 @@ export async function decideFlag(flagKey: string): Promise<string> {
 export async function track(
   eventName: string,
   properties?: Record<string, unknown>,
+  apiKey?: string,
 ): Promise<void> {
   const logId = devLog.add('track', eventName, properties)
   try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (apiKey) headers['x-api-key'] = apiKey
     const res = await fetch(`${API_BASE_URL}/capture`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         user_id: getUserId(),
         event_name: eventName,

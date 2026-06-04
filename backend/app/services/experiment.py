@@ -1,4 +1,5 @@
 import hashlib
+import json
 import uuid
 import numpy as np
 from scipy.stats import chi2_contingency
@@ -7,6 +8,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from app.schemas.experiment import (
     Experiment, ExperimentCreate, ExperimentUpdate,
+    ExperimentStatus, ExperimentType,
     Variant, AssignmentResponse, VALID_TRANSITIONS,
     ExperimentResult, VariantResult,
 )
@@ -21,65 +23,54 @@ def _serialize_datetime(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
 
 
+def _parse_variant_names(value: Optional[str]) -> List[str]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+        return [str(v) for v in parsed] if isinstance(parsed, list) else []
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
 class ExperimentService:
 
     async def get_all(self, status: str | None = None) -> List[Experiment]:
-        sql = """
-            SELECT e.*,
-                   v.id          AS v_id,
-                   v.name        AS v_name,
-                   v.traffic_ratio,
-                   v.description AS v_description,
-                   v.created_at  AS v_created_at
-            FROM experiments e
-            LEFT JOIN experiment_variants v ON v.experiment_id = e.id
-            {where}
-            ORDER BY e.created_at DESC
-        """
         if status:
-            rows = await d1.query(sql.format(where="WHERE e.status = ?"), [status])
+            rows = await d1.query(
+                "SELECT * FROM experiments WHERE status = ? ORDER BY created_at DESC",
+                [status],
+            )
         else:
-            rows = await d1.query(sql.format(where=""))
-
-        # JOIN 결과를 실험별로 그룹핑
-        experiments: dict[str, dict] = {}
-        for row in rows:
-            exp_id = row["id"]
-            if exp_id not in experiments:
-                experiments[exp_id] = {**row, "experiment_variants": []}
-            if row["v_id"]:
-                experiments[exp_id]["experiment_variants"].append({
-                    "id": row["v_id"],
-                    "experiment_id": exp_id,
-                    "name": row["v_name"],
-                    "traffic_ratio": row["traffic_ratio"],
-                    "description": row["v_description"],
-                    "created_at": row["v_created_at"],
-                })
-        return [self._to_experiment(exp) for exp in experiments.values()]
+            rows = await d1.query("SELECT * FROM experiments ORDER BY created_at DESC")
+        return [await self._to_experiment(row) for row in rows]
 
     async def get(self, experiment_id: str) -> Optional[Experiment]:
         rows = await d1.query("SELECT * FROM experiments WHERE id = ?", [experiment_id])
         if not rows:
             return None
-        row = rows[0]
-        row["experiment_variants"] = await d1.query(
-            "SELECT * FROM experiment_variants WHERE experiment_id = ?",
-            [experiment_id]
-        )
-        return self._to_experiment(row)
+        return await self._to_experiment(rows[0])
 
     async def create(self, data: ExperimentCreate) -> Experiment:
         exp_id = data.id or str(uuid.uuid4())
         if data.id and await self.get(exp_id):
             raise HTTPException(status_code=409, detail="Experiment id already exists")
 
+        if data.flag_key:
+            await self._require_flag(data.flag_key)
+
+        # variants는 단순 이름 배열로 저장. linked 실험은 flag rules에서 derive되므로
+        # variant_names_json는 unlinked 실험의 진실 공급원.
+        variant_names = [v.name for v in data.variants]
+        variant_names_json = json.dumps(variant_names) if variant_names else None
+
         now = _now()
         ok = await d1.execute(
             """INSERT INTO experiments
                (id, name, hypothesis, expected_effect, primary_metric, completion_event,
-                experiment_type, cohort_id, status, owner_id, start_at, end_at, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
+                experiment_type, cohort_id, flag_key, variant_names_json, product, project_id,
+                status, owner_id, start_at, end_at, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
             [
                 exp_id,
                 data.name,
@@ -89,6 +80,10 @@ class ExperimentService:
                 data.completion_event,
                 data.experiment_type.value,
                 data.cohort_id,
+                data.flag_key,
+                variant_names_json,
+                data.product,
+                data.project_id,
                 data.owner_id,
                 _serialize_datetime(data.start_at),
                 _serialize_datetime(data.end_at),
@@ -97,14 +92,6 @@ class ExperimentService:
         )
         if not ok:
             raise HTTPException(status_code=500, detail="실험 생성에 실패했습니다")
-        for v in data.variants:
-            v_id = str(uuid.uuid4())
-            await d1.execute(
-                """INSERT INTO experiment_variants
-                   (id, experiment_id, name, traffic_ratio, description, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                [v_id, exp_id, v.name, v.traffic_ratio, v.description, now]
-            )
         return await self.get(exp_id)
 
     async def update(self, experiment_id: str, data: ExperimentUpdate) -> Optional[Experiment]:
@@ -122,6 +109,10 @@ class ExperimentService:
                     status_code=422,
                     detail=f"'{current.status}' → '{patch['status']}' 전환은 허용되지 않습니다."
                 )
+            self._validate_running_preconditions(current, patch)
+
+        if patch.get("flag_key"):
+            await self._require_flag(patch["flag_key"])
 
         for field in ("start_at", "end_at", "reflection_start_date"):
             if field in patch and isinstance(patch[field], datetime):
@@ -147,52 +138,64 @@ class ExperimentService:
     async def assign(self, experiment_id: str, user_id: str) -> Optional[AssignmentResponse]:
         # 이미 할당된 경우 기존 결과 반환
         existing = await d1.query(
-            """SELECT a.*, v.name as variant_name
-               FROM experiment_assignments a
-               JOIN experiment_variants v ON a.variant_id = v.id
-               WHERE a.experiment_id = ? AND a.user_id = ?""",
+            """SELECT * FROM experiment_assignments
+               WHERE experiment_id = ? AND user_id = ?""",
             [experiment_id, user_id]
         )
         if existing:
             row = existing[0]
             return AssignmentResponse(
                 experiment_id=experiment_id,
-                variant_id=row["variant_id"],
                 variant_name=row["variant_name"],
                 user_id=user_id,
                 assigned_at=row["assigned_at"],
             )
 
-        variants = await d1.query(
-            "SELECT * FROM experiment_variants WHERE experiment_id = ?",
-            [experiment_id]
+        # Flag-linked experiment → flag decide가 단일 진실 공급원.
+        exp_meta = await d1.query(
+            "SELECT flag_key, variant_names_json FROM experiments WHERE id = ?",
+            [experiment_id],
         )
-        if not variants:
+        if not exp_meta:
+            return None
+        exp_row = exp_meta[0]
+
+        if exp_row.get("flag_key"):
+            from app.services.feature_flag import feature_flag_service  # avoid circular import
+            await feature_flag_service.decide(exp_row["flag_key"], user_id)
+            assigned = await d1.query(
+                """SELECT * FROM experiment_assignments
+                   WHERE experiment_id = ? AND user_id = ?""",
+                [experiment_id, user_id]
+            )
+            if assigned:
+                row = assigned[0]
+                return AssignmentResponse(
+                    experiment_id=experiment_id,
+                    variant_name=row["variant_name"],
+                    user_id=user_id,
+                    assigned_at=row["assigned_at"],
+                )
+            # variant 이름 매칭 실패 시 레거시 폴백 (보통 발생 안 함)
+
+        # Unlinked 실험: variant_names_json 기준 SHA256 결정론적 배정.
+        variant_names = _parse_variant_names(exp_row.get("variant_names_json"))
+        if not variant_names:
             return None
 
-        # 해시 기반 결정론적 배정
-        bucket = int(hashlib.sha256(f"{experiment_id}:{user_id}".encode()).hexdigest(), 16) % 100
-
-        cumulative = 0
-        selected = variants[-1]
-        for v in variants:
-            cumulative += int(float(v["traffic_ratio"]) * 100)
-            if bucket < cumulative:
-                selected = v
-                break
+        bucket = int(hashlib.sha256(f"{experiment_id}:{user_id}".encode()).hexdigest(), 16) % len(variant_names)
+        selected_name = variant_names[bucket]
 
         now = _now()
         await d1.execute(
             """INSERT INTO experiment_assignments
-               (experiment_id, variant_id, user_id, assigned_at)
+               (experiment_id, variant_name, user_id, assigned_at)
                VALUES (?, ?, ?, ?)""",
-            [experiment_id, selected["id"], user_id, now]
+            [experiment_id, selected_name, user_id, now]
         )
-
         return AssignmentResponse(
             experiment_id=experiment_id,
-            variant_id=selected["id"],
-            variant_name=selected["name"],
+            variant_name=selected_name,
             user_id=user_id,
             assigned_at=now,
         )
@@ -211,10 +214,7 @@ class ExperimentService:
             )
 
         assignments = await d1.query(
-            """SELECT a.user_id, v.name as variant_name
-               FROM experiment_assignments a
-               JOIN experiment_variants v ON a.variant_id = v.id
-               WHERE a.experiment_id = ?""",
+            "SELECT user_id, variant_name FROM experiment_assignments WHERE experiment_id = ?",
             [experiment_id],
         )
         if not assignments:
@@ -275,14 +275,12 @@ class ExperimentService:
             experiment_id=experiment_id,
             primary_metric=exp.primary_metric,
             treatment=VariantResult(
-                variant_id="",
                 variant_name=treatment_name,
                 users=t_total,
                 conversions=t_success,
                 rate=round(t_rate, 4),
             ),
             control=VariantResult(
-                variant_id="",
                 variant_name=control_name,
                 users=c_total,
                 conversions=c_success,
@@ -294,18 +292,25 @@ class ExperimentService:
             sample_size=c_total + t_total,
         )
 
-    def _to_experiment(self, row: dict) -> Experiment:
-        variants = [
-            Variant(
-                id=v["id"],
-                experiment_id=v["experiment_id"],
-                name=v["name"],
-                traffic_ratio=float(v["traffic_ratio"]),
-                description=v.get("description"),
-                created_at=v["created_at"],
+    async def _to_experiment(self, row: dict) -> Experiment:
+        # variants는 단일 정의 모델에 따라 동적으로 구성:
+        # - linked: feature_flag_rule.variant + implicit "control"
+        # - unlinked: variant_names_json
+        exp_id = row["id"]
+        flag_key = row.get("flag_key")
+        if flag_key:
+            rule_rows = await d1.query(
+                """SELECT DISTINCT variant FROM feature_flag_rule
+                    WHERE flag_key = ? AND enabled = 1""",
+                [flag_key],
             )
-            for v in (row.get("experiment_variants") or [])
-        ]
+            names = [r["variant"] for r in rule_rows if r["variant"] != "control"]
+            names = ["control"] + names
+        else:
+            names = _parse_variant_names(row.get("variant_names_json"))
+
+        variants = [Variant(name=name, experiment_id=exp_id) for name in names]
+
         return Experiment(
             id=row["id"],
             name=row["name"],
@@ -315,6 +320,9 @@ class ExperimentService:
             completion_event=row.get("completion_event"),
             experiment_type=row.get("experiment_type") or "ab_test",
             cohort_id=row.get("cohort_id"),
+            flag_key=row.get("flag_key"),
+            product=row.get("product"),
+            project_id=row.get("project_id"),
             status=row["status"],
             owner_id=row.get("owner_id"),
             start_at=row.get("start_at"),
@@ -325,6 +333,49 @@ class ExperimentService:
             updated_at=row["updated_at"],
             variants=variants,
         )
+
+    def _validate_running_preconditions(self, current: Experiment, patch: dict) -> None:
+        """draft → running 전환 시 사전 조건 검증.
+        - primary_metric: 모든 type 필수 (없으면 결과 계산 불가)
+        - flag_key: ab_test 필수 (quasi_experiment/rollout은 placement 기반이므로 예외)
+        paused → running(재개)은 이미 draft → running 시 검증을 통과한 상태이므로 재검증 생략.
+        """
+        next_status = patch["status"]
+        if hasattr(next_status, "value"):
+            next_status = next_status.value
+        if next_status != ExperimentStatus.RUNNING.value:
+            return
+        # 재개(paused → running)는 최초 진입 시 이미 검증 완료
+        if current.status == ExperimentStatus.PAUSED:
+            return
+
+        next_primary_metric = patch.get("primary_metric", current.primary_metric)
+        if not next_primary_metric:
+            raise HTTPException(
+                status_code=422,
+                detail="실험을 running으로 전환하려면 primary_metric을 먼저 설정해야 합니다.",
+            )
+
+        next_experiment_type = patch.get("experiment_type", current.experiment_type)
+        if hasattr(next_experiment_type, "value"):
+            next_experiment_type = next_experiment_type.value
+        next_flag_key = patch.get("flag_key", current.flag_key)
+        if next_experiment_type == ExperimentType.AB_TEST.value and not next_flag_key:
+            raise HTTPException(
+                status_code=422,
+                detail="A/B 테스트를 running으로 전환하려면 Feature Flag 연결이 필요합니다.",
+            )
+
+    async def _require_flag(self, flag_key: str) -> None:
+        rows = await d1.query(
+            "SELECT 1 FROM feature_flag WHERE flag_key = ? AND archived_at IS NULL",
+            [flag_key],
+        )
+        if not rows:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Feature flag '{flag_key}'을(를) 찾을 수 없거나 아카이브 상태입니다",
+            )
 
 
 experiment_service = ExperimentService()

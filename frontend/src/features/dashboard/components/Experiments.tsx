@@ -26,6 +26,7 @@ import {
 import { Plus, Search, MoreHorizontal, Eye, Trash2 } from 'lucide-react';
 import { Card } from '../../../components/ui/card';
 import { experimentApi, type Experiment, type ExperimentStatus } from '../../../services/api';
+import { useProject } from '../../../contexts/ProjectContext';
 import { CreateExperimentModal } from './CreateExperimentModal';
 
 interface ExperimentsProps {
@@ -44,6 +45,7 @@ const translations = {
     statusPaused: 'Paused',
     statusCompleted: 'Completed',
     statusArchived: 'Archived',
+    allProducts: 'All Products',
     colName: 'Experiment Name',
     colStatus: 'Status',
     colVariants: 'Variants',
@@ -66,6 +68,7 @@ const translations = {
     statusPaused: '일시정지',
     statusCompleted: '완료',
     statusArchived: '보관',
+    allProducts: '전체 제품',
     colName: '실험명',
     colStatus: '상태',
     colVariants: 'Variants',
@@ -90,6 +93,7 @@ const statusConfig = {
 export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
   const navigate = useNavigate();
   const t = translations[lang];
+  const { currentProjectId } = useProject();
 
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,9 +130,11 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
     }
   };
 
-  const filteredExperiments = experiments.filter((exp) =>
-    exp.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredExperiments = experiments.filter((exp) => {
+    const matchesSearch = exp.name.toLowerCase().includes(search.toLowerCase());
+    const matchesProject = !currentProjectId || (exp.project_id || exp.product) === currentProjectId;
+    return matchesSearch && matchesProject;
+  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">

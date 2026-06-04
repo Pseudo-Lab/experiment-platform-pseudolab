@@ -3,10 +3,130 @@ import { API_BASE_URL, apiFetch } from './http';
 export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed' | 'archived';
 
 // ────────────────────────────────────────────────────────────
+// Projects
+// ────────────────────────────────────────────────────────────
+export interface Project {
+  id: string;
+  name: string;
+  api_key: string;
+  base_url?: string | null;
+  project_type: 'ab_test' | 'quasi_experiment';
+  created_at: string;
+}
+export interface ProjectCreate {
+  id: string;
+  name: string;
+  base_url?: string;
+  project_type?: 'ab_test' | 'quasi_experiment';
+}
+export interface ProjectSdkStatus {
+  project_id: string;
+  status: 'connected' | 'not_connected';
+}
+export interface VisualChange {
+  id: string;
+  experiment_id: string;
+  variation_key: string;
+  selector: string;
+  type: string;
+  value: string;
+  created_at: string;
+}
+export interface VisualChangeCreate {
+  variation_key: string;
+  selector: string;
+  type: string;
+  value: string;
+}
+
+export const projectApi = {
+  list: async (): Promise<Project[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/projects/`);
+    if (!res.ok) throw new Error('Failed to fetch projects');
+    return res.json();
+  },
+  get: async (id: string): Promise<Project> => {
+    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error('Failed to fetch project');
+    return res.json();
+  },
+  patch: async (id: string, data: { base_url?: string | null }): Promise<Project> => {
+    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update project');
+    return res.json();
+  },
+  create: async (data: ProjectCreate): Promise<Project> => {
+    const res = await apiFetch(`${API_BASE_URL}/projects/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      let detail = 'Failed to create project';
+      try {
+        const b = await res.json();
+        if (Array.isArray(b?.detail)) {
+          detail = b.detail.map((e: { msg: string }) => e.msg).join('; ');
+        } else if (b?.detail) {
+          detail = b.detail;
+        }
+      } catch { /* */ }
+      throw new Error(detail);
+    }
+    return res.json();
+  },
+  delete: async (id: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) {
+      let detail = 'Failed to delete project';
+      try {
+        const b = await res.json();
+        if (Array.isArray(b?.detail)) {
+          detail = b.detail.map((e: { msg: string }) => e.msg).join('; ');
+        } else if (b?.detail) {
+          detail = b.detail;
+        }
+      } catch { /* */ }
+      throw new Error(detail);
+    }
+  },
+  sdkStatus: async (id: string): Promise<ProjectSdkStatus> => {
+    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}/sdk-status`);
+    if (!res.ok) throw new Error('Failed to fetch SDK status');
+    return res.json();
+  },
+};
+
+export const visualChangeApi = {
+  list: async (experimentId: string, variationKey?: string): Promise<VisualChange[]> => {
+    const q = variationKey ? `?variation_key=${encodeURIComponent(variationKey)}` : '';
+    const res = await apiFetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/visual-changes${q}`);
+    if (!res.ok) throw new Error('Failed to fetch visual changes');
+    return res.json();
+  },
+  create: async (experimentId: string, data: VisualChangeCreate): Promise<VisualChange> => {
+    const res = await apiFetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/visual-changes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to save visual change');
+    return res.json();
+  },
+  delete: async (changeId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/visual-changes/${encodeURIComponent(changeId)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete visual change');
+  },
+};
+
+// ────────────────────────────────────────────────────────────
 // Experiment Result (Bayesian)
 // ────────────────────────────────────────────────────────────
 export interface VariantResult {
-  variant_id: string;
   variant_name: string;
   users: number;
   conversions: number;
@@ -52,6 +172,8 @@ export interface FeatureFlag {
   description?: string;
   rollout_pct: number;
   enabled: boolean;
+  product?: string | null;
+  project_id?: string | null;
   archived_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -61,11 +183,15 @@ export interface FeatureFlagCreate {
   description?: string;
   rollout_pct?: number;
   enabled?: boolean;
+  product?: string;
+  project_id?: string;
 }
 export interface FeatureFlagUpdate {
   description?: string;
   rollout_pct?: number;
   enabled?: boolean;
+  product?: string;
+  project_id?: string;
 }
 
 export interface FeatureFlagExposureSummary {
@@ -153,12 +279,10 @@ export interface RetentionCell { cohort_week: string; week_num: number; retained
 export interface RetentionResponse { event_name: string; data: RetentionCell[]; }
 
 export interface Variant {
-  id: string;
   experiment_id: string;
   name: string;
-  traffic_ratio: number;
+  traffic_ratio?: number;
   description?: string;
-  created_at: string;
 }
 
 export interface Experiment {
@@ -170,6 +294,9 @@ export interface Experiment {
   completion_event?: string;
   experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
   cohort_id?: string;
+  flag_key?: string | null;
+  product?: string | null;
+  project_id?: string | null;
   status: ExperimentStatus;
   owner_id?: string;
   start_at?: string;
@@ -190,7 +317,10 @@ export interface ExperimentCreate {
   completion_event?: string;
   experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
   cohort_id?: string;
+  flag_key?: string;
   owner_id?: string;
+  product?: string;
+  project_id?: string;
   start_at?: string;
   end_at?: string;
   variants: { name: string; traffic_ratio: number; description?: string }[];
@@ -204,6 +334,9 @@ export interface ExperimentUpdate {
   completion_event?: string;
   experiment_type?: 'ab_test' | 'quasi_experiment' | 'rollout';
   cohort_id?: string;
+  flag_key?: string;
+  product?: string;
+  project_id?: string;
   start_at?: string;
   end_at?: string;
   status?: ExperimentStatus;
@@ -212,6 +345,7 @@ export interface ExperimentUpdate {
 export interface ExperimentPlacementConfig {
   experiment_id: string;
   placement_key: string;
+  variant_key: string | null;
   ui_id: string;
   ui_type: string;
   title: string;
@@ -239,6 +373,7 @@ export interface ExperimentPlacementConfigUpdate {
 
 export interface ExperimentPlacementConfigCreate extends ExperimentPlacementConfigUpdate {
   placement_key: string;
+  variant_key?: string | null;
   ui_id: string;
   ui_type: string;
   title: string;
@@ -281,7 +416,14 @@ export const experimentApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error('Failed to update experiment');
+    if (!response.ok) {
+      let detail = 'Failed to update experiment';
+      try {
+        const body = await response.json();
+        if (body?.detail) detail = body.detail;
+      } catch { /* ignore parse error */ }
+      throw new Error(detail);
+    }
     return response.json();
   },
 
@@ -295,7 +437,7 @@ export const experimentApi = {
 
 export const experimentPlacementApi = {
   list: async (experimentId: string): Promise<ExperimentPlacementConfig[]> => {
-    const response = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`);
+    const response = await apiFetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`);
     if (!response.ok) throw new Error('Failed to fetch experiment placements');
     return response.json();
   },
@@ -304,7 +446,7 @@ export const experimentPlacementApi = {
     experimentId: string,
     data: ExperimentPlacementConfigCreate,
   ): Promise<ExperimentPlacementConfig> => {
-    const response = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`, {
+    const response = await apiFetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -318,7 +460,7 @@ export const experimentPlacementApi = {
     placementKey: string,
     data: ExperimentPlacementConfigUpdate,
   ): Promise<ExperimentPlacementConfig> => {
-    const response = await fetch(
+    const response = await apiFetch(
       `${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}/config`,
       {
         method: 'PATCH',
@@ -331,11 +473,91 @@ export const experimentPlacementApi = {
   },
 
   delete: async (experimentId: string, placementKey: string): Promise<void> => {
-    const response = await fetch(
+    const response = await apiFetch(
       `${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}`,
       { method: 'DELETE' },
     );
     if (!response.ok) throw new Error('Failed to delete experiment placement');
+  },
+};
+
+// ────────────────────────────────────────────────────────────
+// Placements (quasi-experiments)
+// ────────────────────────────────────────────────────────────
+export interface Placement {
+  key: string;
+  name: string;
+  description?: string | null;
+  project_id?: string | null;
+  status: string;
+  target_cohort?: string | null;
+  allowed_roles?: string[] | null;
+  start_at?: string | null;
+  end_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface PlacementCreate {
+  key: string;
+  name: string;
+  description?: string;
+  project_id?: string;
+  status?: string;
+  target_cohort?: string;
+  allowed_roles?: string[];
+  start_at?: string;
+  end_at?: string;
+}
+
+export interface PlacementDecideResponse {
+  key: string;
+  show: boolean;
+  completed: boolean;
+  reason?: string | null;
+}
+
+export const placementApi = {
+  list: async (projectId?: string): Promise<Placement[]> => {
+    const params = projectId ? `?project_id=${encodeURIComponent(projectId)}` : '';
+    const res = await apiFetch(`${API_BASE_URL}/placements/${params}`);
+    if (!res.ok) throw new Error('Failed to fetch placements');
+    return res.json();
+  },
+  get: async (key: string): Promise<Placement> => {
+    const res = await apiFetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}`);
+    if (!res.ok) throw new Error('Failed to fetch placement');
+    return res.json();
+  },
+  create: async (data: PlacementCreate): Promise<Placement> => {
+    const res = await apiFetch(`${API_BASE_URL}/placements/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      let detail = 'Failed to create placement';
+      try {
+        const b = await res.json();
+        if (b?.detail) detail = b.detail;
+      } catch { /* */ }
+      throw new Error(detail);
+    }
+    return res.json();
+  },
+  delete: async (key: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete placement');
+  },
+  decide: async (
+    key: string,
+    params: { user_id: string; role?: string; cohort?: string; scenario?: string },
+  ): Promise<PlacementDecideResponse> => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined) qs.set(k, v); });
+    const res = await apiFetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}/decide?${qs}`);
+    if (!res.ok) throw new Error('Failed to decide placement');
+    return res.json();
   },
 };
 

@@ -79,12 +79,13 @@ class ExperimentPlacementService:
         now = datetime.now(timezone.utc).isoformat()
         ok = await d1.execute(
             """INSERT INTO experiment_placement_config
-               (experiment_id, placement_key, ui_id, ui_type, title, description, target_url, source,
+               (experiment_id, placement_key, variant_key, ui_id, ui_type, title, description, target_url, source,
                 target_cohort, allowed_roles, enabled, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
                 experiment_id,
                 placement_key,
+                data.variant_key or None,
                 data.ui_id.strip(),
                 data.ui_type.strip(),
                 data.title.strip(),
@@ -554,6 +555,7 @@ class ExperimentPlacementService:
         return ExperimentPlacementConfig(
             experiment_id=row["experiment_id"],
             placement_key=row["placement_key"],
+            variant_key=row.get("variant_key") or None,
             ui_id=row["ui_id"],
             ui_type=row["ui_type"],
             title=row["title"],

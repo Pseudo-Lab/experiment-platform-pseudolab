@@ -1,17 +1,39 @@
-from typing import Optional
+from typing import List, Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Path, Query
 
-from app.schemas.experiment_placement import ExperimentPlacementDecisionResponse
-from app.services.experiment_placement import experiment_placement_service
+from app.schemas.placement import Placement, PlacementCreate, PlacementDecideResponse
+from app.services.placement import placement_service
 
 router = APIRouter()
 
 
-@router.get("/{placement_key}/decide", response_model=ExperimentPlacementDecisionResponse)
+@router.get("/", response_model=List[Placement])
+async def list_placements(project_id: Optional[str] = Query(None)):
+    return await placement_service.list(project_id=project_id)
+
+
+@router.post("/", response_model=Placement, status_code=201)
+async def create_placement(data: PlacementCreate):
+    return await placement_service.create(data)
+
+
+@router.get("/{key}", response_model=Placement)
+async def get_placement(key: str = Path(...)):
+    return await placement_service.get(key)
+
+
+@router.delete("/{key}", status_code=204)
+async def delete_placement(key: str = Path(...)):
+    await placement_service.delete(key)
+
+
+@router.get("/{key}/decide", response_model=PlacementDecideResponse)
 async def decide_placement(
-    placement_key: str,
-    project_id: str = Query(...),
-    user_id: Optional[str] = Query(None),
+    key: str,
+    user_id: str = Query(..., min_length=1),
+    role: Optional[str] = Query(None),
+    cohort: Optional[str] = Query(None),
+    scenario: Optional[str] = Query(None),
 ):
-    return await experiment_placement_service.decide_by_placement(placement_key, user_id, project_id)
+    return await placement_service.decide(key, user_id=user_id, role=role, cohort=cohort, scenario=scenario)

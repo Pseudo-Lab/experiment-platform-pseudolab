@@ -18,10 +18,18 @@ import {
     ToggleLeft,
     BarChart2,
     Code2,
+    FolderOpen,
+    Key,
+    MapPin,
+    Plug,
+    Flag,
+    Plus,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { useProject } from '../contexts/ProjectContext';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -32,6 +40,7 @@ interface SidebarItemProps {
     label: string;
     active?: boolean;
     expanded?: boolean;
+    secondary?: boolean;
     onClick: () => void;
 }
 
@@ -40,18 +49,22 @@ const SidebarItem = ({
     label,
     active = false,
     expanded = true,
+    secondary = false,
     onClick
 }: SidebarItemProps) => (
     <button
         onClick={onClick}
         className={cn(
-            "flex items-center w-full gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 rounded-lg group relative",
+            "flex items-center w-full gap-3 px-3 rounded-lg group relative transition-all duration-200",
+            secondary ? "py-1.5 text-xs font-medium" : "py-2.5 text-sm font-medium",
             active
                 ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400 shadow-sm"
-                : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
+                : secondary
+                  ? "text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300"
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
         )}
     >
-        <Icon size={20} className="shrink-0" />
+        <Icon size={secondary ? 17 : 20} className="shrink-0" />
         <span className={cn(
             "flex-1 text-left whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out",
             expanded ? "opacity-100 max-w-[200px] ml-0" : "opacity-0 max-w-0 -ml-4"
@@ -60,6 +73,21 @@ const SidebarItem = ({
         </span>
         {active && expanded && <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
     </button>
+);
+
+const SectionDivider = ({ label, expanded }: { label: string; expanded: boolean }) => (
+    <div className={cn("flex items-center gap-2 px-2 pb-1", expanded ? "pt-5" : "pt-4")}>
+        {expanded ? (
+            <>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600 whitespace-nowrap shrink-0">
+                    {label}
+                </span>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+            </>
+        ) : (
+            <div className="w-full h-px bg-slate-200 dark:bg-slate-700" />
+        )}
+    </div>
 );
 
 interface MainLayoutProps {
@@ -86,8 +114,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const [toolsVisible, setToolsVisible] = useState(true);
     const location = useLocation();
     const navigate = useNavigate();
+    const { projects, currentProjectId, currentProject, setCurrentProjectId } = useProject();
+
+    useEffect(() => {
+        setToolsVisible(false);
+        const timer = setTimeout(() => setToolsVisible(true), 60);
+        return () => clearTimeout(timer);
+    }, [currentProject?.project_type]);
 
     const activePath = location.pathname;
 
@@ -97,8 +133,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", example: "Example App", settings: "Settings", logout: "Logout" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", example: "예제 앱", settings: "설정", logout: "로그아웃" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project", logout: "Logout" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "Analytics", projects: "Projects", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트", logout: "로그아웃" }
     };
 
     const t = translations[lang];
@@ -113,7 +149,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         activePath === '/metrics/discord' ? t.discordMetrics :
         activePath === '/bug-report' ? t.bugReport :
         activePath === '/feature-flags' ? t.featureFlags :
+        activePath === '/placements' ? t.placements :
         activePath === '/analytics' ? t.analytics :
+        activePath === '/projects' ? t.projects :
+        activePath === '/api-key' ? t.apiKey :
         activePath.startsWith('/example') ? t.example :
         t.dashboard;
 
@@ -192,18 +231,94 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     </button>
                 </div>
 
-                <nav className="flex-1 px-3 py-6 space-y-2">
-                    <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => handleNav('/dashboard')} />
-                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments'} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
-                    <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/github')} />
-                    <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/discord')} />
-                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} />
-                    <SidebarItem icon={ToggleLeft} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
-                    <SidebarItem icon={BarChart2} label={t.analytics} active={activePath === '/analytics'} expanded={isSidebarOpen} onClick={() => handleNav('/analytics')} />
-                    <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} />
+                {isSidebarOpen && (
+                    <div className="px-3 pt-4">
+                        {projects.length === 0 ? (
+                            <button
+                                onClick={() => handleNav('/projects')}
+                                className="w-full rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-3 py-2.5 text-left text-sm font-medium text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                            >
+                                {t.selectProject}
+                            </button>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                <Select
+                                    value={currentProjectId ?? '__all__'}
+                                    onValueChange={(v) => setCurrentProjectId(v === '__all__' ? null : v)}
+                                >
+                                    <SelectTrigger className="w-full rounded-xl border-slate-200 dark:border-slate-700" aria-label={t.projects}>
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <FolderOpen size={15} className="shrink-0 text-indigo-500" />
+                                            <SelectValue />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__all__">{t.allProjects}</SelectItem>
+                                        {projects.map((p) => (
+                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <button
+                                    onClick={() => handleNav('/projects')}
+                                    className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 py-1.5 text-xs font-medium text-slate-400 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                                >
+                                    <Plus size={13} />{t.newProject}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+                    {/* Project Tools Section */}
+                    <SectionDivider label={currentProject ? t.sectionProjectTools : t.sectionNoProject} expanded={isSidebarOpen} />
+
+                    {!currentProject ? (
+                        <>
+                            <div className="opacity-40 pointer-events-none">
+                                <SidebarItem icon={FlaskConical} label={t.experiments} active={false} expanded={isSidebarOpen} onClick={() => {}} />
+                            </div>
+                            {isSidebarOpen && (
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 px-3 pt-1 leading-relaxed">
+                                    {t.noProjectHint}
+                                </p>
+                            )}
+                        </>
+                    ) : (
+                        <div className={cn(
+                            "space-y-1 transition-all duration-200 ease-out",
+                            toolsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+                        )}>
+                            {currentProject.project_type === 'ab_test' && (
+                                <>
+                                    <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
+                                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
+                                    <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
+                                </>
+                            )}
+                            {currentProject.project_type === 'quasi_experiment' && (
+                                <>
+                                    <SidebarItem icon={MapPin} label={t.placements} active={activePath === '/placements'} expanded={isSidebarOpen} onClick={() => handleNav('/placements')} />
+                                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Secondary */}
+                    <SectionDivider label={t.sectionOther} expanded={isSidebarOpen} />
+                    <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => handleNav('/dashboard')} secondary />
+                    <SidebarItem icon={BarChart2} label={t.analytics} active={activePath === '/analytics'} expanded={isSidebarOpen} onClick={() => handleNav('/analytics')} secondary />
+                    <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/github')} secondary />
+                    <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/discord')} secondary />
+                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />
                 </nav>
 
-                <div className="p-3 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
+                    {currentProjectId === 'demo-app' && (
+                        <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} secondary />
+                    )}
                     <SidebarItem icon={Settings} label={t.settings} expanded={isSidebarOpen} onClick={() => { }} />
                 </div>
             </aside>

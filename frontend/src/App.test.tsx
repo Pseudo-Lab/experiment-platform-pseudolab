@@ -54,6 +54,9 @@ vi.mock('@/services/api', async (importOriginal) => {
     experimentApi: {
       list: vi.fn(() => Promise.resolve([])),
     },
+    projectApi: {
+      list: vi.fn(() => Promise.resolve([])),
+    },
   };
 });
 

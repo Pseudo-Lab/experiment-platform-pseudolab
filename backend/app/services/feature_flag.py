@@ -57,9 +57,9 @@ class FeatureFlagService:
             raise HTTPException(status_code=409, detail=f"flag_key '{data.flag_key}' already exists")
         now = _now()
         ok = await d1.execute(
-            """INSERT INTO feature_flag (flag_key, description, rollout_pct, enabled, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            [data.flag_key, data.description, data.rollout_pct, int(data.enabled), now, now],
+            """INSERT INTO feature_flag (flag_key, description, rollout_pct, enabled, product, project_id, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            [data.flag_key, data.description, data.rollout_pct, int(data.enabled), data.product, data.project_id, now, now],
         )
         if not ok:
             raise HTTPException(status_code=502, detail="Failed to create feature flag")
@@ -196,10 +196,11 @@ class FeatureFlagService:
             raise HTTPException(status_code=502, detail="Feature flag rule update did not persist")
         return updated
 
-    async def decide(self, flag_key: str, user_id: str, track: bool = True) -> str:
+    async def decide(self, flag_key: str, user_id: str, track: bool = True, project_id: str | None = None) -> str:
         decision = await self._decide(flag_key, user_id)
         if track and decision.reason != "unknown_flag":
-            await self._record_exposure(flag_key, user_id, decision)
+            await self._record_exposure(flag_key, user_id, decision, project_id=project_id)
+            await self._record_experiment_assignments(flag_key, user_id, decision)
         return decision.variant
 
     async def list_exposures(
@@ -303,12 +304,20 @@ class FeatureFlagService:
             {"rollout_pct": rollout_pct},
         )
 
-    async def _record_exposure(self, flag_key: str, user_id: str, decision: FeatureFlagDecision) -> None:
+    async def _record_exposure(
+        self, flag_key: str, user_id: str, decision: FeatureFlagDecision, project_id: str | None = None
+    ) -> None:
         now = _now()
         ok = await d1.execute(
             """INSERT INTO feature_flag_exposure
-               (id, flag_key, user_id, variant, reason, evaluated_at, context_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               (id, flag_key, user_id, variant, reason, evaluated_at, context_json, project_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(user_id, flag_key) DO UPDATE SET
+                   variant      = excluded.variant,
+                   reason       = excluded.reason,
+                   evaluated_at = excluded.evaluated_at,
+                   context_json = excluded.context_json,
+                   project_id   = COALESCE(excluded.project_id, project_id)""",
             [
                 str(uuid.uuid4()),
                 flag_key,
@@ -317,11 +326,38 @@ class FeatureFlagService:
                 decision.reason,
                 now,
                 json.dumps(decision.context, ensure_ascii=False) if decision.context else None,
+                project_id,
             ],
         )
         if not ok:
             # Decide must stay available even if exposure logging has a transient failure.
             print(f"Feature flag exposure logging failed: flag_key={flag_key}, user_id={user_id}")
+
+    async def _record_experiment_assignments(
+        self, flag_key: str, user_id: str, decision: FeatureFlagDecision
+    ) -> None:
+        # flag_key로 연결된 running/paused 실험에 variant_name으로 sticky assignment 기록.
+        # paused 상태도 포함: 재개 시 사용자들이 기록 없이 결과에서 누락되는 문제 방지.
+        # PK가 (experiment_id, user_id)이라 INSERT OR IGNORE로 반복 호출 안전(sticky).
+        rows = await d1.query(
+            "SELECT id AS experiment_id FROM experiments WHERE flag_key = ? AND status IN ('running', 'paused')",
+            [flag_key],
+        )
+        if not rows:
+            return
+        now = _now()
+        for row in rows:
+            ok = await d1.execute(
+                """INSERT OR IGNORE INTO experiment_assignments
+                   (experiment_id, variant_name, user_id, assigned_at)
+                   VALUES (?, ?, ?, ?)""",
+                [row["experiment_id"], decision.variant, user_id, now],
+            )
+            if not ok:
+                print(
+                    f"Experiment assignment write failed: experiment_id={row['experiment_id']}, "
+                    f"user_id={user_id}, flag_key={flag_key}, variant={decision.variant}"
+                )
 
     async def _require_flag(self, flag_key: str) -> FeatureFlag:
         flag = await self.get(flag_key, include_archived=False)
@@ -399,6 +435,8 @@ class FeatureFlagService:
             description=row.get("description"),
             rollout_pct=int(row["rollout_pct"]),
             enabled=int(row["enabled"]) == 1,
+            product=row.get("product"),
+            project_id=row.get("project_id"),
             archived_at=row.get("archived_at"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],

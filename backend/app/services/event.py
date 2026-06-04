@@ -10,7 +10,7 @@ def _now() -> str:
 
 class EventService:
 
-    async def capture(self, data: EventCapture) -> bool:
+    async def capture(self, data: EventCapture, project_id: str | None = None) -> bool:
         rows = await d1.query(
             "SELECT cohort_id FROM person WHERE user_id = ?", [data.user_id]
         )
@@ -20,9 +20,9 @@ class EventService:
         properties = json.dumps(data.properties) if data.properties else None
 
         return await d1.execute(
-            """INSERT INTO event_log (user_id, cohort_id, event_name, properties, event_time, created_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            [data.user_id, cohort_id, data.event_name, properties, event_time, _now()],
+            """INSERT INTO event_log (user_id, cohort_id, event_name, properties, event_time, created_at, project_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            [data.user_id, cohort_id, data.event_name, properties, event_time, _now(), project_id],
         )
 
     async def identify(self, data: PersonIdentify) -> bool:

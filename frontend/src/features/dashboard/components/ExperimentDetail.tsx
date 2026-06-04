@@ -6,12 +6,12 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight } from 'lucide-react';
 import {
-  experimentApi, experimentResultApi, decisionApi, experimentPlacementApi,
+  experimentApi, experimentResultApi, decisionApi, experimentPlacementApi, projectApi, featureFlagApi,
   type Experiment, type ExperimentStatus,
   type ExperimentResult, type Decision, type LearningNote, type DecisionType,
-  type ExperimentPlacementConfig,
+  type ExperimentPlacementConfig, type Project, type FeatureFlag, type FeatureFlagExposureSummary,
 } from '../../../services/api';
 
 interface ExperimentDetailProps {
@@ -29,7 +29,10 @@ const translations = {
     labelPrimaryMetric: 'Primary metric',
     labelCompletionEvent: 'Completion event',
     labelExperimentType: 'Experiment type',
+    labelProject: 'Project',
+    projectNone: '(none)',
     labelCohortId: 'Cohort ID',
+    labelFlagKey: 'Linked feature flag',
     labelStartAt: 'Exposure starts',
     labelEndAt: 'Exposure ends',
     labelSchedule: 'Exposure schedule',
@@ -49,6 +52,15 @@ const translations = {
     saving: 'Saving...',
     labelName: 'Name',
     none: '-',
+    flagNone: '(none)',
+    flagEditTitle: 'Link feature flag',
+    flagSaving: 'Saving...',
+    flagRollout: 'Rollout %',
+    flagEnabled: 'Enabled',
+    flagDisabled: 'Disabled',
+    flagErrorUpdate: 'Failed to update flag.',
+    flagTotalExposure: 'Total',
+    flagFirstExposure: 'Analysis users',
     actionStart: 'Start',
     actionPause: 'Pause',
     actionResume: 'Resume',
@@ -138,7 +150,10 @@ const translations = {
     labelExpectedEffect: '기대 효과',
     labelPrimaryMetric: 'Primary metric',
     labelCompletionEvent: '완료 이벤트',
+    labelFlagKey: '연결된 Feature Flag',
     labelExperimentType: '실험 유형',
+    labelProject: '프로젝트',
+    projectNone: '(없음)',
     labelCohortId: '코호트 ID',
     labelStartAt: '노출 시작',
     labelEndAt: '노출 종료',
@@ -159,6 +174,15 @@ const translations = {
     saving: '저장 중...',
     labelName: '실험 이름',
     none: '-',
+    flagNone: '(없음)',
+    flagEditTitle: 'Feature Flag 연결',
+    flagSaving: '저장 중...',
+    flagRollout: '롤아웃 %',
+    flagEnabled: '활성',
+    flagDisabled: '비활성',
+    flagErrorUpdate: 'Flag 업데이트에 실패했습니다.',
+    flagTotalExposure: '전체',
+    flagFirstExposure: '분석 대상',
     actionStart: '시작',
     actionPause: '일시정지',
     actionResume: '재개',
@@ -310,6 +334,7 @@ const parseCsvList = (value: string) => value
 
 type PlacementForm = {
   placement_key: string;
+  variant_key: string | null;
   ui_id: string;
   ui_type: string;
   title: string;
@@ -323,6 +348,7 @@ type PlacementForm = {
 
 const toPlacementForm = (placement: ExperimentPlacementConfig): PlacementForm => ({
   placement_key: placement.placement_key,
+  variant_key: placement.variant_key,
   ui_id: placement.ui_id,
   ui_type: placement.ui_type,
   title: placement.title,
@@ -334,8 +360,9 @@ const toPlacementForm = (placement: ExperimentPlacementConfig): PlacementForm =>
   enabled: placement.enabled,
 });
 
-const emptyPlacementForm = (): PlacementForm => ({
+const emptyPlacementForm = (variantKey: string | null = null): PlacementForm => ({
   placement_key: '',
+  variant_key: variantKey,
   ui_id: '',
   ui_type: 'banner',
   title: '',
@@ -363,11 +390,14 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [editPrimaryMetric, setEditPrimaryMetric] = useState('');
   const [editCompletionEvent, setEditCompletionEvent] = useState('');
   const [editExperimentType, setEditExperimentType] = useState<ExperimentType>('ab_test');
+  const [editProjectId, setEditProjectId] = useState('');
+  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [editCohortId, setEditCohortId] = useState('');
   const [editStartAt, setEditStartAt] = useState('');
   const [editEndAt, setEditEndAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   const [result, setResult] = useState<ExperimentResult | null>(null);
   const [resultLoading, setResultLoading] = useState(false);
@@ -376,12 +406,23 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [placementsLoading, setPlacementsLoading] = useState(false);
   const [placementsError, setPlacementsError] = useState<string | null>(null);
   const [selectedPlacementKey, setSelectedPlacementKey] = useState<string | null>(null);
+  const [placementVariantKey, setPlacementVariantKey] = useState<string | null>(null);
   const [placementEditing, setPlacementEditing] = useState(false);
   const [placementCreating, setPlacementCreating] = useState(false);
   const [placementForm, setPlacementForm] = useState<PlacementForm | null>(null);
   const [placementSaving, setPlacementSaving] = useState(false);
   const [placementDeleting, setPlacementDeleting] = useState(false);
   const [placementSaveMessage, setPlacementSaveMessage] = useState<string | null>(null);
+
+  const [flagEditing, setFlagEditing] = useState(false);
+  const [availableFlags, setAvailableFlags] = useState<FeatureFlag[]>([]);
+  const [flagSaving, setFlagSaving] = useState(false);
+  const [linkedFlag, setLinkedFlag] = useState<FeatureFlag | null>(null);
+  const [linkedFlagLoading, setLinkedFlagLoading] = useState(false);
+  const [flagRolloutDraft, setFlagRolloutDraft] = useState(0);
+  const [flagRolloutSaving, setFlagRolloutSaving] = useState(false);
+  const [flagToggling, setFlagToggling] = useState(false);
+  const [linkedFlagExposure, setLinkedFlagExposure] = useState<FeatureFlagExposureSummary | null | undefined>(undefined);
 
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [notes, setNotes] = useState<LearningNote[]>([]);
@@ -413,7 +454,34 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       .finally(() => setPlacementsLoading(false));
     decisionApi.list(id).then(setDecisions).catch(() => {});
     decisionApi.listNotes(id).then(setNotes).catch(() => {});
+    projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
   }, [id]);
+
+  useEffect(() => {
+    const flagKey = experiment?.flag_key;
+    if (!flagKey) {
+      setLinkedFlag(null);
+      setLinkedFlagExposure(undefined);
+      return;
+    }
+    setLinkedFlagLoading(true);
+    Promise.all([
+      featureFlagApi.list(false),
+      featureFlagApi.exposureSummary(flagKey).catch(() => null),
+    ])
+      .then(([flags, exposure]) => {
+        const flag = flags.find(f => f.flag_key === flagKey) ?? null;
+        setLinkedFlag(flag);
+        if (flag) setFlagRolloutDraft(flag.rollout_pct);
+        setAvailableFlags(flags);
+        setLinkedFlagExposure(exposure);
+      })
+      .catch(() => {
+        setLinkedFlag(null);
+        setLinkedFlagExposure(null);
+      })
+      .finally(() => setLinkedFlagLoading(false));
+  }, [experiment?.flag_key]);
 
   const loadResult = () => {
     if (!id || resultLoading) return;
@@ -422,6 +490,77 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       .then(setResult)
       .catch(() => {})
       .finally(() => setResultLoading(false));
+  };
+
+  const startFlagEdit = () => {
+    if (availableFlags.length === 0) {
+      featureFlagApi.list(false).then(setAvailableFlags).catch(() => {});
+    }
+    setFlagEditing(true);
+  };
+
+  const handleFlagSave = async (newFlagKey: string) => {
+    if (!experiment) return;
+    const flagKeyValue = newFlagKey === '__none__' ? undefined : newFlagKey;
+    setFlagSaving(true);
+    try {
+      const updated = await experimentApi.update(experiment.id, { flag_key: flagKeyValue });
+      setExperiment(updated);
+      setFlagEditing(false);
+    } catch {
+      // silent — user can retry
+    } finally {
+      setFlagSaving(false);
+    }
+  };
+
+  const handleFlagToggle = async () => {
+    if (!linkedFlag) return;
+    setFlagToggling(true);
+    try {
+      const updated = await featureFlagApi.update(linkedFlag.flag_key, { enabled: !linkedFlag.enabled });
+      setLinkedFlag(updated);
+    } catch {
+      // silent
+    } finally {
+      setFlagToggling(false);
+    }
+  };
+
+  const handleFlagRolloutSave = async () => {
+    if (!linkedFlag || flagRolloutDraft === linkedFlag.rollout_pct) return;
+    setFlagRolloutSaving(true);
+    try {
+      const updated = await featureFlagApi.update(linkedFlag.flag_key, { rollout_pct: flagRolloutDraft });
+      setLinkedFlag(updated);
+    } catch {
+      setFlagRolloutDraft(linkedFlag.rollout_pct);
+    } finally {
+      setFlagRolloutSaving(false);
+    }
+  };
+
+  const renderLinkedFlagExposure = (summary: FeatureFlagExposureSummary | null) => {
+    if (!summary || summary.total_exposures === 0) return null;
+    const variantEntries = Object.entries(summary.variant_counts)
+      .filter(([, count]) => count > 0)
+      .sort(([a], [b]) => (a === 'control' ? -1 : b === 'control' ? 1 : a.localeCompare(b)));
+    const controlChip = 'rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+    const variantChip = 'rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300';
+    return (
+      <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+        <div className="font-semibold text-slate-600 dark:text-slate-300">
+          {t.flagTotalExposure} {summary.total_exposures.toLocaleString()} · {t.flagFirstExposure} {summary.first_exposure_users.toLocaleString()}
+        </div>
+        <div className="flex flex-wrap gap-x-2 gap-y-1">
+          {variantEntries.map(([key, count]) => (
+            <span key={key} className={key === 'control' ? controlChip : variantChip}>
+              {key} {count.toLocaleString()}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const handleAddDecision = async () => {
@@ -458,6 +597,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     setEditPrimaryMetric(experiment.primary_metric || '');
     setEditCompletionEvent(experiment.completion_event || '');
     setEditExperimentType((experiment.experiment_type || 'ab_test') as ExperimentType);
+    setEditProjectId(experiment.project_id || '');
     setEditCohortId(experiment.cohort_id || '');
     setEditStartAt(toLocalDateTimeInput(experiment.start_at));
     setEditEndAt(toLocalDateTimeInput(experiment.end_at));
@@ -475,6 +615,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         primary_metric: editPrimaryMetric.trim() || undefined,
         completion_event: editCompletionEvent.trim() || undefined,
         experiment_type: editExperimentType,
+        project_id: editProjectId || undefined,
         cohort_id: editCohortId.trim() || undefined,
         start_at: toApiDatetime(editStartAt),
         end_at: toApiDatetime(editEndAt),
@@ -492,12 +633,13 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     if (!experiment) return;
     const label = statusConfig[to][lang];
     if (!window.confirm(t.statusChangeConfirm(label))) return;
+    setStatusError(null);
     setTransitioning(true);
     try {
       const updated = await experimentApi.update(experiment.id, { status: to });
       setExperiment(updated);
-    } catch {
-      // silent — status badge reflects current state
+    } catch (e) {
+      setStatusError(e instanceof Error ? e.message : String(e));
     } finally {
       setTransitioning(false);
     }
@@ -509,8 +651,12 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     navigate('/experiments');
   };
 
+  const filteredPlacements = experiment?.experiment_type === 'ab_test' && placementVariantKey !== null
+    ? placements.filter((p) => p.variant_key === placementVariantKey)
+    : placements;
+
   const selectedPlacement =
-    placements.find((placement) => placement.placement_key === selectedPlacementKey) ?? placements[0] ?? null;
+    filteredPlacements.find((placement) => placement.placement_key === selectedPlacementKey) ?? filteredPlacements[0] ?? null;
 
   const handleSelectPlacement = (placementKey: string) => {
     setSelectedPlacementKey(placementKey);
@@ -520,10 +666,22 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     setPlacementSaveMessage(null);
   };
 
-  const startPlacementCreate = () => {
-    setPlacementForm(emptyPlacementForm());
+  const startPlacementCreate = (variantKey: string | null = null) => {
+    setPlacementForm(emptyPlacementForm(variantKey));
     setPlacementCreating(true);
     setPlacementEditing(false);
+    setPlacementSaveMessage(null);
+    if (variantKey !== null) {
+      setPlacementVariantKey(variantKey);
+    }
+  };
+
+  const handleVariantPlacementClick = (variantKey: string, placementKey: string) => {
+    setPlacementVariantKey(variantKey);
+    setSelectedPlacementKey(placementKey);
+    setPlacementEditing(false);
+    setPlacementCreating(false);
+    setPlacementForm(null);
     setPlacementSaveMessage(null);
   };
 
@@ -564,6 +722,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       if (placementCreating) {
         const created = await experimentPlacementApi.create(id, {
           placement_key: placementForm.placement_key.trim(),
+          variant_key: placementForm.variant_key || undefined,
           ...payload,
         });
         setPlacements((current) => [...current, created].sort((a, b) => a.placement_key.localeCompare(b.placement_key)));
@@ -595,7 +754,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       await experimentPlacementApi.delete(id, selectedPlacement.placement_key);
       const remaining = placements.filter((placement) => placement.placement_key !== selectedPlacement.placement_key);
       setPlacements(remaining);
-      setSelectedPlacementKey(remaining[0]?.placement_key ?? null);
+      const nextInScope = placementVariantKey
+        ? remaining.filter((p) => p.variant_key === placementVariantKey)
+        : remaining;
+      setSelectedPlacementKey(nextInScope[0]?.placement_key ?? null);
       cancelPlacementForm();
       setPlacementSaveMessage(t.placementDeleted);
     } catch {
@@ -608,6 +770,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   if (loading) return <p className="text-slate-500 dark:text-slate-400 text-sm p-8">{t.loading}</p>;
   if (error) return <p className="text-rose-500 text-sm p-8">{error}</p>;
   if (!experiment) return <p className="text-slate-500 text-sm p-8">{t.notFound}</p>;
+
+  const experimentType = (experiment.experiment_type || 'ab_test') as ExperimentType;
+  const isAbTest = experimentType === 'ab_test';
+  const isQuasiExperiment = experimentType === 'quasi_experiment';
 
   const status = statusConfig[experiment.status];
   const buttons = transitionButtons[experiment.status] ?? [];
@@ -666,6 +832,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const experimentTypeLabel = experimentTypeOptions.find(
     (option) => option.value === (experiment.experiment_type || 'ab_test'),
   )?.[lang] ?? experiment.experiment_type ?? t.none;
+  const matchedProject = availableProjects.find((p) => p.id === experiment.project_id);
+  const projectLabel = matchedProject
+    ? `${matchedProject.name} (${matchedProject.id})`
+    : experiment.project_id || t.none;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -712,6 +882,21 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProject}</label>
+                <Select value={editProjectId || '__none__'} onValueChange={(value) => setEditProjectId(value === '__none__' ? '' : value)}>
+                  <SelectTrigger className="rounded-xl" aria-label={t.labelProject}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t.projectNone}</SelectItem>
+                    {availableProjects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name} ({p.id})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
@@ -800,10 +985,17 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                   </Button>
                 ))}
               </div>
+              {statusError && (
+                <p className="text-xs text-rose-500 mt-1">{statusError}</p>
+              )}
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelExperimentType}</p>
               <p className="text-sm text-slate-700 dark:text-slate-300">{experimentTypeLabel}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelProject}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300">{projectLabel}</p>
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelPrimaryMetric}</p>
@@ -816,6 +1008,103 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelCohortId}</p>
               <p className="text-sm text-slate-700 dark:text-slate-300">{experiment.cohort_id || t.none}</p>
+            </div>
+            <div className={experiment.flag_key && !flagEditing ? 'w-full' : undefined}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.labelFlagKey}</p>
+                {!editing && !flagEditing && (
+                  <button
+                    type="button"
+                    onClick={startFlagEdit}
+                    className="text-slate-400 hover:text-indigo-500 transition-colors"
+                    aria-label={t.flagEditTitle}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              {flagEditing ? (
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={experiment.flag_key || '__none__'}
+                    onValueChange={handleFlagSave}
+                    disabled={flagSaving}
+                  >
+                    <SelectTrigger className="rounded-xl h-8 text-sm w-56" aria-label={t.flagEditTitle}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">{t.flagNone}</SelectItem>
+                      {availableFlags.map((f) => (
+                        <SelectItem key={f.flag_key} value={f.flag_key}>{f.flag_key}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <button
+                    type="button"
+                    onClick={() => setFlagEditing(false)}
+                    disabled={flagSaving}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                    aria-label={t.cancel}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : experiment.flag_key ? (
+                <div className="space-y-3">
+                  {/* Flag key badge + toggle */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300 font-mono">
+                      <Link2 className="h-3 w-3 shrink-0" />
+                      {experiment.flag_key}
+                    </span>
+                    {linkedFlagLoading && <span className="text-xs text-slate-400">...</span>}
+                    {linkedFlag && (
+                      <button
+                        onClick={handleFlagToggle}
+                        disabled={flagToggling}
+                        className="flex items-center gap-1 disabled:opacity-50 transition-opacity"
+                        aria-label={linkedFlag.enabled ? t.flagDisabled : t.flagEnabled}
+                      >
+                        {linkedFlag.enabled
+                          ? <ToggleRight className="h-5 w-5 text-indigo-500" />
+                          : <ToggleLeft className="h-5 w-5 text-slate-400" />}
+                        <span className={`text-xs font-medium ${linkedFlag.enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                          {linkedFlag.enabled ? t.flagEnabled : t.flagDisabled}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                  {/* Rollout slider */}
+                  {linkedFlag && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 shrink-0">{t.flagRollout}</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={flagRolloutDraft}
+                        onChange={e => setFlagRolloutDraft(Number(e.target.value))}
+                        className="w-32 accent-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-9 text-right">{flagRolloutDraft}%</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 rounded-lg px-2 text-xs"
+                        onClick={handleFlagRolloutSave}
+                        disabled={flagRolloutDraft === linkedFlag.rollout_pct || flagRolloutSaving}
+                      >
+                        {flagRolloutSaving ? t.saving : t.save}
+                      </Button>
+                    </div>
+                  )}
+                  {/* Variant exposure distribution */}
+                  {linkedFlag && linkedFlagExposure !== undefined && renderLinkedFlagExposure(linkedFlagExposure)}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-700 dark:text-slate-300">{t.none}</p>
+              )}
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelSchedule}</p>
@@ -839,50 +1128,137 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">{t.sectionVariants}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
-              <TableRow>
-                <TableHead className="font-bold text-slate-500">{t.colVariantName}</TableHead>
-                <TableHead className="font-bold text-slate-500">{t.colTrafficRatio}</TableHead>
-                <TableHead className="font-bold text-slate-500">{t.colDescription}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {experiment.variants.map((v) => (
-                <TableRow key={v.id}>
-                  <TableCell className="font-medium text-slate-800 dark:text-slate-200">{v.name}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-20 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${v.traffic_ratio * 100}%` }} />
+      {!isQuasiExperiment && (
+        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">{t.sectionVariants}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {isAbTest ? (
+              <div className="space-y-3">
+                {experiment.variants.map((v) => {
+                  const isControl = v.name === 'control';
+                  const variantPlacements = placements.filter((p) => p.variant_key === v.name);
+                  return (
+                    <div
+                      key={v.name}
+                      className={`rounded-xl border p-4 ${
+                        isControl
+                          ? 'border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-950/40'
+                          : 'border-indigo-100 bg-indigo-50/30 dark:border-indigo-900/40 dark:bg-indigo-950/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          isControl
+                            ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300'
+                        }`}>
+                          {v.name}
+                        </span>
+                        {(v.traffic_ratio ?? 0) > 0 && (
+                          <span className="text-xs text-slate-400">{Math.round((v.traffic_ratio ?? 0) * 100)}%</span>
+                        )}
                       </div>
-                      <span className="text-xs font-bold text-slate-500">{(v.traffic_ratio * 100).toFixed(0)}%</span>
+                      {isControl ? (
+                        <p className="text-xs text-slate-400">
+                          {lang === 'ko' ? '원본 경험 (Placement 없음)' : 'Original experience (no placement)'}
+                        </p>
+                      ) : (
+                        <div className="mt-1 space-y-2">
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            {lang === 'ko' ? '이 variant의 Placement' : 'Placements for this variant'}
+                          </p>
+                          {variantPlacements.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {variantPlacements.map((p) => (
+                                <button
+                                  key={p.placement_key}
+                                  type="button"
+                                  onClick={() => handleVariantPlacementClick(v.name, p.placement_key)}
+                                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono border transition-colors ${
+                                    selectedPlacementKey === p.placement_key && placementVariantKey === v.name
+                                      ? 'border-indigo-300 bg-indigo-100 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                                      : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                                  }`}
+                                >
+                                  <span className={`h-1.5 w-1.5 rounded-full ${p.enabled ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                                  {p.placement_key}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400">
+                              {lang === 'ko' ? '연결된 Placement 없음' : 'No placements linked'}
+                            </p>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 rounded-xl h-7 text-xs"
+                            onClick={() => startPlacementCreate(v.name)}
+                          >
+                            <Plus className="h-3 w-3" />
+                            {t.addPlacement}
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
-                    {v.description || t.none}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {experiment.variants.map((v) => (
+                    <span
+                      key={v.name}
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        v.name === 'control'
+                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+                      }`}
+                    >
+                      {v.name}
+                    </span>
+                  ))}
+                </div>
+                {experiment.flag_key && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {lang === 'ko'
+                      ? `Variants는 연결된 Feature Flag(${experiment.flag_key})의 rule에서 자동 동기화됩니다.`
+                      : `Variants are auto-synced from the linked feature flag rules (${experiment.flag_key}).`}
+                  </p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
+      {(!isAbTest || placementVariantKey !== null) && (
       <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
             <SlidersHorizontal className="h-5 w-5 text-indigo-500" />
             {t.sectionPlacements}
+            {isAbTest && placementVariantKey && (
+              <span className="ml-1 text-sm font-normal text-slate-400 font-mono">— {placementVariantKey}</span>
+            )}
           </CardTitle>
           <div className="flex flex-wrap justify-end gap-2">
+            {isAbTest && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 rounded-xl text-slate-400 hover:text-slate-600"
+                onClick={() => { setPlacementVariantKey(null); cancelPlacementForm(); }}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {!placementEditing && !placementCreating && (
-              <Button size="sm" variant="outline" className="gap-1.5 rounded-xl" onClick={startPlacementCreate}>
+              <Button size="sm" variant="outline" className="gap-1.5 rounded-xl" onClick={() => startPlacementCreate(placementVariantKey)}>
                 <Plus className="h-3.5 w-3.5" />
                 {t.addPlacement}
               </Button>
@@ -913,14 +1289,14 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
           {!placementsLoading && !placementsError && (
             <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{t.placementsIntro}</p>
           )}
-          {!placementsLoading && !placementsError && placements.length === 0 && !placementCreating && (
+          {!placementsLoading && !placementsError && filteredPlacements.length === 0 && !placementCreating && (
             <p className="text-sm text-slate-400">{t.placementsEmpty}</p>
           )}
           {!placementsLoading && !placementsError && (selectedPlacement || placementCreating) && (
             <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
               <div className="space-y-2">
-                {placements.map((placement) => {
-                  const active = placement.placement_key === selectedPlacement.placement_key;
+                {filteredPlacements.map((placement) => {
+                  const active = placement.placement_key === selectedPlacement?.placement_key;
                   return (
                     <button
                       type="button"
@@ -1139,6 +1515,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* ── 실험 결과 ── */}
       <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">

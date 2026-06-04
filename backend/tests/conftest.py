@@ -7,6 +7,15 @@ import pytest
 
 # 마이그레이션 001~003을 합친 스키마 (ALTER TABLE → 컬럼을 처음부터 포함)
 _SCHEMA = """
+CREATE TABLE IF NOT EXISTS projects (
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    api_key      TEXT NOT NULL UNIQUE,
+    base_url     TEXT,
+    project_type TEXT NOT NULL DEFAULT 'ab_test',
+    created_at   TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS experiments (
     id          TEXT PRIMARY KEY,
     name        TEXT NOT NULL,
@@ -16,6 +25,10 @@ CREATE TABLE IF NOT EXISTS experiments (
     completion_event TEXT,
     experiment_type TEXT NOT NULL DEFAULT 'ab_test',
     cohort_id       TEXT,
+    flag_key    TEXT,
+    variant_names_json TEXT,
+    product     TEXT,
+    project_id  TEXT REFERENCES projects(id),
     status      TEXT NOT NULL DEFAULT 'draft',
     owner_id    TEXT,
     start_at    TEXT,
@@ -26,18 +39,9 @@ CREATE TABLE IF NOT EXISTS experiments (
     updated_at  TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS experiment_variants (
-    id              TEXT PRIMARY KEY,
-    experiment_id   TEXT NOT NULL,
-    name            TEXT NOT NULL,
-    traffic_ratio   REAL NOT NULL,
-    description     TEXT,
-    created_at      TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS experiment_assignments (
     experiment_id   TEXT NOT NULL,
-    variant_id      TEXT NOT NULL,
+    variant_name    TEXT NOT NULL,
     user_id         TEXT NOT NULL,
     assigned_at     TEXT NOT NULL,
     PRIMARY KEY (experiment_id, user_id)
@@ -69,6 +73,8 @@ CREATE TABLE IF NOT EXISTS feature_flag (
     rollout_pct INTEGER NOT NULL DEFAULT 0,
     enabled     INTEGER NOT NULL DEFAULT 0,
     archived_at TEXT,
+    product     TEXT,
+    project_id  TEXT REFERENCES projects(id),
     created_at  TEXT    NOT NULL,
     updated_at  TEXT    NOT NULL
 );
@@ -114,7 +120,9 @@ CREATE TABLE IF NOT EXISTS feature_flag_exposure (
     variant      TEXT NOT NULL,
     reason       TEXT,
     evaluated_at TEXT NOT NULL,
-    context_json TEXT
+    context_json TEXT,
+    project_id   TEXT REFERENCES projects(id),
+    UNIQUE(user_id, flag_key)
 );
 
 CREATE TABLE IF NOT EXISTS event_log (
@@ -124,7 +132,19 @@ CREATE TABLE IF NOT EXISTS event_log (
     event_name TEXT   NOT NULL,
     properties TEXT,
     event_time TEXT   NOT NULL,
-    created_at TEXT   NOT NULL
+    created_at TEXT   NOT NULL,
+    project_id TEXT   REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS visual_changes (
+    id            TEXT PRIMARY KEY,
+    experiment_id TEXT NOT NULL,
+    variation_key TEXT NOT NULL,
+    selector      TEXT NOT NULL,
+    type          TEXT NOT NULL,
+    value         TEXT NOT NULL,
+    created_at    TEXT DEFAULT (datetime('now')),
+    updated_at    TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS person (
@@ -155,6 +175,7 @@ CREATE TABLE IF NOT EXISTS reflection (
 CREATE TABLE IF NOT EXISTS experiment_placement_config (
     experiment_id  TEXT NOT NULL,
     placement_key  TEXT NOT NULL,
+    variant_key    TEXT,
     ui_id          TEXT NOT NULL,
     ui_type        TEXT NOT NULL DEFAULT 'banner',
     title          TEXT NOT NULL,
@@ -167,6 +188,20 @@ CREATE TABLE IF NOT EXISTS experiment_placement_config (
     created_at     TEXT NOT NULL,
     updated_at     TEXT NOT NULL,
     PRIMARY KEY (experiment_id, placement_key)
+);
+
+CREATE TABLE IF NOT EXISTS placements (
+    key          TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    description  TEXT,
+    project_id   TEXT REFERENCES projects(id),
+    status       TEXT NOT NULL DEFAULT 'active',
+    target_cohort TEXT,
+    allowed_roles TEXT,
+    start_at     TEXT,
+    end_at       TEXT,
+    created_at   TEXT DEFAULT (datetime('now')),
+    updated_at   TEXT DEFAULT (datetime('now'))
 );
 
 """
