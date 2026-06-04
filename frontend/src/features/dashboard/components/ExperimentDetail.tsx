@@ -334,6 +334,7 @@ const parseCsvList = (value: string) => value
 
 type PlacementForm = {
   placement_key: string;
+  variant_key: string | null;
   ui_id: string;
   ui_type: string;
   title: string;
@@ -347,6 +348,7 @@ type PlacementForm = {
 
 const toPlacementForm = (placement: ExperimentPlacementConfig): PlacementForm => ({
   placement_key: placement.placement_key,
+  variant_key: placement.variant_key,
   ui_id: placement.ui_id,
   ui_type: placement.ui_type,
   title: placement.title,
@@ -358,8 +360,9 @@ const toPlacementForm = (placement: ExperimentPlacementConfig): PlacementForm =>
   enabled: placement.enabled,
 });
 
-const emptyPlacementForm = (): PlacementForm => ({
+const emptyPlacementForm = (variantKey: string | null = null): PlacementForm => ({
   placement_key: '',
+  variant_key: variantKey,
   ui_id: '',
   ui_type: 'banner',
   title: '',
@@ -403,6 +406,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [placementsLoading, setPlacementsLoading] = useState(false);
   const [placementsError, setPlacementsError] = useState<string | null>(null);
   const [selectedPlacementKey, setSelectedPlacementKey] = useState<string | null>(null);
+  const [placementVariantKey, setPlacementVariantKey] = useState<string | null>(null);
   const [placementEditing, setPlacementEditing] = useState(false);
   const [placementCreating, setPlacementCreating] = useState(false);
   const [placementForm, setPlacementForm] = useState<PlacementForm | null>(null);
@@ -647,8 +651,12 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     navigate('/experiments');
   };
 
+  const filteredPlacements = experiment?.experiment_type === 'ab_test' && placementVariantKey !== null
+    ? placements.filter((p) => p.variant_key === placementVariantKey)
+    : placements;
+
   const selectedPlacement =
-    placements.find((placement) => placement.placement_key === selectedPlacementKey) ?? placements[0] ?? null;
+    filteredPlacements.find((placement) => placement.placement_key === selectedPlacementKey) ?? filteredPlacements[0] ?? null;
 
   const handleSelectPlacement = (placementKey: string) => {
     setSelectedPlacementKey(placementKey);
@@ -658,10 +666,22 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     setPlacementSaveMessage(null);
   };
 
-  const startPlacementCreate = () => {
-    setPlacementForm(emptyPlacementForm());
+  const startPlacementCreate = (variantKey: string | null = null) => {
+    setPlacementForm(emptyPlacementForm(variantKey));
     setPlacementCreating(true);
     setPlacementEditing(false);
+    setPlacementSaveMessage(null);
+    if (variantKey !== null) {
+      setPlacementVariantKey(variantKey);
+    }
+  };
+
+  const handleVariantPlacementClick = (variantKey: string, placementKey: string) => {
+    setPlacementVariantKey(variantKey);
+    setSelectedPlacementKey(placementKey);
+    setPlacementEditing(false);
+    setPlacementCreating(false);
+    setPlacementForm(null);
     setPlacementSaveMessage(null);
   };
 
@@ -702,6 +722,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       if (placementCreating) {
         const created = await experimentPlacementApi.create(id, {
           placement_key: placementForm.placement_key.trim(),
+          variant_key: placementForm.variant_key || undefined,
           ...payload,
         });
         setPlacements((current) => [...current, created].sort((a, b) => a.placement_key.localeCompare(b.placement_key)));
@@ -733,7 +754,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       await experimentPlacementApi.delete(id, selectedPlacement.placement_key);
       const remaining = placements.filter((placement) => placement.placement_key !== selectedPlacement.placement_key);
       setPlacements(remaining);
-      setSelectedPlacementKey(remaining[0]?.placement_key ?? null);
+      const nextInScope = placementVariantKey
+        ? remaining.filter((p) => p.variant_key === placementVariantKey)
+        : remaining;
+      setSelectedPlacementKey(nextInScope[0]?.placement_key ?? null);
       cancelPlacementForm();
       setPlacementSaveMessage(t.placementDeleted);
     } catch {
@@ -746,6 +770,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   if (loading) return <p className="text-slate-500 dark:text-slate-400 text-sm p-8">{t.loading}</p>;
   if (error) return <p className="text-rose-500 text-sm p-8">{error}</p>;
   if (!experiment) return <p className="text-slate-500 text-sm p-8">{t.notFound}</p>;
+
+  const experimentType = (experiment.experiment_type || 'ab_test') as ExperimentType;
+  const isAbTest = experimentType === 'ab_test';
+  const isQuasiExperiment = experimentType === 'quasi_experiment';
 
   const status = statusConfig[experiment.status];
   const buttons = transitionButtons[experiment.status] ?? [];
@@ -1100,44 +1128,137 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">{t.sectionVariants}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {experiment.variants.map((v) => (
-              <span
-                key={v.name}
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  v.name === 'control'
-                    ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                    : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
-                }`}
-              >
-                {v.name}
-              </span>
-            ))}
-          </div>
-          {experiment.flag_key && (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {lang === 'ko'
-                ? `Variants는 연결된 Feature Flag(${experiment.flag_key})의 rule에서 자동 동기화됩니다.`
-                : `Variants are auto-synced from the linked feature flag rules (${experiment.flag_key}).`}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {!isQuasiExperiment && (
+        <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">{t.sectionVariants}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {isAbTest ? (
+              <div className="space-y-3">
+                {experiment.variants.map((v) => {
+                  const isControl = v.name === 'control';
+                  const variantPlacements = placements.filter((p) => p.variant_key === v.name);
+                  return (
+                    <div
+                      key={v.name}
+                      className={`rounded-xl border p-4 ${
+                        isControl
+                          ? 'border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-950/40'
+                          : 'border-indigo-100 bg-indigo-50/30 dark:border-indigo-900/40 dark:bg-indigo-950/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          isControl
+                            ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300'
+                        }`}>
+                          {v.name}
+                        </span>
+                        {(v.traffic_ratio ?? 0) > 0 && (
+                          <span className="text-xs text-slate-400">{Math.round((v.traffic_ratio ?? 0) * 100)}%</span>
+                        )}
+                      </div>
+                      {isControl ? (
+                        <p className="text-xs text-slate-400">
+                          {lang === 'ko' ? '원본 경험 (Placement 없음)' : 'Original experience (no placement)'}
+                        </p>
+                      ) : (
+                        <div className="mt-1 space-y-2">
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            {lang === 'ko' ? '이 variant의 Placement' : 'Placements for this variant'}
+                          </p>
+                          {variantPlacements.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {variantPlacements.map((p) => (
+                                <button
+                                  key={p.placement_key}
+                                  type="button"
+                                  onClick={() => handleVariantPlacementClick(v.name, p.placement_key)}
+                                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono border transition-colors ${
+                                    selectedPlacementKey === p.placement_key && placementVariantKey === v.name
+                                      ? 'border-indigo-300 bg-indigo-100 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                                      : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                                  }`}
+                                >
+                                  <span className={`h-1.5 w-1.5 rounded-full ${p.enabled ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                                  {p.placement_key}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400">
+                              {lang === 'ko' ? '연결된 Placement 없음' : 'No placements linked'}
+                            </p>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 rounded-xl h-7 text-xs"
+                            onClick={() => startPlacementCreate(v.name)}
+                          >
+                            <Plus className="h-3 w-3" />
+                            {t.addPlacement}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {experiment.variants.map((v) => (
+                    <span
+                      key={v.name}
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        v.name === 'control'
+                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+                      }`}
+                    >
+                      {v.name}
+                    </span>
+                  ))}
+                </div>
+                {experiment.flag_key && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {lang === 'ko'
+                      ? `Variants는 연결된 Feature Flag(${experiment.flag_key})의 rule에서 자동 동기화됩니다.`
+                      : `Variants are auto-synced from the linked feature flag rules (${experiment.flag_key}).`}
+                  </p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
+      {(!isAbTest || placementVariantKey !== null) && (
       <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
             <SlidersHorizontal className="h-5 w-5 text-indigo-500" />
             {t.sectionPlacements}
+            {isAbTest && placementVariantKey && (
+              <span className="ml-1 text-sm font-normal text-slate-400 font-mono">— {placementVariantKey}</span>
+            )}
           </CardTitle>
           <div className="flex flex-wrap justify-end gap-2">
+            {isAbTest && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 rounded-xl text-slate-400 hover:text-slate-600"
+                onClick={() => { setPlacementVariantKey(null); cancelPlacementForm(); }}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {!placementEditing && !placementCreating && (
-              <Button size="sm" variant="outline" className="gap-1.5 rounded-xl" onClick={startPlacementCreate}>
+              <Button size="sm" variant="outline" className="gap-1.5 rounded-xl" onClick={() => startPlacementCreate(placementVariantKey)}>
                 <Plus className="h-3.5 w-3.5" />
                 {t.addPlacement}
               </Button>
@@ -1168,14 +1289,14 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
           {!placementsLoading && !placementsError && (
             <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{t.placementsIntro}</p>
           )}
-          {!placementsLoading && !placementsError && placements.length === 0 && !placementCreating && (
+          {!placementsLoading && !placementsError && filteredPlacements.length === 0 && !placementCreating && (
             <p className="text-sm text-slate-400">{t.placementsEmpty}</p>
           )}
           {!placementsLoading && !placementsError && (selectedPlacement || placementCreating) && (
             <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
               <div className="space-y-2">
-                {placements.map((placement) => {
-                  const active = placement.placement_key === selectedPlacement.placement_key;
+                {filteredPlacements.map((placement) => {
+                  const active = placement.placement_key === selectedPlacement?.placement_key;
                   return (
                     <button
                       type="button"
@@ -1394,6 +1515,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* ── 실험 결과 ── */}
       <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">

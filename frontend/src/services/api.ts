@@ -281,6 +281,8 @@ export interface RetentionResponse { event_name: string; data: RetentionCell[]; 
 export interface Variant {
   experiment_id: string;
   name: string;
+  traffic_ratio?: number;
+  description?: string;
 }
 
 export interface Experiment {
@@ -343,6 +345,7 @@ export interface ExperimentUpdate {
 export interface ExperimentPlacementConfig {
   experiment_id: string;
   placement_key: string;
+  variant_key: string | null;
   ui_id: string;
   ui_type: string;
   title: string;
@@ -370,6 +373,7 @@ export interface ExperimentPlacementConfigUpdate {
 
 export interface ExperimentPlacementConfigCreate extends ExperimentPlacementConfigUpdate {
   placement_key: string;
+  variant_key?: string | null;
   ui_id: string;
   ui_type: string;
   title: string;
