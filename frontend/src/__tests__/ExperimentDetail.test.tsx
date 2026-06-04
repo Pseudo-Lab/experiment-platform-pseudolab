@@ -41,6 +41,7 @@ const experiment = {
   hypothesis: '회고 UI 노출은 제출을 늘린다.',
   expected_effect: '',
   primary_metric: 'project_reflection_ui_clicked',
+  experiment_type: 'quasi_experiment',
   status: 'running',
   created_at: '2026-05-25T00:00:00Z',
   updated_at: '2026-05-25T00:00:00Z',
