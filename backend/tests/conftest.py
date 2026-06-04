@@ -175,6 +175,7 @@ CREATE TABLE IF NOT EXISTS reflection (
 CREATE TABLE IF NOT EXISTS experiment_placement_config (
     experiment_id  TEXT NOT NULL,
     placement_key  TEXT NOT NULL,
+    variant_key    TEXT,
     ui_id          TEXT NOT NULL,
     ui_type        TEXT NOT NULL DEFAULT 'banner',
     title          TEXT NOT NULL,
