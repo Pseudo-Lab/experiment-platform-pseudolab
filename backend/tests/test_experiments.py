@@ -295,8 +295,8 @@ class TestRunningPreconditions:
         exp_id = client.post(BASE + "/", json=payload).json()["id"]
         try:
             resp = client.patch(f"{BASE}/{exp_id}", json={"status": "running"})
-            assert resp.status_code == 422
-            assert "Feature Flag" in resp.json()["detail"]
+            assert resp.status_code == 400
+            assert "Feature flag must be connected" in resp.json()["detail"]
         finally:
             client.delete(f"{BASE}/{exp_id}")
 
@@ -316,6 +316,86 @@ class TestRunningPreconditions:
             resp = client.patch(f"{BASE}/{exp_id}", json={"status": "running"})
             assert resp.status_code == 200
             assert resp.json()["status"] == "running"
+        finally:
+            client.delete(f"{BASE}/{exp_id}")
+
+
+class TestRunningPlacementPreconditions:
+    """A/B 테스트 running 전환 시 non-control variant placement 연결 검증."""
+
+    FLAGS_BASE = "/api/v1/feature-flags"
+    PLACEMENTS_BASE = "/api/v1/experiments"
+
+    def _setup(self, flag_key: str, exp_name: str):
+        """feature flag + rule + ab_test 실험 생성 후 실험 ID 반환."""
+        client.post(self.FLAGS_BASE + "/", json={"flag_key": flag_key, "description": "test"})
+        client.post(
+            f"{self.FLAGS_BASE}/{flag_key}/rules",
+            json={"variant": "treatment", "rollout_pct": 50},
+        )
+        payload = {
+            "name": exp_name,
+            "experiment_type": "ab_test",
+            "primary_metric": "clicked",
+            "flag_key": flag_key,
+            "variants": [
+                {"name": "control", "traffic_ratio": 0.5},
+                {"name": "treatment", "traffic_ratio": 0.5},
+            ],
+        }
+        return client.post(BASE + "/", json=payload).json()["id"]
+
+    def _cleanup(self, exp_id: str, flag_key: str):
+        client.delete(f"{BASE}/{exp_id}")
+        client.post(f"{self.FLAGS_BASE}/{flag_key}/archive")
+
+    def test_running_blocked_without_placement(self):
+        flag_key = "test-placement-block-flag"
+        exp_id = self._setup(flag_key, "placement 없는 A/B 테스트")
+        try:
+            resp = client.patch(f"{BASE}/{exp_id}", json={"status": "running"})
+            assert resp.status_code == 400
+            assert "placement" in resp.json()["detail"].lower()
+        finally:
+            self._cleanup(exp_id, flag_key)
+
+    def test_running_allowed_after_placement_connected(self):
+        flag_key = "test-placement-allow-flag"
+        exp_id = self._setup(flag_key, "placement 있는 A/B 테스트")
+        try:
+            client.post(
+                f"{self.PLACEMENTS_BASE}/{exp_id}/placements",
+                json={
+                    "placement_key": "test-banner-treatment",
+                    "variant_key": "treatment",
+                    "ui_id": "test-banner",
+                    "ui_type": "banner",
+                    "title": "Test",
+                    "description": "Test placement",
+                    "target_url": "/test",
+                },
+            )
+            resp = client.patch(f"{BASE}/{exp_id}", json={"status": "running"})
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "running"
+        finally:
+            self._cleanup(exp_id, flag_key)
+
+    def test_quasi_experiment_running_skips_placement_check(self):
+        # quasi_experiment는 placement 없어도 running 전환 가능
+        payload = {
+            "name": "quasi placement 없음",
+            "experiment_type": "quasi_experiment",
+            "primary_metric": "submitted",
+            "variants": [
+                {"name": "control", "traffic_ratio": 0.5},
+                {"name": "treatment", "traffic_ratio": 0.5},
+            ],
+        }
+        exp_id = client.post(BASE + "/", json=payload).json()["id"]
+        try:
+            resp = client.patch(f"{BASE}/{exp_id}", json={"status": "running"})
+            assert resp.status_code == 200
         finally:
             client.delete(f"{BASE}/{exp_id}")
 

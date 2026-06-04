@@ -109,7 +109,7 @@ class ExperimentService:
                     status_code=422,
                     detail=f"'{current.status}' → '{patch['status']}' 전환은 허용되지 않습니다."
                 )
-            self._validate_running_preconditions(current, patch)
+            await self._validate_running_preconditions(current, patch)
 
         if patch.get("flag_key"):
             await self._require_flag(patch["flag_key"])
@@ -334,10 +334,11 @@ class ExperimentService:
             variants=variants,
         )
 
-    def _validate_running_preconditions(self, current: Experiment, patch: dict) -> None:
+    async def _validate_running_preconditions(self, current: Experiment, patch: dict) -> None:
         """draft → running 전환 시 사전 조건 검증.
         - primary_metric: 모든 type 필수 (없으면 결과 계산 불가)
-        - flag_key: ab_test 필수 (quasi_experiment/rollout은 placement 기반이므로 예외)
+        - ab_test 한정: flag_key 필수, non-control variant마다 placement 연결 필수
+        - quasi_experiment/rollout: placement 기반 운영이므로 이하 검증 스킵
         paused → running(재개)은 이미 draft → running 시 검증을 통과한 상태이므로 재검증 생략.
         """
         next_status = patch["status"]
@@ -359,12 +360,27 @@ class ExperimentService:
         next_experiment_type = patch.get("experiment_type", current.experiment_type)
         if hasattr(next_experiment_type, "value"):
             next_experiment_type = next_experiment_type.value
+        if next_experiment_type != ExperimentType.AB_TEST.value:
+            return
+
         next_flag_key = patch.get("flag_key", current.flag_key)
-        if next_experiment_type == ExperimentType.AB_TEST.value and not next_flag_key:
+        if not next_flag_key:
             raise HTTPException(
-                status_code=422,
-                detail="A/B 테스트를 running으로 전환하려면 Feature Flag 연결이 필요합니다.",
+                status_code=400,
+                detail="Feature flag must be connected before starting",
             )
+
+        placement_rows = await d1.query(
+            "SELECT DISTINCT variant_key FROM experiment_placement_config WHERE experiment_id = ?",
+            [current.id],
+        )
+        covered = {row["variant_key"] for row in placement_rows if row.get("variant_key")}
+        for variant in current.variants:
+            if variant.name != "control" and variant.name not in covered:
+                raise HTTPException(
+                    status_code=400,
+                    detail="All non-control variants must have a placement",
+                )
 
     async def _require_flag(self, flag_key: str) -> None:
         rows = await d1.query(

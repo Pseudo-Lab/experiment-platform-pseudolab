@@ -66,6 +66,8 @@ const translations = {
     actionResume: 'Resume',
     actionComplete: 'Complete',
     actionArchive: 'Archive',
+    runningBlockedNoFlag: 'Feature Flag is not connected. Please link a Feature Flag before starting.',
+    runningBlockedNoPlacement: (variantKey: string) => `'${variantKey}' variant has no Placement. Add a Placement before starting the experiment.`,
     statusChangeConfirm: (to: string) => `Change status to "${to}"?`,
     sectionResult: 'Experiment Result',
     resultLoading: 'Loading result...',
@@ -188,6 +190,8 @@ const translations = {
     actionResume: '재개',
     actionComplete: '완료',
     actionArchive: '보관',
+    runningBlockedNoFlag: 'Feature Flag가 연결되지 않았습니다. 실험 상세에서 Feature Flag를 먼저 연결해주세요.',
+    runningBlockedNoPlacement: (variantKey: string) => `'${variantKey}' variant에 Placement가 연결되지 않았습니다. Placement를 추가한 후 실험을 시작하세요.`,
     statusChangeConfirm: (to: string) => `상태를 "${to}"(으)로 변경하시겠습니까?`,
     sectionResult: '실험 결과',
     resultLoading: '결과 불러오는 중...',
@@ -631,6 +635,22 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
 
   const handleStatusChange = async (to: ExperimentStatus) => {
     if (!experiment) return;
+
+    if (to === 'running' && experiment.experiment_type === 'ab_test') {
+      if (!experiment.flag_key) {
+        setStatusError(t.runningBlockedNoFlag);
+        return;
+      }
+      const coveredVariantKeys = new Set(placements.map((p) => p.variant_key).filter(Boolean));
+      const missingVariant = experiment.variants.find(
+        (v) => v.name !== 'control' && !coveredVariantKeys.has(v.name),
+      );
+      if (missingVariant) {
+        setStatusError(t.runningBlockedNoPlacement(missingVariant.name));
+        return;
+      }
+    }
+
     const label = statusConfig[to][lang];
     if (!window.confirm(t.statusChangeConfirm(label))) return;
     setStatusError(null);
