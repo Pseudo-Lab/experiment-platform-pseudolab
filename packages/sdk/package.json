@@ -1,0 +1,40 @@
+{
+  "name": "@experibase/sdk",
+  "version": "0.1.0",
+  "description": "ExperiBase SDK — feature flag & A/B test client",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "react": ["./dist/react.d.ts"]
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "keywords": ["experibase", "feature-flag", "ab-test", "sdk"],
+  "license": "MIT"
+}

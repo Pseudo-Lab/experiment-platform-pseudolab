@@ -1,13 +1,11 @@
 import { useCallback } from 'react'
-import { track } from '../lib/sdk'
-import { useExperimentContext } from '../lib/ExperimentContext'
+import { useExperibase } from '@experibase/sdk/react'
 
 export function useTrack() {
-  const { variants, apiKey } = useExperimentContext()
-  // variants spreads first so caller-supplied properties can override if needed
+  const { sdk, variants } = useExperibase()
   return useCallback(
     (eventName: string, properties?: Record<string, unknown>) =>
-      track(eventName, { ...variants, ...properties }, apiKey),
-    [variants, apiKey],
+      sdk.track(eventName, { ...variants, ...properties }),
+    [sdk, variants],
   )
 }

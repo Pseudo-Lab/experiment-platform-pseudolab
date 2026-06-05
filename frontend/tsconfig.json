@@ -29,6 +29,18 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@experibase/sdk": [
+        "../packages/sdk/src/index.ts"
+      ],
+      "@experibase/sdk/react": [
+        "../packages/sdk/src/react.tsx"
+      ],
+      "react": [
+        "./node_modules/@types/react/index.d.ts"
+      ],
+      "react/jsx-runtime": [
+        "./node_modules/@types/react/jsx-runtime.d.ts"
       ]
     }
   },

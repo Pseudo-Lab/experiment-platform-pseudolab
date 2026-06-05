@@ -6,9 +6,11 @@ import path from "path"
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      { find: '@experibase/sdk/react', replacement: path.resolve(__dirname, '../packages/sdk/src/react.tsx') },
+      { find: '@experibase/sdk', replacement: path.resolve(__dirname, '../packages/sdk/src/index.ts') },
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+    ],
   },
   server: {
     allowedHosts: [

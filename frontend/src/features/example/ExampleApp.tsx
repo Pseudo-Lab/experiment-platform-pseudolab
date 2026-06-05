@@ -4,8 +4,11 @@ import { Layout } from './components/Layout'
 import { HomePage } from './pages/HomePage'
 import { StudyListPage } from './pages/StudyListPage'
 import { ExperimentShowcase } from './components/ExperimentShowcase'
-import { ExperimentProvider } from './lib/ExperimentContext'
+import { ExperibaseProvider } from '@experibase/sdk/react'
+import { ExperimentContextBridge } from './lib/ExperimentContext'
 import { initVisualEditor } from './lib/visualEditor'
+import { getUserId } from './lib/userId'
+import { API_BASE_URL } from './lib/apiBase'
 import type { Lang } from './i18n'
 
 const FLAG_KEYS = ['home_layout_v1', 'sponsor_slot_v1'] as const
@@ -25,15 +28,22 @@ export function ExampleApp({ lang }: Props) {
   }, [])
 
   return (
-    <ExperimentProvider apiKey="pk_live_demo_7g8h9i0j1k2l" flagKeys={FLAG_KEYS} projectId="demo-app">
-      <Layout lang={lang}>
-        <Routes>
-          <Route index element={<HomePage lang={lang} />} />
-          <Route path="studies" element={<StudyListPage lang={lang} />} />
-          <Route path="experiments" element={<ExperimentShowcase lang={lang} />} />
-          <Route path="*" element={<ExampleRedirect />} />
-        </Routes>
-      </Layout>
-    </ExperimentProvider>
+    <ExperibaseProvider
+      apiKey="pk_live_demo_7g8h9i0j1k2l"
+      baseUrl={API_BASE_URL}
+      userId={getUserId()}
+      flagKeys={FLAG_KEYS}
+    >
+      <ExperimentContextBridge>
+        <Layout lang={lang}>
+          <Routes>
+            <Route index element={<HomePage lang={lang} />} />
+            <Route path="studies" element={<StudyListPage lang={lang} />} />
+            <Route path="experiments" element={<ExperimentShowcase lang={lang} />} />
+            <Route path="*" element={<ExampleRedirect />} />
+          </Routes>
+        </Layout>
+      </ExperimentContextBridge>
+    </ExperibaseProvider>
   )
 }

@@ -10,12 +10,14 @@ const okJson = (data: unknown) =>
   } as Response)
 
 function mockExampleApi() {
-  global.fetch = vi.fn((input: RequestInfo | URL) => {
+  global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
 
-    if (url.includes('/feature-flags/decide')) {
-      const variant = url.includes('sponsor_slot_v1') ? 'inline' : 'grid'
-      return okJson({ data: { variant } })
+    // SDK unified decide endpoint (POST /decide)
+    if (url.includes('/decide') && init?.method === 'POST') {
+      const body = JSON.parse(String(init?.body ?? '{}'))
+      const variant = body.key === 'sponsor_slot_v1' ? 'inline' : 'grid'
+      return okJson({ key: body.key, type: 'flag', show: true, variant, payload: null })
     }
 
     if (url.includes('/feature-flags/?include_archived=true')) {
