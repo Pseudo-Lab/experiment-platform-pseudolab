@@ -844,3 +844,52 @@ export const analyticsApi = {
     return res.json();
   },
 };
+
+// ---------------------------------------------------------------------------
+// Experiment Analytics
+// ---------------------------------------------------------------------------
+
+export interface ExperimentAnalyticsTimeSeries {
+  date: string;
+  count: number;
+}
+
+export interface ExperimentAnalyticsImpressions {
+  total: number;
+  by_variant: Record<string, number>;
+  by_url: Record<string, number>;
+  time_series: ExperimentAnalyticsTimeSeries[];
+}
+
+export interface ExperimentAnalyticsConversions {
+  total: number;
+  by_variant: Record<string, number>;
+  rate: Record<string, number>;
+}
+
+export interface ExperimentAnalyticsSignificance {
+  p_value: number | null;
+  is_significant: boolean;
+  confidence: number;
+  winner: string | null;
+}
+
+export interface ExperimentAnalyticsAnomaly {
+  variant: string;
+  message: string;
+}
+
+export interface ExperimentAnalyticsResponse {
+  impressions: ExperimentAnalyticsImpressions;
+  conversions: ExperimentAnalyticsConversions;
+  statistical_significance: ExperimentAnalyticsSignificance;
+  anomalies: ExperimentAnalyticsAnomaly[];
+}
+
+export const experimentAnalyticsApi = {
+  get: async (experimentId: string): Promise<ExperimentAnalyticsResponse> => {
+    const res = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/analytics`);
+    if (!res.ok) throw new Error('Failed to fetch experiment analytics');
+    return res.json();
+  },
+};

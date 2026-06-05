@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from typing import Optional
-from app.schemas.event import EventCapture, PersonIdentify
+from app.schemas.event import EventCapture, ExperimentEvent, PersonIdentify
 from app.schemas.project import Project
 from app.services.event import event_service
 from app.api.deps import get_project_from_api_key
@@ -16,6 +16,13 @@ async def capture(
     project_id = project.id if project else None
     await event_service.capture(data, project_id=project_id)
     return {"success": True, "message": "accepted"}
+
+
+@router.post("/events", status_code=202)
+async def track_experiment_event(data: ExperimentEvent):
+    """SDK가 직접 호출하는 실험 impression/conversion 이벤트 수집 (인증 불필요)."""
+    await event_service.track_experiment_event(data)
+    return {"success": True}
 
 
 @router.post("/identify", status_code=200)

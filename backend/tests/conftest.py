@@ -204,6 +204,19 @@ CREATE TABLE IF NOT EXISTS placements (
     updated_at   TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS experiment_event (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type     TEXT    NOT NULL,
+    experiment_key TEXT,
+    experiment_id  TEXT,
+    variant        TEXT    NOT NULL DEFAULT 'unknown',
+    url            TEXT,
+    user_id        TEXT    NOT NULL,
+    properties     TEXT,
+    event_time     TEXT    NOT NULL,
+    created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 """
 
 

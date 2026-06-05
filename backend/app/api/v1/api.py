@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     status, experiments, dashboard, bug_reports,
     events, feature_flags, analytics, decisions, reflections, segments,
-    experiment_placements, placements, projects, visual_changes, sdk,
+    experiment_placements, experiment_analytics, placements, projects, visual_changes, sdk,
 )
 
 api_router = APIRouter()
@@ -10,6 +10,7 @@ api_router.include_router(sdk.router,                            prefix="",     
 api_router.include_router(status.router,                         prefix="/status",          tags=["status"])
 api_router.include_router(projects.router,                       prefix="/projects",        tags=["projects"])
 api_router.include_router(experiments.router,                    prefix="/experiments",     tags=["experiments"])
+api_router.include_router(experiment_analytics.router,           prefix="/experiments",     tags=["experiment-analytics"])
 api_router.include_router(visual_changes.experiment_router,      prefix="/experiments",     tags=["visual-changes"])
 api_router.include_router(visual_changes.standalone_router,      prefix="/visual-changes",  tags=["visual-changes"])
 api_router.include_router(dashboard.router,                      prefix="/dashboard",       tags=["dashboard"])

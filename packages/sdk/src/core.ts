@@ -33,6 +33,26 @@ export class ExperibaseSDK {
     this._userId = userId
   }
 
+  private async _sendEvent(payload: {
+    type: string
+    key: string
+    variant: string
+    url?: string | null
+    user_id: string
+    experiment_id?: string
+    properties?: Record<string, unknown>
+  }): Promise<void> {
+    try {
+      await fetch(`${this.baseUrl}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    } catch {
+      // fire-and-forget: silently swallow network errors
+    }
+  }
+
   async decide(key: string, options?: { userId?: string }): Promise<DecideResult> {
     const uid = options?.userId ?? this._userId
     const res = await fetch(`${this.baseUrl}/decide`, {
@@ -44,7 +64,15 @@ export class ExperibaseSDK {
       body: JSON.stringify({ key, user_id: uid }),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    return res.json() as Promise<DecideResult>
+    const result = await res.json() as DecideResult
+    this._sendEvent({
+      type: 'impression',
+      key,
+      variant: result.variant ?? 'unknown',
+      url: typeof window !== 'undefined' ? window.location.pathname : null,
+      user_id: uid,
+    })
+    return result
   }
 
   async track(event: string, properties?: Record<string, unknown>): Promise<void> {
@@ -61,5 +89,15 @@ export class ExperibaseSDK {
       }),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const key = (properties?.placement_key ?? properties?.key ?? event) as string
+    const variant = (properties?.variant ?? 'unknown') as string
+    this._sendEvent({
+      type: 'conversion',
+      key,
+      variant,
+      url: typeof window !== 'undefined' ? window.location.pathname : null,
+      user_id: this._userId,
+      properties,
+    })
   }
 }

@@ -28,6 +28,16 @@ class EventLog(BaseModel):
     created_at: datetime
 
 
+class ExperimentEvent(BaseModel):
+    type: str
+    key: str
+    variant: str = 'unknown'
+    url: Optional[str] = None
+    user_id: str
+    experiment_id: Optional[str] = None
+    properties: Optional[dict[str, Any]] = None
+
+
 class Person(BaseModel):
     user_id: str
     cohort_id: Optional[str] = None

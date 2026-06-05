@@ -6,13 +6,14 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2 } from 'lucide-react';
 import {
   experimentApi, experimentResultApi, decisionApi, experimentPlacementApi, projectApi, featureFlagApi,
   type Experiment, type ExperimentStatus,
   type ExperimentResult, type Decision, type LearningNote, type DecisionType,
   type ExperimentPlacementConfig, type Project, type FeatureFlag, type FeatureFlagExposureSummary,
 } from '../../../services/api';
+import { ExperimentAnalytics } from './ExperimentAnalytics';
 
 interface ExperimentDetailProps {
   lang: 'en' | 'ko';
@@ -142,6 +143,9 @@ const translations = {
     placementCreateError: 'Failed to create placement.',
     placementSaveError: 'Failed to save placement.',
     placementDeleteError: 'Failed to delete placement.',
+    tabOverview: 'Overview',
+    tabAnalytics: 'Analytics',
+    tabResults: 'Results',
   },
   ko: {
     back: '목록으로',
@@ -266,6 +270,9 @@ const translations = {
     placementCreateError: 'Placement 생성에 실패했습니다.',
     placementSaveError: 'Placement 저장에 실패했습니다.',
     placementDeleteError: 'Placement 삭제에 실패했습니다.',
+    tabOverview: '개요',
+    tabAnalytics: 'Analytics',
+    tabResults: '결과',
   },
 };
 
@@ -427,6 +434,8 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [flagRolloutSaving, setFlagRolloutSaving] = useState(false);
   const [flagToggling, setFlagToggling] = useState(false);
   const [linkedFlagExposure, setLinkedFlagExposure] = useState<FeatureFlagExposureSummary | null | undefined>(undefined);
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'results'>('overview');
 
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [notes, setNotes] = useState<LearningNote[]>([]);
@@ -1148,7 +1157,35 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </CardContent>
       </Card>
 
-      {!isQuasiExperiment && (
+      {/* ── Tab bar ── */}
+      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800 pb-0">
+        {([
+          { key: 'overview', label: t.tabOverview, icon: <SlidersHorizontal className="h-3.5 w-3.5" /> },
+          { key: 'analytics', label: t.tabAnalytics, icon: <BarChart2 className="h-3.5 w-3.5" /> },
+          { key: 'results', label: t.tabResults, icon: <TrendingUp className="h-3.5 w-3.5" /> },
+        ] as const).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Analytics tab ── */}
+      {activeTab === 'analytics' && id && (
+        <ExperimentAnalytics experimentId={id} lang={lang} />
+      )}
+
+      {!isQuasiExperiment && activeTab === 'overview' && (
         <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
           <CardHeader>
             <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">{t.sectionVariants}</CardTitle>
@@ -1256,7 +1293,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </Card>
       )}
 
-      {(!isAbTest || placementVariantKey !== null) && (
+      {activeTab === 'overview' && (!isAbTest || placementVariantKey !== null) && (
       <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
@@ -1538,7 +1575,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       )}
 
       {/* ── 실험 결과 ── */}
-      <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+      {activeTab === 'results' && <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-indigo-500" />
@@ -1592,84 +1629,88 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
-      {/* ── 의사결정 ── */}
-      <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Ship className="h-5 w-5 text-indigo-500" />
-            {t.sectionDecisions}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              {(['SHIP', 'HOLD', 'ROLLBACK'] as DecisionType[]).map((d) => (
-                <button key={d} onClick={() => setDecisionType(d)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${decisionType === d
-                    ? d === 'SHIP' ? 'bg-emerald-500 text-white border-emerald-500'
-                    : d === 'HOLD' ? 'bg-amber-500 text-white border-amber-500'
-                    : 'bg-rose-500 text-white border-rose-500'
-                    : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}>
-                  {d === 'SHIP' ? t.ship : d === 'HOLD' ? t.hold : t.rollback}
-                </button>
-              ))}
-            </div>
-            <Textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} placeholder={t.decisionPlaceholder} className="rounded-xl resize-none" rows={2} />
-            <div className="flex gap-2">
-              <Input value={decisionBy} onChange={e => setDecisionBy(e.target.value)} placeholder={t.authorPlaceholder} className="rounded-xl" />
-              <Button size="sm" className="rounded-xl shrink-0" onClick={handleAddDecision} disabled={submittingDecision || !decisionReason.trim()}>
-                {submittingDecision ? t.submitting : t.submit}
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            {decisions.map(d => (
-              <div key={d.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${d.decision === 'SHIP' ? 'bg-emerald-100 text-emerald-600' : d.decision === 'HOLD' ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
-                    {d.decision}
-                  </span>
-                  <span className="text-xs text-slate-400">{d.decided_by} · {new Date(d.decided_at).toLocaleDateString()}</span>
+      {activeTab === 'overview' && (
+        <>
+          {/* ── 의사결정 ── */}
+          <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Ship className="h-5 w-5 text-indigo-500" />
+                {t.sectionDecisions}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  {(['SHIP', 'HOLD', 'ROLLBACK'] as DecisionType[]).map((d) => (
+                    <button key={d} onClick={() => setDecisionType(d)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${decisionType === d
+                        ? d === 'SHIP' ? 'bg-emerald-500 text-white border-emerald-500'
+                        : d === 'HOLD' ? 'bg-amber-500 text-white border-amber-500'
+                        : 'bg-rose-500 text-white border-rose-500'
+                        : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}>
+                      {d === 'SHIP' ? t.ship : d === 'HOLD' ? t.hold : t.rollback}
+                    </button>
+                  ))}
                 </div>
-                <p className="text-sm text-slate-700 dark:text-slate-300">{d.reason}</p>
+                <Textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} placeholder={t.decisionPlaceholder} className="rounded-xl resize-none" rows={2} />
+                <div className="flex gap-2">
+                  <Input value={decisionBy} onChange={e => setDecisionBy(e.target.value)} placeholder={t.authorPlaceholder} className="rounded-xl" />
+                  <Button size="sm" className="rounded-xl shrink-0" onClick={handleAddDecision} disabled={submittingDecision || !decisionReason.trim()}>
+                    {submittingDecision ? t.submitting : t.submit}
+                  </Button>
+                </div>
               </div>
-            ))}
-            {decisions.length === 0 && <p className="text-sm text-slate-400">{lang === 'ko' ? '아직 결정이 없습니다.' : 'No decisions yet.'}</p>}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                {decisions.map(d => (
+                  <div key={d.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${d.decision === 'SHIP' ? 'bg-emerald-100 text-emerald-600' : d.decision === 'HOLD' ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
+                        {d.decision}
+                      </span>
+                      <span className="text-xs text-slate-400">{d.decided_by} · {new Date(d.decided_at).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{d.reason}</p>
+                  </div>
+                ))}
+                {decisions.length === 0 && <p className="text-sm text-slate-400">{lang === 'ko' ? '아직 결정이 없습니다.' : 'No decisions yet.'}</p>}
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* ── 학습 노트 ── */}
-      <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-indigo-500" />
-            {t.sectionNotes}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Textarea value={noteContent} onChange={e => setNoteContent(e.target.value)} placeholder={t.notePlaceholder} className="rounded-xl resize-none" rows={2} />
-            <div className="flex gap-2">
-              <Input value={noteBy} onChange={e => setNoteBy(e.target.value)} placeholder={t.authorPlaceholder} className="rounded-xl" />
-              <Button size="sm" className="rounded-xl shrink-0" onClick={handleAddNote} disabled={submittingNote || !noteContent.trim()}>
-                {submittingNote ? t.submitting : t.submit}
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            {notes.map(n => (
-              <div key={n.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                <p className="text-xs text-slate-400 mb-1">{n.created_by ?? 'anonymous'} · {new Date(n.created_at).toLocaleDateString()}</p>
-                <p className="text-sm text-slate-700 dark:text-slate-300">{n.content}</p>
+          {/* ── 학습 노트 ── */}
+          <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-indigo-500" />
+                {t.sectionNotes}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Textarea value={noteContent} onChange={e => setNoteContent(e.target.value)} placeholder={t.notePlaceholder} className="rounded-xl resize-none" rows={2} />
+                <div className="flex gap-2">
+                  <Input value={noteBy} onChange={e => setNoteBy(e.target.value)} placeholder={t.authorPlaceholder} className="rounded-xl" />
+                  <Button size="sm" className="rounded-xl shrink-0" onClick={handleAddNote} disabled={submittingNote || !noteContent.trim()}>
+                    {submittingNote ? t.submitting : t.submit}
+                  </Button>
+                </div>
               </div>
-            ))}
-            {notes.length === 0 && <p className="text-sm text-slate-400">{lang === 'ko' ? '아직 노트가 없습니다.' : 'No notes yet.'}</p>}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                {notes.map(n => (
+                  <div key={n.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                    <p className="text-xs text-slate-400 mb-1">{n.created_by ?? 'anonymous'} · {new Date(n.created_at).toLocaleDateString()}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{n.content}</p>
+                  </div>
+                ))}
+                {notes.length === 0 && <p className="text-sm text-slate-400">{lang === 'ko' ? '아직 노트가 없습니다.' : 'No notes yet.'}</p>}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 };

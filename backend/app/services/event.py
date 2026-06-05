@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timezone
-from app.schemas.event import EventCapture, PersonIdentify
+from app.schemas.event import EventCapture, ExperimentEvent, PersonIdentify
 from app.db import d1
 
 
@@ -23,6 +23,17 @@ class EventService:
             """INSERT INTO event_log (user_id, cohort_id, event_name, properties, event_time, created_at, project_id)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             [data.user_id, cohort_id, data.event_name, properties, event_time, _now(), project_id],
+        )
+
+    async def track_experiment_event(self, data: ExperimentEvent) -> bool:
+        now = _now()
+        properties = json.dumps(data.properties) if data.properties else None
+        return await d1.execute(
+            """INSERT INTO experiment_event
+               (event_type, experiment_key, experiment_id, variant, url, user_id, properties, event_time, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [data.type, data.key, data.experiment_id, data.variant,
+             data.url, data.user_id, properties, now, now],
         )
 
     async def identify(self, data: PersonIdentify) -> bool:
