@@ -262,57 +262,6 @@ export function ApiKeyPage({ lang }: Props) {
         </CardContent>
       </Card>
 
-      {/* App Domain */}
-      <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
-        <CardContent className="pt-5 space-y-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t.baseUrl}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{t.baseUrlDesc}</p>
-          </div>
-          {editingBaseUrl ? (
-            <div className="flex gap-2">
-              <Input
-                value={baseUrlInput}
-                onChange={(e) => setBaseUrlInput(e.target.value)}
-                placeholder={t.baseUrlPlaceholder}
-                className="rounded-xl text-sm font-mono"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSaveBaseUrl();
-                  if (e.key === 'Escape') setEditingBaseUrl(false);
-                }}
-              />
-              <Button size="sm" className="shrink-0 rounded-xl" onClick={handleSaveBaseUrl}>{t.baseUrlSave}</Button>
-              <Button size="sm" variant="ghost" className="shrink-0 rounded-xl" onClick={() => setEditingBaseUrl(false)}>
-                <X size={14} />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <code className="flex-1 text-sm font-mono text-slate-600 dark:text-slate-300 truncate">
-                {baseUrl || <span className="text-slate-400 font-sans not-italic">{t.baseUrlPlaceholder}</span>}
-              </code>
-              <button
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-500 transition-colors shrink-0"
-                onClick={() => { setBaseUrlInput(baseUrl || ''); setEditingBaseUrl(true); }}
-              >
-                <Pencil size={12} /> {t.baseUrlEdit}
-              </button>
-            </div>
-          )}
-          {baseUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-xl w-full sm:w-auto"
-              onClick={() => navigate(`/projects/${currentProject.id}/visual-editor`)}
-            >
-              <Wand2 size={14} /> {t.openVisualEditor}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Danger Zone */}
       <Card className="rounded-2xl border border-rose-200 dark:border-rose-900/50">
         <CardContent className="pt-5 space-y-3">
