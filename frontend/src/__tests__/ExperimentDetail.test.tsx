@@ -51,6 +51,7 @@ const experiment = {
 const placement = {
   experiment_id: 's12-mid-reflection',
   placement_key: 'project-detail-home-reflection-cta',
+  variant_key: null,
   ui_id: 's12-mid-reflection-banner',
   ui_type: 'banner',
   title: '중간 회고 작성하기',

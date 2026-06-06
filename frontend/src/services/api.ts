@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api/v1';
+import { API_BASE_URL, apiFetch } from './http';
 
 export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed' | 'archived';
 
@@ -41,17 +41,17 @@ export interface VisualChangeCreate {
 
 export const projectApi = {
   list: async (): Promise<Project[]> => {
-    const res = await fetch(`${API_BASE_URL}/projects/`);
+    const res = await apiFetch(`${API_BASE_URL}/projects/`);
     if (!res.ok) throw new Error('Failed to fetch projects');
     return res.json();
   },
   get: async (id: string): Promise<Project> => {
-    const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`);
+    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`);
     if (!res.ok) throw new Error('Failed to fetch project');
     return res.json();
   },
   patch: async (id: string, data: { base_url?: string | null }): Promise<Project> => {
-    const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`, {
+    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -60,7 +60,7 @@ export const projectApi = {
     return res.json();
   },
   create: async (data: ProjectCreate): Promise<Project> => {
-    const res = await fetch(`${API_BASE_URL}/projects/`, {
+    const res = await apiFetch(`${API_BASE_URL}/projects/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -80,7 +80,7 @@ export const projectApi = {
     return res.json();
   },
   delete: async (id: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/projects/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (!res.ok) {
       let detail = 'Failed to delete project';
       try {
@@ -95,7 +95,7 @@ export const projectApi = {
     }
   },
   sdkStatus: async (id: string): Promise<ProjectSdkStatus> => {
-    const res = await fetch(`${API_BASE_URL}/projects/${id}/sdk-status`);
+    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}/sdk-status`);
     if (!res.ok) throw new Error('Failed to fetch SDK status');
     return res.json();
   },
@@ -104,12 +104,12 @@ export const projectApi = {
 export const visualChangeApi = {
   list: async (experimentId: string, variationKey?: string): Promise<VisualChange[]> => {
     const q = variationKey ? `?variation_key=${encodeURIComponent(variationKey)}` : '';
-    const res = await fetch(`${API_BASE_URL}/experiments/${experimentId}/visual-changes${q}`);
+    const res = await apiFetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/visual-changes${q}`);
     if (!res.ok) throw new Error('Failed to fetch visual changes');
     return res.json();
   },
   create: async (experimentId: string, data: VisualChangeCreate): Promise<VisualChange> => {
-    const res = await fetch(`${API_BASE_URL}/experiments/${experimentId}/visual-changes`, {
+    const res = await apiFetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/visual-changes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -118,7 +118,7 @@ export const visualChangeApi = {
     return res.json();
   },
   delete: async (changeId: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/visual-changes/${changeId}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_BASE_URL}/visual-changes/${encodeURIComponent(changeId)}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete visual change');
   },
 };
@@ -389,19 +389,19 @@ export const experimentApi = {
   list: async (status?: ExperimentStatus): Promise<Experiment[]> => {
     const url = new URL(`${API_BASE_URL}/experiments/`, window.location.origin);
     if (status) url.searchParams.set('status', status);
-    const response = await fetch(url.toString());
+    const response = await apiFetch(url.toString());
     if (!response.ok) throw new Error('Failed to fetch experiments');
     return response.json();
   },
 
   get: async (id: string): Promise<Experiment> => {
-    const response = await fetch(`${API_BASE_URL}/experiments/${id}`);
+    const response = await apiFetch(`${API_BASE_URL}/experiments/${id}`);
     if (!response.ok) throw new Error('Failed to fetch experiment');
     return response.json();
   },
 
   create: async (data: ExperimentCreate): Promise<Experiment> => {
-    const response = await fetch(`${API_BASE_URL}/experiments/`, {
+    const response = await apiFetch(`${API_BASE_URL}/experiments/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -411,7 +411,7 @@ export const experimentApi = {
   },
 
   update: async (id: string, data: ExperimentUpdate): Promise<Experiment> => {
-    const response = await fetch(`${API_BASE_URL}/experiments/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/experiments/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -428,7 +428,7 @@ export const experimentApi = {
   },
 
   delete: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/experiments/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/experiments/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete experiment');
@@ -437,7 +437,7 @@ export const experimentApi = {
 
 export const experimentPlacementApi = {
   list: async (experimentId: string): Promise<ExperimentPlacementConfig[]> => {
-    const response = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`);
+    const response = await apiFetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`);
     if (!response.ok) throw new Error('Failed to fetch experiment placements');
     return response.json();
   },
@@ -446,7 +446,7 @@ export const experimentPlacementApi = {
     experimentId: string,
     data: ExperimentPlacementConfigCreate,
   ): Promise<ExperimentPlacementConfig> => {
-    const response = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`, {
+    const response = await apiFetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -460,7 +460,7 @@ export const experimentPlacementApi = {
     placementKey: string,
     data: ExperimentPlacementConfigUpdate,
   ): Promise<ExperimentPlacementConfig> => {
-    const response = await fetch(
+    const response = await apiFetch(
       `${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}/config`,
       {
         method: 'PATCH',
@@ -473,7 +473,7 @@ export const experimentPlacementApi = {
   },
 
   delete: async (experimentId: string, placementKey: string): Promise<void> => {
-    const response = await fetch(
+    const response = await apiFetch(
       `${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}`,
       { method: 'DELETE' },
     );
@@ -520,17 +520,17 @@ export interface PlacementDecideResponse {
 export const placementApi = {
   list: async (projectId?: string): Promise<Placement[]> => {
     const params = projectId ? `?project_id=${encodeURIComponent(projectId)}` : '';
-    const res = await fetch(`${API_BASE_URL}/placements/${params}`);
+    const res = await apiFetch(`${API_BASE_URL}/placements/${params}`);
     if (!res.ok) throw new Error('Failed to fetch placements');
     return res.json();
   },
   get: async (key: string): Promise<Placement> => {
-    const res = await fetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}`);
+    const res = await apiFetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}`);
     if (!res.ok) throw new Error('Failed to fetch placement');
     return res.json();
   },
   create: async (data: PlacementCreate): Promise<Placement> => {
-    const res = await fetch(`${API_BASE_URL}/placements/`, {
+    const res = await apiFetch(`${API_BASE_URL}/placements/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -546,7 +546,7 @@ export const placementApi = {
     return res.json();
   },
   delete: async (key: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete placement');
   },
   decide: async (
@@ -555,7 +555,7 @@ export const placementApi = {
   ): Promise<PlacementDecideResponse> => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => { if (v !== undefined) qs.set(k, v); });
-    const res = await fetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}/decide?${qs}`);
+    const res = await apiFetch(`${API_BASE_URL}/placements/${encodeURIComponent(key)}/decide?${qs}`);
     if (!res.ok) throw new Error('Failed to decide placement');
     return res.json();
   },
@@ -605,19 +605,19 @@ export const bugReportApi = {
   list: async (status?: BugStatus): Promise<BugReport[]> => {
     const url = new URL(`${API_BASE_URL}/bug-reports/`, window.location.origin);
     if (status) url.searchParams.set('status', status);
-    const response = await fetch(url.toString());
+    const response = await apiFetch(url.toString());
     if (!response.ok) throw new Error('Failed to fetch bug reports');
     return response.json();
   },
 
   get: async (id: string): Promise<BugReport> => {
-    const response = await fetch(`${API_BASE_URL}/bug-reports/${id}`);
+    const response = await apiFetch(`${API_BASE_URL}/bug-reports/${id}`);
     if (!response.ok) throw new Error('Failed to fetch bug report');
     return response.json();
   },
 
   create: async (data: BugReportCreate): Promise<BugReport> => {
-    const response = await fetch(`${API_BASE_URL}/bug-reports/`, {
+    const response = await apiFetch(`${API_BASE_URL}/bug-reports/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -627,7 +627,7 @@ export const bugReportApi = {
   },
 
   update: async (id: string, data: Partial<{ status: BugStatus; severity: BugSeverity; title: string; description: string }>): Promise<BugReport> => {
-    const response = await fetch(`${API_BASE_URL}/bug-reports/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/bug-reports/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -637,7 +637,7 @@ export const bugReportApi = {
   },
 
   addComment: async (id: string, content: string, author?: string): Promise<BugReport> => {
-    const response = await fetch(`${API_BASE_URL}/bug-reports/${id}/comments`, {
+    const response = await apiFetch(`${API_BASE_URL}/bug-reports/${id}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content, author }),
@@ -649,7 +649,7 @@ export const bugReportApi = {
   uploadAttachment: async (file: File): Promise<Attachment> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch(`${API_BASE_URL}/bug-reports/upload`, {
+    const response = await apiFetch(`${API_BASE_URL}/bug-reports/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -658,7 +658,7 @@ export const bugReportApi = {
   },
 
   delete: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/bug-reports/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/bug-reports/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete bug report');
@@ -667,7 +667,7 @@ export const bugReportApi = {
 
 export const experimentResultApi = {
   getResult: async (id: string): Promise<ExperimentResult> => {
-    const res = await fetch(`${API_BASE_URL}/experiments/${id}/result`);
+    const res = await apiFetch(`${API_BASE_URL}/experiments/${id}/result`);
     if (!res.ok) throw new Error('Failed to fetch result');
     return res.json();
   },
@@ -675,7 +675,7 @@ export const experimentResultApi = {
 
 export const decisionApi = {
   create: async (data: { experiment_id: string; decision: DecisionType; reason: string; decided_by: string }): Promise<Decision> => {
-    const res = await fetch(`${API_BASE_URL}/decisions`, {
+    const res = await apiFetch(`${API_BASE_URL}/decisions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -684,12 +684,12 @@ export const decisionApi = {
     return res.json();
   },
   list: async (experimentId: string): Promise<Decision[]> => {
-    const res = await fetch(`${API_BASE_URL}/experiments/${experimentId}/decisions`);
+    const res = await apiFetch(`${API_BASE_URL}/experiments/${experimentId}/decisions`);
     if (!res.ok) throw new Error('Failed to fetch decisions');
     return res.json();
   },
   createNote: async (data: { experiment_id: string; content: string; created_by?: string }): Promise<LearningNote> => {
-    const res = await fetch(`${API_BASE_URL}/learning-notes`, {
+    const res = await apiFetch(`${API_BASE_URL}/learning-notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -698,7 +698,7 @@ export const decisionApi = {
     return res.json();
   },
   listNotes: async (experimentId: string): Promise<LearningNote[]> => {
-    const res = await fetch(`${API_BASE_URL}/experiments/${experimentId}/learning-notes`);
+    const res = await apiFetch(`${API_BASE_URL}/experiments/${experimentId}/learning-notes`);
     if (!res.ok) throw new Error('Failed to fetch notes');
     return res.json();
   },
@@ -707,12 +707,12 @@ export const decisionApi = {
 export const featureFlagApi = {
   list: async (includeArchived = false): Promise<FeatureFlag[]> => {
     const params = includeArchived ? '?include_archived=true' : '';
-    const res = await fetch(`${API_BASE_URL}/feature-flags/${params}`);
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/${params}`);
     if (!res.ok) throw new Error('Failed to fetch flags');
     return res.json();
   },
   create: async (data: FeatureFlagCreate): Promise<FeatureFlag> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/`, {
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -721,7 +721,7 @@ export const featureFlagApi = {
     return res.json();
   },
   update: async (flagKey: string, data: FeatureFlagUpdate): Promise<FeatureFlag> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}`, {
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -731,23 +731,23 @@ export const featureFlagApi = {
   },
   decide: async (flagKey: string, userId: string): Promise<{ variant: string }> => {
     const params = new URLSearchParams({ flag_key: flagKey, user_id: userId });
-    const res = await fetch(`${API_BASE_URL}/feature-flags/decide?${params}`);
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/decide?${params}`);
     if (!res.ok) throw new Error('Failed to decide');
     const json = await res.json();
     return json.data;
   },
   exposureSummary: async (flagKey: string): Promise<FeatureFlagExposureSummary> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/exposure-summary`);
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/exposure-summary`);
     if (!res.ok) throw new Error('Failed to fetch exposure summary');
     return res.json();
   },
   listRules: async (flagKey: string): Promise<FeatureFlagRule[]> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules`);
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules`);
     if (!res.ok) throw new Error('Failed to fetch flag rules');
     return res.json();
   },
   createRule: async (flagKey: string, data: FeatureFlagRuleCreate): Promise<FeatureFlagRule> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules`, {
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -756,21 +756,21 @@ export const featureFlagApi = {
     return res.json();
   },
   archive: async (flagKey: string): Promise<FeatureFlag> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/archive`, {
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/archive`, {
       method: 'POST',
     });
     if (!res.ok) throw new Error('Failed to archive flag');
     return res.json();
   },
   restore: async (flagKey: string): Promise<FeatureFlag> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/restore`, {
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/restore`, {
       method: 'POST',
     });
     if (!res.ok) throw new Error('Failed to restore flag');
     return res.json();
   },
   updateRule: async (flagKey: string, ruleId: string, data: FeatureFlagRuleUpdate): Promise<FeatureFlagRule> => {
-    const res = await fetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules/${encodeURIComponent(ruleId)}`, {
+    const res = await apiFetch(`${API_BASE_URL}/feature-flags/${encodeURIComponent(flagKey)}/rules/${encodeURIComponent(ruleId)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -782,17 +782,17 @@ export const featureFlagApi = {
 
 export const segmentApi = {
   queryTemplates: async (): Promise<SegmentQueryTemplate[]> => {
-    const res = await fetch(`${API_BASE_URL}/segments/query-templates`);
+    const res = await apiFetch(`${API_BASE_URL}/segments/query-templates`);
     if (!res.ok) throw new Error('Failed to fetch segment query templates');
     return res.json();
   },
   list: async (): Promise<Segment[]> => {
-    const res = await fetch(`${API_BASE_URL}/segments/`);
+    const res = await apiFetch(`${API_BASE_URL}/segments/`);
     if (!res.ok) throw new Error('Failed to fetch segments');
     return res.json();
   },
   create: async (data: SegmentCreate): Promise<Segment> => {
-    const res = await fetch(`${API_BASE_URL}/segments/`, {
+    const res = await apiFetch(`${API_BASE_URL}/segments/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -801,7 +801,7 @@ export const segmentApi = {
     return res.json();
   },
   refresh: async (segmentId: string, data?: { user_ids?: string[]; reason?: string }): Promise<SegmentRefreshResponse> => {
-    const res = await fetch(`${API_BASE_URL}/segments/${encodeURIComponent(segmentId)}/refresh`, {
+    const res = await apiFetch(`${API_BASE_URL}/segments/${encodeURIComponent(segmentId)}/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data ?? {}),
@@ -811,7 +811,7 @@ export const segmentApi = {
   },
   members: async (segmentId: string, limit = 100): Promise<SegmentMember[]> => {
     const params = new URLSearchParams({ limit: String(limit) });
-    const res = await fetch(`${API_BASE_URL}/segments/${encodeURIComponent(segmentId)}/members?${params}`);
+    const res = await apiFetch(`${API_BASE_URL}/segments/${encodeURIComponent(segmentId)}/members?${params}`);
     if (!res.ok) throw new Error('Failed to fetch segment members');
     return res.json();
   },
@@ -820,17 +820,17 @@ export const segmentApi = {
 export const analyticsApi = {
   getTrends: async (eventName: string, from: string, to: string, granularity = 'day'): Promise<TrendsResponse> => {
     const params = new URLSearchParams({ event_name: eventName, from, to, granularity });
-    const res = await fetch(`${API_BASE_URL}/analytics/trends?${params}`);
+    const res = await apiFetch(`${API_BASE_URL}/analytics/trends?${params}`);
     if (!res.ok) throw new Error('Failed to fetch trends');
     return res.json();
   },
   getEventNames: async (): Promise<string[]> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/event-names`);
+    const res = await apiFetch(`${API_BASE_URL}/analytics/event-names`);
     if (!res.ok) throw new Error('Failed to fetch event names');
     return res.json();
   },
   getFunnels: async (steps: string[], from?: string, to?: string): Promise<FunnelResponse> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/funnels`, {
+    const res = await apiFetch(`${API_BASE_URL}/analytics/funnels`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ steps, from_: from, to }),
@@ -839,7 +839,7 @@ export const analyticsApi = {
     return res.json();
   },
   getRetention: async (eventName: string): Promise<RetentionResponse> => {
-    const res = await fetch(`${API_BASE_URL}/analytics/retention?event_name=${eventName}`);
+    const res = await apiFetch(`${API_BASE_URL}/analytics/retention?event_name=${eventName}`);
     if (!res.ok) throw new Error('Failed to fetch retention');
     return res.json();
   },
