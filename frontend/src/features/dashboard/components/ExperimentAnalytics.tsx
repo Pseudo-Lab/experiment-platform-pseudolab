@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, TrendingUp, Radio, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import {
@@ -19,8 +19,10 @@ interface ExperimentAnalyticsProps {
 
 const t = {
   en: {
-    loading: 'Loading analytics...',
-    error: 'Failed to load analytics.',
+    loading: 'Loading monitoring data...',
+    error: 'Failed to load monitoring data.',
+    monitoringBadge: 'Live Monitoring',
+    noDataHint: 'Events collected via SDK will appear here.',
     totalImpressions: 'Total Impressions',
     conversionRateControl: 'Control Conv. Rate',
     conversionRateTreatment: 'Treatment Conv. Rate',
@@ -45,8 +47,10 @@ const t = {
     rate: 'Conv. Rate',
   },
   ko: {
-    loading: 'Analytics 불러오는 중...',
-    error: 'Analytics를 불러오지 못했습니다.',
+    loading: '모니터링 데이터 불러오는 중...',
+    error: '모니터링 데이터를 불러오지 못했습니다.',
+    monitoringBadge: '실시간 수집 중',
+    noDataHint: 'SDK에서 이벤트가 수집되면 여기에 표시됩니다.',
     totalImpressions: '총 노출',
     conversionRateControl: 'Control 전환율',
     conversionRateTreatment: 'Treatment 전환율',
@@ -153,6 +157,14 @@ export const ExperimentAnalytics: React.FC<ExperimentAnalyticsProps> = ({ experi
 
   return (
     <div className="space-y-6">
+      {/* Live monitoring header */}
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+          <Activity className="h-3 w-3" />
+          {labels.monitoringBadge}
+        </span>
+      </div>
+
       {/* Anomaly warnings */}
       {anomalies.length > 0 && (
         <div className="space-y-2">
@@ -191,7 +203,13 @@ export const ExperimentAnalytics: React.FC<ExperimentAnalyticsProps> = ({ experi
       </div>
 
       {impressions.total === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">{labels.noData}</p>
+        <div className="flex flex-col items-center justify-center gap-3 py-12 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+          <Radio className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+          <div className="text-center space-y-1">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{labels.noData}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{labels.noDataHint}</p>
+          </div>
+        </div>
       ) : (
         <>
           {/* Variant distribution bar chart */}

@@ -144,8 +144,12 @@ const translations = {
     placementSaveError: 'Failed to save placement.',
     placementDeleteError: 'Failed to delete placement.',
     tabOverview: 'Overview',
-    tabAnalytics: 'Analytics',
+    tabAnalytics: 'Monitoring',
     tabResults: 'Results',
+    placementBadgeSdk: 'SDK Integration',
+    placementBadgeSdkHelp: 'SDK decide() call automatically handles exposure.',
+    placementBadgeManual: 'Manual Setup',
+    placementBadgeManualHelp: 'Service team implements the UI directly. Refer to the Payload section.',
   },
   ko: {
     back: '목록으로',
@@ -271,8 +275,12 @@ const translations = {
     placementSaveError: 'Placement 저장에 실패했습니다.',
     placementDeleteError: 'Placement 삭제에 실패했습니다.',
     tabOverview: '개요',
-    tabAnalytics: 'Analytics',
+    tabAnalytics: '모니터링',
     tabResults: '결과',
+    placementBadgeSdk: 'SDK 연동',
+    placementBadgeSdkHelp: 'SDK decide() 호출 시 자동 노출됩니다.',
+    placementBadgeManual: '수동 설정',
+    placementBadgeManualHelp: '서비스 팀이 직접 UI를 구현합니다. Payload를 참고하세요.',
   },
 };
 
@@ -1379,6 +1387,23 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
               <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-950/60">
                 {!placementEditing && !placementCreating && selectedPlacement && (
                   <div className="space-y-5">
+                    {/* Placement type badge */}
+                    <div className={`flex items-start gap-3 p-3 rounded-xl border ${
+                      isAbTest
+                        ? 'bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/20 dark:border-indigo-900/40'
+                        : 'bg-amber-50/60 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/40'
+                    }`}>
+                      <span className={`shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        isAbTest
+                          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                      }`}>
+                        {isAbTest ? t.placementBadgeSdk : t.placementBadgeManual}
+                      </span>
+                      <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        {isAbTest ? t.placementBadgeSdkHelp : t.placementBadgeManualHelp}
+                      </p>
+                    </div>
                     {placementDetailGroups.map((group) => (
                       <section key={group.title} className="space-y-3 border-t border-slate-200 pt-4 first:border-t-0 first:pt-0 dark:border-slate-800">
                         <div className="space-y-1">
@@ -1458,9 +1483,9 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                       </div>
                     </section>
 
-                    <section className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                    <section className={`space-y-3 border-t pt-4 dark:border-slate-800 ${isQuasiExperiment ? 'border-amber-200 dark:border-amber-900/40' : 'border-slate-200'}`}>
                       <div className="space-y-1">
-                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.placementPayload}</h3>
+                        <h3 className={`text-sm font-bold ${isQuasiExperiment ? 'text-amber-700 dark:text-amber-300' : 'text-slate-800 dark:text-slate-200'}`}>{t.placementPayload}</h3>
                         <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t.placementPayloadHelp}</p>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
