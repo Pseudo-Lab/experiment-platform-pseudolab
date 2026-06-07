@@ -9,6 +9,7 @@ on:
       - '.github/workflows/gitops-ci.yml'
       - 'frontend/**'
       - 'backend/**'
+      - 'packages/**'
   pull_request:
     branches:
       - main
@@ -17,6 +18,7 @@ on:
       - '.github/workflows/gitops-ci.yml'
       - 'frontend/**'
       - 'backend/**'
+      - 'packages/**'
   workflow_dispatch:
 
 concurrency:
@@ -37,7 +39,17 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: |
+            packages/sdk/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install SDK dependencies
+        run: npm ci
+        working-directory: packages/sdk
+
+      - name: Build SDK
+        run: npm run build
+        working-directory: packages/sdk
 
       - name: Install frontend dependencies
         run: npm ci
