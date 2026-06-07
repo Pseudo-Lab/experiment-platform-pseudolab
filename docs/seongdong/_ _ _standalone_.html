@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>중간 회고 가이드</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f1923; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: #666; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); z-index: 10000; }
+    #__bundler_thumbnail { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #0f1923; z-index: 9999; }
+    #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
+    #__bundler_placeholder { color: #999; font-size: 14px; }
+  </style>
+  <noscript>
+    <style>#__bundler_loading { display: none; }</style>
+    <div style="position:fixed;bottom:12px;left:12px;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#999;background:rgba(255,255,255,0.9);padding:6px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);z-index:10000;">
+      This page requires JavaScript to display.
+    </div>
+  </noscript>
+</head>
+<body>
+  <div id="__bundler_thumbnail">
+  <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Nav bar -->
+    <rect width="400" height="300" fill="#0f1923"></rect>
+    <rect x="0" y="0" width="400" height="36" fill="#16232f"></rect>
+    <circle cx="20" cy="18" r="5" fill="#4ade80"></circle>
+    <rect x="34" y="14" width="60" height="8" rx="4" fill="#334155"></rect>
+    <!-- Progress bar -->
+    <rect x="0" y="36" width="400" height="2" fill="#1c2e3e"></rect>
+    <rect x="0" y="36" width="120" height="2" fill="#4a9eff"></rect>
+    <!-- Step dots -->
+    <circle cx="40" cy="56" r="4" fill="#4a9eff"></circle>
+    <rect x="48" y="52" width="16" height="8" rx="4" fill="#4a9eff"></rect>
+    <circle cx="72" cy="56" r="4" fill="#334155"></circle>
+    <circle cx="84" cy="56" r="4" fill="#334155"></circle>
+    <circle cx="96" cy="56" r="4" fill="#334155"></circle>
+    <!-- Section label -->
+    <rect x="32" y="72" width="40" height="6" rx="3" fill="#4a9eff" opacity="0.7"></rect>
+    <!-- Title lines -->
+    <rect x="32" y="86" width="200" height="12" rx="6" fill="#f0f4f8" opacity="0.9"></rect>
+    <rect x="32" y="104" width="160" height="12" rx="6" fill="#f0f4f8" opacity="0.7"></rect>
+    <!-- Chip group -->
+    <rect x="32" y="126" width="64" height="22" rx="11" fill="#16232f" stroke="#334155" stroke-width="1"></rect>
+    <rect x="104" y="126" width="64" height="22" rx="11" fill="#16232f" stroke="#4a9eff" stroke-width="1.5"></rect>
+    <rect x="176" y="126" width="64" height="22" rx="11" fill="#16232f" stroke="#334155" stroke-width="1"></rect>
+    <!-- Stat cards -->
+    <rect x="32" y="162" width="78" height="50" rx="8" fill="#16232f"></rect>
+    <rect x="118" y="162" width="78" height="50" rx="8" fill="#16232f"></rect>
+    <rect x="204" y="162" width="78" height="50" rx="8" fill="#16232f"></rect>
+    <rect x="290" y="162" width="78" height="50" rx="8" fill="#16232f"></rect>
+    <!-- Stat bar fills -->
+    <rect x="40" y="200" width="62" height="3" rx="1.5" fill="#1c2e3e"></rect>
+    <rect x="40" y="200" width="46" height="3" rx="1.5" fill="#4ade80"></rect>
+    <rect x="126" y="200" width="62" height="3" rx="1.5" fill="#1c2e3e"></rect>
+    <rect x="126" y="200" width="25" height="3" rx="1.5" fill="#4ade80"></rect>
+    <!-- Banner -->
+    <rect x="32" y="226" width="336" height="52" rx="12" fill="#0d2035" stroke="rgba(99,179,237,0.3)" stroke-width="1"></rect>
+    <rect x="48" y="240" width="36" height="36" rx="8" fill="rgba(74,158,255,0.2)"></rect>
+    <text x="66" y="264" text-anchor="middle" font-size="18" fill="#93c5fd">📝</text>
+    <rect x="96" y="245" width="80" height="8" rx="4" fill="#f0f4f8" opacity="0.8"></rect>
+    <rect x="96" y="259" width="120" height="6" rx="3" fill="#64748b"></rect>
+  </svg>
+</div>
+  <div id="__bundler_loading">Unpacking...</div>
+
+  <script>
+    
+document.addEventListener('DOMContentLoaded', async function() {
+  const loading = document.getElementById('__bundler_loading');
+  function setStatus(msg) { if (loading) loading.textContent = msg; }
+
+  // Error sink persists across replaceWith since it's on window, not the DOM.
+  window.addEventListener('error', function(e) {
+    var p = document.body || document.documentElement;
+    var d = document.getElementById('__bundler_err') || p.appendChild(document.createElement('div'));
+    d.id = '__bundler_err';
+    d.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;font:12px/1.4 ui-monospace,monospace;background:#2a1215;color:#ff8a80;padding:10px 14px;border-radius:8px;border:1px solid #5c2b2e;z-index:99999;white-space:pre-wrap;max-height:40vh;overflow:auto';
+    d.textContent = (d.textContent ? d.textContent + String.fromCharCode(10) : '') +
+      '[bundle] ' + (e.message || e.type) +
+      (e.filename ? ' (' + e.filename.slice(0, 60) + ':' + e.lineno + ')' : '');
+  }, true);
+
+  try {
+    const manifestEl = document.querySelector('script[type="__bundler/manifest"]');
+    const templateEl = document.querySelector('script[type="__bundler/template"]');
+    if (!manifestEl || !templateEl) {
+      setStatus('Error: missing bundle data');
+      console.error('[bundler] Missing script tags — manifestEl:', !!manifestEl, 'templateEl:', !!templateEl);
+      return;
+    }
+
+    const manifest = JSON.parse(manifestEl.textContent);
+    let template = JSON.parse(templateEl.textContent);
+
+    const uuids = Object.keys(manifest);
+    setStatus('Unpacking ' + uuids.length + ' assets...');
+
+    const blobUrls = {};
+    await Promise.all(uuids.map(async (uuid) => {
+      const entry = manifest[uuid];
+      try {
+        const binaryStr = atob(entry.data);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        let finalBytes = bytes;
+        if (entry.compressed) {
+          if (typeof DecompressionStream !== 'undefined') {
+            const ds = new DecompressionStream('gzip');
+            const writer = ds.writable.getWriter();
+            const reader = ds.readable.getReader();
+            writer.write(bytes);
+            writer.close();
+            const chunks = [];
+            let totalLen = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              totalLen += value.length;
+            }
+            finalBytes = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const chunk of chunks) { finalBytes.set(chunk, offset); offset += chunk.length; }
+          } else {
+            console.warn('DecompressionStream not available, asset ' + uuid + ' may not render');
+          }
+        }
+
+        blobUrls[uuid] = URL.createObjectURL(new Blob([finalBytes], { type: entry.mime }));
+      } catch (err) {
+        console.error('Failed to decode asset ' + uuid + ':', err);
+        blobUrls[uuid] = URL.createObjectURL(new Blob([], { type: entry.mime }));
+      }
+    }));
+
+    const extResEl = document.querySelector('script[type="__bundler/ext_resources"]');
+    const extResources = extResEl ? JSON.parse(extResEl.textContent) : [];
+    const resourceMap = {};
+    for (const entry of extResources) {
+      if (blobUrls[entry.uuid]) resourceMap[entry.id] = blobUrls[entry.uuid];
+    }
+
+    setStatus('Rendering...');
+    for (const uuid of uuids) template = template.split(uuid).join(blobUrls[uuid]);
+
+    // Strip integrity + crossorigin — blob URLs from a file:// document inherit
+    // a null origin, so crossorigin forces a CORS fetch that SRI then rejects.
+    // The manifest bytes are ours; SRI protects against CDN compromise, not this.
+    template = template.replace(/\s+integrity="[^"]*"/gi, '').replace(/\s+crossorigin="[^"]*"/gi, '');
+
+    const resourceScript = '<script>window.__resources = ' +
+      JSON.stringify(resourceMap).split('</' + 'script>').join('<\\/' + 'script>') +
+      ';</' + 'script>';
+    // Inject after <head> so the DOCTYPE stays first; prepending the script
+    // would push the parser into quirks mode. DOMParser always emits a <head>
+    // (synthesizing one if the source HTML omitted it) but may carry
+    // attributes through, so match the full opening tag. slice() rather than
+    // replace() keeps us clear of $-pattern substitution in resourceScript.
+    const headOpen = template.match(/<head[^>]*>/i);
+    if (headOpen) {
+      const i = headOpen.index + headOpen[0].length;
+      template = template.slice(0, i) + resourceScript + template.slice(i);
+    }
+
+    // Parse the template and swap the root element. Scripts inserted via
+    // DOMParser/replaceWith are inert per spec — re-create each with
+    // createElement so they execute, awaiting onload for src scripts to
+    // preserve ordering (React before ReactDOM before Babel before text/babel).
+    const doc = new DOMParser().parseFromString(template, 'text/html');
+    document.documentElement.replaceWith(doc.documentElement);
+    const dead = Array.from(document.scripts);
+    for (const old of dead) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.textContent = old.textContent;
+      // text/babel scripts with a src: fetch and inline. transformScriptTags
+      // does XHR against the src, but blob:null/ from a file:// origin is
+      // silently dropped. Inlining makes it a plain inline babel script,
+      // which transformScriptTags handles unconditionally.
+      if ((s.type === 'text/babel' || s.type === 'text/jsx') && s.src) {
+        const r = await fetch(s.src);
+        s.textContent = await r.text();
+        s.removeAttribute('src');
+      }
+      const p = s.src ? new Promise(function(r) { s.onload = s.onerror = r; }) : null;
+      old.replaceWith(s);
+      if (p) await p;
+    }
+    // Babel standalone auto-transforms type=text/babel on DOMContentLoaded,
+    // which fired before we swapped the document. Trigger manually if present.
+    if (window.Babel && typeof window.Babel.transformScriptTags === 'function') {
+      window.Babel.transformScriptTags();
+    }
+  } catch (err) {
+    setStatus('Error unpacking: ' + err.message);
+    console.error('Bundle unpack error:', err);
+  }
+});
+
+  </script>
+
+  <script type="__bundler/manifest">
+{}
+  </script>
+
+  <script type="__bundler/ext_resources">
+[]
+  </script>
+
+  <script type="__bundler/template">
+"<!DOCTYPE html>\n<html lang=\"ko\"><head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>중간 회고 가이드<\u002Ftitle>\n\n\n<style>\n  :root {\n    --bg: #0f1923;\n    --surface: #16232f;\n    --surface-2: #1c2e3e;\n    --surface-3: #0d1e2b;\n    --border: rgba(255,255,255,0.06);\n    --border-strong: rgba(255,255,255,0.12);\n    --text-primary: #f0f4f8;\n    --text-secondary: #a0aab4;\n    --text-hint: #4a5568;\n    --accent: #4a9eff;\n    --accent-bg: rgba(74,158,255,0.10);\n    --accent-text: #93c5fd;\n    --green: #4ade80;\n    --green-bg: rgba(74,222,128,0.10);\n    --green-text: #86efac;\n    --amber: #fbbf24;\n    --amber-bg: rgba(251,191,36,0.10);\n    --amber-text: #fde68a;\n    --red: #f87171;\n    --red-bg: rgba(248,113,113,0.10);\n    --radius-sm: 8px;\n    --radius-md: 10px;\n    --radius-lg: 14px;\n    --font: 'Apple SD Gothic Neo', 'Pretendard', -apple-system, sans-serif;\n  }\n\n  * { box-sizing: border-box; margin: 0; padding: 0; }\n\n  body {\n    font-family: var(--font);\n    background: var(--bg);\n    color: var(--text-primary);\n    min-height: 100vh;\n    padding-bottom: 80px;\n  }\n\n  /* ── Top nav ── */\n  .top-nav {\n    display: flex; align-items: center; justify-content: space-between;\n    padding: 14px 24px;\n    background: var(--bg);\n    border-bottom: 1px solid var(--border);\n    position: sticky; top: 0; z-index: 100;\n  }\n  .nav-left { display: flex; align-items: center; gap: 10px; }\n  .online-dot { width: 9px; height: 9px; background: var(--green); border-radius: 50%; flex-shrink: 0; }\n  .back-btn { color: var(--text-secondary); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 5px; }\n  .back-btn:hover { color: var(--text-primary); }\n  .nav-title {\n    font-size: 13px; color: var(--text-secondary);\n    display: flex; align-items: center; gap: 6px;\n  }\n  .nav-title .sep { color: var(--text-hint); }\n  .nav-title .cur { color: var(--text-primary); font-weight: 500; }\n  .share-btn {\n    width: 32px; height: 32px; border-radius: 50%;\n    background: rgba(255,255,255,0.06);\n    display: flex; align-items: center; justify-content: center;\n    cursor: pointer; font-size: 14px; color: var(--text-secondary);\n  }\n\n  /* ── Progress ── */\n  .progress-wrap { height: 2px; background: rgba(255,255,255,0.05); }\n  .progress-bar { height: 2px; background: var(--accent); width: 20%; transition: width 0.4s ease; }\n\n  /* ── Layout ── */\n  .page-wrap {\n    max-width: 760px; margin: 0 auto; padding: 0 24px;\n  }\n\n  /* ── Step dots ── */\n  .steps {\n    display: flex; align-items: center; gap: 6px;\n    padding: 28px 0 0;\n  }\n  .step-dot {\n    width: 8px; height: 8px; border-radius: 50%;\n    background: rgba(255,255,255,0.12); transition: all 0.2s;\n    flex-shrink: 0;\n  }\n  .step-dot.done { background: var(--accent); }\n  .step-dot.current { background: var(--accent); width: 20px; border-radius: 4px; }\n  .step-label { font-size: 11px; color: var(--text-hint); margin-left: 4px; }\n\n  /* ── Section header ── */\n  .section-header { padding: 32px 0 6px; }\n  .section-label {\n    font-size: 10px; font-weight: 600; letter-spacing: 1.5px;\n    text-transform: uppercase; color: var(--accent); margin-bottom: 8px;\n  }\n  .section-title {\n    font-size: 20px; font-weight: 700; color: var(--text-primary);\n    line-height: 1.4; margin-bottom: 8px;\n  }\n  .section-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }\n\n  /* ── Cards ── */\n  .card {\n    background: var(--surface);\n    border: 1px solid var(--border);\n    border-radius: var(--radius-lg);\n    padding: 18px 20px;\n    margin-bottom: 10px;\n  }\n  .card-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }\n  .card-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }\n\n  /* ── Chip selector ── */\n  .chip-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }\n  .chip {\n    display: inline-flex; align-items: center; gap: 6px;\n    padding: 8px 16px; border-radius: 100px;\n    border: 1px solid var(--border-strong);\n    background: var(--surface);\n    font-size: 13px; color: var(--text-secondary);\n    cursor: pointer; transition: all 0.15s; user-select: none;\n  }\n  .chip:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-bg); }\n  .chip.selected { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-text); font-weight: 600; }\n  .chip .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.7; }\n\n  /* hint card */\n  #outputHint { margin-top: 14px; display: none; }\n  .hint-card {\n    background: var(--accent-bg);\n    border: 1px solid rgba(74,158,255,0.25);\n    border-radius: var(--radius-md);\n    padding: 14px 16px;\n  }\n  .hint-card .card-title { color: var(--accent-text); }\n  .hint-card .card-desc { color: var(--accent-text); opacity: 0.8; }\n\n  /* ── Divider ── */\n  .section-sep { height: 1px; background: var(--border); border: none; margin: 36px 0 0; }\n\n  /* ── Stat grid ── */\n  .stat-grid {\n    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;\n    margin-top: 18px;\n  }\n  .stat-card {\n    background: var(--surface);\n    border: 1px solid var(--border);\n    border-radius: var(--radius-md);\n    padding: 14px 16px;\n  }\n  .stat-label { font-size: 11px; color: var(--text-hint); margin-bottom: 6px; }\n  .stat-value { font-size: 22px; font-weight: 600; color: var(--text-primary); }\n  .stat-unit { font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-left: 2px; }\n  .stat-bar-wrap { margin-top: 8px; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }\n  .stat-bar-fill { height: 3px; border-radius: 2px; background: var(--green); }\n\n  /* ── Badge ── */\n  .badge {\n    display: inline-flex; align-items: center;\n    padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 500;\n  }\n  .badge-green { background: var(--green-bg); color: var(--green-text); border: 1px solid rgba(74,222,128,0.2); }\n  .badge-amber { background: var(--amber-bg); color: var(--amber-text); border: 1px solid rgba(251,191,36,0.2); }\n  .badge-blue  { background: var(--accent-bg); color: var(--accent-text); border: 1px solid rgba(74,158,255,0.2); }\n\n  /* ── Action list ── */\n  .action-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }\n  .action-item {\n    display: flex; align-items: flex-start; gap: 12px;\n    background: var(--surface); border: 1px solid var(--border);\n    border-radius: var(--radius-md); padding: 14px 16px;\n  }\n  .action-num {\n    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;\n    background: var(--accent-bg); color: var(--accent-text);\n    font-size: 11px; font-weight: 600;\n    display: flex; align-items: center; justify-content: center; margin-top: 1px;\n    border: 1px solid rgba(74,158,255,0.2);\n  }\n  .action-text { flex: 1; }\n  .action-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }\n  .action-sub { font-size: 12px; color: var(--text-secondary); }\n\n  /* warm box */\n  .warm-box {\n    background: var(--green-bg);\n    border: 1px solid rgba(74,222,128,0.15);\n    border-radius: var(--radius-md);\n    padding: 14px 16px; margin-top: 16px;\n    font-size: 13px; color: var(--green-text); line-height: 1.6;\n  }\n\n  /* ── Form ── */\n  .form-block { margin-top: 18px; display: flex; flex-direction: column; gap: 14px; }\n  .form-field { display: flex; flex-direction: column; gap: 6px; }\n  .form-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }\n  .form-hint { font-size: 12px; color: var(--text-hint); line-height: 1.5; }\n  textarea {\n    font-family: var(--font); font-size: 13px; color: var(--text-primary);\n    background: var(--surface); border: 1px solid var(--border-strong);\n    border-radius: var(--radius-md); padding: 12px 14px;\n    resize: vertical; min-height: 80px; line-height: 1.6;\n    outline: none; transition: border-color 0.15s;\n  }\n  textarea:focus { border-color: var(--accent); }\n  textarea::placeholder { color: var(--text-hint); }\n\n  /* output grid */\n  .output-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }\n  .output-option {\n    display: flex; align-items: center; gap: 10px;\n    padding: 11px 14px; border: 1px solid var(--border-strong);\n    border-radius: var(--radius-md); cursor: pointer;\n    transition: all 0.15s; background: var(--surface);\n  }\n  .output-option:hover { border-color: var(--accent); background: var(--accent-bg); }\n  .output-option.selected { border-color: var(--accent); background: var(--accent-bg); }\n  .output-option input[type=\"checkbox\"] { accent-color: var(--accent); width: 14px; height: 14px; flex-shrink: 0; }\n  .output-option-text { font-size: 12px; font-weight: 500; color: var(--text-secondary); }\n  .output-option.selected .output-option-text { color: var(--accent-text); }\n\n  /* ── Checklist ── */\n  .checklist { display: flex; flex-direction: column; gap: 10px; }\n  .check-row {\n    display: flex; align-items: center; gap: 10px;\n    font-size: 13px; color: var(--text-secondary);\n  }\n  .check-icon { font-size: 14px; color: var(--text-hint); width: 18px; text-align: center; }\n  .check-icon.done { color: var(--green); }\n\n  /* ── Submit btn ── */\n  .btn-submit {\n    display: flex; align-items: center; justify-content: center; gap: 8px;\n    width: 100%; padding: 14px;\n    background: linear-gradient(135deg, #22c55e, #16a34a);\n    color: #fff; font-family: var(--font); font-size: 15px; font-weight: 700;\n    border: none; border-radius: var(--radius-md); cursor: pointer;\n    transition: opacity 0.15s; margin-top: 24px;\n  }\n  .btn-submit:hover { opacity: 0.88; }\n\n  /* ── Responsive ── */\n  @media (max-width: 600px) {\n    .stat-grid { grid-template-columns: repeat(2, 1fr); }\n    .output-grid { grid-template-columns: repeat(2, 1fr); }\n  }\n<\u002Fstyle>\n<\u002Fhead>\n<body>\n\n<!-- Top Nav -->\n<div class=\"top-nav\">\n  <div class=\"nav-left\">\n    <div class=\"online-dot\"><\u002Fdiv>\n    <div class=\"back-btn\">← 돌아가기<\u002Fdiv>\n    <div class=\"nav-title\" style=\"margin-left:8px;\">\n      <span>차세대 지능형 실험 플랫폼<\u002Fspan>\n      <span class=\"sep\">›<\u002Fspan>\n      <span class=\"cur\">중간 회고<\u002Fspan>\n    <\u002Fdiv>\n  <\u002Fdiv>\n  <div class=\"share-btn\">⤴<\u002Fdiv>\n<\u002Fdiv>\n<div class=\"progress-wrap\">\n  <div class=\"progress-bar\" id=\"progressBar\"><\u002Fdiv>\n<\u002Fdiv>\n\n<div class=\"page-wrap\">\n\n  <!-- Step dots -->\n  <div class=\"steps\">\n    <div class=\"step-dot done\"><\u002Fdiv>\n    <div class=\"step-dot current\"><\u002Fdiv>\n    <div class=\"step-dot\"><\u002Fdiv>\n    <div class=\"step-dot\"><\u002Fdiv>\n    <div class=\"step-dot\"><\u002Fdiv>\n    <span class=\"step-label\">섹션 A → E · 5단계<\u002Fspan>\n  <\u002Fdiv>\n\n  <!-- ════════ 섹션 A ════════ -->\n  <div class=\"section-header\">\n    <div class=\"section-label\">섹션 A<\u002Fdiv>\n    <div class=\"section-title\">지금 우리 프로젝트는<br>어떤 성격인가요?<\u002Fdiv>\n    <div class=\"section-desc\">프로젝트 방향과 핵심 산출물이 떠오르는 유형을 선택해주세요.<br>둘 이상 해당되면 가장 중심적인 것 하나를 골라도 괜찮아요.<\u002Fdiv>\n  <\u002Fdiv>\n\n  <div class=\"chip-group\" id=\"projectTypeGroup\">\n    <div class=\"chip\" data-val=\"research\" onclick=\"selectChip(this,'projectTypeGroup')\"><span class=\"dot\"><\u002Fspan> 연구형<\u002Fdiv>\n    <div class=\"chip\" data-val=\"implementation\" onclick=\"selectChip(this,'projectTypeGroup')\"><span class=\"dot\"><\u002Fspan> 구현형<\u002Fdiv>\n    <div class=\"chip\" data-val=\"presentation\" onclick=\"selectChip(this,'projectTypeGroup')\"><span class=\"dot\"><\u002Fspan> 발표형<\u002Fdiv>\n    <div class=\"chip\" data-val=\"documentation\" onclick=\"selectChip(this,'projectTypeGroup')\"><span class=\"dot\"><\u002Fspan> 문서형<\u002Fdiv>\n    <div class=\"chip\" data-val=\"opensource\" onclick=\"selectChip(this,'projectTypeGroup')\"><span class=\"dot\"><\u002Fspan> 오픈소스형<\u002Fdiv>\n  <\u002Fdiv>\n\n  <div id=\"outputHint\">\n    <div class=\"hint-card\">\n      <div class=\"card-title\" id=\"outputHintTitle\"><\u002Fdiv>\n      <div class=\"card-desc\" id=\"outputHintDesc\"><\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <hr class=\"section-sep\">\n\n  <!-- ════════ 섹션 B ════════ -->\n  <div class=\"section-header\">\n    <div class=\"section-label\">섹션 B<\u002Fdiv>\n    <div class=\"section-title\">지금까지의 진행 상태<\u002Fdiv>\n    <div class=\"section-desc\">현재 기록된 참여 현황이에요. 데이터를 보며 흐름을 정리해봐요.<\u002Fdiv>\n  <\u002Fdiv>\n\n  <div class=\"stat-grid\">\n    <div class=\"stat-card\">\n      <div class=\"stat-label\">출석률<\u002Fdiv>\n      <div class=\"stat-value\">75<span class=\"stat-unit\">%<\u002Fspan><\u002Fdiv>\n      <div class=\"stat-bar-wrap\"><div class=\"stat-bar-fill\" style=\"width:75%\"><\u002Fdiv><\u002Fdiv>\n    <\u002Fdiv>\n    <div class=\"stat-card\">\n      <div class=\"stat-label\">발표 횟수<\u002Fdiv>\n      <div class=\"stat-value\">2<span class=\"stat-unit\">회<\u002Fspan><\u002Fdiv>\n      <div class=\"stat-bar-wrap\"><div class=\"stat-bar-fill\" style=\"width:40%\"><\u002Fdiv><\u002Fdiv>\n    <\u002Fdiv>\n    <div class=\"stat-card\">\n      <div class=\"stat-label\">GitHub 업로드<\u002Fdiv>\n      <div class=\"stat-value\">5<span class=\"stat-unit\">건<\u002Fspan><\u002Fdiv>\n      <div class=\"stat-bar-wrap\"><div class=\"stat-bar-fill\" style=\"width:50%\"><\u002Fdiv><\u002Fdiv>\n    <\u002Fdiv>\n    <div class=\"stat-card\">\n      <div class=\"stat-label\">게시물/문서<\u002Fdiv>\n      <div class=\"stat-value\">1<span class=\"stat-unit\">건<\u002Fspan><\u002Fdiv>\n      <div class=\"stat-bar-wrap\"><div class=\"stat-bar-fill\" style=\"width:20%\"><\u002Fdiv><\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <div style=\"margin-top:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;\">\n    <span class=\"badge badge-green\">공개 가능한 결과물 있음<\u002Fspan>\n    <span class=\"badge badge-amber\">내부 공유 자료 포함<\u002Fspan>\n    <span style=\"font-size:11px; color:var(--text-hint);\">※ 실제 데이터로 대체됩니다<\u002Fspan>\n  <\u002Fdiv>\n\n  <hr class=\"section-sep\">\n\n  <!-- ════════ 섹션 C ════════ -->\n  <div class=\"section-header\">\n    <div class=\"section-label\">섹션 C<\u002Fdiv>\n    <div class=\"section-title\">남은 기간, 이렇게 가면<br>완주에 가까워져요<\u002Fdiv>\n    <div class=\"section-desc\">프로젝트 유형과 현재 상태를 기반으로 추천 경로를 안내해드려요.<\u002Fdiv>\n  <\u002Fdiv>\n\n  <div class=\"action-list\">\n    <div class=\"action-item\">\n      <div class=\"action-num\">1<\u002Fdiv>\n      <div class=\"action-text\">\n        <div class=\"action-name\">GitHub에 진행 내용 정리 push<\u002Fdiv>\n        <div class=\"action-sub\">README 업데이트 + 코드 정리까지 하면 산출물로 인정됩니다<\u002Fdiv>\n      <\u002Fdiv>\n      <span class=\"badge badge-blue\">우선<\u002Fspan>\n    <\u002Fdiv>\n    <div class=\"action-item\">\n      <div class=\"action-num\">2<\u002Fdiv>\n      <div class=\"action-text\">\n        <div class=\"action-name\">최소 1회 이상 발표 완료<\u002Fdiv>\n        <div class=\"action-sub\">진행 상황 공유 발표도 포함됩니다<\u002Fdiv>\n      <\u002Fdiv>\n    <\u002Fdiv>\n    <div class=\"action-item\">\n      <div class=\"action-num\">3<\u002Fdiv>\n      <div class=\"action-text\">\n        <div class=\"action-name\">공개용 자료 1건 정리<\u002Fdiv>\n        <div class=\"action-sub\">블로그 포스트, 회고 문서, 공유 슬라이드 중 하나<\u002Fdiv>\n      <\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <div class=\"warm-box\">\n    지금까지 잘 걸어오고 있어요. 이제 남은 경로를 함께 정리해볼까요? 🌱\n  <\u002Fdiv>\n\n  <hr class=\"section-sep\">\n\n  <!-- ════════ 섹션 D ════════ -->\n  <div class=\"section-header\">\n    <div class=\"section-label\">섹션 D<\u002Fdiv>\n    <div class=\"section-title\">우리 팀의 지금을<br>직접 기록해보세요<\u002Fdiv>\n    <div class=\"section-desc\">짧아도 괜찮아요. 지금 솔직하게 쓰는 것이 가장 좋은 회고예요.<\u002Fdiv>\n  <\u002Fdiv>\n\n  <div class=\"form-block\">\n    <div class=\"form-field\">\n      <label class=\"form-label\">지금 가장 잘 되고 있는 점<\u002Flabel>\n      <span class=\"form-hint\">팀의 강점, 잘 굴러가고 있는 리듬, 기억하고 싶은 순간<\u002Fspan>\n      <textarea placeholder=\"예) 매주 꾸준히 모이고 있고, 서로 막히는 부분을 빠르게 공유하고 있어요.\"><\u002Ftextarea>\n    <\u002Fdiv>\n    <div class=\"form-field\">\n      <label class=\"form-label\">현재 막히는 점<\u002Flabel>\n      <span class=\"form-hint\">기술적 문제, 방향 혼선, 시간 부족 등 솔직하게<\u002Fspan>\n      <textarea placeholder=\"예) 데이터 전처리에서 예상보다 오래 걸리고 있고, GitHub 업로드가 불규칙해요.\"><\u002Ftextarea>\n    <\u002Fdiv>\n    <div class=\"form-field\">\n      <label class=\"form-label\">남은 기간 가장 중요한 목표 1가지<\u002Flabel>\n      <span class=\"form-hint\">딱 하나만 골라보세요. 가장 완주에 가까워지는 것<\u002Fspan>\n      <textarea style=\"min-height:64px;\" placeholder=\"예) 최종 발표 자료를 완성하고 GitHub에 올리기\"><\u002Ftextarea>\n    <\u002Fdiv>\n    <div class=\"form-field\">\n      <label class=\"form-label\">우리 팀의 최종 산출물 형태<\u002Flabel>\n      <span class=\"form-hint\">완주 기준으로 삼을 산출물을 선택해주세요 (복수 선택 가능)<\u002Fspan>\n      <div class=\"output-grid\">\n        <label class=\"output-option\" onclick=\"toggleOutput(this)\">\n          <input type=\"checkbox\" value=\"github\"><span class=\"output-option-text\">GitHub 저장소<\u002Fspan>\n        <\u002Flabel>\n        <label class=\"output-option\" onclick=\"toggleOutput(this)\">\n          <input type=\"checkbox\" value=\"post\"><span class=\"output-option-text\">블로그 / 게시물<\u002Fspan>\n        <\u002Flabel>\n        <label class=\"output-option\" onclick=\"toggleOutput(this)\">\n          <input type=\"checkbox\" value=\"presentation\"><span class=\"output-option-text\">발표 슬라이드<\u002Fspan>\n        <\u002Flabel>\n        <label class=\"output-option\" onclick=\"toggleOutput(this)\">\n          <input type=\"checkbox\" value=\"doc\"><span class=\"output-option-text\">문서 / 보고서<\u002Fspan>\n        <\u002Flabel>\n        <label class=\"output-option\" onclick=\"toggleOutput(this)\">\n          <input type=\"checkbox\" value=\"public\"><span class=\"output-option-text\">공개용 자료<\u002Fspan>\n        <\u002Flabel>\n        <label class=\"output-option\" onclick=\"toggleOutput(this)\">\n          <input type=\"checkbox\" value=\"internal\"><span class=\"output-option-text\">내부 공유 자료<\u002Fspan>\n        <\u002Flabel>\n      <\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <hr class=\"section-sep\">\n\n  <!-- ════════ 섹션 E ════════ -->\n  <div class=\"section-header\">\n    <div class=\"section-label\">섹션 E<\u002Fdiv>\n    <div class=\"section-title\">거의 다 왔어요<\u002Fdiv>\n    <div class=\"section-desc\">제출하면 빌더와 운영진이 팀 회고 내용을 확인할 수 있어요.<br>남은 기간도 함께 완주해봐요 🎯<\u002Fdiv>\n  <\u002Fdiv>\n\n  <div class=\"card\" style=\"background:var(--surface-3);\">\n    <div class=\"card-title\" style=\"font-size:12px; color:var(--text-secondary); margin-bottom:14px;\">제출 전 확인<\u002Fdiv>\n    <div class=\"checklist\">\n      <div class=\"check-row\">\n        <span class=\"check-icon\" id=\"check-type\">○<\u002Fspan>\n        프로젝트 성격 선택\n      <\u002Fdiv>\n      <div class=\"check-row\">\n        <span class=\"check-icon\">○<\u002Fspan>\n        회고 내용 입력 (최소 1개)\n      <\u002Fdiv>\n      <div class=\"check-row\">\n        <span class=\"check-icon\">○<\u002Fspan>\n        최종 산출물 형태 선택\n      <\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <button class=\"btn-submit\" onclick=\"handleSubmit()\">\n    회고 제출하기 →\n  <\u002Fbutton>\n\n  <div style=\"text-align:center; margin-top:16px; font-size:12px; color:var(--text-hint);\">\n    프로젝트마다 완주의 모양은 조금씩 다릅니다.<br>우리 팀만의 완주를 응원해요.\n  <\u002Fdiv>\n\n<\u002Fdiv><!-- /page-wrap -->\n\n<script>\n  const outputHints = {\n    research:       { title: '핵심 산출물 · 연구형',    desc: '논문 초안, 실험 결과 문서, 데이터셋 정리, 분석 보고서가 중심이에요. GitHub에 실험 코드와 함께 정리하면 더 탄탄해져요.' },\n    implementation: { title: '핵심 산출물 · 구현형',    desc: 'GitHub 저장소가 가장 중요해요. README 정비, 실행 가능한 코드, 데모 영상 또는 스크린샷도 챙겨두면 좋아요.' },\n    presentation:   { title: '핵심 산출물 · 발표형',    desc: '발표 슬라이드와 발표 영상(또는 회고 문서)이 핵심이에요. 발표 횟수를 채우는 것이 완주 기준에 직접 연결돼요.' },\n    documentation:  { title: '핵심 산출물 · 문서형',    desc: '블로그 게시물, 노션/Docs 정리, 가이드 문서가 중심이에요. 공개 가능한 형태로 정리하면 팀 밖에서도 활용할 수 있어요.' },\n    opensource:     { title: '핵심 산출물 · 오픈소스형', desc: 'GitHub 저장소에 LICENSE, README, CONTRIBUTING 파일까지 포함해야 완성도 있는 오픈소스로 인정돼요.' },\n  };\n\n  function selectChip(el, groupId) {\n    document.querySelectorAll('#' + groupId + ' .chip').forEach(c => c.classList.remove('selected'));\n    el.classList.add('selected');\n    const hint = outputHints[el.dataset.val];\n    if (hint) {\n      document.getElementById('outputHintTitle').textContent = hint.title;\n      document.getElementById('outputHintDesc').textContent = hint.desc;\n      document.getElementById('outputHint').style.display = 'block';\n    }\n    document.getElementById('check-type').textContent = '✓';\n    document.getElementById('check-type').classList.add('done');\n    document.getElementById('progressBar').style.width = '60%';\n  }\n\n  function toggleOutput(label) {\n    setTimeout(() => {\n      label.classList.toggle('selected', label.querySelector('input').checked);\n    }, 0);\n  }\n\n  function handleSubmit() {\n    document.getElementById('progressBar').style.width = '100%';\n    alert('회고가 제출되었어요 🎉\\n남은 기간도 함께 완주해봐요!');\n  }\n<\u002Fscript>\n\n\n\n<\u002Fbody><\u002Fhtml>"
+  </script>
+</body>
+</html>
