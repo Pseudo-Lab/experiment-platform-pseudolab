@@ -12,16 +12,21 @@ RUN npm config set registry https://registry.npmjs.org/ \
 # publishes do not need to emulate Node.js just to produce static assets.
 ARG BUILDPLATFORM
 FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS build
-WORKDIR /app/frontend
+WORKDIR /app
 
-# Copy package files and install dependencies
-COPY frontend/package*.json ./
-RUN npm config set registry https://registry.npmjs.org/ \
- && npm ci --retry 2
+RUN npm config set registry https://registry.npmjs.org/
 
-# Copy frontend sources
-COPY frontend/ ./
-RUN npm run build
+# 2-1. Build SDK first (frontend depends on @experibase/sdk via file:../packages/sdk)
+COPY packages/sdk/package*.json ./packages/sdk/
+RUN cd ./packages/sdk && npm ci --retry 2
+COPY packages/sdk/ ./packages/sdk/
+RUN cd ./packages/sdk && npm run build
+
+# 2-2. Install and build frontend
+COPY frontend/package*.json ./frontend/
+RUN cd ./frontend && npm ci --retry 2
+COPY frontend/ ./frontend/
+RUN cd ./frontend && npm run build
 
 # 2. Production stage (Nginx)
 FROM nginx:alpine
