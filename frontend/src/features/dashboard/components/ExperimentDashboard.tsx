@@ -11,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Textarea } from '../../../components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import {
   experimentAnalyticsApi,
   decisionApi,
@@ -248,12 +249,50 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
           <Activity className="h-4 w-4 text-indigo-500" />
           P0 — 실험 헬스
         </h3>
+
+        {/* Summary metric cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">총 노출</p>
+            <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+              {analyticsLoading ? '—' : (analytics?.impressions.total.toLocaleString() ?? '—')}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">총 전환</p>
+            <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+              {analyticsLoading ? '—' : (analytics
+                ? Object.values(analytics.conversions.by_variant).reduce((a, b) => a + b, 0).toLocaleString()
+                : '—')}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Control 전환율</p>
+            <p className="text-2xl font-extrabold text-slate-600 dark:text-slate-300">
+              {analyticsLoading ? '—' : analytics
+                ? `${((analytics.conversions.rate['control'] ?? 0) * 100).toFixed(2)}%`
+                : '—'}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50 dark:bg-indigo-950/30 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-1">Treatment 전환율</p>
+            <p className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300">
+              {analyticsLoading ? '—' : (() => {
+                if (!analytics) return '—';
+                const treatments = Object.keys(analytics.conversions.rate).filter(v => v !== 'control');
+                const key = treatments[0];
+                return key ? `${((analytics.conversions.rate[key] ?? 0) * 100).toFixed(2)}%` : '—';
+              })()}
+            </p>
+          </div>
+        </div>
+
         <div className="grid gap-4 lg:grid-cols-3">
-          {/* Assignment trend */}
+          {/* Assignment / impression trend */}
           <Card className="lg:col-span-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                배정 추이 (Variant별 누적)
+                실시간 노출 추이 (Variant별)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -330,6 +369,45 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
             </Card>
           </div>
         </div>
+
+        {/* URL breakdown table */}
+        {!analyticsLoading && analytics && analytics.impressions.total > 0 && (() => {
+          const urlRows = Object.entries(analytics.impressions.by_url)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 10);
+          if (urlRows.length === 0) return null;
+          return (
+            <Card className="mt-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  URL별 호출 분석
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">URL</TableHead>
+                      <TableHead className="text-xs text-right">건수</TableHead>
+                      <TableHead className="text-xs text-right">비율</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {urlRows.map(([url, count]) => (
+                      <TableRow key={url}>
+                        <TableCell className="text-xs font-mono truncate max-w-[260px]">{url}</TableCell>
+                        <TableCell className="text-xs text-right">{count.toLocaleString()}</TableCell>
+                        <TableCell className="text-xs text-right text-slate-400">
+                          {((count / analytics.impressions.total) * 100).toFixed(1)}%
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          );
+        })()}
       </section>
 
       {/* ─────────── P1: Primary ─────────── */}

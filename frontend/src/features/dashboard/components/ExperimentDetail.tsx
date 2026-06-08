@@ -13,7 +13,6 @@ import {
   type ExperimentResult, type Decision, type LearningNote, type DecisionType,
   type ExperimentPlacementConfig, type Project, type FeatureFlag, type FeatureFlagExposureSummary,
 } from '../../../services/api';
-import { ExperimentAnalytics } from './ExperimentAnalytics';
 import { ExperimentDashboard } from './ExperimentDashboard';
 
 interface ExperimentDetailProps {
@@ -145,7 +144,6 @@ const translations = {
     placementSaveError: 'Failed to save placement.',
     placementDeleteError: 'Failed to delete placement.',
     tabOverview: 'Overview',
-    tabAnalytics: 'Monitoring',
     tabResults: 'Results',
     tabDashboard: 'Dashboard',
     placementBadgeSdk: 'SDK Integration',
@@ -277,7 +275,6 @@ const translations = {
     placementSaveError: 'Placement 저장에 실패했습니다.',
     placementDeleteError: 'Placement 삭제에 실패했습니다.',
     tabOverview: '개요',
-    tabAnalytics: '모니터링',
     tabResults: '결과',
     tabDashboard: '대시보드',
     placementBadgeSdk: 'SDK 연동',
@@ -446,7 +443,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [flagToggling, setFlagToggling] = useState(false);
   const [linkedFlagExposure, setLinkedFlagExposure] = useState<FeatureFlagExposureSummary | null | undefined>(undefined);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'results' | 'dashboard'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'results' | 'dashboard'>('overview');
 
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [notes, setNotes] = useState<LearningNote[]>([]);
@@ -1172,7 +1169,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800 pb-0">
         {([
           { key: 'overview', label: t.tabOverview, icon: <SlidersHorizontal className="h-3.5 w-3.5" /> },
-          { key: 'analytics', label: t.tabAnalytics, icon: <BarChart2 className="h-3.5 w-3.5" /> },
           { key: 'results', label: t.tabResults, icon: <TrendingUp className="h-3.5 w-3.5" /> },
           { key: 'dashboard', label: t.tabDashboard, icon: <BarChart2 className="h-3.5 w-3.5" /> },
         ] as const).map((tab) => (
@@ -1191,11 +1187,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
           </button>
         ))}
       </div>
-
-      {/* ── Analytics tab ── */}
-      {activeTab === 'analytics' && id && (
-        <ExperimentAnalytics experimentId={id} lang={lang} />
-      )}
 
       {/* ── Dashboard tab ── */}
       {activeTab === 'dashboard' && id && experiment && (
