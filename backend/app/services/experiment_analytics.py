@@ -7,6 +7,36 @@ from app.schemas.experiment_analytics import (
 )
 
 
+def _chi2_sf(chi2: float, df: int) -> float:
+    """Chi-squared survival function (p-value) without scipy."""
+    if chi2 <= 0:
+        return 1.0
+    if df == 1:
+        return 2.0 * (1.0 - _normal_cdf(math.sqrt(chi2)))
+    if df == 2:
+        return math.exp(-chi2 / 2.0)
+    # Wilson-Hilferty normal approximation (accurate for df >= 3)
+    h = (chi2 / df) ** (1.0 / 3.0)
+    mu_h = 1.0 - 2.0 / (9.0 * df)
+    sigma_h = math.sqrt(2.0 / (9.0 * df))
+    z = (h - mu_h) / sigma_h
+    return 1.0 - _normal_cdf(z)
+
+
+def _srm_check(by_variant: dict[str, int]) -> bool:
+    """Sample Ratio Mismatch: chi-squared test against equal split, p < 0.01."""
+    counts = list(by_variant.values())
+    if len(counts) < 2:
+        return False
+    total = sum(counts)
+    if total < 10:
+        return False
+    k = len(counts)
+    expected = total / k
+    chi2 = sum((c - expected) ** 2 / expected for c in counts)
+    return _chi2_sf(chi2, k - 1) < 0.01
+
+
 def _erf(x: float) -> float:
     # Abramowitz and Stegun approximation (max error 1.5e-7)
     t = 1.0 / (1.0 + 0.3275911 * abs(x))
@@ -53,11 +83,14 @@ class ExperimentAnalyticsService:
         significance = self._compute_significance(impressions, conversions)
         anomalies = self._detect_anomalies(imp_rows, conv_rows)
 
+        srm_warning = _srm_check(impressions.by_variant)
+
         return ExperimentAnalyticsResponse(
             impressions=impressions,
             conversions=conversions,
             statistical_significance=significance,
             anomalies=anomalies,
+            srm_warning=srm_warning,
         )
 
     async def _fetch_events(
@@ -82,23 +115,34 @@ class ExperimentAnalyticsService:
         by_variant: dict[str, int] = defaultdict(int)
         by_url: dict[str, int] = defaultdict(int)
         by_date: dict[str, int] = defaultdict(int)
+        by_variant_date: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
         for row in rows:
-            by_variant[row["variant"]] += 1
+            variant = row["variant"]
+            by_variant[variant] += 1
             url = row.get("url") or "(unknown)"
             by_url[url] += 1
             date = row.get("date") or "unknown"
             by_date[date] += 1
+            by_variant_date[variant][date] += 1
 
         time_series = [
             ImpressionTimeSeries(date=d, count=c)
             for d, c in sorted(by_date.items())
         ]
+        time_series_by_variant = {
+            variant: [
+                ImpressionTimeSeries(date=d, count=c)
+                for d, c in sorted(dates.items())
+            ]
+            for variant, dates in by_variant_date.items()
+        }
         return ImpressionData(
             total=len(rows),
             by_variant=dict(by_variant),
             by_url=dict(by_url),
             time_series=time_series,
+            time_series_by_variant=time_series_by_variant,
         )
 
     def _build_conversions(self, rows: list[dict]) -> ConversionData:

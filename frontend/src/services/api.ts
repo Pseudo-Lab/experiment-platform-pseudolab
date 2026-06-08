@@ -683,6 +683,15 @@ export const decisionApi = {
     if (!res.ok) throw new Error('Failed to create decision');
     return res.json();
   },
+  createForExperiment: async (experimentId: string, data: { decision: DecisionType; reason: string; decided_by?: string }): Promise<Decision> => {
+    const res = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/decisions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create decision');
+    return res.json();
+  },
   list: async (experimentId: string): Promise<Decision[]> => {
     const res = await fetch(`${API_BASE_URL}/experiments/${experimentId}/decisions`);
     if (!res.ok) throw new Error('Failed to fetch decisions');
@@ -859,6 +868,7 @@ export interface ExperimentAnalyticsImpressions {
   by_variant: Record<string, number>;
   by_url: Record<string, number>;
   time_series: ExperimentAnalyticsTimeSeries[];
+  time_series_by_variant?: Record<string, ExperimentAnalyticsTimeSeries[]>;
 }
 
 export interface ExperimentAnalyticsConversions {
@@ -884,6 +894,7 @@ export interface ExperimentAnalyticsResponse {
   conversions: ExperimentAnalyticsConversions;
   statistical_significance: ExperimentAnalyticsSignificance;
   anomalies: ExperimentAnalyticsAnomaly[];
+  srm_warning?: boolean;
 }
 
 export const experimentAnalyticsApi = {

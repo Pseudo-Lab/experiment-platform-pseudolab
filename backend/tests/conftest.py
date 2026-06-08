@@ -217,6 +217,23 @@ CREATE TABLE IF NOT EXISTS experiment_event (
     created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS decision_log (
+    id            TEXT PRIMARY KEY,
+    experiment_id TEXT NOT NULL,
+    decision      TEXT NOT NULL CHECK (decision IN ('SHIP', 'HOLD', 'ROLLBACK')),
+    reason        TEXT NOT NULL,
+    decided_by    TEXT NOT NULL,
+    decided_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS learning_note (
+    id            TEXT PRIMARY KEY,
+    experiment_id TEXT NOT NULL,
+    content       TEXT NOT NULL,
+    created_by    TEXT,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 """
 
 

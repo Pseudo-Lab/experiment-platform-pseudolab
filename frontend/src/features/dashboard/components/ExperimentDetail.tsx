@@ -14,6 +14,7 @@ import {
   type ExperimentPlacementConfig, type Project, type FeatureFlag, type FeatureFlagExposureSummary,
 } from '../../../services/api';
 import { ExperimentAnalytics } from './ExperimentAnalytics';
+import { ExperimentDashboard } from './ExperimentDashboard';
 
 interface ExperimentDetailProps {
   lang: 'en' | 'ko';
@@ -146,6 +147,7 @@ const translations = {
     tabOverview: 'Overview',
     tabAnalytics: 'Monitoring',
     tabResults: 'Results',
+    tabDashboard: 'Dashboard',
     placementBadgeSdk: 'SDK Integration',
     placementBadgeSdkHelp: 'SDK decide() call automatically handles exposure.',
     placementBadgeManual: 'Manual Setup',
@@ -277,6 +279,7 @@ const translations = {
     tabOverview: '개요',
     tabAnalytics: '모니터링',
     tabResults: '결과',
+    tabDashboard: '대시보드',
     placementBadgeSdk: 'SDK 연동',
     placementBadgeSdkHelp: 'SDK decide() 호출 시 자동 노출됩니다.',
     placementBadgeManual: '수동 설정',
@@ -443,7 +446,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [flagToggling, setFlagToggling] = useState(false);
   const [linkedFlagExposure, setLinkedFlagExposure] = useState<FeatureFlagExposureSummary | null | undefined>(undefined);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'results'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'results' | 'dashboard'>('overview');
 
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [notes, setNotes] = useState<LearningNote[]>([]);
@@ -1171,6 +1174,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
           { key: 'overview', label: t.tabOverview, icon: <SlidersHorizontal className="h-3.5 w-3.5" /> },
           { key: 'analytics', label: t.tabAnalytics, icon: <BarChart2 className="h-3.5 w-3.5" /> },
           { key: 'results', label: t.tabResults, icon: <TrendingUp className="h-3.5 w-3.5" /> },
+          { key: 'dashboard', label: t.tabDashboard, icon: <BarChart2 className="h-3.5 w-3.5" /> },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -1191,6 +1195,11 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       {/* ── Analytics tab ── */}
       {activeTab === 'analytics' && id && (
         <ExperimentAnalytics experimentId={id} lang={lang} />
+      )}
+
+      {/* ── Dashboard tab ── */}
+      {activeTab === 'dashboard' && id && experiment && (
+        <ExperimentDashboard experimentId={id} experiment={experiment} lang={lang} />
       )}
 
       {!isQuasiExperiment && activeTab === 'overview' && (

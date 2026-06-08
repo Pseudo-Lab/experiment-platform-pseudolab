@@ -12,6 +12,7 @@ class ImpressionData(BaseModel):
     by_variant: dict[str, int]
     by_url: dict[str, int]
     time_series: list[ImpressionTimeSeries]
+    time_series_by_variant: dict[str, list[ImpressionTimeSeries]] = {}
 
 
 class ConversionData(BaseModel):
@@ -37,3 +38,4 @@ class ExperimentAnalyticsResponse(BaseModel):
     conversions: ConversionData
     statistical_significance: StatisticalSignificance
     anomalies: list[AnomalyWarning]
+    srm_warning: bool = False

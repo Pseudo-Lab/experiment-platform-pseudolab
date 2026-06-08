@@ -17,6 +17,12 @@ class DecisionCreate(BaseModel):
     decided_by: str
 
 
+class ExperimentDecisionCreate(BaseModel):
+    decision: DecisionType
+    reason: str
+    decided_by: str = "user"
+
+
 class Decision(BaseModel):
     id: str
     experiment_id: str
