@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useExperibase } from '@experibase/sdk/react'
+import { useExperibase } from '@pseudo-lab/experibase-sdk/react'
 import { isEditorMode, getEditorForcedVariant } from '../lib/visualEditor'
 
 export function useFlag(flagKey: string): string | null {

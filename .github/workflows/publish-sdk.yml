@@ -1,0 +1,29 @@
+name: Publish SDK to GitHub Packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/sdk/**'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@pseudo-lab'
+      - name: Install SDK dependencies
+        run: cd packages/sdk && npm ci
+      - name: Build SDK
+        run: cd packages/sdk && npm run build
+      - name: Publish to GitHub Packages
+        run: cd packages/sdk && npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

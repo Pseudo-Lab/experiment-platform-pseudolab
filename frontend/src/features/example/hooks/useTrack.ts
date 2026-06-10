@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useExperibase } from '@experibase/sdk/react'
+import { useExperibase } from '@pseudo-lab/experibase-sdk/react'
 
 export function useTrack() {
   const { sdk, variants } = useExperibase()

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
-import { useExperibase } from '@experibase/sdk/react'
+import { useExperibase } from '@pseudo-lab/experibase-sdk/react'
 import { devLog } from './devLog'
 
 export interface ExperimentContextValue {

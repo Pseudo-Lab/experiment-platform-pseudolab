@@ -1,6 +1,9 @@
 {
-  "name": "@experibase/sdk",
+  "name": "@pseudo-lab/experibase-sdk",
   "version": "0.1.0",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "description": "ExperiBase SDK — feature flag & A/B test client",
   "main": "dist/index.js",
   "module": "dist/index.js",

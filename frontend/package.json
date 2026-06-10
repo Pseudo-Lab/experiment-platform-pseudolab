@@ -10,7 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@experibase/sdk": "file:../packages/sdk",
+    "@pseudo-lab/experibase-sdk": "file:../packages/sdk",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
