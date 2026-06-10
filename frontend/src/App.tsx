@@ -9,7 +9,6 @@ import { ExperimentDetail } from './features/dashboard/components/ExperimentDeta
 import { GitHubDashboard } from './features/dashboard/components/GitHubDashboard';
 import { DiscordDashboard } from './features/dashboard/components/DiscordDashboard';
 import { FeatureFlags } from './features/dashboard/components/FeatureFlags';
-import { Analytics } from './features/dashboard/components/Analytics';
 import { Projects } from './features/dashboard/components/Projects';
 import { ApiKeyPage } from './features/dashboard/components/ApiKeyPage';
 import { Placements } from './features/dashboard/components/Placements';
@@ -76,7 +75,6 @@ export default function App() {
         <Route path="/bug-report/:id" element={<BugReportDetail lang={lang} />} />
         <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
         <Route path="/placements" element={<Placements lang={lang} />} />
-        <Route path="/analytics" element={<Analytics lang={lang} />} />
         <Route path="/projects" element={<Projects lang={lang} />} />
         <Route path="/api-key" element={<ApiKeyPage lang={lang} />} />
         <Route path="/example/*" element={<ExampleApp lang={lang} />} />

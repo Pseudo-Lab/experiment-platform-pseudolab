@@ -16,7 +16,6 @@ import {
     Moon,
     Globe,
     ToggleLeft,
-    BarChart2,
     Code2,
     FolderOpen,
     Key,
@@ -129,8 +128,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", analytics: "Event Analytics", projects: "Projects", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", analytics: "이벤트 분석", projects: "Projects", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트" }
+        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", projects: "Projects", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project" },
+        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", projects: "Projects", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트" }
     };
 
     const t = translations[lang];
@@ -146,7 +145,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         activePath === '/bug-report' ? t.bugReport :
         activePath === '/feature-flags' ? t.featureFlags :
         activePath === '/placements' ? t.placements :
-        activePath === '/analytics' ? t.analytics :
         activePath === '/projects' ? t.projects :
         activePath === '/api-key' ? t.apiKey :
         activePath.startsWith('/example') ? t.example :
@@ -305,7 +303,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     {/* Secondary */}
                     <SectionDivider label={t.sectionOther} expanded={isSidebarOpen} />
                     <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => handleNav('/dashboard')} secondary />
-                    <SidebarItem icon={BarChart2} label={t.analytics} active={activePath === '/analytics'} expanded={isSidebarOpen} onClick={() => handleNav('/analytics')} secondary />
                     <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/github')} secondary />
                     <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/discord')} secondary />
                     <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />

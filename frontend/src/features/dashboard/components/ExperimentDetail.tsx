@@ -6,14 +6,13 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, TrendingUp, BookOpen, Ship, AlertTriangle, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, BookOpen, Ship, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2 } from 'lucide-react';
 import {
-  experimentApi, experimentResultApi, decisionApi, experimentPlacementApi, projectApi, featureFlagApi,
+  experimentApi, decisionApi, experimentPlacementApi, projectApi, featureFlagApi,
   type Experiment, type ExperimentStatus,
-  type ExperimentResult, type Decision, type LearningNote, type DecisionType,
+  type Decision, type LearningNote, type DecisionType,
   type ExperimentPlacementConfig, type Project, type FeatureFlag, type FeatureFlagExposureSummary,
 } from '../../../services/api';
-import { ExperimentAnalytics } from './ExperimentAnalytics';
 import { ExperimentDashboard } from './ExperimentDashboard';
 
 interface ExperimentDetailProps {
@@ -421,8 +420,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [transitioning, setTransitioning] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
 
-  const [result, setResult] = useState<ExperimentResult | null>(null);
-  const [resultLoading, setResultLoading] = useState(false);
 
   const [placements, setPlacements] = useState<ExperimentPlacementConfig[]>([]);
   const [placementsLoading, setPlacementsLoading] = useState(false);
@@ -446,7 +443,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [flagToggling, setFlagToggling] = useState(false);
   const [linkedFlagExposure, setLinkedFlagExposure] = useState<FeatureFlagExposureSummary | null | undefined>(undefined);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'results' | 'dashboard'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'dashboard'>('overview');
 
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [notes, setNotes] = useState<LearningNote[]>([]);
@@ -506,15 +503,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       })
       .finally(() => setLinkedFlagLoading(false));
   }, [experiment?.flag_key]);
-
-  const loadResult = () => {
-    if (!id || resultLoading) return;
-    setResultLoading(true);
-    experimentResultApi.getResult(id)
-      .then(setResult)
-      .catch(() => {})
-      .finally(() => setResultLoading(false));
-  };
 
   const startFlagEdit = () => {
     if (availableFlags.length === 0) {
@@ -1172,8 +1160,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800 pb-0">
         {([
           { key: 'overview', label: t.tabOverview, icon: <SlidersHorizontal className="h-3.5 w-3.5" /> },
-          { key: 'analytics', label: t.tabAnalytics, icon: <BarChart2 className="h-3.5 w-3.5" /> },
-          { key: 'results', label: t.tabResults, icon: <TrendingUp className="h-3.5 w-3.5" /> },
           { key: 'dashboard', label: t.tabDashboard, icon: <BarChart2 className="h-3.5 w-3.5" /> },
         ] as const).map((tab) => (
           <button
@@ -1191,11 +1177,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
           </button>
         ))}
       </div>
-
-      {/* ── Analytics tab ── */}
-      {activeTab === 'analytics' && id && (
-        <ExperimentAnalytics experimentId={id} lang={lang} />
-      )}
 
       {/* ── Dashboard tab ── */}
       {activeTab === 'dashboard' && id && experiment && (
@@ -1607,63 +1588,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </CardContent>
       </Card>
       )}
-
-      {/* ── 실험 결과 ── */}
-      {activeTab === 'results' && <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-indigo-500" />
-            {t.sectionResult}
-          </CardTitle>
-          {!result && (
-            <Button size="sm" variant="outline" className="rounded-xl" onClick={loadResult} disabled={resultLoading}>
-              {resultLoading ? t.resultLoading : (lang === 'ko' ? '결과 불러오기' : 'Load Result')}
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {!result && !resultLoading && (
-            <p className="text-sm text-slate-400">{lang === 'ko' ? '버튼을 눌러 결과를 확인하세요.' : 'Click the button to load results.'}</p>
-          )}
-          {resultLoading && <p className="text-sm text-slate-400">{t.resultLoading}</p>}
-          {result && result.message && <p className="text-sm text-slate-400">{result.message}</p>}
-          {result && result.treatment && result.control && (
-            <div className="space-y-4">
-              {result.srm_warning && (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-600 dark:text-amber-400 text-sm">
-                  <AlertTriangle className="h-4 w-4 shrink-0" />
-                  {t.srmWarningMsg}
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                {[{ label: t.labelTreatment, data: result.treatment, color: 'indigo' }, { label: t.labelControl, data: result.control, color: 'slate' }].map(({ label, data, color }) => (
-                  <div key={label} className={`p-4 rounded-xl bg-${color}-50 dark:bg-${color}-900/10 border border-${color}-100 dark:border-${color}-800`}>
-                    <p className={`text-xs font-bold uppercase text-${color}-500 mb-2`}>{label}</p>
-                    <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{(data.rate * 100).toFixed(2)}%</p>
-                    <p className="text-xs text-slate-500 mt-1">{data.conversions} / {data.users} {t.labelUsers}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <p className="text-xs text-slate-400 mb-1">{t.labelUplift}</p>
-                  <p className={`text-lg font-bold ${(result.uplift ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                    {((result.uplift ?? 0) * 100).toFixed(2)}%
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <p className="text-xs text-slate-400 mb-1">{t.labelProbWin}</p>
-                  <p className="text-lg font-bold text-indigo-600">{((result.probability_treatment_wins ?? 0) * 100).toFixed(1)}%</p>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <p className="text-xs text-slate-400 mb-1">{lang === 'ko' ? '총 샘플' : 'Sample Size'}</p>
-                  <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{result.sample_size.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>}
 
       {activeTab === 'overview' && (
         <>
