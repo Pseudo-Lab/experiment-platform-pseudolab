@@ -6,11 +6,10 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, BookOpen, Ship, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2 } from 'lucide-react';
 import {
-  experimentApi, decisionApi, experimentPlacementApi, projectApi, featureFlagApi,
+  experimentApi, experimentPlacementApi, projectApi, featureFlagApi,
   type Experiment, type ExperimentStatus,
-  type Decision, type LearningNote, type DecisionType,
   type ExperimentPlacementConfig, type Project, type FeatureFlag, type FeatureFlagExposureSummary,
 } from '../../../services/api';
 import { ExperimentDashboard } from './ExperimentDashboard';
@@ -83,18 +82,6 @@ const translations = {
     labelProbWin: 'Prob. Treatment Wins',
     labelSrm: 'SRM Warning',
     srmWarningMsg: 'Sample ratio mismatch detected. Check assignment logic.',
-    sectionDecisions: 'Decisions',
-    sectionNotes: 'Learning Notes',
-    addDecision: 'Add Decision',
-    addNote: 'Add Note',
-    decisionPlaceholder: 'Enter decision reason...',
-    notePlaceholder: 'Enter what you learned...',
-    authorPlaceholder: 'Author (optional)',
-    submit: 'Save',
-    submitting: 'Saving...',
-    ship: 'Ship',
-    hold: 'Hold',
-    rollback: 'Rollback',
     sectionPlacements: 'Placements',
     placementsIntro: 'A placement is a frontend-owned decision point. The product service renders the UI and owns routes; this platform decides eligibility and returns optional payload.',
     placementsLoading: 'Loading placements...',
@@ -215,18 +202,6 @@ const translations = {
     labelProbWin: 'Treatment 승률',
     labelSrm: 'SRM 경고',
     srmWarningMsg: '샘플 비율이 예상과 다릅니다. 배정 로직을 확인하세요.',
-    sectionDecisions: '의사결정',
-    sectionNotes: '학습 노트',
-    addDecision: '결정 추가',
-    addNote: '노트 추가',
-    decisionPlaceholder: '결정 이유를 입력하세요...',
-    notePlaceholder: '학습한 내용을 입력하세요...',
-    authorPlaceholder: '작성자 (선택)',
-    submit: '저장',
-    submitting: '저장 중...',
-    ship: '배포',
-    hold: '보류',
-    rollback: '롤백',
     sectionPlacements: '노출 지점(Placement)',
     placementsIntro: 'Placement는 서비스 프론트가 소유한 노출 결정 지점입니다. 실제 UI 렌더링과 라우트는 각 서비스가 소유하고, 실험 플랫폼은 대상 여부와 응답 payload를 결정합니다.',
     placementsLoading: 'Placement를 불러오는 중...',
@@ -445,16 +420,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'dashboard'>('overview');
 
-  const [decisions, setDecisions] = useState<Decision[]>([]);
-  const [notes, setNotes] = useState<LearningNote[]>([]);
-  const [decisionType, setDecisionType] = useState<DecisionType>('SHIP');
-  const [decisionReason, setDecisionReason] = useState('');
-  const [decisionBy, setDecisionBy] = useState('');
-  const [noteContent, setNoteContent] = useState('');
-  const [noteBy, setNoteBy] = useState('');
-  const [submittingDecision, setSubmittingDecision] = useState(false);
-  const [submittingNote, setSubmittingNote] = useState(false);
-
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -473,8 +438,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       })
       .catch(() => setPlacementsError(t.placementsError))
       .finally(() => setPlacementsLoading(false));
-    decisionApi.list(id).then(setDecisions).catch(() => {});
-    decisionApi.listNotes(id).then(setNotes).catch(() => {});
     projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
   }, [id]);
 
@@ -573,32 +536,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </div>
       </div>
     );
-  };
-
-  const handleAddDecision = async () => {
-    if (!id || !decisionReason.trim()) return;
-    setSubmittingDecision(true);
-    try {
-      const d = await decisionApi.create({ experiment_id: id, decision: decisionType, reason: decisionReason.trim(), decided_by: decisionBy.trim() || 'anonymous' });
-      setDecisions(prev => [d, ...prev]);
-      setDecisionReason('');
-      setDecisionBy('');
-    } finally {
-      setSubmittingDecision(false);
-    }
-  };
-
-  const handleAddNote = async () => {
-    if (!id || !noteContent.trim()) return;
-    setSubmittingNote(true);
-    try {
-      const n = await decisionApi.createNote({ experiment_id: id, content: noteContent.trim(), created_by: noteBy.trim() || undefined });
-      setNotes(prev => [n, ...prev]);
-      setNoteContent('');
-      setNoteBy('');
-    } finally {
-      setSubmittingNote(false);
-    }
   };
 
   const startEdit = () => {
@@ -1589,86 +1526,6 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       </Card>
       )}
 
-      {activeTab === 'overview' && (
-        <>
-          {/* ── 의사결정 ── */}
-          <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Ship className="h-5 w-5 text-indigo-500" />
-                {t.sectionDecisions}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  {(['SHIP', 'HOLD', 'ROLLBACK'] as DecisionType[]).map((d) => (
-                    <button key={d} onClick={() => setDecisionType(d)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${decisionType === d
-                        ? d === 'SHIP' ? 'bg-emerald-500 text-white border-emerald-500'
-                        : d === 'HOLD' ? 'bg-amber-500 text-white border-amber-500'
-                        : 'bg-rose-500 text-white border-rose-500'
-                        : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}>
-                      {d === 'SHIP' ? t.ship : d === 'HOLD' ? t.hold : t.rollback}
-                    </button>
-                  ))}
-                </div>
-                <Textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} placeholder={t.decisionPlaceholder} className="rounded-xl resize-none" rows={2} />
-                <div className="flex gap-2">
-                  <Input value={decisionBy} onChange={e => setDecisionBy(e.target.value)} placeholder={t.authorPlaceholder} className="rounded-xl" />
-                  <Button size="sm" className="rounded-xl shrink-0" onClick={handleAddDecision} disabled={submittingDecision || !decisionReason.trim()}>
-                    {submittingDecision ? t.submitting : t.submit}
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {decisions.map(d => (
-                  <div key={d.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${d.decision === 'SHIP' ? 'bg-emerald-100 text-emerald-600' : d.decision === 'HOLD' ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
-                        {d.decision}
-                      </span>
-                      <span className="text-xs text-slate-400">{d.decided_by} · {new Date(d.decided_at).toLocaleDateString()}</span>
-                    </div>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{d.reason}</p>
-                  </div>
-                ))}
-                {decisions.length === 0 && <p className="text-sm text-slate-400">{lang === 'ko' ? '아직 결정이 없습니다.' : 'No decisions yet.'}</p>}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* ── 학습 노트 ── */}
-          <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-indigo-500" />
-                {t.sectionNotes}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Textarea value={noteContent} onChange={e => setNoteContent(e.target.value)} placeholder={t.notePlaceholder} className="rounded-xl resize-none" rows={2} />
-                <div className="flex gap-2">
-                  <Input value={noteBy} onChange={e => setNoteBy(e.target.value)} placeholder={t.authorPlaceholder} className="rounded-xl" />
-                  <Button size="sm" className="rounded-xl shrink-0" onClick={handleAddNote} disabled={submittingNote || !noteContent.trim()}>
-                    {submittingNote ? t.submitting : t.submit}
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {notes.map(n => (
-                  <div key={n.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                    <p className="text-xs text-slate-400 mb-1">{n.created_by ?? 'anonymous'} · {new Date(n.created_at).toLocaleDateString()}</p>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{n.content}</p>
-                  </div>
-                ))}
-                {notes.length === 0 && <p className="text-sm text-slate-400">{lang === 'ko' ? '아직 노트가 없습니다.' : 'No notes yet.'}</p>}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
     </div>
   );
 };
