@@ -6,26 +6,21 @@ import {
 import {
   AlertTriangle, CheckCircle, Clock, X,
   Ship, Pause, RotateCcw, TrendingUp, Shield,
-  Activity, Layers, BarChart2, Lightbulb, ClipboardList,
+  Activity, Layers, ClipboardList, Info,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Textarea } from '../../../components/ui/textarea';
 import {
   experimentAnalyticsApi,
+  availableEventsApi,
   decisionApi,
   type ExperimentAnalyticsResponse,
+  type AvailableEventsResponse,
   type Decision,
   type Experiment,
   type DecisionType,
 } from '../../../services/api';
-
-// ── SDK Required Badge ──────────────────────────────────────────
-const SdkRequiredBadge: React.FC = () => (
-  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
-    SDK 필요
-  </span>
-);
 
 // ── P-value significance badge ──────────────────────────────────
 function SigCard({ pValue }: { pValue: number | null }) {
@@ -116,9 +111,10 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
   experiment,
   lang,
 }) => {
-  const [segment, setSegment] = useState<'all' | 'new' | 'returning'>('all');
   const [analytics, setAnalytics] = useState<ExperimentAnalyticsResponse | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [availableEvents, setAvailableEvents] = useState<AvailableEventsResponse | null>(null);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [decisionsLoading, setDecisionsLoading] = useState(true);
 
@@ -135,6 +131,12 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
       .then(setAnalytics)
       .catch(() => {})
       .finally(() => setAnalyticsLoading(false));
+
+    setEventsLoading(true);
+    availableEventsApi.get(experimentId)
+      .then(setAvailableEvents)
+      .catch(() => {})
+      .finally(() => setEventsLoading(false));
 
     setDecisionsLoading(true);
     decisionApi.list(experimentId)
@@ -205,297 +207,275 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
       }))
     : [];
 
+  // Panel visibility derived from available events
+  const hasImpressions = availableEvents?.has_impressions ?? false;
+  const hasConversions = availableEvents?.has_conversions ?? false;
+  const conversionEvents = availableEvents?.conversion_events ?? [];
+  const eventTypes = availableEvents?.event_types ?? [];
+  const totalEvents = availableEvents?.total_events ?? 0;
+
+  const showP1 = !eventsLoading && (hasImpressions || hasConversions);
+  const showP2 = !eventsLoading && eventTypes.includes('weekly_session_attended');
+  const showP3 = !eventsLoading && conversionEvents.length >= 2;
+
+  // Conversion event label for P1 chart title
+  const convEventLabel = conversionEvents.length > 0
+    ? conversionEvents.join(' / ')
+    : '전환';
+
   return (
     <div className="space-y-8">
-      {/* ── Guardrail amber banner (SDK 필요 항목이 있어 amber) ── */}
-      <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 flex items-center gap-2">
-        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-        <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">
-          가드레일 지표에 SDK 연동이 필요한 항목이 있습니다. 연동 완료 전까지 배포 판단을 보류하세요.
-        </p>
-      </div>
-
-      {/* ── Common controls ── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">세그먼트</span>
-        <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-sm">
-          {(['all', 'new', 'returning'] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSegment(s)}
-              className={`px-3 py-1.5 font-medium transition-colors ${
-                segment === s
-                  ? 'bg-indigo-500 text-white'
-                  : 'bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              {{ all: '전체', new: '신규', returning: '재방문' }[s]}
-            </button>
-          ))}
-        </div>
-        {segment !== 'all' && (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-            <AlertTriangle className="h-3 w-3" />
-            세그먼트 필터는 SDK 연동 후 지원됩니다
-          </span>
-        )}
-      </div>
-
       {/* ─────────── P0: 실험 헬스 ─────────── */}
       <section>
         <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
           <Activity className="h-4 w-4 text-indigo-500" />
           P0 — 실험 헬스
         </h3>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {/* Assignment trend */}
-          <Card className="lg:col-span-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                배정 추이 (Variant별 누적)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {analyticsLoading ? (
-                <div className="h-44 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-slate-300 animate-spin" />
-                </div>
-              ) : trendData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={180}>
-                  <LineChart data={trendData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    {trendKeys.map((v, i) => (
-                      <Line
-                        key={v}
-                        type="monotone"
-                        dataKey={v}
-                        stroke={variantColor(v, i)}
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-44 flex flex-col items-center justify-center gap-2 text-slate-400">
-                  <BarChart2 className="h-8 w-8 opacity-30" />
-                  <p className="text-xs">SDK 이벤트 연동 후 표시됩니다</p>
-                </div>
-              )}
+
+        {/* No events at all */}
+        {!eventsLoading && totalEvents === 0 ? (
+          <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+            <CardContent className="pt-6 pb-6 flex flex-col items-center gap-3 text-center">
+              <Info className="h-8 w-8 text-slate-300" />
+              <p className="text-sm text-slate-500">
+                아직 수집된 이벤트가 없습니다.<br />
+                앱에서 SDK <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">decide()</code> 또는{' '}
+                <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">track()</code>을 호출하면 여기에 표시됩니다.
+              </p>
             </CardContent>
           </Card>
-
-          {/* SRM + sample stats */}
-          <div className="space-y-3">
-            <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-              <CardContent className="pt-4 pb-4">
-                <p className="text-xs font-semibold text-slate-500 mb-2">SRM 경고</p>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* Assignment trend */}
+            <Card className="lg:col-span-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  배정 추이 (Variant별 누적)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 {analyticsLoading ? (
-                  <span className="text-xs text-slate-400">로딩 중...</span>
-                ) : analytics?.srm_warning ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    ⚠ SRM 감지
-                  </span>
+                  <div className="h-44 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-slate-300 animate-spin" />
+                  </div>
+                ) : trendData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={trendData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      {trendKeys.map((v, i) => (
+                        <Line
+                          key={v}
+                          type="monotone"
+                          dataKey={v}
+                          stroke={variantColor(v, i)}
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                    <CheckCircle className="h-3.5 w-3.5" />
-                    정상
-                  </span>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-              <CardContent className="pt-4 pb-4">
-                <p className="text-xs font-semibold text-slate-500 mb-1">현재 표본 수</p>
-                <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
-                  {analytics?.impressions.total.toLocaleString() ?? '—'}
-                </p>
-                <p className="text-xs text-slate-400 mt-1">목표: 운영팀 확인 필요</p>
-                {analytics && analytics.impressions.total > 0 && (
-                  <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-indigo-400 transition-all"
-                      style={{ width: `${Math.min((analytics.impressions.total / 1000) * 100, 100)}%` }}
-                    />
+                  <div className="h-44 flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <Clock className="h-8 w-8 opacity-30" />
+                    <p className="text-xs">배정 데이터를 불러오는 중...</p>
                   </div>
                 )}
               </CardContent>
             </Card>
+
+            {/* SRM + sample stats */}
+            <div className="space-y-3">
+              <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                <CardContent className="pt-4 pb-4">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">SRM 경고</p>
+                  {analyticsLoading ? (
+                    <span className="text-xs text-slate-400">로딩 중...</span>
+                  ) : analytics?.srm_warning ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      ⚠ SRM 감지
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      정상
+                    </span>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                <CardContent className="pt-4 pb-4">
+                  <p className="text-xs font-semibold text-slate-500 mb-1">현재 표본 수</p>
+                  <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+                    {analytics?.impressions.total.toLocaleString() ?? '—'}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">목표: 운영팀 확인 필요</p>
+                  {analytics && analytics.impressions.total > 0 && (
+                    <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-indigo-400 transition-all"
+                        style={{ width: `${Math.min((analytics.impressions.total / 1000) * 100, 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
-      {/* ─────────── P1: Primary ─────────── */}
-      <section>
-        <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
-          <TrendingUp className="h-4 w-4 text-indigo-500" />
-          P1 — Primary 지표
-        </h3>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {/* Conversion rate bar chart */}
-          <Card className="lg:col-span-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                완주율 (Variant별 전환율)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {analyticsLoading ? (
-                <div className="h-44 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-slate-300 animate-spin" />
-                </div>
-              ) : convRateData.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <BarChart data={convRateData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="variant" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} unit="%" />
-                      <Tooltip formatter={(value) => [`${value}%`, '전환율']} />
-                      <Bar dataKey="전환율 (%)" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    시즌 종료 전 확정 불가
-                  </p>
-                </>
-              ) : (
-                <div className="h-44 flex flex-col items-center justify-center gap-2 text-slate-400">
-                  <BarChart2 className="h-8 w-8 opacity-30" />
-                  <p className="text-xs">SDK 이벤트 연동 후 표시됩니다</p>
+      {/* ─────────── P1: Primary (수집된 이벤트가 있을 때만) ─────────── */}
+      {showP1 && (
+        <section>
+          <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
+            <TrendingUp className="h-4 w-4 text-indigo-500" />
+            P1 — Primary 지표
+          </h3>
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* Conversion rate bar chart */}
+            <Card className="lg:col-span-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  전환율 — {convEventLabel}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analyticsLoading ? (
+                  <div className="h-44 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-slate-300 animate-spin" />
+                  </div>
+                ) : convRateData.length > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={160}>
+                      <BarChart data={convRateData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="variant" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} unit="%" />
+                        <Tooltip formatter={(value) => [`${value}%`, '전환율']} />
+                        <Bar dataKey="전환율 (%)" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      시즌 종료 전 확정 불가
+                    </p>
+                  </>
+                ) : (
+                  <div className="h-44 flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <Clock className="h-6 w-6 opacity-40 animate-spin" />
+                    <p className="text-xs">전환 데이터 집계 중...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Statistical significance */}
+            <div className="space-y-3">
+              <SigCard pValue={analytics?.statistical_significance?.p_value ?? null} />
+
+              {/* Variant distribution breakdown */}
+              {hasImpressions && analytics && Object.keys(analytics.impressions.by_variant).length > 0 && (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">배정 분포</p>
+                  {Object.entries(analytics.impressions.by_variant).map(([v, cnt], i) => (
+                    <div key={v} className="flex items-center justify-between text-xs py-0.5">
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className="inline-block w-2 h-2 rounded-full"
+                          style={{ backgroundColor: variantColor(v, i) }}
+                        />
+                        {v}
+                      </span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {cnt.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </section>
+      )}
 
-          {/* P(T>C) + W11 SDK */}
-          <div className="space-y-3">
-            <SigCard pValue={analytics?.statistical_significance?.p_value ?? null} />
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">W11 출석 proxy</span>
-                <SdkRequiredBadge />
+      {/* ─────────── P2: Guardrail (weekly_session_attended 있을 때만) ─────────── */}
+      {showP2 && (
+        <section>
+          <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
+            <Shield className="h-4 w-4 text-amber-500" />
+            P2 — Guardrail
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">W11 리텐션</p>
+              <p className="text-xs text-slate-400">
+                <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">weekly_session_attended</code> 이벤트 기반
+              </p>
+              <p className="text-xs text-slate-400 mt-2">리텐션 차트 준비 중 — 백엔드 집계 후 표시됩니다.</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-1">수집된 이벤트</p>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {eventTypes.filter(e => e !== 'impression').map(e => (
+                  <span
+                    key={e}
+                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
+                  >
+                    {e}
+                  </span>
+                ))}
               </div>
-              <p className="text-xs text-slate-400">SDK 이벤트 연동 후 표시됩니다</p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* ─────────── P2: Guardrail ─────────── */}
-      <section>
-        <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
-          <Shield className="h-4 w-4 text-amber-500" />
-          P2 — Guardrail
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">W11 리텐션</span>
-              <SdkRequiredBadge />
-            </div>
-            <p className="text-xs text-slate-400">SDK 이벤트 연동 후 표시됩니다</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">중도 이탈률</span>
-              <SdkRequiredBadge />
-            </div>
-            <p className="text-xs text-slate-400">SDK 이벤트 연동 후 표시됩니다</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">운영 부담</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
-                정의 합의 중
-              </span>
-            </div>
-            <p className="text-xs text-slate-400">지표 정의 확정 후 표시됩니다</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">추가 가드레일</span>
-              <SdkRequiredBadge />
-            </div>
-            <p className="text-xs text-slate-400">SDK 연동 후 추가됩니다</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ─────────── P3: Supporting ─────────── */}
-      <section>
-        <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
-          <Layers className="h-4 w-4 text-indigo-400" />
-          P3 — Supporting 지표
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {/* Funnel chart (SDK 필요) */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">퍼널 차트</span>
-              <SdkRequiredBadge />
-            </div>
-            <div className="space-y-1.5 opacity-40">
-              {[
-                { label: '노출', width: '100%' },
-                { label: '클릭', width: '65%' },
-                { label: '완료', width: '35%' },
-              ].map(({ label, width }) => (
-                <div key={label} className="flex items-center gap-2">
-                  <div className="h-5 rounded bg-indigo-200 dark:bg-indigo-800 transition-all" style={{ width }} />
-                  <span className="text-xs text-slate-400 whitespace-nowrap">{label}</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-slate-400 mt-3">SDK 이벤트 연동 후 표시됩니다</p>
-          </div>
-
-          {/* Survival curve (SDK 필요) */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">생존 곡선</span>
-              <SdkRequiredBadge />
-            </div>
-            <div className="h-20 flex items-end gap-1 opacity-40">
-              {[100, 82, 68, 58, 51, 46, 42].map((h, i) => (
-                <div key={i} className="flex-1 rounded-t bg-slate-300 dark:bg-slate-600" style={{ height: `${h}%` }} />
-              ))}
-            </div>
-            <p className="text-xs text-slate-400 mt-3">SDK 이벤트 연동 후 표시됩니다</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ─────────── P4: Leading ─────────── */}
-      <section>
-        <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
-          <Lightbulb className="h-4 w-4 text-slate-400" />
-          P4 — Leading 지표
-          <span className="text-xs font-normal text-slate-400 ml-1">관측 전용 · 인과 해석 금지</span>
-        </h3>
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4 opacity-70">
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <SdkRequiredBadge />
-            <span className="text-xs text-slate-400">관측 전용 · 인과 해석 금지</span>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {['즉시 반응률', '초기 참여율', '빠른 완료 여부'].map((label) => (
-              <div key={label} className="rounded-lg bg-slate-100 dark:bg-slate-800 p-3">
-                <p className="text-xs font-medium text-slate-500">{label}</p>
-                <p className="text-base font-bold text-slate-300 dark:text-slate-600 mt-1">데이터 미적재</p>
+      {/* ─────────── P3: Supporting (conversion_events 2개 이상일 때만) ─────────── */}
+      {showP3 && (
+        <section>
+          <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
+            <Layers className="h-4 w-4 text-indigo-400" />
+            P3 — Supporting 지표
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Funnel preview */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">퍼널 차트</p>
+              <div className="space-y-1.5">
+                {['impression', ...conversionEvents].map((label, idx, arr) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <div
+                      className="h-5 rounded bg-indigo-300 dark:bg-indigo-700 transition-all"
+                      style={{ width: `${100 - idx * (60 / arr.length)}%` }}
+                    />
+                    <span className="text-xs text-slate-500 whitespace-nowrap">{label}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+              <p className="text-xs text-slate-400 mt-3">실제 집계 데이터 연동 예정</p>
+            </div>
+
+            {/* Event type list */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">수집된 이벤트 타입</p>
+              <div className="flex flex-col gap-1.5">
+                {eventTypes.map(e => (
+                  <div key={e} className="flex items-center gap-2 text-xs">
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span className="font-mono text-slate-600 dark:text-slate-400">{e}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ─────────── P5: 의사결정 로그 ─────────── */}
       <section>

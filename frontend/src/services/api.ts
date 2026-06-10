@@ -904,3 +904,23 @@ export const experimentAnalyticsApi = {
     return res.json();
   },
 };
+
+// ---------------------------------------------------------------------------
+// Available Events
+// ---------------------------------------------------------------------------
+
+export interface AvailableEventsResponse {
+  event_types: string[];
+  has_impressions: boolean;
+  has_conversions: boolean;
+  conversion_events: string[];
+  total_events: number;
+}
+
+export const availableEventsApi = {
+  get: async (experimentId: string): Promise<AvailableEventsResponse> => {
+    const res = await fetch(`${API_BASE_URL}/experiments/${encodeURIComponent(experimentId)}/available-events`);
+    if (!res.ok) throw new Error('Failed to fetch available events');
+    return res.json();
+  },
+};

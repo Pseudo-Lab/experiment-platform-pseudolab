@@ -39,3 +39,11 @@ class ExperimentAnalyticsResponse(BaseModel):
     statistical_significance: StatisticalSignificance
     anomalies: list[AnomalyWarning]
     srm_warning: bool = False
+
+
+class AvailableEventsResponse(BaseModel):
+    event_types: list[str]
+    has_impressions: bool
+    has_conversions: bool
+    conversion_events: list[str]
+    total_events: int

@@ -2,8 +2,9 @@ import math
 from collections import defaultdict
 from app.db import d1
 from app.schemas.experiment_analytics import (
-    AnomalyWarning, ConversionData, ExperimentAnalyticsResponse,
-    ImpressionData, ImpressionTimeSeries, StatisticalSignificance,
+    AnomalyWarning, AvailableEventsResponse, ConversionData,
+    ExperimentAnalyticsResponse, ImpressionData, ImpressionTimeSeries,
+    StatisticalSignificance,
 )
 
 
@@ -221,6 +222,52 @@ class ExperimentAnalyticsService:
                     message=f"전환 수({conv_count})가 노출 수({imp_count})를 초과합니다. 이벤트 연동을 확인하세요.",
                 ))
         return warnings
+
+
+    async def get_available_events(self, experiment_id: str) -> AvailableEventsResponse:
+        exp_rows = await d1.query(
+            "SELECT flag_key FROM experiments WHERE id = ?", [experiment_id]
+        )
+        flag_key: str | None = exp_rows[0]["flag_key"] if exp_rows else None
+
+        if flag_key:
+            type_rows = await d1.query(
+                """SELECT DISTINCT event_type
+                   FROM experiment_event
+                   WHERE experiment_id = ? OR experiment_key = ?""",
+                [experiment_id, flag_key],
+            )
+            count_rows = await d1.query(
+                """SELECT COUNT(*) AS total
+                   FROM experiment_event
+                   WHERE experiment_id = ? OR experiment_key = ?""",
+                [experiment_id, flag_key],
+            )
+        else:
+            type_rows = await d1.query(
+                """SELECT DISTINCT event_type
+                   FROM experiment_event
+                   WHERE experiment_id = ?""",
+                [experiment_id],
+            )
+            count_rows = await d1.query(
+                """SELECT COUNT(*) AS total
+                   FROM experiment_event
+                   WHERE experiment_id = ?""",
+                [experiment_id],
+            )
+
+        event_types = [r["event_type"] for r in type_rows]
+        total_events = count_rows[0]["total"] if count_rows else 0
+        conversion_events = [e for e in event_types if e != "impression"]
+
+        return AvailableEventsResponse(
+            event_types=event_types,
+            has_impressions="impression" in event_types,
+            has_conversions=len(conversion_events) > 0,
+            conversion_events=conversion_events,
+            total_events=total_events,
+        )
 
 
 experiment_analytics_service = ExperimentAnalyticsService()
