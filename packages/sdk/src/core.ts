@@ -43,13 +43,19 @@ export class ExperibaseSDK {
     properties?: Record<string, unknown>
   }): Promise<void> {
     try {
-      await fetch(`${this.baseUrl}/events`, {
+      const res = await fetch(`${this.baseUrl}/events`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+        },
         body: JSON.stringify(payload),
       })
-    } catch {
-      // fire-and-forget: silently swallow network errors
+      if (!res.ok) {
+        console.warn(`[ExperibaseSDK] Event not saved (HTTP ${res.status})`, payload)
+      }
+    } catch (err) {
+      console.warn('[ExperibaseSDK] Failed to send event:', err)
     }
   }
 

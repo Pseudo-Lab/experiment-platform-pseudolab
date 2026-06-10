@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 from app.schemas.event import EventCapture, ExperimentEvent, PersonIdentify
 from app.schemas.project import Project
@@ -20,8 +20,10 @@ async def capture(
 
 @router.post("/events", status_code=202)
 async def track_experiment_event(data: ExperimentEvent):
-    """SDK가 직접 호출하는 실험 impression/conversion 이벤트 수집 (인증 불필요)."""
-    await event_service.track_experiment_event(data)
+    """SDK가 직접 호출하는 실험 impression/conversion 이벤트 수집."""
+    saved = await event_service.track_experiment_event(data)
+    if not saved:
+        raise HTTPException(status_code=502, detail="Failed to persist event")
     return {"success": True}
 
 
