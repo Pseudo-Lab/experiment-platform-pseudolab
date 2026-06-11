@@ -68,15 +68,16 @@ CREATE TABLE IF NOT EXISTS bug_report_comments (
 );
 
 CREATE TABLE IF NOT EXISTS feature_flag (
-    flag_key    TEXT PRIMARY KEY,
-    description TEXT,
-    rollout_pct INTEGER NOT NULL DEFAULT 0,
-    enabled     INTEGER NOT NULL DEFAULT 0,
-    archived_at TEXT,
-    product     TEXT,
-    project_id  TEXT REFERENCES projects(id),
-    created_at  TEXT    NOT NULL,
-    updated_at  TEXT    NOT NULL
+    flag_key     TEXT PRIMARY KEY,
+    description  TEXT,
+    rollout_pct  INTEGER NOT NULL DEFAULT 0,
+    enabled      INTEGER NOT NULL DEFAULT 0,
+    archived_at  TEXT,
+    product      TEXT,
+    project_id   TEXT REFERENCES projects(id),
+    payload_json TEXT,
+    created_at   TEXT    NOT NULL,
+    updated_at   TEXT    NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS feature_segment (
@@ -148,12 +149,13 @@ CREATE TABLE IF NOT EXISTS visual_changes (
 );
 
 CREATE TABLE IF NOT EXISTS person (
-    user_id     TEXT PRIMARY KEY,
-    cohort_id   TEXT,
-    cohort_name TEXT,
-    team_name   TEXT,
-    role        TEXT,
-    updated_at  TEXT NOT NULL
+    user_id         TEXT PRIMARY KEY,
+    cohort_id       TEXT,
+    cohort_name     TEXT,
+    team_name       TEXT,
+    role            TEXT,
+    properties_json TEXT,
+    updated_at      TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS reflection (

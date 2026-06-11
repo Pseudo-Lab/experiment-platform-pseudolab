@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 FLAG_KEY_PATTERN = r"^[a-z0-9][a-z0-9_-]{2,63}$"
 
@@ -12,6 +12,7 @@ class FeatureFlagCreate(BaseModel):
     enabled: bool = False
     product: Optional[str] = None
     project_id: Optional[str] = None
+    payload: Optional[dict[str, Any]] = None
 
 
 class FeatureFlagUpdate(BaseModel):
@@ -20,6 +21,7 @@ class FeatureFlagUpdate(BaseModel):
     enabled: Optional[bool] = None
     product: Optional[str] = None
     project_id: Optional[str] = None
+    payload: Optional[dict[str, Any]] = None
 
 
 class FeatureFlag(BaseModel):
@@ -29,6 +31,7 @@ class FeatureFlag(BaseModel):
     enabled: bool
     product: Optional[str] = None
     project_id: Optional[str] = None
+    payload: Optional[dict[str, Any]] = None
     archived_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime

@@ -4,7 +4,7 @@ from app.db import d1
 from app.schemas.experiment_analytics import (
     AnomalyWarning, AvailableEventsResponse, ConversionData,
     ExperimentAnalyticsResponse, ImpressionData, ImpressionTimeSeries,
-    StatisticalSignificance,
+    StatisticalSignificance, VariantSignificance,
 )
 
 
@@ -159,14 +159,12 @@ class ExperimentAnalyticsService:
     def _compute_significance(
         self, impressions: ImpressionData, conversions: ConversionData
     ) -> StatisticalSignificance:
-        # compute conversion rates per variant
         rate: dict[str, float] = {}
         for variant, imp_count in impressions.by_variant.items():
             conv = conversions.by_variant.get(variant, 0)
             rate[variant] = conv / imp_count if imp_count > 0 else 0.0
         conversions.rate.update(rate)
 
-        # 2-proportion z-test between control and the best-performing non-control variant
         control_imp = impressions.by_variant.get("control", 0)
         control_conv = conversions.by_variant.get("control", 0)
         treatments = [v for v in impressions.by_variant if v != "control"]
@@ -175,29 +173,53 @@ class ExperimentAnalyticsService:
                 p_value=None, is_significant=False, confidence=0.95, winner=None
             )
 
-        # pick the treatment with the most impressions for the primary test
-        primary = max(treatments, key=lambda v: impressions.by_variant.get(v, 0))
-        treat_imp = impressions.by_variant.get(primary, 0)
-        treat_conv = conversions.by_variant.get(primary, 0)
+        n_treatments = len(treatments)
+        per_variant: list[VariantSignificance] = []
+        ctrl_rate = control_conv / control_imp if control_imp else 0.0
 
-        _, p_value = _two_proportion_z_test(control_imp, control_conv, treat_imp, treat_conv)
-        if p_value is None:
-            return StatisticalSignificance(
-                p_value=None, is_significant=False, confidence=0.95, winner=None
-            )
+        for variant in treatments:
+            treat_imp = impressions.by_variant.get(variant, 0)
+            treat_conv = conversions.by_variant.get(variant, 0)
+            _, p_raw = _two_proportion_z_test(control_imp, control_conv, treat_imp, treat_conv)
+            if p_raw is None:
+                per_variant.append(VariantSignificance(
+                    variant=variant, p_value_raw=None, p_value=None, is_significant=False
+                ))
+                continue
+            # Bonferroni correction: multiply p by number of tests, cap at 1.0
+            p_corrected = min(p_raw * n_treatments, 1.0)
+            treat_rate = treat_conv / treat_imp if treat_imp else 0.0
+            is_sig = p_corrected < 0.05 and treat_rate > ctrl_rate
+            per_variant.append(VariantSignificance(
+                variant=variant,
+                p_value_raw=round(p_raw, 6),
+                p_value=round(p_corrected, 6),
+                is_significant=is_sig,
+            ))
 
-        is_significant = p_value < 0.05
+        # Overall: pick the most significant treatment (lowest corrected p-value, above control)
+        significant = [v for v in per_variant if v.is_significant and v.p_value is not None]
+        best: VariantSignificance | None = min(significant, key=lambda v: v.p_value) if significant else None  # type: ignore[arg-type]
+
         winner: str | None = None
-        if is_significant:
-            ctrl_rate = control_conv / control_imp if control_imp else 0
-            treat_rate = treat_conv / treat_imp if treat_imp else 0
-            winner = primary if treat_rate > ctrl_rate else "control"
+        overall_p: float | None = None
+        is_significant = False
+        if best:
+            overall_p = best.p_value
+            is_significant = True
+            winner = best.variant
+        elif per_variant:
+            # report the smallest corrected p-value even if not significant
+            candidates = [v for v in per_variant if v.p_value is not None]
+            if candidates:
+                overall_p = min(v.p_value for v in candidates)  # type: ignore[misc]
 
         return StatisticalSignificance(
-            p_value=round(p_value, 6),
+            p_value=overall_p,
             is_significant=is_significant,
             confidence=0.95,
             winner=winner,
+            per_variant=per_variant,
         )
 
     def _detect_anomalies(

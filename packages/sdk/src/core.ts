@@ -81,6 +81,14 @@ export class ExperibaseSDK {
     return result
   }
 
+  startAutocapture(): () => void {
+    if (typeof window === 'undefined') return () => {}
+    this.track('$pageview', { url: window.location.pathname })
+    const onPopstate = () => this.track('$pageview', { url: window.location.pathname })
+    window.addEventListener('popstate', onPopstate)
+    return () => window.removeEventListener('popstate', onPopstate)
+  }
+
   async track(event: string, properties?: Record<string, unknown>): Promise<void> {
     const res = await fetch(`${this.baseUrl}/capture`, {
       method: 'POST',

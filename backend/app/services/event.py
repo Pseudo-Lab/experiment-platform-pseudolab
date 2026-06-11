@@ -38,16 +38,18 @@ class EventService:
 
     async def identify(self, data: PersonIdentify) -> bool:
         now = _now()
+        traits_json = json.dumps(data.traits, ensure_ascii=False) if data.traits else None
         return await d1.execute(
-            """INSERT INTO person (user_id, cohort_id, cohort_name, team_name, role, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?)
+            """INSERT INTO person (user_id, cohort_id, cohort_name, team_name, role, properties_json, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(user_id) DO UPDATE SET
-                 cohort_id   = excluded.cohort_id,
-                 cohort_name = excluded.cohort_name,
-                 team_name   = excluded.team_name,
-                 role        = excluded.role,
-                 updated_at  = excluded.updated_at""",
-            [data.user_id, data.cohort_id, data.cohort_name, data.team_name, data.role, now],
+                 cohort_id       = excluded.cohort_id,
+                 cohort_name     = excluded.cohort_name,
+                 team_name       = excluded.team_name,
+                 role            = excluded.role,
+                 properties_json = excluded.properties_json,
+                 updated_at      = excluded.updated_at""",
+            [data.user_id, data.cohort_id, data.cohort_name, data.team_name, data.role, traits_json, now],
         )
 
 

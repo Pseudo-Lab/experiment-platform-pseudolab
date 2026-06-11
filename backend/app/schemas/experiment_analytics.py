@@ -21,11 +21,19 @@ class ConversionData(BaseModel):
     rate: dict[str, float]
 
 
+class VariantSignificance(BaseModel):
+    variant: str
+    p_value_raw: Optional[float]
+    p_value: Optional[float]  # Bonferroni-corrected
+    is_significant: bool
+
+
 class StatisticalSignificance(BaseModel):
     p_value: Optional[float]
     is_significant: bool
     confidence: float
     winner: Optional[str]
+    per_variant: list[VariantSignificance] = []
 
 
 class AnomalyWarning(BaseModel):

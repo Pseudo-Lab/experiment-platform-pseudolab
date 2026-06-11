@@ -16,6 +16,7 @@ class PersonIdentify(BaseModel):
     cohort_name: Optional[str] = None
     team_name: Optional[str] = None
     role: Optional[str] = None
+    traits: Optional[dict[str, Any]] = None
 
 
 class EventLog(BaseModel):
@@ -44,4 +45,5 @@ class Person(BaseModel):
     cohort_name: Optional[str] = None
     team_name: Optional[str] = None
     role: Optional[str] = None
+    properties_json: Optional[dict[str, Any]] = None
     updated_at: datetime

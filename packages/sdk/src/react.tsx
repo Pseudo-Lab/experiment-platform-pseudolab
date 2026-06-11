@@ -95,6 +95,11 @@ export function ExperibaseProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // runs once on mount; flagKeys and sdk are stable references
 
+  // Autocapture pageviews on mount and on browser history navigation
+  useEffect(() => {
+    return sdk.startAutocapture()
+  }, [sdk])
+
   // Allow forced variants from the visual editor to update the in-memory cache
   useEffect(() => {
     const handler = (e: Event) => {

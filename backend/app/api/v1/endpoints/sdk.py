@@ -34,7 +34,7 @@ async def unified_decide(
             type="flag",
             show=variant != "control",
             variant=variant,
-            payload=None,
+            payload=flag.payload,
         )
 
     # 2. Fall back to placement

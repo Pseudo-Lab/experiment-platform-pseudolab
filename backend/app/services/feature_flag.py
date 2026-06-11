@@ -14,6 +14,41 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _match_single(actual: Any, operator: str, expected: Any) -> bool:
+    """Evaluate one targeting condition. Returns True if the condition passes."""
+    if operator == "eq":
+        return actual is not None and str(actual) == str(expected)
+    if operator == "neq":
+        return actual is None or str(actual) != str(expected)
+    if operator == "in":
+        return actual is not None and actual in (expected if isinstance(expected, list) else [expected])
+    if operator == "not_in":
+        return actual is None or actual not in (expected if isinstance(expected, list) else [expected])
+    if operator == "gt":
+        try:
+            return float(actual) > float(expected)
+        except (TypeError, ValueError):
+            return False
+    if operator == "lt":
+        try:
+            return float(actual) < float(expected)
+        except (TypeError, ValueError):
+            return False
+    if operator == "contains":
+        return actual is not None and str(expected) in str(actual)
+    if operator == "not_contains":
+        return actual is None or str(expected) not in str(actual)
+    return False
+
+
+def _evaluate_conditions(person: dict, conditions: List[dict]) -> bool:
+    """All conditions must pass (AND logic)."""
+    for cond in conditions:
+        if not _match_single(person.get(cond.get("property")), cond.get("operator", "eq"), cond.get("value")):
+            return False
+    return True
+
+
 def _hash_pct(*parts: str) -> int:
     return binascii.crc32(":".join(parts).encode()) % 100
 
@@ -56,10 +91,11 @@ class FeatureFlagService:
         if existing:
             raise HTTPException(status_code=409, detail=f"flag_key '{data.flag_key}' already exists")
         now = _now()
+        payload_json = json.dumps(data.payload, ensure_ascii=False) if data.payload else None
         ok = await d1.execute(
-            """INSERT INTO feature_flag (flag_key, description, rollout_pct, enabled, product, project_id, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            [data.flag_key, data.description, data.rollout_pct, int(data.enabled), data.product, data.project_id, now, now],
+            """INSERT INTO feature_flag (flag_key, description, rollout_pct, enabled, product, project_id, payload_json, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [data.flag_key, data.description, data.rollout_pct, int(data.enabled), data.product, data.project_id, payload_json, now, now],
         )
         if not ok:
             raise HTTPException(status_code=502, detail="Failed to create feature flag")
@@ -73,7 +109,12 @@ class FeatureFlagService:
         if not existing:
             raise HTTPException(status_code=404, detail="Feature flag not found")
 
-        patch = {k: v for k, v in data.model_dump().items() if v is not None}
+        raw = data.model_dump()
+        patch = {k: v for k, v in raw.items() if v is not None}
+        if "payload" in raw:
+            if raw["payload"] is not None:
+                patch["payload_json"] = json.dumps(raw["payload"], ensure_ascii=False)
+            patch.pop("payload", None)
         if not patch:
             return existing
         if "enabled" in patch:
@@ -393,15 +434,50 @@ class FeatureFlagService:
         segment_id = rule.get("segment_id")
         if not segment_id:
             return True
+
+        seg_rows = await d1.query(
+            "SELECT id, enabled, rules_json FROM feature_segment WHERE id = ?",
+            [segment_id],
+        )
+        if not seg_rows or int(seg_rows[0]["enabled"]) != 1:
+            return False
+        seg = seg_rows[0]
+
+        rules_json_str = seg.get("rules_json")
+        if rules_json_str:
+            try:
+                conditions = json.loads(rules_json_str)
+                if conditions:
+                    person_props = await self._get_person_props(user_id)
+                    if _evaluate_conditions(person_props, conditions):
+                        return True
+            except Exception:
+                pass
+
+        # Fall back to explicit membership
         rows = await d1.query(
-            """SELECT 1 AS matched
-                 FROM feature_segment_member m
-                 JOIN feature_segment s ON s.id = m.segment_id
-                WHERE m.segment_id = ? AND m.user_id = ? AND s.enabled = 1
-                LIMIT 1""",
+            "SELECT 1 AS matched FROM feature_segment_member WHERE segment_id = ? AND user_id = ? LIMIT 1",
             [segment_id, user_id],
         )
         return bool(rows)
+
+    async def _get_person_props(self, user_id: str) -> dict:
+        rows = await d1.query(
+            "SELECT cohort_id, cohort_name, team_name, role, properties_json FROM person WHERE user_id = ?",
+            [user_id],
+        )
+        if not rows:
+            return {}
+        p = rows[0]
+        props: dict = {
+            k: p[k] for k in ("cohort_id", "cohort_name", "team_name", "role") if p.get(k) is not None
+        }
+        if p.get("properties_json"):
+            try:
+                props.update(json.loads(p["properties_json"]))
+            except Exception:
+                pass
+        return props
 
     def _to_rule(self, row: dict) -> FeatureFlagRule:
         return FeatureFlagRule(
@@ -430,6 +506,13 @@ class FeatureFlagService:
         )
 
     def _to_flag(self, row: dict) -> FeatureFlag:
+        payload_raw = row.get("payload_json")
+        payload = None
+        if payload_raw:
+            try:
+                payload = json.loads(payload_raw)
+            except Exception:
+                pass
         return FeatureFlag(
             flag_key=row["flag_key"],
             description=row.get("description"),
@@ -437,6 +520,7 @@ class FeatureFlagService:
             enabled=int(row["enabled"]) == 1,
             product=row.get("product"),
             project_id=row.get("project_id"),
+            payload=payload,
             archived_at=row.get("archived_at"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
