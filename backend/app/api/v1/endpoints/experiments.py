@@ -3,6 +3,7 @@ from typing import List, Optional
 from app.schemas.experiment import (
     Experiment, ExperimentCreate, ExperimentUpdate,
     AssignmentResponse, ExperimentStatus, ExperimentResult,
+    AdoptWinnerRequest,
 )
 from app.schemas.reflection import ReflectionWindowUpdate
 from app.services.experiment import experiment_service
@@ -59,3 +60,14 @@ async def get_result(experiment_id: str):
 async def update_reflection_window(experiment_id: str, data: ReflectionWindowUpdate):
     await reflection_service.update_reflection_window(experiment_id, data)
     return {"success": True}
+
+
+@router.post("/{experiment_id}/adopt-winner", response_model=Experiment)
+async def adopt_winner(experiment_id: str, data: AdoptWinnerRequest):
+    """실험 완료 후 winning variant를 채택한다.
+
+    - experiments.status → completed, winning_variant = data.variant
+    - 연결된 feature_flag.forced_variant = data.variant
+      → 이후 모든 사용자가 rollout_pct 무관하게 해당 variant를 받음
+    """
+    return await experiment_service.adopt_winner(experiment_id, data.variant)

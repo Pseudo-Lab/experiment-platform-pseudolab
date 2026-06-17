@@ -174,6 +174,7 @@ export interface FeatureFlag {
   enabled: boolean;
   product?: string | null;
   project_id?: string | null;
+  forced_variant?: string | null;
   archived_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -299,6 +300,7 @@ export interface Experiment {
   project_id?: string | null;
   status: ExperimentStatus;
   owner_id?: string;
+  winning_variant?: string | null;
   start_at?: string;
   end_at?: string;
   reflection_start_date?: string;
@@ -432,6 +434,20 @@ export const experimentApi = {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete experiment');
+  },
+
+  adoptWinner: async (id: string, variant: string): Promise<Experiment> => {
+    const response = await fetch(`${API_BASE_URL}/experiments/${id}/adopt-winner`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ variant }),
+    });
+    if (!response.ok) {
+      let detail = 'Failed to adopt winner';
+      try { const b = await response.json(); if (b?.detail) detail = b.detail; } catch { /* ignore */ }
+      throw new Error(detail);
+    }
+    return response.json();
   },
 };
 

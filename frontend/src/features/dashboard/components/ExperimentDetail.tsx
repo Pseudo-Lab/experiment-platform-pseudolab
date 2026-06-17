@@ -6,7 +6,7 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2, Trophy } from 'lucide-react';
 import {
   experimentApi, experimentPlacementApi, projectApi, featureFlagApi,
   type Experiment, type ExperimentStatus,
@@ -138,6 +138,14 @@ const translations = {
     placementBadgeSdkHelp: 'SDK decide() call automatically handles exposure.',
     placementBadgeManual: 'Manual Setup',
     placementBadgeManualHelp: 'Service team implements the UI directly. Refer to the Payload section.',
+    adoptWinner: 'Adopt Winner',
+    adoptWinnerTitle: 'Adopt Winning Variant',
+    adoptWinnerDesc: (variant: string, flagKey?: string | null) =>
+      `Adopt "${variant}" as the winner? This will:\n• Set experiment status to Completed\n• Set forced_variant on the linked flag (${flagKey ?? 'none'}) to "${variant}"\n• All users will receive "${variant}" regardless of rollout %`,
+    adoptWinnerSuccess: 'Winner adopted. Flag is now forced to the winning variant.',
+    adoptWinnerError: 'Failed to adopt winner.',
+    winnerBadge: (v: string) => `Winner: ${v}`,
+    forcedBadge: 'Forced',
   },
   ko: {
     back: '목록으로',
@@ -258,6 +266,14 @@ const translations = {
     placementBadgeSdkHelp: 'SDK decide() 호출 시 자동 노출됩니다.',
     placementBadgeManual: '수동 설정',
     placementBadgeManualHelp: '서비스 팀이 직접 UI를 구현합니다. Payload를 참고하세요.',
+    adoptWinner: 'Winning Variant 채택',
+    adoptWinnerTitle: 'Winning Variant 채택',
+    adoptWinnerDesc: (variant: string, flagKey?: string | null) =>
+      `"${variant}"을(를) 최종 winner로 채택하시겠습니까?\n\n• 실험 상태 → 완료\n• 연결된 Flag(${flagKey ?? '없음'})의 forced_variant = "${variant}"\n• 이후 모든 사용자가 rollout % 무관하게 "${variant}"를 받습니다`,
+    adoptWinnerSuccess: 'Winner 채택 완료. Flag가 winning variant로 강제 설정됐습니다.',
+    adoptWinnerError: 'Winner 채택에 실패했습니다.',
+    winnerBadge: (v: string) => `Winner: ${v}`,
+    forcedBadge: '강제 적용 중',
   },
 };
 
@@ -419,6 +435,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [linkedFlagExposure, setLinkedFlagExposure] = useState<FeatureFlagExposureSummary | null | undefined>(undefined);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'dashboard'>('overview');
+
+  const [adoptWinnerVariant, setAdoptWinnerVariant] = useState<string | null>(null);
+  const [adoptWinnerLoading, setAdoptWinnerLoading] = useState(false);
+  const [adoptWinnerMsg, setAdoptWinnerMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -614,6 +634,22 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     if (!experiment || !window.confirm(t.deleteConfirm)) return;
     await experimentApi.delete(experiment.id);
     navigate('/experiments');
+  };
+
+  const handleAdoptWinner = async () => {
+    if (!experiment || !adoptWinnerVariant) return;
+    setAdoptWinnerLoading(true);
+    setAdoptWinnerMsg(null);
+    try {
+      const updated = await experimentApi.adoptWinner(experiment.id, adoptWinnerVariant);
+      setExperiment(updated);
+      setAdoptWinnerVariant(null);
+      setAdoptWinnerMsg(t.adoptWinnerSuccess);
+    } catch (e) {
+      setAdoptWinnerMsg(e instanceof Error ? e.message : t.adoptWinnerError);
+    } finally {
+      setAdoptWinnerLoading(false);
+    }
   };
 
   const filteredPlacements = experiment?.experiment_type === 'ab_test' && placementVariantKey !== null
@@ -949,9 +985,88 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                     {t[btn.labelKey]}
                   </Button>
                 ))}
+                {/* Adopt Winner 버튼: running/paused + flag 연결 + ab_test 한정 */}
+                {(experiment.status === 'running' || experiment.status === 'paused') &&
+                  experiment.flag_key &&
+                  isAbTest && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 rounded-xl h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/20"
+                    onClick={() => {
+                      const treatmentVariant = experiment.variants.find((v) => v.name !== 'control')?.name ?? 'treatment';
+                      setAdoptWinnerVariant(treatmentVariant);
+                      setAdoptWinnerMsg(null);
+                    }}
+                  >
+                    <Trophy className="h-3.5 w-3.5" />
+                    {t.adoptWinner}
+                  </Button>
+                )}
+                {/* Completed + winning_variant: winner 뱃지 */}
+                {experiment.status === 'completed' && experiment.winning_variant && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                    <Trophy className="h-3 w-3" />
+                    {t.winnerBadge(experiment.winning_variant)}
+                  </span>
+                )}
               </div>
               {statusError && (
                 <p className="text-xs text-rose-500 mt-1">{statusError}</p>
+              )}
+              {adoptWinnerMsg && (
+                <p className={`text-xs mt-1 ${adoptWinnerMsg === t.adoptWinnerSuccess ? 'text-emerald-600' : 'text-rose-500'}`}>
+                  {adoptWinnerMsg}
+                </p>
+              )}
+              {/* Adopt Winner 확인 다이얼로그 */}
+              {adoptWinnerVariant && (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-700 dark:bg-amber-900/10">
+                  <p className="font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                    {t.adoptWinnerTitle}
+                  </p>
+                  <div className="mb-3 text-slate-600 dark:text-slate-300">
+                    <p className="mb-1">채택할 variant를 선택하세요:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {experiment.variants.map((v) => (
+                        <button
+                          key={v.name}
+                          type="button"
+                          onClick={() => setAdoptWinnerVariant(v.name)}
+                          className={`rounded-full px-2.5 py-0.5 font-medium transition ${
+                            adoptWinnerVariant === v.name
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-white border border-slate-200 text-slate-600 hover:bg-amber-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {v.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-slate-500 dark:text-slate-400 mb-3 whitespace-pre-line text-[11px]">
+                    {t.adoptWinnerDesc(adoptWinnerVariant, experiment.flag_key)}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white gap-1.5"
+                      disabled={adoptWinnerLoading}
+                      onClick={handleAdoptWinner}
+                    >
+                      <Trophy className="h-3.5 w-3.5" />
+                      {adoptWinnerLoading ? '처리 중...' : t.adoptWinner}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => { setAdoptWinnerVariant(null); setAdoptWinnerMsg(null); }}
+                    >
+                      {t.cancel}
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
             <div>
@@ -1023,6 +1138,13 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                       <Link2 className="h-3 w-3 shrink-0" />
                       {experiment.flag_key}
                     </span>
+                    {/* forced_variant 뱃지: 실험 완료 후 flag가 강제 설정된 경우 */}
+                    {linkedFlag?.forced_variant && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                        <Trophy className="h-3 w-3" />
+                        {t.forcedBadge}: {linkedFlag.forced_variant}
+                      </span>
+                    )}
                     {linkedFlagLoading && <span className="text-xs text-slate-400">...</span>}
                     {linkedFlag && (
                       <button

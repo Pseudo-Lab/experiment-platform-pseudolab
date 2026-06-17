@@ -115,6 +115,11 @@ class FeatureFlagService:
             if raw["payload"] is not None:
                 patch["payload_json"] = json.dumps(raw["payload"], ensure_ascii=False)
             patch.pop("payload", None)
+        # forced_variant: sentinel "__unset__" = 변경 없음, None = 명시적 해제, str = 설정
+        if "forced_variant" in raw:
+            if raw["forced_variant"] == "__unset__":
+                patch.pop("forced_variant", None)  # 변경 없음
+            # None이면 patch에 그대로 남겨 NULL로 업데이트
         if not patch:
             return existing
         if "enabled" in patch:
@@ -313,6 +318,15 @@ class FeatureFlagService:
             return FeatureFlagDecision("control", "archived")
         if not enabled:
             return FeatureFlagDecision("control", "disabled")
+
+        # forced_variant: 실험 완료 후 winning variant가 설정된 경우
+        # rollout_pct와 무관하게 해당 variant를 모든 사용자에게 반환.
+        if flag.get("forced_variant"):
+            return FeatureFlagDecision(
+                flag["forced_variant"],
+                "forced",
+                {"forced_variant": flag["forced_variant"]},
+            )
 
         rules = await d1.query(
             """SELECT * FROM feature_flag_rule
@@ -521,6 +535,7 @@ class FeatureFlagService:
             product=row.get("product"),
             project_id=row.get("project_id"),
             payload=payload,
+            forced_variant=row.get("forced_variant"),
             archived_at=row.get("archived_at"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],

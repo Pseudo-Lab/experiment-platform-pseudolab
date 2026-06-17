@@ -113,6 +113,10 @@ class ExperimentUpdate(BaseModel):
         return self
 
 
+class AdoptWinnerRequest(BaseModel):
+    variant: str  # 채택할 variant 이름 (e.g. "treatment")
+
+
 class Experiment(BaseModel):
     id: str
     name: str
@@ -127,6 +131,7 @@ class Experiment(BaseModel):
     project_id: Optional[str] = None
     status: ExperimentStatus
     owner_id: Optional[str] = None
+    winning_variant: Optional[str] = None
     start_at: Optional[datetime] = None
     end_at: Optional[datetime] = None
     reflection_start_date: Optional[datetime] = None

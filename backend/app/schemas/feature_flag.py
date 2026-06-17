@@ -22,6 +22,9 @@ class FeatureFlagUpdate(BaseModel):
     product: Optional[str] = None
     project_id: Optional[str] = None
     payload: Optional[dict[str, Any]] = None
+    # forced_variant: 설정 시 rollout_pct/enabled 무시하고 이 값을 항상 반환.
+    # None을 명시적으로 보내면 강제 적용을 해제할 수 있도록 sentinel 처리.
+    forced_variant: Optional[str] = Field(default="__unset__")
 
 
 class FeatureFlag(BaseModel):
@@ -32,6 +35,7 @@ class FeatureFlag(BaseModel):
     product: Optional[str] = None
     project_id: Optional[str] = None
     payload: Optional[dict[str, Any]] = None
+    forced_variant: Optional[str] = None
     archived_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime

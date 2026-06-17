@@ -135,6 +135,40 @@ class ExperimentService:
     async def delete(self, experiment_id: str) -> bool:
         return await d1.execute("DELETE FROM experiments WHERE id = ?", [experiment_id])
 
+    async def adopt_winner(self, experiment_id: str, variant: str) -> Experiment:
+        """실험 완료 후 winning variant를 채택한다.
+
+        1. experiments.winning_variant = variant, status = completed
+        2. 연결된 feature_flag.forced_variant = variant (이후 모든 사용자가 winning variant를 받음)
+        """
+        exp = await self.get(experiment_id)
+        if not exp:
+            raise HTTPException(status_code=404, detail="Experiment not found")
+        if exp.status not in (ExperimentStatus.RUNNING, ExperimentStatus.PAUSED, ExperimentStatus.COMPLETED):
+            raise HTTPException(
+                status_code=422,
+                detail=f"'{exp.status}' 상태에서는 winning variant를 채택할 수 없습니다.",
+            )
+
+        now = _now()
+        # 1. 실험 상태 업데이트
+        await d1.execute(
+            "UPDATE experiments SET status = 'completed', winning_variant = ?, updated_at = ? WHERE id = ?",
+            [variant, now, experiment_id],
+        )
+
+        # 2. 연결된 Feature Flag에 forced_variant 설정
+        if exp.flag_key:
+            await d1.execute(
+                "UPDATE feature_flag SET forced_variant = ?, updated_at = ? WHERE flag_key = ?",
+                [variant, now, exp.flag_key],
+            )
+
+        updated = await self.get(experiment_id)
+        if not updated:
+            raise HTTPException(status_code=502, detail="adopt_winner: experiment not found after update")
+        return updated
+
     async def assign(self, experiment_id: str, user_id: str) -> Optional[AssignmentResponse]:
         # 이미 할당된 경우 기존 결과 반환
         existing = await d1.query(
@@ -325,6 +359,7 @@ class ExperimentService:
             project_id=row.get("project_id"),
             status=row["status"],
             owner_id=row.get("owner_id"),
+            winning_variant=row.get("winning_variant"),
             start_at=row.get("start_at"),
             end_at=row.get("end_at"),
             reflection_start_date=row.get("reflection_start_date"),
