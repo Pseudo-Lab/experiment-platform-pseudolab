@@ -94,14 +94,24 @@ export class ExperibaseSDK {
    */
   async placement(key: string, options?: PlacementOptions): Promise<PlacementDecideResult> {
     const uid = options?.userId ?? this._userId
-    const params = new URLSearchParams({ user_id: uid })
-    if (options?.role) params.set('role', options.role)
-    if (options?.cohort) params.set('cohort', options.cohort)
-    if (options?.scenario) params.set('scenario', options.scenario)
+    const searchParams = new URLSearchParams({ user_id: uid })
+    if (options?.role) searchParams.set('role', options.role)
+    if (options?.cohort) searchParams.set('cohort', options.cohort)
+    if (options?.scenario) searchParams.set('scenario', options.scenario)
+    if (options?.params) {
+      for (const [k, v] of Object.entries(options.params)) {
+        if (v === null || v === undefined || v === '') continue
+        searchParams.set(k, String(v))
+      }
+    }
 
-    const res = await fetch(`${this.baseUrl}/placements/${encodeURIComponent(key)}/decide?${params}`, {
-      headers: { 'x-api-key': this.apiKey },
-    })
+    const res = await fetch(
+      `${this.baseUrl}/placements/${encodeURIComponent(key)}/decide?${searchParams}`,
+      {
+        headers: { 'x-api-key': this.apiKey },
+        signal: options?.signal,
+      },
+    )
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return res.json() as Promise<PlacementDecideResult>
   }
