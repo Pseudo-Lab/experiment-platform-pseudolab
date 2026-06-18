@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { ExperibaseSDK } from './core'
-import type { DecideResult } from './types'
+import type { DecideResult, PlacementDecideResult, PlacementOptions } from './types'
 
 export type { DecideResult }
 export { ExperibaseSDK }
@@ -305,4 +305,105 @@ export function ExperimentSwitch({ flagKey, variants: variantMap, loading }: Exp
   const fallback = variantMap['control'] ?? null
   if (resolving) return <>{loading ?? fallback}</>
   return <>{(variant ? variantMap[variant] : null) ?? fallback}</>
+}
+
+// ---------------------------------------------------------------------------
+// Placement(준실험) API
+// ---------------------------------------------------------------------------
+
+/**
+ * 준실험 placement 노출 여부를 결정하는 훅.
+ *
+ * - fail-closed: API 오류 시 show=false 반환 (안전장치)
+ * - userId는 Provider에 넘긴 값(또는 자동생성 UUID)을 사용.
+ *   로그인 사용자 ID로 연결하려면 Provider의 userId prop이나
+ *   sdk.identify(userId)를 먼저 호출한다.
+ *
+ * @example
+ * ```tsx
+ * const { show, completed, loading } = usePlacement('reflection-cta')
+ * if (loading) return <Skeleton />
+ * if (!show) return null
+ * return completed ? <CompletedBanner /> : <Banner />
+ * ```
+ */
+export interface UsePlacementResult extends PlacementDecideResult {
+  loading: boolean
+}
+
+export function usePlacement(
+  placementKey: string,
+  options?: Omit<PlacementOptions, 'userId'>,
+): UsePlacementResult {
+  const { sdk } = useExperibase()
+  const [result, setResult] = useState<PlacementDecideResult>({
+    key: placementKey,
+    show: false,
+    completed: false,
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    sdk
+      .placement(placementKey, options)
+      .then(r => {
+        if (!cancelled) {
+          setResult(r)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        // fail-closed: API 오류 시 미노출
+        if (!cancelled) {
+          setResult({ key: placementKey, show: false, completed: false })
+          setLoading(false)
+        }
+      })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placementKey])
+
+  return { ...result, loading }
+}
+
+/**
+ * 준실험 placement 선언형 컴포넌트.
+ *
+ * - `show=false` 또는 로딩 중이면 아무것도 렌더하지 않는다 (fail-closed).
+ * - `completed=true`이면 `completedContent`를, 그 외에는 `children`을 렌더한다.
+ *
+ * @example
+ * ```tsx
+ * <Placement
+ *   placementKey="project-detail-home-reflection-cta"
+ *   completedContent={<ReflectionCompletedBanner />}
+ * >
+ *   <ReflectionBanner />
+ * </Placement>
+ * ```
+ */
+export interface PlacementProps {
+  placementKey: string
+  children: ReactNode
+  /** completed=true일 때 렌더할 컴포넌트. 생략 시 children을 그대로 렌더한다. */
+  completedContent?: ReactNode
+  /** 로딩 중 스켈레톤. 생략 시 아무것도 렌더하지 않는다 (layout shift 없음). */
+  loadingContent?: ReactNode
+  options?: Omit<PlacementOptions, 'userId'>
+}
+
+export function Placement({
+  placementKey,
+  children,
+  completedContent,
+  loadingContent,
+  options,
+}: PlacementProps) {
+  const { show, completed, loading } = usePlacement(placementKey, options)
+
+  if (loading) return <>{loadingContent ?? null}</>
+  if (!show) return null
+  if (completed && completedContent !== undefined) return <>{completedContent}</>
+  return <>{children}</>
 }

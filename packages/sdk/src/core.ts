@@ -1,4 +1,4 @@
-import type { DecideResult, SDKConfig } from './types'
+import type { DecideResult, PlacementDecideResult, PlacementOptions, SDKConfig } from './types'
 
 const UID_KEY = 'experibase_uid'
 
@@ -79,6 +79,31 @@ export class ExperibaseSDK {
       user_id: uid,
     })
     return result
+  }
+
+  /**
+   * Placement(준실험) 노출 여부를 결정한다.
+   *
+   * GET /placements/{key}/decide?user_id=...&role=...&cohort=...
+   *
+   * - fail-closed: API 오류 시 { show: false, completed: false } 반환
+   * - 운영에서는 scenario를 전달하지 않는다
+   *
+   * @example
+   * const { show, completed } = await sdk.placement('reflection-cta')
+   */
+  async placement(key: string, options?: PlacementOptions): Promise<PlacementDecideResult> {
+    const uid = options?.userId ?? this._userId
+    const params = new URLSearchParams({ user_id: uid })
+    if (options?.role) params.set('role', options.role)
+    if (options?.cohort) params.set('cohort', options.cohort)
+    if (options?.scenario) params.set('scenario', options.scenario)
+
+    const res = await fetch(`${this.baseUrl}/placements/${encodeURIComponent(key)}/decide?${params}`, {
+      headers: { 'x-api-key': this.apiKey },
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json() as Promise<PlacementDecideResult>
   }
 
   startAutocapture(): () => void {
