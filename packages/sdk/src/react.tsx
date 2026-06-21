@@ -8,7 +8,13 @@ import {
   type ReactNode,
 } from 'react'
 import { ExperibaseSDK } from './core'
-import type { DecideResult, PlacementDecideResult, PlacementOptions } from './types'
+import type {
+  DecideResult,
+  ExperimentPlacementDecisionResult,
+  ExperimentPlacementOptions,
+  PlacementDecideResult,
+  PlacementOptions,
+} from './types'
 
 export type { DecideResult }
 export { ExperibaseSDK }
@@ -363,6 +369,112 @@ export function usePlacement(
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placementKey])
+
+  return { ...result, loading }
+}
+
+// ---------------------------------------------------------------------------
+// ExperimentPlacement (준실험 — experiment_placements 엔드포인트) API
+// ---------------------------------------------------------------------------
+
+/**
+ * 준실험(experiment placement) 노출 여부를 결정하는 훅.
+ *
+ * `/experiments/{experimentId}/placements/{placementKey}/decide` 엔드포인트를 사용.
+ * 배너 UI 메타데이터(title, description, target_url)와 logging_context까지 포함한
+ * 전체 응답을 반환한다.
+ *
+ * - fail-closed: API 오류 시 show=false 반환
+ * - userId는 Provider에 넘긴 값(또는 sdk.identify())을 사용
+ *
+ * @example
+ * ```tsx
+ * const { show, completed, ui, loading } = useExperimentPlacement(
+ *   's12-mid-reflection',
+ *   'project-detail-home-reflection-cta',
+ *   { projectId }
+ * )
+ * if (loading || !show) return null
+ * return <Banner title={ui?.title} />
+ * ```
+ */
+export interface UseExperimentPlacementResult extends ExperimentPlacementDecisionResult {
+  loading: boolean
+}
+
+export function useExperimentPlacement(
+  experimentId: string,
+  placementKey: string,
+  options?: ExperimentPlacementOptions,
+): UseExperimentPlacementResult {
+  const { sdk } = useExperibase()
+  const [result, setResult] = useState<ExperimentPlacementDecisionResult>({
+    show: false,
+    completed: false,
+    experiment_id: experimentId,
+    placement_key: placementKey,
+    ui: null,
+    logging_context: null,
+  })
+  const [loading, setLoading] = useState(true)
+
+  // options를 ref로 안정화해서 불필요한 재요청 방지
+  const optionsRef = useRef(options)
+  useEffect(() => {
+    optionsRef.current = options
+  })
+
+  useEffect(() => {
+    // enabled가 false면 요청하지 않고 즉시 미노출 처리
+    if (optionsRef.current?.enabled === false) {
+      setResult({
+        show: false,
+        completed: false,
+        experiment_id: experimentId,
+        placement_key: placementKey,
+        ui: null,
+        logging_context: null,
+      })
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+    const controller = new AbortController()
+
+    sdk
+      .experimentPlacement(experimentId, placementKey, {
+        ...optionsRef.current,
+        signal: controller.signal,
+      })
+      .then(r => {
+        if (!cancelled) {
+          setResult(r)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        // fail-closed: API 오류 시 미노출
+        if (!cancelled) {
+          setResult({
+            show: false,
+            completed: false,
+            experiment_id: experimentId,
+            placement_key: placementKey,
+            ui: null,
+            logging_context: null,
+          })
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+    // experimentId / placementKey / enabled가 바뀌면 재요청
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [experimentId, placementKey, options?.enabled])
 
   return { ...result, loading }
 }

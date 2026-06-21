@@ -1,4 +1,11 @@
-import type { DecideResult, PlacementDecideResult, PlacementOptions, SDKConfig } from './types'
+import type {
+  DecideResult,
+  ExperimentPlacementDecisionResult,
+  ExperimentPlacementOptions,
+  PlacementDecideResult,
+  PlacementOptions,
+  SDKConfig,
+} from './types'
 
 const UID_KEY = 'experibase_uid'
 
@@ -114,6 +121,36 @@ export class ExperibaseSDK {
     )
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return res.json() as Promise<PlacementDecideResult>
+  }
+
+  /**
+   * 준실험(experiment placement) 노출 여부를 결정한다.
+   *
+   * GET /experiments/{experimentId}/placements/{placementKey}/decide
+   *   ?user_id=...&project_id=...&scenario=...
+   *
+   * - fail-closed: API 오류 시 호출부에서 catch 처리 권장
+   * - 이 엔드포인트는 공개 API이므로 x-api-key 헤더를 보내지 않는다
+   *
+   * @example
+   * const decision = await sdk.experimentPlacement('s12-mid-reflection', 'project-detail-home-reflection-cta', { projectId })
+   */
+  async experimentPlacement(
+    experimentId: string,
+    placementKey: string,
+    options?: ExperimentPlacementOptions,
+  ): Promise<ExperimentPlacementDecisionResult> {
+    const uid = options?.userId ?? this._userId
+    const searchParams = new URLSearchParams({ user_id: uid })
+    if (options?.projectId) searchParams.set('project_id', options.projectId)
+    if (options?.scenario) searchParams.set('scenario', options.scenario)
+
+    const res = await fetch(
+      `${this.baseUrl}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}/decide?${searchParams}`,
+      { signal: options?.signal },
+    )
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json() as Promise<ExperimentPlacementDecisionResult>
   }
 
   startAutocapture(): () => void {
