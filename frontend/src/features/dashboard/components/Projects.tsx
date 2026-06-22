@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Copy, Check, Plus, FolderOpen, Trash2, FlaskConical, Target } from 'lucide-react';
+import { Copy, Check, Plus, FolderOpen, Trash2 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { projectApi, type Project, type ProjectSdkStatus } from '../../../services/api';
@@ -44,11 +44,6 @@ const t = {
     sdkNotConnected: 'SDK 미설치',
     sdkChecking: '확인 중...',
     openVisualEditor: 'Visual Editor 열기',
-    typeLabel: '프로젝트 유형',
-    abTestLabel: 'A/B 테스트',
-    abTestDesc: '무작위 배정으로 variant 효과를 측정합니다. Feature Flag, Visual Editor 지원.',
-    quasiLabel: '준실험',
-    quasiDesc: '대상 집단 전체에 처치를 적용합니다. Placement 기반 노출 제어.',
   },
   en: {
     title: 'Projects',
@@ -76,11 +71,6 @@ const t = {
     sdkNotConnected: 'SDK not installed',
     sdkChecking: 'Checking...',
     openVisualEditor: 'Open Visual Editor',
-    typeLabel: 'Project Type',
-    abTestLabel: 'A/B Test',
-    abTestDesc: 'Measure variant effects with random assignment. Feature Flag and Visual Editor supported.',
-    quasiLabel: 'Quasi-Experiment',
-    quasiDesc: 'Apply treatment to an entire cohort. Placement-based exposure control.',
   },
 };
 
@@ -106,7 +96,6 @@ export function Projects({ lang }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [newId, setNewId] = useState('');
   const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState<'ab_test' | 'quasi_experiment'>('ab_test');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -137,11 +126,10 @@ export function Projects({ lang }: Props) {
       return;
     }
     try {
-      await projectApi.create({ id: newId.trim(), name: newName.trim(), project_type: newType });
+      await projectApi.create({ id: newId.trim(), name: newName.trim() });
       await reloadProjects();
       setNewId('');
       setNewName('');
-      setNewType('ab_test');
       setShowForm(false);
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : tr.errorCreate);
@@ -187,41 +175,6 @@ export function Projects({ lang }: Props) {
       {showForm && (
         <Card>
           <CardContent className="pt-6 space-y-4">
-            {/* Type selector */}
-            <div>
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2 block">{tr.typeLabel}</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  className={cn(
-                    "rounded-xl border-2 p-4 text-left transition-all",
-                    newType === 'ab_test'
-                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
-                      : "border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700"
-                  )}
-                  onClick={() => setNewType('ab_test')}
-                >
-                  <FlaskConical size={18} className={cn("mb-2", newType === 'ab_test' ? "text-indigo-500" : "text-slate-400")} />
-                  <div className={cn("text-sm font-semibold", newType === 'ab_test' ? "text-indigo-700 dark:text-indigo-300" : "text-slate-700 dark:text-slate-200")}>{tr.abTestLabel}</div>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">{tr.abTestDesc}</p>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "rounded-xl border-2 p-4 text-left transition-all",
-                    newType === 'quasi_experiment'
-                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
-                      : "border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700"
-                  )}
-                  onClick={() => setNewType('quasi_experiment')}
-                >
-                  <Target size={18} className={cn("mb-2", newType === 'quasi_experiment' ? "text-emerald-500" : "text-slate-400")} />
-                  <div className={cn("text-sm font-semibold", newType === 'quasi_experiment' ? "text-emerald-700 dark:text-emerald-300" : "text-slate-700 dark:text-slate-200")}>{tr.quasiLabel}</div>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">{tr.quasiDesc}</p>
-                </button>
-              </div>
-            </div>
-
             {/* ID / Name fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -249,7 +202,7 @@ export function Projects({ lang }: Props) {
               <Button onClick={handleCreate} disabled={creating || !newId.trim() || !newName.trim()} size="sm">
                 {creating ? tr.creating : tr.create}
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setCreateError(null); setNewType('ab_test'); }}>
+              <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setCreateError(null); }}>
                 Cancel
               </Button>
             </div>
@@ -272,21 +225,13 @@ export function Projects({ lang }: Props) {
             <Card
               key={p.id}
               className="cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
-              onClick={() => { setCurrentProjectId(p.id); navigate(p.project_type === 'quasi_experiment' ? '/experiments' : '/api-key'); }}
+              onClick={() => { setCurrentProjectId(p.id); navigate('/experiments'); }}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <CardTitle className="text-base">{p.name}</CardTitle>
-                      <span className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                        p.project_type === 'quasi_experiment'
-                          ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-                          : "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
-                      )}>
-                        {p.project_type === 'quasi_experiment' ? (lang === 'ko' ? '준실험' : 'Quasi') : (lang === 'ko' ? 'A/B 테스트' : 'A/B Test')}
-                      </span>
                       {renderSdkBadge(p.id)}
                     </div>
                     <p className="text-xs text-slate-400 font-mono mt-0.5">{p.id}</p>

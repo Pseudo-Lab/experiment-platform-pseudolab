@@ -4,17 +4,33 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import {
-  Copy, Check, Eye, EyeOff, Key, Pencil, X, Trash2, Plus,
-  FolderOpen, Wand2, CheckCircle2, Clock, Loader2,
+  Copy, Check, Eye, EyeOff, Key, Trash2, Plus,
+  FolderOpen, CheckCircle2, Clock, Loader2, FlaskConical,
+  ChevronRight,
 } from 'lucide-react';
-import { projectApi, type Project, type ProjectSdkStatus } from '../../../services/api';
+import { projectApi, experimentApi, type Project, type ProjectSdkStatus, type Experiment } from '../../../services/api';
 import { useProject } from '../../../contexts/ProjectContext';
 
 interface Props { lang: 'en' | 'ko'; }
 
+const STATUS_STYLES: Record<string, string> = {
+  running:   'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  draft:     'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+  paused:    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  completed: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  archived:  'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500',
+};
+const STATUS_LABELS: Record<string, { ko: string; en: string }> = {
+  running:   { ko: '진행 중', en: 'Running' },
+  draft:     { ko: '초안', en: 'Draft' },
+  paused:    { ko: '일시 정지', en: 'Paused' },
+  completed: { ko: '완료', en: 'Completed' },
+  archived:  { ko: '보관', en: 'Archived' },
+};
+
 const tr = {
   ko: {
-    title: 'API 키',
+    title: 'SDK 연동',
     noProject: '프로젝트를 선택하세요',
     noProjectDesc: '사이드바 상단의 드롭다운에서 프로젝트를 선택하면 해당 프로젝트의 API 키를 확인할 수 있어요.',
     goProjects: '프로젝트 목록으로',
@@ -38,6 +54,10 @@ const tr = {
     sdkConnectedDesc: 'SDK가 정상적으로 연결되어 실험 데이터를 수집하고 있습니다.',
     sdkNotConnectedDesc: '아직 수신된 이벤트가 없습니다. 아래 설정 예시를 참고해 SDK를 설치하고, 앱을 방문하면 자동으로 연결됩니다.',
     openVisualEditor: 'Visual Editor 열기',
+    abExperiments: 'A/B 테스트 실험',
+    abExperimentsDesc: '이 프로젝트에 연결된 A/B 테스트 실험 목록입니다.',
+    noAbExperiments: '연결된 A/B 테스트 실험이 없습니다.',
+    goCreateExperiment: '실험 만들기',
     dangerZone: 'Danger Zone',
     deleteProject: '프로젝트 삭제',
     deleteProjectDesc: '이 프로젝트와 관련된 모든 데이터가 삭제됩니다. 연결된 실험이나 플래그가 있으면 삭제가 거부됩니다.',
@@ -46,7 +66,7 @@ const tr = {
     deleteError: '삭제에 실패했습니다.',
   },
   en: {
-    title: 'API Key',
+    title: 'SDK Integration',
     noProject: 'Select a Project',
     noProjectDesc: 'Choose a project from the dropdown at the top of the sidebar to view its API key.',
     goProjects: 'Go to projects',
@@ -70,6 +90,10 @@ const tr = {
     sdkConnectedDesc: 'The SDK is connected and collecting experiment data.',
     sdkNotConnectedDesc: 'No events received yet. Install the SDK using the example below — once your app is visited, it will connect automatically.',
     openVisualEditor: 'Open Visual Editor',
+    abExperiments: 'A/B Test Experiments',
+    abExperimentsDesc: 'A/B test experiments linked to this project.',
+    noAbExperiments: 'No A/B test experiments yet.',
+    goCreateExperiment: 'Create experiment',
     dangerZone: 'Danger Zone',
     deleteProject: 'Delete Project',
     deleteProjectDesc: 'All data associated with this project will be deleted. Deletion fails if linked experiments or flags exist.',
@@ -138,6 +162,7 @@ export function ApiKeyPage({ lang }: Props) {
   const [baseUrl, setBaseUrl] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [abExperiments, setAbExperiments] = useState<Experiment[]>([]);
 
   useEffect(() => {
     if (!currentProject) return;
@@ -146,6 +171,11 @@ export function ApiKeyPage({ lang }: Props) {
     projectApi.sdkStatus(currentProject.id)
       .then((r) => setSdkStatus(r.status === 'connected' ? 'connected' : 'not_connected'))
       .catch(() => setSdkStatus('not_connected'));
+    experimentApi.list()
+      .then((all) => setAbExperiments(
+        all.filter((e) => e.experiment_type === 'ab_test' && e.project_id === currentProject.id)
+      ))
+      .catch(() => setAbExperiments([]));
   }, [currentProject]);
 
   const handleSaveBaseUrl = async () => {
@@ -259,6 +289,54 @@ export function ApiKeyPage({ lang }: Props) {
         <CardContent className="pt-5 space-y-3">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t.sdkSetup}</p>
           <SdkCodeBlock apiKey={currentProject.api_key} />
+        </CardContent>
+      </Card>
+
+      {/* A/B Test Experiments */}
+      <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
+        <CardContent className="pt-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t.abExperiments}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{t.abExperimentsDesc}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 rounded-xl text-xs"
+              onClick={() => navigate('/experiments')}
+            >
+              <Plus size={13} />
+              {t.goCreateExperiment}
+            </Button>
+          </div>
+          {abExperiments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-slate-400 gap-2">
+              <FlaskConical size={28} className="opacity-30" />
+              <p className="text-sm">{t.noAbExperiments}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {abExperiments.map((exp) => (
+                <button
+                  key={exp.id}
+                  className="w-full flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 px-4 py-3 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors text-left"
+                  onClick={() => navigate(`/experiments/${exp.id}`)}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{exp.name}</p>
+                    <p className="text-xs font-mono text-slate-400 truncate mt-0.5">{exp.id}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_STYLES[exp.status] ?? STATUS_STYLES.draft}`}>
+                      {(STATUS_LABELS[exp.status]?.[lang]) ?? exp.status}
+                    </span>
+                    <ChevronRight size={14} className="text-slate-400" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

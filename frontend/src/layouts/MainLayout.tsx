@@ -19,7 +19,6 @@ import {
     Code2,
     FolderOpen,
     Key,
-    MapPin,
     Plug,
     Flag,
     Plus,
@@ -284,19 +283,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             "space-y-1 transition-all duration-200 ease-out",
                             toolsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
                         )}>
-                            {currentProject.project_type === 'ab_test' && (
-                                <>
-                                    <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
-                                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
-                                    <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
-                                </>
-                            )}
-                            {currentProject.project_type === 'quasi_experiment' && (
-                                <>
-                                    <SidebarItem icon={MapPin} label={t.placements} active={activePath === '/placements'} expanded={isSidebarOpen} onClick={() => handleNav('/placements')} />
-                                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
-                                </>
-                            )}
+                            <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
+                            <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
+                            <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
                         </div>
                     )}
 
