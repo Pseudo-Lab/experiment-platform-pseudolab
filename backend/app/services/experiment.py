@@ -2,7 +2,7 @@ import hashlib
 import json
 import uuid
 import numpy as np
-from scipy.stats import chi2_contingency
+from scipy.stats import chi2_contingency, chisquare
 from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import HTTPException
@@ -247,23 +247,54 @@ class ExperimentService:
                 message="primary_metric이 설정되지 않았습니다",
             )
 
-        assignments = await d1.query(
-            "SELECT user_id, variant_name FROM experiment_assignments WHERE experiment_id = ?",
+        # ── 분모 결정: exp_exposure 이벤트 우선, 없으면 experiment_assignments 폴백 ──
+        # 분모는 "배정"이 아닌 "실제 노출"이어야 정확한 CTR/전환율 계산 가능.
+        # exp_exposure 이벤트에는 properties.variant 가 필수(control|treatment).
+        exposure_rows = await d1.query(
+            """SELECT user_id,
+                      json_extract(properties, '$.variant') AS variant
+                 FROM event_log
+                WHERE event_name = 'exp_exposure'
+                  AND json_extract(properties, '$.experiment_id') = ?
+                GROUP BY user_id""",
             [experiment_id],
         )
-        if not assignments:
+
+        denominator_source: str
+        variant_users: dict[str, set[str]] = {}
+
+        if exposure_rows:
+            # 노출 이벤트 기반 분모
+            denominator_source = "exposure"
+            for r in exposure_rows:
+                v = (r.get("variant") or "unknown").strip()
+                variant_users.setdefault(v, set()).add(r["user_id"])
+        else:
+            # 폴백: experiment_assignments 기반 배정 분모
+            denominator_source = "assignment"
+            assignments = await d1.query(
+                "SELECT user_id, variant_name FROM experiment_assignments WHERE experiment_id = ?",
+                [experiment_id],
+            )
+            if not assignments:
+                return ExperimentResult(
+                    experiment_id=experiment_id,
+                    primary_metric=exp.primary_metric,
+                    sample_size=0,
+                    denominator_source=denominator_source,
+                    message="배정된 사용자가 없습니다",
+                )
+            for a in assignments:
+                variant_users.setdefault(a["variant_name"], set()).add(a["user_id"])
+
+        if not variant_users:
             return ExperimentResult(
                 experiment_id=experiment_id,
                 primary_metric=exp.primary_metric,
                 sample_size=0,
-                message="배정된 사용자가 없습니다",
+                denominator_source=denominator_source,
+                message="노출된 사용자가 없습니다",
             )
-
-        # variant별 사용자 그룹핑 (control / treatment 우선, 없으면 첫 두 variant)
-        variant_users: dict[str, set[str]] = {}
-        for a in assignments:
-            vname = a["variant_name"]
-            variant_users.setdefault(vname, set()).add(a["user_id"])
 
         variant_names = list(variant_users.keys())
         control_name = "control" if "control" in variant_users else variant_names[0]
@@ -271,7 +302,8 @@ class ExperimentService:
             variant_names[1] if len(variant_names) > 1 else variant_names[0]
         )
 
-        all_user_ids = [a["user_id"] for a in assignments]
+        # ── 전환 유저 조회 (primary_metric 이벤트 발생 여부) ──
+        all_user_ids = list({uid for uids in variant_users.values() for uid in uids})
         placeholders = ",".join("?" * len(all_user_ids))
         metric_rows = await d1.query(
             f"SELECT DISTINCT user_id FROM event_log WHERE event_name = ? AND user_id IN ({placeholders})",
@@ -290,17 +322,20 @@ class ExperimentService:
                 experiment_id=experiment_id,
                 primary_metric=exp.primary_metric,
                 sample_size=c_total + t_total,
+                denominator_source=denominator_source,
                 message="control 또는 treatment 사용자가 없습니다",
             )
 
+        # ── Bayesian 확률 (Beta-Binomial) ──
         t_samples = np.random.beta(t_success + 1, (t_total - t_success) + 1, 10_000)
         c_samples = np.random.beta(c_success + 1, (c_total - c_success) + 1, 10_000)
         prob = float((t_samples > c_samples).mean())
 
-        _, p_value, _, _ = chi2_contingency(
-            [[t_total, c_total], [t_total + c_total, t_total + c_total]]
-        )
-        srm_warning = bool(p_value < 0.01)
+        # ── SRM 검정: χ² goodness-of-fit (기대 50:50) — 임계값 p < 0.001 ──
+        total = c_total + t_total
+        expected_each = total / 2.0
+        _, srm_p = chisquare([t_total, c_total], f_exp=[expected_each, expected_each])
+        srm_warning = bool(srm_p < 0.001)
 
         c_rate = c_success / c_total
         t_rate = t_success / t_total
@@ -324,6 +359,7 @@ class ExperimentService:
             probability_treatment_wins=round(prob, 4),
             srm_warning=srm_warning,
             sample_size=c_total + t_total,
+            denominator_source=denominator_source,
         )
 
     async def _to_experiment(self, row: dict) -> Experiment:

@@ -141,6 +141,8 @@ export interface ExperimentResult {
   probability_treatment_wins: number | null;
   srm_warning: boolean;
   sample_size: number;
+  /** "exposure" = exp_exposure 이벤트 기반 / "assignment" = experiment_assignments 폴백 */
+  denominator_source?: 'exposure' | 'assignment';
   message?: string;
 }
 

@@ -13,9 +13,11 @@ import { Button } from '../../../components/ui/button';
 import { Textarea } from '../../../components/ui/textarea';
 import {
   experimentAnalyticsApi,
+  experimentResultApi,
   availableEventsApi,
   decisionApi,
   type ExperimentAnalyticsResponse,
+  type ExperimentResult,
   type AvailableEventsResponse,
   type Decision,
   type Experiment,
@@ -113,6 +115,7 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
 }) => {
   const [analytics, setAnalytics] = useState<ExperimentAnalyticsResponse | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [experimentResult, setExperimentResult] = useState<ExperimentResult | null>(null);
   const [availableEvents, setAvailableEvents] = useState<AvailableEventsResponse | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [decisions, setDecisions] = useState<Decision[]>([]);
@@ -131,6 +134,10 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
       .then(setAnalytics)
       .catch(() => {})
       .finally(() => setAnalyticsLoading(false));
+
+    experimentResultApi.getResult(experimentId)
+      .then(setExperimentResult)
+      .catch(() => {});
 
     setEventsLoading(true);
     availableEventsApi.get(experimentId)
@@ -323,6 +330,30 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
                       />
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                <CardContent className="pt-4 pb-4">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">분모 기준</p>
+                  {analyticsLoading ? (
+                    <span className="text-xs text-slate-400">로딩 중...</span>
+                  ) : experimentResult?.denominator_source === 'exposure' ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      노출 기준 (exp_exposure)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      배정 기준 (폴백)
+                    </span>
+                  )}
+                  <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                    {experimentResult?.denominator_source === 'exposure'
+                      ? 'exp_exposure 이벤트 기록 유저 기준'
+                      : 'exp_exposure 이벤트 없음 — experiment_assignments 기준'}
+                  </p>
                 </CardContent>
               </Card>
             </div>

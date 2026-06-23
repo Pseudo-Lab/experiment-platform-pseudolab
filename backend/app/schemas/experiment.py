@@ -169,4 +169,6 @@ class ExperimentResult(BaseModel):
     probability_treatment_wins: Optional[float] = None
     srm_warning: bool = False
     sample_size: int
+    # "exposure" = exp_exposure 이벤트 기반 분모 / "assignment" = experiment_assignments 기반 폴백
+    denominator_source: str = "assignment"
     message: Optional[str] = None
