@@ -112,36 +112,43 @@ class ExperimentAnalyticsService:
         properties JSON 안의 experiment_id 필드로 실험을 식별하고,
         event_name = primary_metric 이면 conversion, 그 외는 impression.
         variant 컬럼이 없으므로 'control' 고정.
+        smoke_test = true 인 이벤트는 실수로 집계되지 않도록 제외.
         """
+        # smoke_test 이벤트 제외 조건 (properties.smoke_test = true)
+        SMOKE_FILTER = "AND (json_extract(properties, '$.smoke_test') IS NULL OR json_extract(properties, '$.smoke_test') = 0)"
+
         if event_type == "conversion":
             if not primary_metric:
                 return []
             return await d1.query(
-                """SELECT 'control' AS variant,
+                f"""SELECT 'control' AS variant,
                           NULL        AS url,
                           substr(event_time, 1, 10) AS date
                    FROM event_log
                    WHERE event_name = ?
-                     AND json_extract(properties, '$.experiment_id') = ?""",
+                     AND json_extract(properties, '$.experiment_id') = ?
+                     {SMOKE_FILTER}""",
                 [primary_metric, experiment_id],
             )
         # impression: primary_metric 이벤트가 아닌 것 (= 노출/exposure 이벤트)
         if primary_metric:
             return await d1.query(
-                """SELECT 'control' AS variant,
+                f"""SELECT 'control' AS variant,
                           NULL        AS url,
                           substr(event_time, 1, 10) AS date
                    FROM event_log
                    WHERE event_name != ?
-                     AND json_extract(properties, '$.experiment_id') = ?""",
+                     AND json_extract(properties, '$.experiment_id') = ?
+                     {SMOKE_FILTER}""",
                 [primary_metric, experiment_id],
             )
         return await d1.query(
-            """SELECT 'control' AS variant,
+            f"""SELECT 'control' AS variant,
                       NULL        AS url,
                       substr(event_time, 1, 10) AS date
                FROM event_log
-               WHERE json_extract(properties, '$.experiment_id') = ?""",
+               WHERE json_extract(properties, '$.experiment_id') = ?
+               {SMOKE_FILTER}""",
             [experiment_id],
         )
 
@@ -307,17 +314,20 @@ class ExperimentAnalyticsService:
         primary_metric: str | None = exp_rows[0]["primary_metric"] if exp_rows else None
 
         if experiment_type == "quasi_experiment":
-            # event_log 기반 이벤트 목록 집계
+            # event_log 기반 이벤트 목록 집계 (smoke_test 제외)
+            SMOKE_FILTER = "AND (json_extract(properties, '$.smoke_test') IS NULL OR json_extract(properties, '$.smoke_test') = 0)"
             type_rows = await d1.query(
-                """SELECT DISTINCT event_name AS event_type
+                f"""SELECT DISTINCT event_name AS event_type
                    FROM event_log
-                   WHERE json_extract(properties, '$.experiment_id') = ?""",
+                   WHERE json_extract(properties, '$.experiment_id') = ?
+                   {SMOKE_FILTER}""",
                 [experiment_id],
             )
             count_rows = await d1.query(
-                """SELECT COUNT(*) AS total
+                f"""SELECT COUNT(*) AS total
                    FROM event_log
-                   WHERE json_extract(properties, '$.experiment_id') = ?""",
+                   WHERE json_extract(properties, '$.experiment_id') = ?
+                   {SMOKE_FILTER}""",
                 [experiment_id],
             )
             event_types = [r["event_type"] for r in type_rows]
