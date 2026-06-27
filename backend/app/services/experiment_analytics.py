@@ -72,12 +72,21 @@ class ExperimentAnalyticsService:
     async def get_analytics(self, experiment_id: str) -> ExperimentAnalyticsResponse:
         # resolve experiment key (flag_key) for events that lack experiment_id
         exp_rows = await d1.query(
-            "SELECT flag_key FROM experiments WHERE id = ?", [experiment_id]
+            "SELECT flag_key, experiment_type, primary_metric FROM experiments WHERE id = ?",
+            [experiment_id],
         )
         flag_key: str | None = exp_rows[0]["flag_key"] if exp_rows else None
+        experiment_type: str = (exp_rows[0]["experiment_type"] or "ab_test") if exp_rows else "ab_test"
+        primary_metric: str | None = exp_rows[0]["primary_metric"] if exp_rows else None
 
-        imp_rows = await self._fetch_events(experiment_id, flag_key, "impression")
-        conv_rows = await self._fetch_events(experiment_id, flag_key, "conversion")
+        if experiment_type == "quasi_experiment":
+            # 준실험: luvp trackEvent → /capture → event_log 테이블로 쌓임
+            # properties.experiment_id 로 필터, primary_metric 일치 여부로 impression/conversion 구분
+            imp_rows = await self._fetch_events_from_log(experiment_id, primary_metric, "impression")
+            conv_rows = await self._fetch_events_from_log(experiment_id, primary_metric, "conversion")
+        else:
+            imp_rows = await self._fetch_events(experiment_id, flag_key, "impression")
+            conv_rows = await self._fetch_events(experiment_id, flag_key, "conversion")
 
         impressions = self._build_impressions(imp_rows)
         conversions = self._build_conversions(conv_rows)
@@ -92,6 +101,48 @@ class ExperimentAnalyticsService:
             statistical_significance=significance,
             anomalies=anomalies,
             srm_warning=srm_warning,
+        )
+
+    async def _fetch_events_from_log(
+        self, experiment_id: str, primary_metric: str | None, event_type: str
+    ) -> list[dict]:
+        """event_log 기반 이벤트 조회 (quasi_experiment 전용).
+
+        luvp trackEvent → /capture → event_log 에 쌓이는 이벤트를 읽는다.
+        properties JSON 안의 experiment_id 필드로 실험을 식별하고,
+        event_name = primary_metric 이면 conversion, 그 외는 impression.
+        variant 컬럼이 없으므로 'control' 고정.
+        """
+        if event_type == "conversion":
+            if not primary_metric:
+                return []
+            return await d1.query(
+                """SELECT 'control' AS variant,
+                          NULL        AS url,
+                          substr(event_time, 1, 10) AS date
+                   FROM event_log
+                   WHERE event_name = ?
+                     AND json_extract(properties, '$.experiment_id') = ?""",
+                [primary_metric, experiment_id],
+            )
+        # impression: primary_metric 이벤트가 아닌 것 (= 노출/exposure 이벤트)
+        if primary_metric:
+            return await d1.query(
+                """SELECT 'control' AS variant,
+                          NULL        AS url,
+                          substr(event_time, 1, 10) AS date
+                   FROM event_log
+                   WHERE event_name != ?
+                     AND json_extract(properties, '$.experiment_id') = ?""",
+                [primary_metric, experiment_id],
+            )
+        return await d1.query(
+            """SELECT 'control' AS variant,
+                      NULL        AS url,
+                      substr(event_time, 1, 10) AS date
+               FROM event_log
+               WHERE json_extract(properties, '$.experiment_id') = ?""",
+            [experiment_id],
         )
 
     async def _fetch_events(
@@ -248,9 +299,39 @@ class ExperimentAnalyticsService:
 
     async def get_available_events(self, experiment_id: str) -> AvailableEventsResponse:
         exp_rows = await d1.query(
-            "SELECT flag_key FROM experiments WHERE id = ?", [experiment_id]
+            "SELECT flag_key, experiment_type, primary_metric FROM experiments WHERE id = ?",
+            [experiment_id],
         )
         flag_key: str | None = exp_rows[0]["flag_key"] if exp_rows else None
+        experiment_type: str = (exp_rows[0]["experiment_type"] or "ab_test") if exp_rows else "ab_test"
+        primary_metric: str | None = exp_rows[0]["primary_metric"] if exp_rows else None
+
+        if experiment_type == "quasi_experiment":
+            # event_log 기반 이벤트 목록 집계
+            type_rows = await d1.query(
+                """SELECT DISTINCT event_name AS event_type
+                   FROM event_log
+                   WHERE json_extract(properties, '$.experiment_id') = ?""",
+                [experiment_id],
+            )
+            count_rows = await d1.query(
+                """SELECT COUNT(*) AS total
+                   FROM event_log
+                   WHERE json_extract(properties, '$.experiment_id') = ?""",
+                [experiment_id],
+            )
+            event_types = [r["event_type"] for r in type_rows]
+            total_events = count_rows[0]["total"] if count_rows else 0
+            # primary_metric 이벤트 = conversion; 나머지 = impression 역할
+            has_impressions = any(e != primary_metric for e in event_types)
+            conversion_events = [e for e in event_types if e == primary_metric]
+            return AvailableEventsResponse(
+                event_types=event_types,
+                has_impressions=has_impressions,
+                has_conversions=len(conversion_events) > 0,
+                conversion_events=conversion_events,
+                total_events=total_events,
+            )
 
         if flag_key:
             type_rows = await d1.query(
