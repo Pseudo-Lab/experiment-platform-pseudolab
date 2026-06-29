@@ -36,6 +36,20 @@ export interface SDKConfig {
   userId?: string
 }
 
+/** GET /experiments/assignment 응답 */
+export interface AssignmentResult {
+  experiment_id: string
+  variant_name: string
+  user_id: string
+  assigned_at: string
+}
+
+/** sdk.useAssignment / trackExposure 옵션 */
+export interface AssignmentOptions {
+  userId?: string
+  signal?: AbortSignal
+}
+
 // ---------------------------------------------------------------------------
 // ExperimentPlacement (준실험) 타입
 // ---------------------------------------------------------------------------

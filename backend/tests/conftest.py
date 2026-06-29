@@ -31,10 +31,14 @@ CREATE TABLE IF NOT EXISTS experiments (
     project_id  TEXT REFERENCES projects(id),
     status      TEXT NOT NULL DEFAULT 'draft',
     owner_id    TEXT,
+    winning_variant TEXT,
     start_at    TEXT,
     end_at      TEXT,
     reflection_start_date  TEXT,
     reflection_window_days INTEGER NOT NULL DEFAULT 7,
+    kill_switch        INTEGER NOT NULL DEFAULT 0,
+    srm_flagged        INTEGER NOT NULL DEFAULT 0,
+    guardrail_metrics  TEXT,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
@@ -127,14 +131,21 @@ CREATE TABLE IF NOT EXISTS feature_flag_exposure (
 );
 
 CREATE TABLE IF NOT EXISTS event_log (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id   TEXT    NOT NULL,
-    cohort_id TEXT,
-    event_name TEXT   NOT NULL,
-    properties TEXT,
-    event_time TEXT   NOT NULL,
-    created_at TEXT   NOT NULL,
-    project_id TEXT   REFERENCES projects(id)
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id        TEXT    NOT NULL,
+    cohort_id      TEXT,
+    event_name     TEXT    NOT NULL,
+    properties     TEXT,
+    event_time     TEXT    NOT NULL,
+    created_at     TEXT    NOT NULL,
+    project_id     TEXT    REFERENCES projects(id),
+    event_id       TEXT,
+    session_id     TEXT,
+    experiment_id  TEXT,
+    variant        TEXT,
+    device         TEXT,
+    anon_id        TEXT,
+    UNIQUE(event_id)
 );
 
 CREATE TABLE IF NOT EXISTS visual_changes (

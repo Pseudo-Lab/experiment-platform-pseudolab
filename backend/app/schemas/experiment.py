@@ -67,6 +67,9 @@ class ExperimentCreate(BaseModel):
     start_at: Optional[datetime] = None
     end_at: Optional[datetime] = None
     variants: List[VariantCreate] = []
+    # 가드레일 지표: running 중 악화 여부를 모니터링할 이벤트 이름 목록
+    # e.g. ["weekly_session_attended", "page_view"]
+    guardrail_metrics: Optional[List[str]] = None
 
     @field_validator("id")
     @classmethod
@@ -105,6 +108,8 @@ class ExperimentUpdate(BaseModel):
     end_at: Optional[datetime] = None
     reflection_start_date: Optional[datetime] = None
     reflection_window_days: Optional[int] = None
+    kill_switch: Optional[bool] = None  # True = 전원 control 배정 (긴급 차단)
+    guardrail_metrics: Optional[List[str]] = None
 
     @model_validator(mode="after")
     def check_update_contract(self):
@@ -136,6 +141,9 @@ class Experiment(BaseModel):
     end_at: Optional[datetime] = None
     reflection_start_date: Optional[datetime] = None
     reflection_window_days: int = 7
+    kill_switch: bool = False
+    srm_flagged: bool = False        # 배치 SRM 모니터 결과
+    guardrail_metrics: Optional[List[str]] = None  # 가드레일 이벤트 목록
     created_at: datetime
     updated_at: datetime
     variants: List[Variant] = []
@@ -160,6 +168,24 @@ class VariantResult(BaseModel):
     rate: float
 
 
+class GuardrailMetricResult(BaseModel):
+    """가드레일 지표별 variant 전환율 비교."""
+    metric: str
+    control_rate: float
+    treatment_rate: Optional[float] = None
+    uplift: Optional[float] = None
+    # True = treatment가 control 대비 통계적으로 유의미하게 악화
+    deteriorating: bool = False
+
+
+# 의사결정 판단 상태 (4-state)
+# ship         : P(T>C) >= 0.95 && uplift > 0 && 샘플 충분 && SRM 없음
+# rollback     : P(T>C) <= 0.05 && uplift < 0 && 샘플 충분 && SRM 없음
+# hold         : SRM 감지 또는 가드레일 악화
+# need_more_data: 샘플 부족 (표본 < 최소 기준)
+JudgmentType = str  # "ship" | "hold" | "rollback" | "need_more_data"
+
+
 class ExperimentResult(BaseModel):
     experiment_id: str
     primary_metric: Optional[str]
@@ -172,3 +198,9 @@ class ExperimentResult(BaseModel):
     # "exposure" = exp_exposure 이벤트 기반 분모 / "assignment" = experiment_assignments 기반 폴백
     denominator_source: str = "assignment"
     message: Optional[str] = None
+    # 95% 신뢰구간 for Δ%p (정규 근사): [lower, upper]
+    confidence_interval: Optional[List[float]] = None
+    # 4-state 판단
+    judgment: Optional[JudgmentType] = None
+    # 가드레일 지표별 결과
+    guardrail_results: Optional[List[GuardrailMetricResult]] = None

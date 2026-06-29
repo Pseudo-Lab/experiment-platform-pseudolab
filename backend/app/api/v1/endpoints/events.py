@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
-from app.schemas.event import EventCapture, ExperimentEvent, PersonIdentify
+from app.schemas.event import EventCapture, EventBatch, ExperimentEvent, PersonIdentify
 from app.schemas.project import Project
 from app.services.event import event_service
 from app.api.deps import get_project_from_api_key
@@ -16,6 +16,17 @@ async def capture(
     project_id = project.id if project else None
     await event_service.capture(data, project_id=project_id)
     return {"success": True, "message": "accepted"}
+
+
+@router.post("/ingest/events", status_code=202)
+async def ingest_events(
+    batch: EventBatch,
+    project: Optional[Project] = Depends(get_project_from_api_key),
+):
+    """배치 이벤트 수집. event_id 기반 멱등 적재 — 동일 event_id는 중복 무시."""
+    project_id = project.id if project else None
+    succeeded = await event_service.capture_batch(batch, project_id=project_id)
+    return {"success": True, "accepted": succeeded, "total": len(batch.events)}
 
 
 @router.post("/events", status_code=202)

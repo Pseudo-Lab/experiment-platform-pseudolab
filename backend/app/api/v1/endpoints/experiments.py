@@ -43,6 +43,18 @@ async def delete_experiment(experiment_id: str):
     await experiment_service.delete(experiment_id)
 
 
+@router.get("/assignment", response_model=AssignmentResponse)
+async def assignment_query(
+    experiment_id: str = Query(..., description="실험 ID"),
+    uid: str = Query(..., description="유저 ID"),
+):
+    """GET /experiments/assignment?experiment_id=&uid= — SDK 표준 형태."""
+    result = await experiment_service.assign(experiment_id, uid)
+    if not result:
+        raise HTTPException(status_code=404, detail="Experiment or variants not found")
+    return result
+
+
 @router.get("/{experiment_id}/assign/{user_id}", response_model=AssignmentResponse)
 async def assign_user(experiment_id: str, user_id: str):
     result = await experiment_service.assign(experiment_id, user_id)

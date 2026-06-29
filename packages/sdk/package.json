@@ -1,7 +1,7 @@
 {
   "name": "@pseudo-lab/experibase-sdk",
-  "version": "0.1.4",
   "type": "module",
+  "version": "0.1.5",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"

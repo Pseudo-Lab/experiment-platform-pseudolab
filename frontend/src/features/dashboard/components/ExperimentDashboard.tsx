@@ -22,7 +22,114 @@ import {
   type Decision,
   type Experiment,
   type DecisionType,
+  type JudgmentType,
 } from '../../../services/api';
+
+// ── 4-state 판단 배너 ─────────────────────────────────────────────
+const JUDGMENT_CONFIG: Record<JudgmentType, {
+  label: string;
+  desc: string;
+  icon: React.ReactNode;
+  className: string;
+}> = {
+  ship: {
+    label: 'SHIP 권장',
+    desc: 'P(T>C) ≥ 95% · Uplift 양수 · 샘플 충분',
+    icon: <Ship className="h-4 w-4" />,
+    className: 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-700 dark:text-emerald-300',
+  },
+  hold: {
+    label: 'HOLD',
+    desc: 'SRM 감지 또는 가드레일 이상 — 추가 모니터링 필요',
+    icon: <Pause className="h-4 w-4" />,
+    className: 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-300',
+  },
+  rollback: {
+    label: 'ROLLBACK 권장',
+    desc: 'P(T>C) ≤ 5% · Uplift 음수 — treatment가 control보다 나쁨',
+    icon: <RotateCcw className="h-4 w-4" />,
+    className: 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/30 dark:border-rose-700 dark:text-rose-300',
+  },
+  need_more_data: {
+    label: '데이터 부족',
+    desc: '샘플이 충분히 수집될 때까지 대기',
+    icon: <Clock className="h-4 w-4" />,
+    className: 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400',
+  },
+};
+
+function JudgmentBanner({ judgment }: { judgment: JudgmentType | null | undefined }) {
+  if (!judgment) return null;
+  const cfg = JUDGMENT_CONFIG[judgment];
+  return (
+    <div className={`flex items-center gap-3 rounded-2xl border px-5 py-3.5 ${cfg.className}`}>
+      <span className="shrink-0">{cfg.icon}</span>
+      <div>
+        <span className="font-bold text-sm mr-2">{cfg.label}</span>
+        <span className="text-xs opacity-75">{cfg.desc}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── KPI 카드 그룹 (Δ%p + CI + P(T>C)) ─────────────────────────────
+function KpiCards({ result }: { result: ExperimentResult }) {
+  const uplift = result.uplift;
+  const prob = result.probability_treatment_wins;
+  const ci = result.confidence_interval;
+
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {/* Δ%p */}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+        <p className="text-xs font-semibold text-slate-500 mb-1">Δ%p (Uplift)</p>
+        {uplift !== null && uplift !== undefined ? (
+          <>
+            <p className={`text-xl font-extrabold ${uplift > 0 ? 'text-emerald-600' : uplift < 0 ? 'text-rose-600' : 'text-slate-600'}`}>
+              {uplift > 0 ? '+' : ''}{(uplift * 100).toFixed(2)}%p
+            </p>
+            {ci && (
+              <p className="text-xs text-slate-400 mt-1">
+                95% CI [{(ci[0] * 100).toFixed(2)}%, {(ci[1] * 100).toFixed(2)}%]
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-slate-400 flex items-center gap-1"><Clock className="h-3.5 w-3.5" />데이터 부족</p>
+        )}
+      </div>
+
+      {/* P(T>C) */}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+        <p className="text-xs font-semibold text-slate-500 mb-1">P(T&gt;C)</p>
+        {prob !== null && prob !== undefined ? (
+          <>
+            <p className={`text-xl font-extrabold ${prob >= 0.95 ? 'text-emerald-600' : prob >= 0.80 ? 'text-amber-500' : 'text-slate-600'}`}>
+              {(prob * 100).toFixed(1)}%
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              {prob >= 0.95 ? '통계적 유의' : prob >= 0.80 ? '경계 수준' : '유의하지 않음'}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-slate-400 flex items-center gap-1"><Clock className="h-3.5 w-3.5" />데이터 부족</p>
+        )}
+      </div>
+
+      {/* Sample */}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+        <p className="text-xs font-semibold text-slate-500 mb-1">총 표본</p>
+        <p className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
+          {result.sample_size.toLocaleString()}
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          {result.control ? `control: ${result.control.users.toLocaleString()}` : '—'}
+          {result.treatment ? ` / treatment: ${result.treatment.users.toLocaleString()}` : ''}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ── P-value significance badge ──────────────────────────────────
 function SigCard({ pValue }: { pValue: number | null }) {
@@ -232,6 +339,16 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
 
   return (
     <div className="space-y-8">
+      {/* ─────────── Judgment 배너 ─────────── */}
+      {experimentResult && (
+        <JudgmentBanner judgment={experimentResult.judgment} />
+      )}
+
+      {/* ─────────── KPI 카드 ─────────── */}
+      {experimentResult && experimentResult.sample_size > 0 && (
+        <KpiCards result={experimentResult} />
+      )}
+
       {/* ─────────── P0: 실험 헬스 ─────────── */}
       <section>
         <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
@@ -435,35 +552,89 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
         </section>
       )}
 
-      {/* ─────────── P2: Guardrail (weekly_session_attended 있을 때만) ─────────── */}
-      {showP2 && (
+      {/* ─────────── P2: Guardrail ─────────── */}
+      {(showP2 || (experimentResult?.guardrail_results && experimentResult.guardrail_results.length > 0)) && (
         <section>
           <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100 mb-3">
             <Shield className="h-4 w-4 text-amber-500" />
             P2 — Guardrail
           </h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">W11 리텐션</p>
-              <p className="text-xs text-slate-400">
-                <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">weekly_session_attended</code> 이벤트 기반
-              </p>
-              <p className="text-xs text-slate-400 mt-2">리텐션 차트 준비 중 — 백엔드 집계 후 표시됩니다.</p>
+
+          {/* guardrail_results가 있으면 실제 데이터 패널 표시 */}
+          {experimentResult?.guardrail_results && experimentResult.guardrail_results.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {experimentResult.guardrail_results.map(g => (
+                <div
+                  key={g.metric}
+                  className={`rounded-xl border p-4 ${
+                    g.deteriorating
+                      ? 'border-rose-200 bg-rose-50 dark:bg-rose-950/20 dark:border-rose-800'
+                      : 'border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-slate-500 font-mono">{g.metric}</p>
+                    {g.deteriorating ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600">
+                        <AlertTriangle className="h-3.5 w-3.5" />악화
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                        <CheckCircle className="h-3.5 w-3.5" />정상
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-4 text-xs text-slate-600 dark:text-slate-400">
+                    <div>
+                      <span className="text-slate-400">control</span>
+                      <br />
+                      <span className="font-bold">{(g.control_rate * 100).toFixed(2)}%</span>
+                    </div>
+                    {g.treatment_rate !== null && (
+                      <div>
+                        <span className="text-slate-400">treatment</span>
+                        <br />
+                        <span className="font-bold">{(g.treatment_rate * 100).toFixed(2)}%</span>
+                      </div>
+                    )}
+                    {g.uplift !== null && (
+                      <div>
+                        <span className="text-slate-400">Δ</span>
+                        <br />
+                        <span className={`font-bold ${g.uplift >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {g.uplift > 0 ? '+' : ''}{(g.uplift * 100).toFixed(2)}%p
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-1">수집된 이벤트</p>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {eventTypes.filter(e => e !== 'impression').map(e => (
-                  <span
-                    key={e}
-                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
-                  >
-                    {e}
-                  </span>
-                ))}
+          ) : (
+            /* guardrail_results 없으면 수집된 이벤트 목록만 */
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">가드레일 미설정</p>
+                <p className="text-xs text-slate-400">
+                  실험에 <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">guardrail_metrics</code> 를 설정하면<br />
+                  variant별 이상 감지 결과가 여기 표시됩니다.
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-1">수집된 이벤트</p>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {eventTypes.filter(e => e !== 'impression').map(e => (
+                    <span
+                      key={e}
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
+                    >
+                      {e}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </section>
       )}
 

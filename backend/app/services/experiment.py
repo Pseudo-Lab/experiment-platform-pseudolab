@@ -7,11 +7,13 @@ from scipy.stats import chi2_contingency, chisquare
 from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import HTTPException
+import math
+
 from app.schemas.experiment import (
     Experiment, ExperimentCreate, ExperimentUpdate,
     ExperimentStatus, ExperimentType,
     Variant, AssignmentResponse, VALID_TRANSITIONS,
-    ExperimentResult, VariantResult,
+    ExperimentResult, VariantResult, GuardrailMetricResult,
 )
 from app.db import d1
 
@@ -64,14 +66,15 @@ class ExperimentService:
         # variant_names_json는 unlinked 실험의 진실 공급원.
         variant_names = [v.name for v in data.variants]
         variant_names_json = json.dumps(variant_names) if variant_names else None
+        guardrail_metrics_json = json.dumps(data.guardrail_metrics) if data.guardrail_metrics else None
 
         now = _now()
         ok = await d1.execute(
             """INSERT INTO experiments
                (id, name, hypothesis, expected_effect, primary_metric, completion_event,
                 experiment_type, cohort_id, flag_key, variant_names_json, product, project_id,
-                status, owner_id, start_at, end_at, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)""",
+                status, owner_id, start_at, end_at, guardrail_metrics, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)""",
             [
                 exp_id,
                 data.name,
@@ -88,6 +91,7 @@ class ExperimentService:
                 data.owner_id,
                 _serialize_datetime(data.start_at),
                 _serialize_datetime(data.end_at),
+                guardrail_metrics_json,
                 now, now,
             ]
         )
@@ -122,6 +126,9 @@ class ExperimentService:
             patch["experiment_type"] = patch["experiment_type"].value
         if "status" in patch and hasattr(patch["status"], "value"):
             patch["status"] = patch["status"].value
+        if "guardrail_metrics" in patch:
+            val = patch["guardrail_metrics"]
+            patch["guardrail_metrics"] = json.dumps(val) if val else None
 
         patch["updated_at"] = _now()
 
@@ -188,12 +195,21 @@ class ExperimentService:
 
         # Flag-linked experiment → flag decide가 단일 진실 공급원.
         exp_meta = await d1.query(
-            "SELECT flag_key, variant_names_json FROM experiments WHERE id = ?",
+            "SELECT flag_key, variant_names_json, kill_switch FROM experiments WHERE id = ?",
             [experiment_id],
         )
         if not exp_meta:
             return None
         exp_row = exp_meta[0]
+
+        # kill_switch = 1 이면 무조건 control 반환 (긴급 차단)
+        if exp_row.get("kill_switch"):
+            return AssignmentResponse(
+                experiment_id=experiment_id,
+                variant_name="control",
+                user_id=user_id,
+                assigned_at=_now(),
+            )
 
         if exp_row.get("flag_key"):
             from app.services.feature_flag import feature_flag_service  # avoid circular import
@@ -338,6 +354,54 @@ class ExperimentService:
 
         c_rate = c_success / c_total
         t_rate = t_success / t_total
+        uplift = round(t_rate - c_rate, 4)
+
+        # ── 95% 신뢰구간 (정규 근사, Δ%p) ──────────────────────────────────────
+        se = math.sqrt(
+            (c_rate * (1 - c_rate) / c_total) +
+            (t_rate * (1 - t_rate) / t_total)
+        ) if c_total > 0 and t_total > 0 else 0.0
+        ci_lo = round(uplift - 1.96 * se, 4)
+        ci_hi = round(uplift + 1.96 * se, 4)
+
+        # ── 가드레일 지표 계산 ──────────────────────────────────────────────────
+        guardrail_results: list[GuardrailMetricResult] | None = None
+        if exp.guardrail_metrics:
+            guardrail_results = []
+            for gm in exp.guardrail_metrics:
+                gm_rows = await d1.query(
+                    f"SELECT DISTINCT user_id FROM event_log WHERE event_name = ? AND user_id IN ({placeholders})",
+                    [gm] + all_user_ids,
+                )
+                gm_converted = {r["user_id"] for r in gm_rows}
+                gm_c_rate = len(c_users & gm_converted) / c_total if c_total > 0 else 0.0
+                gm_t_rate = len(t_users & gm_converted) / t_total if t_total > 0 else 0.0
+                gm_uplift = round(gm_t_rate - gm_c_rate, 4)
+                # 가드레일 악화 판단: treatment 전환율이 control보다 유의미하게 낮음
+                gm_deteriorating = gm_uplift < -0.02  # 절대적 2%p 이상 하락
+                guardrail_results.append(GuardrailMetricResult(
+                    metric=gm,
+                    control_rate=round(gm_c_rate, 4),
+                    treatment_rate=round(gm_t_rate, 4),
+                    uplift=gm_uplift,
+                    deteriorating=gm_deteriorating,
+                ))
+
+        # ── 4-state 판단 ────────────────────────────────────────────────────────
+        MIN_SAMPLE = 100
+        total_sample = c_total + t_total
+        guardrail_alert = any(g.deteriorating for g in guardrail_results) if guardrail_results else False
+
+        if total_sample < MIN_SAMPLE:
+            judgment = "need_more_data"
+        elif srm_warning or guardrail_alert:
+            judgment = "hold"
+        elif prob >= 0.95 and uplift > 0:
+            judgment = "ship"
+        elif prob <= 0.05 and uplift < 0:
+            judgment = "rollback"
+        else:
+            judgment = "need_more_data" if total_sample < 500 else "hold"
 
         return ExperimentResult(
             experiment_id=experiment_id,
@@ -354,11 +418,14 @@ class ExperimentService:
                 conversions=c_success,
                 rate=round(c_rate, 4),
             ),
-            uplift=round(t_rate - c_rate, 4),
+            uplift=uplift,
             probability_treatment_wins=round(prob, 4),
             srm_warning=srm_warning,
             sample_size=c_total + t_total,
             denominator_source=denominator_source,
+            confidence_interval=[ci_lo, ci_hi],
+            judgment=judgment,
+            guardrail_results=guardrail_results,
         )
 
     async def _get_quasi_result(self, exp, experiment_id: str) -> ExperimentResult:
@@ -447,6 +514,13 @@ class ExperimentService:
 
         variants = [Variant(name=name, experiment_id=exp_id) for name in names]
 
+        # guardrail_metrics: DB에 JSON 문자열로 저장
+        raw_guardrail = row.get("guardrail_metrics")
+        try:
+            guardrail_metrics = json.loads(raw_guardrail) if raw_guardrail else None
+        except (json.JSONDecodeError, TypeError):
+            guardrail_metrics = None
+
         return Experiment(
             id=row["id"],
             name=row["name"],
@@ -466,6 +540,9 @@ class ExperimentService:
             end_at=row.get("end_at"),
             reflection_start_date=row.get("reflection_start_date"),
             reflection_window_days=int(row.get("reflection_window_days") or 7),
+            kill_switch=bool(row.get("kill_switch")),
+            srm_flagged=bool(row.get("srm_flagged")),
+            guardrail_metrics=guardrail_metrics,
             created_at=row["created_at"],
             updated_at=row["updated_at"],
             variants=variants,
