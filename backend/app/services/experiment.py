@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import uuid
 import numpy as np
 from scipy.stats import chi2_contingency, chisquare
@@ -247,6 +248,10 @@ class ExperimentService:
                 message="primary_metric이 설정되지 않았습니다",
             )
 
+        # ── 준실험 전용 경로: event_log 노출 + dl_reflection 전환 기준 ──
+        if exp.experiment_type == ExperimentType.QUASI_EXPERIMENT:
+            return await self._get_quasi_result(exp, experiment_id)
+
         # ── 분모 결정: exp_exposure 이벤트 우선, 없으면 experiment_assignments 폴백 ──
         # 분모는 "배정"이 아닌 "실제 노출"이어야 정확한 CTR/전환율 계산 가능.
         # exp_exposure 이벤트에는 properties.variant 가 필수(control|treatment).
@@ -270,22 +275,16 @@ class ExperimentService:
                 v = (r.get("variant") or "unknown").strip()
                 variant_users.setdefault(v, set()).add(r["user_id"])
         else:
-            # 폴백: experiment_assignments 기반 배정 분모
-            denominator_source = "assignment"
-            assignments = await d1.query(
-                "SELECT user_id, variant_name FROM experiment_assignments WHERE experiment_id = ?",
-                [experiment_id],
+            # exp_exposure 이벤트가 없으면 분석을 수행하지 않는다.
+            # assignment 기반 폴백은 실제 노출을 반영하지 않아 SRM·CTR 수치가 왜곡됨.
+            # luvp에서 exp_exposure 이벤트(properties: {experiment_id, variant}) 연동 후 분석 시작.
+            return ExperimentResult(
+                experiment_id=experiment_id,
+                primary_metric=exp.primary_metric,
+                sample_size=0,
+                denominator_source="exposure",
+                message="exp_exposure 이벤트 수집 전입니다. luvp에서 exp_exposure 이벤트 연동 후 분석이 시작됩니다.",
             )
-            if not assignments:
-                return ExperimentResult(
-                    experiment_id=experiment_id,
-                    primary_metric=exp.primary_metric,
-                    sample_size=0,
-                    denominator_source=denominator_source,
-                    message="배정된 사용자가 없습니다",
-                )
-            for a in assignments:
-                variant_users.setdefault(a["variant_name"], set()).add(a["user_id"])
 
         if not variant_users:
             return ExperimentResult(
@@ -293,7 +292,7 @@ class ExperimentService:
                 primary_metric=exp.primary_metric,
                 sample_size=0,
                 denominator_source=denominator_source,
-                message="노출된 사용자가 없습니다",
+                message="exp_exposure 이벤트에 유효한 variant 값이 없습니다. properties.variant(control|treatment) 확인이 필요합니다.",
             )
 
         variant_names = list(variant_users.keys())
@@ -360,6 +359,73 @@ class ExperimentService:
             srm_warning=srm_warning,
             sample_size=c_total + t_total,
             denominator_source=denominator_source,
+        )
+
+    async def _get_quasi_result(self, exp, experiment_id: str) -> ExperimentResult:
+        """준실험 전용 결과 계산.
+
+        분모: event_log의 노출 이벤트 (primary_metric이 아닌 이벤트, smoke_test 제외)
+        전환: dl_reflection 테이블 (제출 완료 기준 — ground truth)
+        교차검증용 primary_metric 이벤트는 집계하지 않음.
+        """
+        SMOKE_FILTER = (
+            "(json_extract(properties, '$.smoke_test') IS NULL "
+            "OR json_extract(properties, '$.smoke_test') = 0)"
+        )
+
+        # ── 분모: 노출 유저 (event_log, primary_metric 이벤트 제외, smoke 제외) ──
+        exposure_rows = await d1.query(
+            f"""SELECT DISTINCT user_id
+                FROM event_log
+                WHERE event_name != ?
+                  AND json_extract(properties, '$.experiment_id') = ?
+                  AND {SMOKE_FILTER}""",
+            [exp.primary_metric, experiment_id],
+        )
+        exposed_users = {r["user_id"] for r in exposure_rows}
+
+        if not exposed_users:
+            return ExperimentResult(
+                experiment_id=experiment_id,
+                primary_metric=exp.primary_metric,
+                sample_size=0,
+                denominator_source="exposure",
+                message="노출된 사용자가 없습니다",
+            )
+
+        # ── 전환: dl_reflection 테이블 (ground truth) ──
+        main_db_id = os.getenv("D1_MAIN_DATABASE_ID")
+        placeholders = ",".join("?" * len(exposed_users))
+        submitted_rows = await d1.query(
+            f"""SELECT DISTINCT user_id
+                FROM dl_reflection
+                WHERE experiment_id = ?
+                  AND user_id IN ({placeholders})""",
+            [experiment_id] + list(exposed_users),
+            database_id=main_db_id,
+        )
+        submitted_users = {r["user_id"] for r in submitted_rows}
+
+        total = len(exposed_users)
+        conversions = len(submitted_users)
+        rate = round(conversions / total, 4) if total > 0 else 0.0
+
+        return ExperimentResult(
+            experiment_id=experiment_id,
+            primary_metric=exp.primary_metric,
+            control=VariantResult(
+                variant_name="control",
+                users=total,
+                conversions=conversions,
+                rate=rate,
+            ),
+            treatment=None,
+            uplift=None,
+            probability_treatment_wins=None,
+            srm_warning=False,
+            sample_size=total,
+            denominator_source="exposure",
+            message=None,
         )
 
     async def _to_experiment(self, row: dict) -> Experiment:
