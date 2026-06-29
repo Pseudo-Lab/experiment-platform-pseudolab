@@ -155,7 +155,7 @@ npm link @pseudo-lab/experibase-sdk
 
 ### 첫 npm publish 체크리스트
 
-목표는 LVUP 같은 외부 프로젝트에서 아래처럼 설치/import할 수 있게 만드는 것입니다.
+목표는 외부 프로젝트에서 아래처럼 설치/import할 수 있게 만드는 것입니다.
 
 ```bash
 npm install @pseudo-lab/experibase-sdk
@@ -193,7 +193,7 @@ npm view @pseudo-lab/experibase-sdk version --registry=https://registry.npmjs.or
 npm view @pseudo-lab/experibase-sdk dist-tags --registry=https://registry.npmjs.org
 ```
 
-7. LVUP 프로젝트에서 설치를 확인합니다.
+7. 외부 소비 프로젝트에서 설치를 확인합니다.
 
 ```bash
 npm install @pseudo-lab/experibase-sdk
@@ -276,7 +276,7 @@ npm pack --dry-run
 
 ## 4. 외부 서비스에서 사용하기
 
-### LVUP 등 외부 React 앱
+### 외부 React 앱
 
 ```bash
 npm install @pseudo-lab/experibase-sdk
