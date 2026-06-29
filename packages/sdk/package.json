@@ -1,6 +1,6 @@
 {
   "name": "@pseudo-lab/experibase-sdk",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
     "access": "public"
