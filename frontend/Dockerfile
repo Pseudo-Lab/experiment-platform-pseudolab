@@ -16,7 +16,7 @@ WORKDIR /app
 
 RUN npm config set registry https://registry.npmjs.org/
 
-# 2-1. Build SDK first (frontend depends on @experibase/sdk via file:../packages/sdk)
+# 2-1. Build SDK first (frontend depends on @pseudo-lab/experibase-sdk via file:../packages/sdk)
 COPY packages/sdk/package*.json ./packages/sdk/
 RUN cd ./packages/sdk && npm ci --retry 2
 COPY packages/sdk/ ./packages/sdk/

@@ -70,15 +70,10 @@
 ## 설치
 
 ```
-# .npmrc 에 추가
-@pseudo-lab:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=깃허브_토큰
-
-# 설치
 npm install @pseudo-lab/experibase-sdk
 ```
 
-> GitHub Personal Access Token은 GitHub → Settings → Developer settings → Personal access tokens에서 발급합니다. `read:packages` 권한이 필요합니다.
+> npmjs public package로 배포합니다. 소비 앱에서는 GitHub token이나 별도 `.npmrc` 설정이 필요하지 않습니다.
 
 ---
 

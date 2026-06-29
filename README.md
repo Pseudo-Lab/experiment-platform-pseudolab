@@ -1,4 +1,4 @@
-# 🔬 Data Experiment Hub
+# 🔬 ExperiBase
 
 <div align="center">
   <a href="https://pseudo-lab.com"><img src="https://img.shields.io/badge/PseudoLab-S12-3776AB" alt="PseudoLab"/></a>
@@ -11,8 +11,8 @@
 </div>
 <br>
 
-> **Data-Driven & AI-Powered Experimentation Platform**
-> 가짜연구소의 실제 커뮤니티 데이터를 기반으로, 직관이 아닌 '데이터'를 통한 의사결정으로, '데이터'의 가치를 증명하는 오픈소스 지능형 실험 플랫폼입니다. 데이터 가치 평가의 글로벌 표준을 지향하며, 궁극적으로 AI Agent가 자율적으로 가설을 수립하고 실험을 운영하는 생태계를 만듭니다.
+> **Open-source experimentation platform**
+> ExperiBase는 가짜연구소의 실제 커뮤니티 데이터를 기반으로, 직관이 아닌 '데이터'를 통한 의사결정으로 '데이터'의 가치를 증명하는 오픈소스 지능형 실험 플랫폼입니다. 데이터 가치 평가의 글로벌 표준을 지향하며, 궁극적으로 AI Agent가 자율적으로 가설을 수립하고 실험을 운영하는 생태계를 만듭니다.
 
 ## 🌟 프로젝트 비전 (Project Vision)
 _"직관에서 데이터로, 수동에서 자율(AI)로"_

@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { ExperibaseSDK } from './core'
+import { ExperibaseSDK } from './core.js'
 import type {
   AssignmentOptions,
   AssignmentResult,
@@ -16,7 +16,7 @@ import type {
   ExperimentPlacementOptions,
   PlacementDecideResult,
   PlacementOptions,
-} from './types'
+} from './types.js'
 
 export type { DecideResult }
 export { ExperibaseSDK }
