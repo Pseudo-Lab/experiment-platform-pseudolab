@@ -35,7 +35,7 @@ def _srm_check(by_variant: dict[str, int]) -> bool:
     k = len(counts)
     expected = total / k
     chi2 = sum((c - expected) ** 2 / expected for c in counts)
-    return _chi2_sf(chi2, k - 1) < 0.01
+    return _chi2_sf(chi2, k - 1) < 0.001
 
 
 def _erf(x: float) -> float:
