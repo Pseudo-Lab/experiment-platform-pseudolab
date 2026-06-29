@@ -1,8 +1,9 @@
 {
   "name": "@pseudo-lab/experibase-sdk",
   "version": "0.1.4",
+  "type": "module",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
+    "registry": "https://registry.npmjs.org",
     "access": "public"
   },
   "description": "ExperiBase SDK — feature flag & A/B test client",
@@ -13,11 +14,12 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "default": "./dist/index.js"
     },
     "./react": {
       "types": "./dist/react.d.ts",
-      "import": "./dist/react.js"
+      "import": "./dist/react.js",
+      "default": "./dist/react.js"
     }
   },
   "typesVersions": {
@@ -27,10 +29,16 @@
       ]
     }
   },
-  "files": [
-    "dist",
-    "src"
-  ],
+  "files": ["dist", "src"],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pseudo-Lab/experiment-platform-pseudolab.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

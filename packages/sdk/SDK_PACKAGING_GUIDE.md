@@ -1,6 +1,6 @@
 # ExperiBase SDK Packaging Guide
 
-`@experibase/sdk` — ExperiBase 플랫폼의 공식 클라이언트 SDK.  
+`@pseudo-lab/experibase-sdk` — ExperiBase 플랫폼의 공식 클라이언트 SDK.
 Feature flag 결정, A/B 테스트 노출, 이벤트 트래킹을 위한 경량 TypeScript 라이브러리입니다.
 
 ---
@@ -57,7 +57,7 @@ ExperiBase 모노레포 내부에서 작업할 때 사용합니다.
 ```json
 {
   "dependencies": {
-    "@experibase/sdk": "file:../packages/sdk"
+    "@pseudo-lab/experibase-sdk": "file:../packages/sdk"
   }
 }
 ```
@@ -67,8 +67,8 @@ ExperiBase 모노레포 내부에서 작업할 때 사용합니다.
 {
   "compilerOptions": {
     "paths": {
-      "@experibase/sdk": ["../packages/sdk/src/index.ts"],
-      "@experibase/sdk/react": ["../packages/sdk/src/react.tsx"]
+      "@pseudo-lab/experibase-sdk": ["../packages/sdk/src/index.ts"],
+      "@pseudo-lab/experibase-sdk/react": ["../packages/sdk/src/react.tsx"]
     }
   }
 }
@@ -82,8 +82,8 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   resolve: {
     alias: [
-      { find: '@experibase/sdk/react', replacement: path.resolve(__dirname, '../packages/sdk/src/react.tsx') },
-      { find: '@experibase/sdk', replacement: path.resolve(__dirname, '../packages/sdk/src/index.ts') },
+      { find: '@pseudo-lab/experibase-sdk/react', replacement: path.resolve(__dirname, '../packages/sdk/src/react.tsx') },
+      { find: '@pseudo-lab/experibase-sdk', replacement: path.resolve(__dirname, '../packages/sdk/src/index.ts') },
     ],
   },
 })
@@ -128,7 +128,7 @@ npm link
 
 # 소비 앱에서 링크
 cd /path/to/your-app
-npm link @experibase/sdk
+npm link @pseudo-lab/experibase-sdk
 ```
 
 변경 시마다 `npx tsc`(또는 `npx tsc --watch`)로 재빌드해야 합니다.
@@ -140,7 +140,64 @@ npm link @experibase/sdk
 ### 사전 준비
 
 1. `packages/sdk/package.json`에 `@types/react`를 devDependencies에 추가합니다.
-2. npm 계정이 필요하며 `@experibase` 스코프에 퍼블리시 권한이 있어야 합니다.
+2. npm 계정이 필요하며 `@pseudo-lab` 스코프에 퍼블리시 권한이 있어야 합니다.
+3. GitHub Actions 배포를 쓰는 경우 repository secret `NPM_TOKEN`을 등록합니다.
+
+### npm 계정/권한 준비
+
+1. npmjs.com에서 배포 담당자 계정을 생성하고 2FA를 활성화합니다.
+2. `@pseudo-lab` npm organization 또는 scope를 준비합니다.
+3. 배포 담당자 계정이 `@pseudo-lab/experibase-sdk`를 publish할 수 있는 권한을 갖는지 확인합니다.
+4. GitHub Actions에서 배포할 경우 npm Access Tokens에서 publish 가능한 token을 생성합니다.
+   - CI/CD용 token은 2FA 요구를 통과할 수 있어야 합니다.
+   - 가능하면 장기 token 대신 npm Trusted Publishing(OIDC) 전환을 우선 검토합니다.
+5. 생성한 token 값은 GitHub repository secret `NPM_TOKEN`에만 저장합니다. 문서나 코드에 평문으로 남기지 않습니다.
+
+### 첫 npm publish 체크리스트
+
+목표는 LVUP 같은 외부 프로젝트에서 아래처럼 설치/import할 수 있게 만드는 것입니다.
+
+```bash
+npm install @pseudo-lab/experibase-sdk
+```
+
+```tsx
+import { ExperibaseProvider } from '@pseudo-lab/experibase-sdk/react'
+```
+
+조직 계정 준비 이후 첫 배포는 아래 순서로 진행합니다.
+
+1. npm organization에서 배포 담당자 권한을 확인합니다.
+   - `@pseudo-lab` organization 또는 scope가 있어야 합니다.
+   - 배포 담당자 계정이 `@pseudo-lab/experibase-sdk`를 publish할 수 있어야 합니다.
+   - 첫 publish 전에는 `npm view @pseudo-lab/experibase-sdk`가 404로 나오는 것이 정상입니다.
+2. npm access token을 준비합니다.
+   - GitHub Actions에서 publish할 수 있는 token을 만듭니다.
+   - token 값은 GitHub secret `NPM_TOKEN`에만 저장합니다.
+   - token 값, OTP, recovery code는 문서/코드/이슈에 남기지 않습니다.
+3. GitHub repository settings를 준비합니다.
+   - Environment: `npm-publish`
+   - Secret: `NPM_TOKEN`
+   - Repository 또는 environment variable: `SDK_NPM_PUBLISH_ENABLED`
+4. 실제 publish 전에는 `SDK_NPM_PUBLISH_ENABLED=false` 또는 미설정 상태로 dry-run을 먼저 실행합니다.
+   - `sdk-v*` 태그를 push하면 workflow가 install, typecheck, build, `npm pack --dry-run`,
+     `npm publish --dry-run --access public`까지 수행합니다.
+   - 이 상태에서는 실제 publish step이 skip됩니다.
+5. 실제 publish 시점에만 `SDK_NPM_PUBLISH_ENABLED=true`로 바꿉니다.
+   - dry-run에 사용한 workflow run을 rerun하거나, 버전을 올린 새 `sdk-v*` 태그를 push합니다.
+   - publish가 끝나면 `SDK_NPM_PUBLISH_ENABLED=false`로 되돌립니다.
+6. 배포 후 npm registry에서 확인합니다.
+
+```bash
+npm view @pseudo-lab/experibase-sdk version --registry=https://registry.npmjs.org
+npm view @pseudo-lab/experibase-sdk dist-tags --registry=https://registry.npmjs.org
+```
+
+7. LVUP 프로젝트에서 설치를 확인합니다.
+
+```bash
+npm install @pseudo-lab/experibase-sdk
+```
 
 ### 빌드 및 배포
 
@@ -163,6 +220,40 @@ npm version major   # 0.1.0 → 1.0.0
 npm publish --access public
 ```
 
+### GitHub Actions 배포
+
+SDK 배포는 `.github/workflows/publish-sdk.yml`에서 수행합니다.
+`package.json`의 버전을 올린 뒤 같은 버전의 `sdk-v*` 태그를 push하면 npmjs public registry로 배포됩니다.
+아직 배포하지 않을 때는 `sdk-v*` 태그를 push하지 않습니다.
+
+npm registry에는 빈 패키지 페이지를 먼저 만들어두는 절차가 없습니다.
+`@pseudo-lab` organization/scope와 GitHub workflow만 먼저 준비하고, 실제 package entry는 첫 publish 시점에 생성됩니다.
+Trusted Publishing(OIDC)을 쓰는 경우 package settings에서 trusted publisher를 등록해야 하므로, 첫 publish 이후 전환하는 흐름이 자연스럽습니다.
+그 전까지는 repository secret `NPM_TOKEN`을 사용하거나, 로컬에서 2FA로 첫 publish를 수행합니다.
+
+GitHub repository settings에서 environment `npm-publish`를 만듭니다.
+리뷰 가능한 사람이 있으면 required reviewers를 설정하고, 없으면 설정하지 않아도 됩니다.
+
+혼자 운영할 때의 배포 안전장치는 repository/environment variable `SDK_NPM_PUBLISH_ENABLED`입니다.
+이 값이 `true`일 때만 publish step이 실행됩니다.
+아직 배포하지 않을 때는 이 variable을 만들지 않거나 `false`로 둡니다.
+실제 배포할 때만 잠깐 `true`로 바꾸고, 배포 후 다시 `false`로 되돌립니다.
+
+배포 테스트는 실제 publish 전에 먼저 dry-run으로 합니다.
+`SDK_NPM_PUBLISH_ENABLED=false` 상태에서 `sdk-v*` 태그를 push하면 install, typecheck, build, `npm pack --dry-run`,
+`npm publish --dry-run --access public`까지 실행되고 실제 publish step만 skip됩니다.
+
+```bash
+cd packages/sdk
+npm version patch
+cd ../..
+git push origin main
+git tag sdk-v0.1.5
+git push origin sdk-v0.1.5
+```
+
+태그 버전과 `packages/sdk/package.json`의 `version`이 다르면 workflow가 실패합니다.
+
 ### 배포 전 체크리스트
 
 - [ ] `dist/` 파일이 최신 소스로 빌드되었는지 확인
@@ -170,6 +261,8 @@ npm publish --access public
 - [ ] `exports` 필드의 경로가 `dist/` 파일과 일치하는지 확인
 - [ ] `peerDependencies`에 `react: ">=18"` 명시되어 있는지 확인
 - [ ] `files` 필드에 `dist`, `src`가 포함되어 있는지 확인
+- [ ] `npm run typecheck` 통과
+- [ ] `npm pack --dry-run` 출력 확인
 - [ ] `CHANGELOG.md` (선택) 업데이트
 
 ### 빌드 후 패키지 구조 확인
@@ -186,12 +279,12 @@ npm pack --dry-run
 ### LVUP 등 외부 React 앱
 
 ```bash
-npm install @experibase/sdk
+npm install @pseudo-lab/experibase-sdk
 ```
 
 ```tsx
 // app.tsx (또는 진입점)
-import { ExperibaseProvider } from '@experibase/sdk/react'
+import { ExperibaseProvider } from '@pseudo-lab/experibase-sdk/react'
 
 export default function App() {
   return (
@@ -208,7 +301,7 @@ export default function App() {
 
 ```tsx
 // 컴포넌트에서
-import { useFlag, useDecide } from '@experibase/sdk/react'
+import { useFlag, useDecide } from '@pseudo-lab/experibase-sdk/react'
 
 function HeroSection() {
   const variant = useFlag('hero_cta_v1')
@@ -223,7 +316,7 @@ function HeroSection() {
 ```tsx
 // app/providers.tsx
 'use client'
-import { ExperibaseProvider } from '@experibase/sdk/react'
+import { ExperibaseProvider } from '@pseudo-lab/experibase-sdk/react'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -245,7 +338,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 ### Provider 설정
 
 ```tsx
-import { ExperibaseProvider } from '@experibase/sdk/react'
+import { ExperibaseProvider } from '@pseudo-lab/experibase-sdk/react'
 
 function App() {
   return (
@@ -266,7 +359,7 @@ function App() {
 ### `useFlag` — 간단한 변수 읽기
 
 ```tsx
-import { useFlag } from '@experibase/sdk/react'
+import { useFlag } from '@pseudo-lab/experibase-sdk/react'
 
 function CheckoutButton() {
   const variant = useFlag('checkout_flow_v2')
@@ -283,7 +376,7 @@ function CheckoutButton() {
 ### `useDecide` — 전체 결과 읽기
 
 ```tsx
-import { useDecide } from '@experibase/sdk/react'
+import { useDecide } from '@pseudo-lab/experibase-sdk/react'
 
 function SponsorBanner({ slotId }: { slotId: string }) {
   const { result, loading } = useDecide(slotId)
@@ -303,7 +396,7 @@ function SponsorBanner({ slotId }: { slotId: string }) {
 ### `useExperibase` — SDK 인스턴스 직접 접근
 
 ```tsx
-import { useExperibase } from '@experibase/sdk/react'
+import { useExperibase } from '@pseudo-lab/experibase-sdk/react'
 
 function TrackButton() {
   const { sdk, variants } = useExperibase()
@@ -328,7 +421,7 @@ React 없이 순수 TypeScript/JavaScript 환경에서 사용합니다.
 ### 초기화
 
 ```ts
-import { ExperibaseSDK } from '@experibase/sdk'
+import { ExperibaseSDK } from '@pseudo-lab/experibase-sdk'
 
 const sdk = new ExperibaseSDK({
   apiKey: 'pk_live_xxxx',
@@ -367,7 +460,7 @@ const result = await sdk.decide('premium_feature')
 ### Node.js 서버 사이드
 
 ```ts
-import { ExperibaseSDK } from '@experibase/sdk'
+import { ExperibaseSDK } from '@pseudo-lab/experibase-sdk'
 
 // 요청별로 userId를 직접 주입
 const sdk = new ExperibaseSDK({
@@ -456,7 +549,7 @@ await sdk.track('study_card_clicked', {
 ### React에서의 트래킹
 
 ```tsx
-import { useExperibase } from '@experibase/sdk/react'
+import { useExperibase } from '@pseudo-lab/experibase-sdk/react'
 
 function StudyCard({ studyId }: { studyId: string }) {
   const { sdk, variants } = useExperibase()

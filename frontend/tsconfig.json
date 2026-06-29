@@ -30,10 +30,10 @@
       "@/*": [
         "./src/*"
       ],
-      "@experibase/sdk": [
+      "@pseudo-lab/experibase-sdk": [
         "../packages/sdk/src/index.ts"
       ],
-      "@experibase/sdk/react": [
+      "@pseudo-lab/experibase-sdk/react": [
         "../packages/sdk/src/react.tsx"
       ],
       "react": [

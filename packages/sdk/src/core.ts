@@ -5,7 +5,7 @@ import type {
   PlacementDecideResult,
   PlacementOptions,
   SDKConfig,
-} from './types'
+} from './types.js'
 
 const UID_KEY = 'experibase_uid'
 
