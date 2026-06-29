@@ -9,6 +9,8 @@ import {
 } from 'react'
 import { ExperibaseSDK } from './core'
 import type {
+  AssignmentOptions,
+  AssignmentResult,
   DecideResult,
   ExperimentPlacementDecisionResult,
   ExperimentPlacementOptions,
@@ -183,6 +185,77 @@ export function useDecide(key: string): { result: DecideResult | null; loading: 
 export function useFlag(flagKey: string, fallback = 'control'): string {
   const { variants } = useExperibase()
   return variants[flagKey] ?? fallback
+}
+
+// ---------------------------------------------------------------------------
+// A/B 배정 훅
+// ---------------------------------------------------------------------------
+
+/**
+ * 실험 배정을 구독하는 훅.
+ *
+ * - `GET /experiments/assignment?experiment_id=&uid=` 를 호출한다.
+ * - kill_switch 활성 시 서버가 'control'을 반환한다.
+ * - fail-closed: API 오류 시 assignment.variant_name = 'control'
+ *
+ * @param experimentId  실험 ID (e.g. 'sidebar-nav-v1')
+ * @param options       userId 오버라이드, AbortSignal 등
+ *
+ * @example
+ * ```tsx
+ * const { assignment, loading } = useAssignment('sidebar-nav-v1')
+ * useEffect(() => {
+ *   if (!loading && assignment) {
+ *     sdk.trackExposure(assignment.experiment_id, assignment.variant_name)
+ *   }
+ * }, [loading, assignment])
+ * ```
+ */
+export interface UseAssignmentResult {
+  assignment: AssignmentResult | null
+  loading: boolean
+}
+
+export function useAssignment(
+  experimentId: string,
+  options?: Omit<AssignmentOptions, 'signal'>,
+): UseAssignmentResult {
+  const { sdk } = useExperibase()
+  const [assignment, setAssignment] = useState<AssignmentResult | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    const controller = new AbortController()
+
+    sdk
+      .getAssignment(experimentId, { ...options, signal: controller.signal })
+      .then(result => {
+        if (!cancelled) {
+          setAssignment(result)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAssignment({
+            experiment_id: experimentId,
+            variant_name:  'control',
+            user_id:       sdk.userId,
+            assigned_at:   new Date().toISOString(),
+          })
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [experimentId, options?.userId])
+
+  return { assignment, loading }
 }
 
 // ---------------------------------------------------------------------------

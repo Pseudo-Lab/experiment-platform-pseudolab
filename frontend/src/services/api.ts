@@ -132,6 +132,16 @@ export interface VariantResult {
   conversions: number;
   rate: number;
 }
+export interface GuardrailMetricResult {
+  metric: string;
+  control_rate: number;
+  treatment_rate: number | null;
+  uplift: number | null;
+  deteriorating: boolean;
+}
+
+export type JudgmentType = 'ship' | 'hold' | 'rollback' | 'need_more_data';
+
 export interface ExperimentResult {
   experiment_id: string;
   primary_metric: string | null;
@@ -144,6 +154,12 @@ export interface ExperimentResult {
   /** "exposure" = exp_exposure 이벤트 기반 / "assignment" = experiment_assignments 폴백 */
   denominator_source?: 'exposure' | 'assignment';
   message?: string;
+  /** 95% 신뢰구간 [lower, upper] for Δ%p */
+  confidence_interval?: [number, number] | null;
+  /** 4-state 판단: ship | hold | rollback | need_more_data */
+  judgment?: JudgmentType | null;
+  /** 가드레일 지표별 결과 */
+  guardrail_results?: GuardrailMetricResult[] | null;
 }
 
 // ────────────────────────────────────────────────────────────
