@@ -50,7 +50,6 @@ jobs:
         run: npm publish --dry-run --access public
 
       - name: Publish to npm
-        if: vars.SDK_NPM_PUBLISH_ENABLED == 'true'
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -178,14 +178,27 @@ import { ExperibaseProvider } from '@pseudo-lab/experibase-sdk/react'
 3. GitHub repository settings를 준비합니다.
    - Environment: `npm-publish`
    - Secret: `NPM_TOKEN`
-   - Repository 또는 environment variable: `SDK_NPM_PUBLISH_ENABLED`
-4. 실제 publish 전에는 `SDK_NPM_PUBLISH_ENABLED=false` 또는 미설정 상태로 dry-run을 먼저 실행합니다.
-   - `sdk-v*` 태그를 push하면 workflow가 install, typecheck, build, `npm pack --dry-run`,
-     `npm publish --dry-run --access public`까지 수행합니다.
-   - 이 상태에서는 실제 publish step이 skip됩니다.
-5. 실제 publish 시점에만 `SDK_NPM_PUBLISH_ENABLED=true`로 바꿉니다.
-   - dry-run에 사용한 workflow run을 rerun하거나, 버전을 올린 새 `sdk-v*` 태그를 push합니다.
-   - publish가 끝나면 `SDK_NPM_PUBLISH_ENABLED=false`로 되돌립니다.
+4. 태그 push 전에 로컬에서 배포 전 검증을 실행합니다.
+
+```bash
+cd packages/sdk
+npm ci
+npm run typecheck
+npm run build
+npm pack --dry-run
+npm publish --dry-run --access public
+```
+
+5. `sdk-v*` 태그를 push해 GitHub Actions 배포를 실행합니다.
+   - workflow는 install, typecheck, build, `npm pack --dry-run`, `npm publish --dry-run --access public`을 먼저 수행합니다.
+   - 모든 검증이 통과하면 같은 workflow에서 `npm publish --access public --provenance`를 실행합니다.
+   - 태그 push가 실제 publish까지 수행하므로, 태그 버전과 package version을 push 전에 반드시 확인합니다.
+
+```bash
+git tag sdk-v0.1.4
+git push origin sdk-v0.1.4
+```
+
 6. 배포 후 npm registry에서 확인합니다.
 
 ```bash
@@ -234,14 +247,9 @@ Trusted Publishing(OIDC)을 쓰는 경우 package settings에서 trusted publish
 GitHub repository settings에서 environment `npm-publish`를 만듭니다.
 리뷰 가능한 사람이 있으면 required reviewers를 설정하고, 없으면 설정하지 않아도 됩니다.
 
-혼자 운영할 때의 배포 안전장치는 repository/environment variable `SDK_NPM_PUBLISH_ENABLED`입니다.
-이 값이 `true`일 때만 publish step이 실행됩니다.
-아직 배포하지 않을 때는 이 variable을 만들지 않거나 `false`로 둡니다.
-실제 배포할 때만 잠깐 `true`로 바꾸고, 배포 후 다시 `false`로 되돌립니다.
-
-배포 테스트는 실제 publish 전에 먼저 dry-run으로 합니다.
-`SDK_NPM_PUBLISH_ENABLED=false` 상태에서 `sdk-v*` 태그를 push하면 install, typecheck, build, `npm pack --dry-run`,
-`npm publish --dry-run --access public`까지 실행되고 실제 publish step만 skip됩니다.
+`sdk-v*` 태그를 push하면 workflow가 실제 npm publish까지 수행합니다.
+workflow 안에서 install, typecheck, build, `npm pack --dry-run`, `npm publish --dry-run --access public`을 먼저 실행한 뒤 publish합니다.
+태그 push 전 로컬에서 같은 검증을 먼저 실행하고, package version과 tag version이 일치하는지 확인합니다.
 
 ```bash
 cd packages/sdk
