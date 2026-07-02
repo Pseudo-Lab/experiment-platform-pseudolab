@@ -144,9 +144,12 @@ CREATE TABLE IF NOT EXISTS event_log (
     experiment_id  TEXT,
     variant        TEXT,
     device         TEXT,
-    anon_id        TEXT,
-    UNIQUE(event_id)
+    anon_id        TEXT
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_event_log_event_id
+    ON event_log(event_id)
+    WHERE event_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS visual_changes (
     id            TEXT PRIMARY KEY,

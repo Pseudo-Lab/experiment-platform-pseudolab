@@ -1,6 +1,5 @@
 import json
 from datetime import datetime, timezone
-from typing import Sequence
 from app.schemas.event import EventCapture, EventBatch, ExperimentEvent, PersonIdentify
 from app.db import d1
 
@@ -21,12 +20,11 @@ class EventService:
         properties = json.dumps(data.properties) if data.properties else None
 
         return await d1.execute(
-            """INSERT INTO event_log
+            """INSERT OR IGNORE INTO event_log
                (event_id, user_id, cohort_id, event_name, properties,
                 session_id, experiment_id, variant, device, anon_id,
                 event_time, created_at, project_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-               ON CONFLICT(event_id) DO NOTHING""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
                 data.event_id, data.user_id, cohort_id, data.event_name, properties,
                 data.session_id, data.experiment_id, data.variant, data.device, data.anon_id,

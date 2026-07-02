@@ -14,7 +14,9 @@ async def capture(
     project: Optional[Project] = Depends(get_project_from_api_key),
 ):
     project_id = project.id if project else None
-    await event_service.capture(data, project_id=project_id)
+    saved = await event_service.capture(data, project_id=project_id)
+    if not saved:
+        raise HTTPException(status_code=502, detail="Failed to persist event")
     return {"success": True, "message": "accepted"}
 
 
