@@ -33,7 +33,7 @@ function ExperimentCard({ flagKey, label, description, variants, eventName, lang
   const [sent, setSent] = useState(false)
 
   const handleSend = () => {
-    track(eventName, { flag_key: flagKey, variant })
+    track(eventName, { key: flagKey, variant })
     setSent(true)
     setTimeout(() => setSent(false), 2000)
   }

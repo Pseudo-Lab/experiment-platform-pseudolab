@@ -28,7 +28,7 @@ export function HomePage({ lang }: { lang: Lang }) {
     track('study_card_clicked', {
       variant,
       study_id: study.id,
-      flag_key: 'home_layout_v1',
+      key: 'home_layout_v1',
     })
   }
 

@@ -29,7 +29,7 @@ export function StudyListPage({ lang }: { lang: Lang }) {
     track('sponsor_clicked', {
       variant,
       sponsor_id: sponsor.id,
-      flag_key: 'sponsor_slot_v1',
+      key: 'sponsor_slot_v1',
     })
   }
 
