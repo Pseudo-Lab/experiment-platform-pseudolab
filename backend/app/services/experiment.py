@@ -312,10 +312,15 @@ class ExperimentService:
                 message="exp_exposure 이벤트에 유효한 variant 값이 없습니다. properties.variant(control|treatment) 확인이 필요합니다.",
             )
 
-        variant_names = list(variant_users.keys())
+        # variant_users 키 순서는 쿼리 반환 순서라 비결정적이다.
+        # treatment는 반드시 control이 아닌 variant 중에서 골라야 한다
+        # (이전엔 variant_names[1]을 썼는데 그 자리에 control이 오면
+        #  자기 자신과 비교해 uplift 0 · P(T>C) 0.5로 판정이 무너졌음).
+        variant_names = sorted(variant_users.keys())
         control_name = "control" if "control" in variant_users else variant_names[0]
+        non_control = [v for v in variant_names if v != control_name]
         treatment_name = "treatment" if "treatment" in variant_users else (
-            variant_names[1] if len(variant_names) > 1 else variant_names[0]
+            non_control[0] if non_control else control_name
         )
 
         # ── 전환 유저 조회 (primary_metric 이벤트 발생 여부) ──
