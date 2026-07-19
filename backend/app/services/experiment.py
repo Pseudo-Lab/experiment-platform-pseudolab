@@ -293,13 +293,14 @@ class ExperimentService:
         else:
             # exp_exposure 이벤트가 없으면 분석을 수행하지 않는다.
             # assignment 기반 폴백은 실제 노출을 반영하지 않아 SRM·CTR 수치가 왜곡됨.
-            # luvp에서 exp_exposure 이벤트(properties: {experiment_id, variant}) 연동 후 분석 시작.
+            # 클라이언트 앱이 SDK trackExposure()로 exp_exposure 이벤트
+            # (properties: {experiment_id, variant})를 보내면 분석이 시작된다.
             return ExperimentResult(
                 experiment_id=experiment_id,
                 primary_metric=exp.primary_metric,
                 sample_size=0,
                 denominator_source="exposure",
-                message="exp_exposure 이벤트 수집 전입니다. luvp에서 exp_exposure 이벤트 연동 후 분석이 시작됩니다.",
+                message="exp_exposure 이벤트 수집 전입니다. 클라이언트 앱(SDK)에서 exp_exposure 이벤트 연동 후 분석이 시작됩니다.",
             )
 
         if not variant_users:
@@ -319,12 +320,7 @@ class ExperimentService:
 
         # ── 전환 유저 조회 (primary_metric 이벤트 발생 여부) ──
         all_user_ids = list({uid for uids in variant_users.values() for uid in uids})
-        placeholders = ",".join("?" * len(all_user_ids))
-        metric_rows = await d1.query(
-            f"SELECT DISTINCT user_id FROM event_log WHERE event_name = ? AND user_id IN ({placeholders})",
-            [exp.primary_metric] + all_user_ids,
-        )
-        converted_users = {r["user_id"] for r in metric_rows}
+        converted_users = await self._users_with_event(exp.primary_metric, all_user_ids)
 
         c_users = variant_users.get(control_name, set())
         t_users = variant_users.get(treatment_name, set())
@@ -369,11 +365,7 @@ class ExperimentService:
         if exp.guardrail_metrics:
             guardrail_results = []
             for gm in exp.guardrail_metrics:
-                gm_rows = await d1.query(
-                    f"SELECT DISTINCT user_id FROM event_log WHERE event_name = ? AND user_id IN ({placeholders})",
-                    [gm] + all_user_ids,
-                )
-                gm_converted = {r["user_id"] for r in gm_rows}
+                gm_converted = await self._users_with_event(gm, all_user_ids)
                 gm_c_rate = len(c_users & gm_converted) / c_total if c_total > 0 else 0.0
                 gm_t_rate = len(t_users & gm_converted) / t_total if t_total > 0 else 0.0
                 gm_uplift = round(gm_t_rate - gm_c_rate, 4)
@@ -428,6 +420,23 @@ class ExperimentService:
             guardrail_results=guardrail_results,
         )
 
+    # D1은 쿼리당 바인드 파라미터가 100개로 제한된다.
+    # 초과 시 400이 반환되고 d1.query가 빈 배열을 돌려주므로 IN절은 반드시 chunk 처리.
+    _IN_CHUNK = 90
+
+    async def _users_with_event(self, event_name: str, user_ids: list[str]) -> set[str]:
+        """event_log에서 event_name 이벤트를 발생시킨 사용자 집합 조회 (chunked IN)."""
+        matched: set[str] = set()
+        for i in range(0, len(user_ids), self._IN_CHUNK):
+            chunk = user_ids[i:i + self._IN_CHUNK]
+            placeholders = ",".join("?" * len(chunk))
+            rows = await d1.query(
+                f"SELECT DISTINCT user_id FROM event_log WHERE event_name = ? AND user_id IN ({placeholders})",
+                [event_name] + chunk,
+            )
+            matched.update(r["user_id"] for r in rows)
+        return matched
+
     async def _get_quasi_result(self, exp, experiment_id: str) -> ExperimentResult:
         """준실험 전용 결과 계산.
 
@@ -462,16 +471,20 @@ class ExperimentService:
 
         # ── 전환: dl_reflection 테이블 (ground truth) ──
         main_db_id = os.getenv("D1_MAIN_DATABASE_ID")
-        placeholders = ",".join("?" * len(exposed_users))
-        submitted_rows = await d1.query(
-            f"""SELECT DISTINCT user_id
-                FROM dl_reflection
-                WHERE experiment_id = ?
-                  AND user_id IN ({placeholders})""",
-            [experiment_id] + list(exposed_users),
-            database_id=main_db_id,
-        )
-        submitted_users = {r["user_id"] for r in submitted_rows}
+        exposed_list = list(exposed_users)
+        submitted_users: set[str] = set()
+        for i in range(0, len(exposed_list), self._IN_CHUNK):
+            chunk = exposed_list[i:i + self._IN_CHUNK]
+            placeholders = ",".join("?" * len(chunk))
+            submitted_rows = await d1.query(
+                f"""SELECT DISTINCT user_id
+                    FROM dl_reflection
+                    WHERE experiment_id = ?
+                      AND user_id IN ({placeholders})""",
+                [experiment_id] + chunk,
+                database_id=main_db_id,
+            )
+            submitted_users.update(r["user_id"] for r in submitted_rows)
 
         total = len(exposed_users)
         conversions = len(submitted_users)

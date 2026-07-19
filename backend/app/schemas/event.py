@@ -49,6 +49,7 @@ class ExperimentEvent(BaseModel):
     user_id: str
     experiment_id: Optional[str] = None
     properties: Optional[dict[str, Any]] = None
+    timestamp: Optional[datetime] = None  # 생략 시 서버 수신 시각
 
 
 class Person(BaseModel):

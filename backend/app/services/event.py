@@ -43,13 +43,14 @@ class EventService:
 
     async def track_experiment_event(self, data: ExperimentEvent) -> bool:
         now = _now()
+        event_time = data.timestamp.isoformat() if data.timestamp else now
         properties = json.dumps(data.properties) if data.properties else None
         return await d1.execute(
             """INSERT INTO experiment_event
                (event_type, experiment_key, experiment_id, variant, url, user_id, properties, event_time, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [data.type, data.key, data.experiment_id, data.variant,
-             data.url, data.user_id, properties, now, now],
+             data.url, data.user_id, properties, event_time, now],
         )
 
     async def identify(self, data: PersonIdentify) -> bool:

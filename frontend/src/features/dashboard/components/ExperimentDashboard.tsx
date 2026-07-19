@@ -136,7 +136,7 @@ function SigCard({ pValue }: { pValue: number | null }) {
   if (pValue === null) {
     return (
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4">
-        <p className="text-xs font-semibold text-slate-500 mb-2">P(T&gt;C) — 통계적 유의성</p>
+        <p className="text-xs font-semibold text-slate-500 mb-2">유의성 검정 (z-test)</p>
         <span className="inline-flex items-center gap-1.5 text-sm text-slate-400">
           <Clock className="h-3.5 w-3.5" />
           데이터 부족
@@ -154,7 +154,7 @@ function SigCard({ pValue }: { pValue: number | null }) {
         ? 'border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800'
         : 'border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-800'
     }`}>
-      <p className="text-xs font-semibold text-slate-500 mb-2">P(T&gt;C) — 통계적 유의성</p>
+      <p className="text-xs font-semibold text-slate-500 mb-2">유의성 검정 (z-test)</p>
       <div className="flex items-center gap-1.5">
         {isSignificant ? (
           <>
@@ -455,7 +455,7 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
                   <p className="text-xs font-semibold text-slate-500 mb-2">분모 기준</p>
                   {analyticsLoading ? (
                     <span className="text-xs text-slate-400">로딩 중...</span>
-                  ) : experimentResult?.denominator_source === 'exposure' ? (
+                  ) : experimentResult?.denominator_source === 'exposure' && experimentResult.sample_size > 0 ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                       <CheckCircle className="h-3.5 w-3.5" />
                       노출 기준 (exp_exposure)
@@ -463,13 +463,13 @@ export const ExperimentDashboard: React.FC<ExperimentDashboardProps> = ({
                   ) : (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      배정 기준 (폴백)
+                      노출 이벤트 없음
                     </span>
                   )}
                   <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                    {experimentResult?.denominator_source === 'exposure'
+                    {experimentResult?.denominator_source === 'exposure' && experimentResult.sample_size > 0
                       ? 'exp_exposure 이벤트 기록 유저 기준'
-                      : 'exp_exposure 이벤트 없음 — experiment_assignments 기준'}
+                      : 'exp_exposure 수집 전 — 노출 데이터가 쌓이면 Bayesian 판정이 시작됩니다'}
                   </p>
                 </CardContent>
               </Card>
