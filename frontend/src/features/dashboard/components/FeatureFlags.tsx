@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { Archive, RotateCcw, ToggleLeft, ToggleRight, Plus, RefreshCcw, X, Info } from 'lucide-react';
-import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate, type FeatureFlagExposureSummary } from '../../../services/api';
+import { Archive, RotateCcw, ToggleLeft, ToggleRight, Plus, RefreshCcw, X, Info, AlertTriangle } from 'lucide-react';
+import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate, type FeatureFlagExposureSummary, type FeatureFlagRule } from '../../../services/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { useProject } from '../../../contexts/ProjectContext';
 
@@ -24,6 +24,7 @@ const t = {
     descPlaceholder: '설명 (선택)',
     productPlaceholder: '제품 (선택)',
     rolloutLabel: '롤아웃 %',
+    rulesPrecedence: (rules: string) => `룰 우선 적용 중 (${rules}) — 이 값은 룰 미매칭 사용자에게만 적용`,
     create: '생성',
     creating: '생성 중...',
     save: '저장',
@@ -63,6 +64,7 @@ const t = {
     descPlaceholder: 'Description (optional)',
     productPlaceholder: 'Product (optional)',
     rolloutLabel: 'Rollout %',
+    rulesPrecedence: (rules: string) => `Rules take precedence (${rules}) — this value only applies to users no rule matches`,
     create: 'Create',
     creating: 'Creating...',
     save: 'Save',
@@ -112,6 +114,15 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
   const [assigningProjectKey, setAssigningProjectKey] = useState<string | null>(null);
   const [exposureSummaries, setExposureSummaries] = useState<Record<string, FeatureFlagExposureSummary | null>>({});
   const [exposureLoading, setExposureLoading] = useState(false);
+  const [flagRules, setFlagRules] = useState<Record<string, FeatureFlagRule[]>>({});
+
+  const loadFlagRules = async (items: FeatureFlag[]) => {
+    const results = await Promise.allSettled(items.map(flag => featureFlagApi.listRules(flag.flag_key)));
+    setFlagRules(Object.fromEntries(items.map((flag, index) => [
+      flag.flag_key,
+      results[index].status === 'fulfilled' ? (results[index] as PromiseFulfilledResult<FeatureFlagRule[]>).value : [],
+    ])));
+  };
 
   const loadExposureSummaries = async (items: FeatureFlag[]) => {
     setExposureLoading(true);
@@ -133,6 +144,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
         setFlags(items);
         setRolloutDrafts(Object.fromEntries(items.map(flag => [flag.flag_key, flag.rollout_pct])));
         void loadExposureSummaries(items);
+        void loadFlagRules(items);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -435,6 +447,17 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                           {isSavingRollout ? tr.saving : tr.save}
                         </Button>
                       </div>
+                      {(flagRules[flag.flag_key] ?? []).some(r => r.enabled) && (
+                        <p className="mt-1 flex items-start gap-1 text-[11px] leading-snug text-amber-600 dark:text-amber-400">
+                          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                          {tr.rulesPrecedence(
+                            (flagRules[flag.flag_key] ?? [])
+                              .filter(r => r.enabled)
+                              .map(r => `${r.variant} ${r.rollout_pct}%`)
+                              .join(', '),
+                          )}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell>{renderExposureSummary(flag.flag_key)}</TableCell>
                     <TableCell>

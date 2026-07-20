@@ -6,11 +6,12 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2, Trophy } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2, Trophy, AlertTriangle } from 'lucide-react';
 import {
   experimentApi, experimentPlacementApi, projectApi, featureFlagApi,
   type Experiment, type ExperimentStatus,
   type ExperimentPlacementConfig, type Project, type FeatureFlag, type FeatureFlagExposureSummary,
+  type FeatureFlagRule,
 } from '../../../services/api';
 import { ExperimentDashboard } from './ExperimentDashboard';
 
@@ -56,6 +57,8 @@ const translations = {
     flagEditTitle: 'Link feature flag',
     flagSaving: 'Saving...',
     flagRollout: 'Rollout %',
+    flagRulesPrecedence: (rules: string) =>
+      `Targeting rules take precedence — this rollout % only applies to users no rule matches (active: ${rules}).`,
     flagEnabled: 'Enabled',
     flagDisabled: 'Disabled',
     flagErrorUpdate: 'Failed to update flag.',
@@ -184,6 +187,8 @@ const translations = {
     flagEditTitle: 'Feature Flag 연결',
     flagSaving: '저장 중...',
     flagRollout: '롤아웃 %',
+    flagRulesPrecedence: (rules: string) =>
+      `룰이 우선 적용 중 — 이 롤아웃 %는 어떤 룰에도 매칭되지 않는 사용자에게만 적용됩니다 (활성 룰: ${rules}).`,
     flagEnabled: '활성',
     flagDisabled: '비활성',
     flagErrorUpdate: 'Flag 업데이트에 실패했습니다.',
@@ -431,6 +436,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [linkedFlagLoading, setLinkedFlagLoading] = useState(false);
   const [flagRolloutDraft, setFlagRolloutDraft] = useState(0);
   const [flagRolloutSaving, setFlagRolloutSaving] = useState(false);
+  const [linkedFlagRules, setLinkedFlagRules] = useState<FeatureFlagRule[]>([]);
   const [flagToggling, setFlagToggling] = useState(false);
   const [linkedFlagExposure, setLinkedFlagExposure] = useState<FeatureFlagExposureSummary | null | undefined>(undefined);
 
@@ -466,19 +472,22 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     if (!flagKey) {
       setLinkedFlag(null);
       setLinkedFlagExposure(undefined);
+      setLinkedFlagRules([]);
       return;
     }
     setLinkedFlagLoading(true);
     Promise.all([
       featureFlagApi.list(false),
       featureFlagApi.exposureSummary(flagKey).catch(() => null),
+      featureFlagApi.listRules(flagKey).catch(() => [] as FeatureFlagRule[]),
     ])
-      .then(([flags, exposure]) => {
+      .then(([flags, exposure, rules]) => {
         const flag = flags.find(f => f.flag_key === flagKey) ?? null;
         setLinkedFlag(flag);
         if (flag) setFlagRolloutDraft(flag.rollout_pct);
         setAvailableFlags(flags);
         setLinkedFlagExposure(exposure);
+        setLinkedFlagRules(rules);
       })
       .catch(() => {
         setLinkedFlag(null);
@@ -1185,6 +1194,18 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                         {flagRolloutSaving ? t.saving : t.save}
                       </Button>
                     </div>
+                  )}
+                  {/* 룰 우선 적용 경고: 활성 룰이 있으면 flag 레벨 rollout은 폴백으로만 동작 */}
+                  {linkedFlag && linkedFlagRules.some(r => r.enabled) && (
+                    <p className="flex items-start gap-1 text-[11px] leading-snug text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                      {t.flagRulesPrecedence(
+                        linkedFlagRules
+                          .filter(r => r.enabled)
+                          .map(r => `${r.variant} ${r.rollout_pct}%`)
+                          .join(', '),
+                      )}
+                    </p>
                   )}
                   {/* Variant exposure distribution */}
                   {linkedFlag && linkedFlagExposure !== undefined && renderLinkedFlagExposure(linkedFlagExposure)}
