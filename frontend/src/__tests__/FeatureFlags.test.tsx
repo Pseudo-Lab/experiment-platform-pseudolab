@@ -10,6 +10,7 @@ vi.mock('@/services/api', () => ({
     archive: vi.fn(),
     restore: vi.fn(),
     exposureSummary: vi.fn(),
+    listRules: vi.fn(),
   },
   projectApi: {
     list: vi.fn().mockResolvedValue([]),
@@ -40,6 +41,7 @@ describe('FeatureFlags', () => {
       first_exposure_users: 8,
       variant_counts: { treatment: 5, control: 3 },
     });
+    (featureFlagApi.listRules as any).mockResolvedValue([]);
   });
 
   afterEach(cleanup);
@@ -55,6 +57,55 @@ describe('FeatureFlags', () => {
     expect(screen.getByText('treatment 5')).toBeInTheDocument();
     expect(screen.getByText('control 3')).toBeInTheDocument();
     expect(featureFlagApi.exposureSummary).toHaveBeenCalledWith('new_home');
+  });
+
+  it('shows rules-precedence warning when the flag has active rules', async () => {
+    (featureFlagApi.listRules as any).mockResolvedValue([
+      {
+        id: 'rule-1',
+        flag_key: 'new_home',
+        priority: 1,
+        segment_id: null,
+        rollout_pct: 50,
+        variant: 'sidebar',
+        enabled: true,
+        starts_at: null,
+        ends_at: null,
+        created_at: '2026-05-17T00:00:00Z',
+        updated_at: '2026-05-17T00:00:00Z',
+      },
+      {
+        id: 'rule-2-disabled',
+        flag_key: 'new_home',
+        priority: 1,
+        segment_id: null,
+        rollout_pct: 50,
+        variant: 'sidebar',
+        enabled: false,
+        starts_at: null,
+        ends_at: null,
+        created_at: '2026-05-17T01:00:00Z',
+        updated_at: '2026-05-17T01:00:00Z',
+      },
+    ]);
+
+    await act(async () => {
+      render(<FeatureFlags lang="ko" />);
+    });
+
+    // 활성 룰만 경고 문구에 포함되고, 비활성 룰은 제외된다.
+    expect(
+      await screen.findByText('룰 우선 적용 중 (sidebar 50%) — 이 값은 룰 미매칭 사용자에게만 적용'),
+    ).toBeInTheDocument();
+  });
+
+  it('hides rules-precedence warning when the flag has no rules', async () => {
+    await act(async () => {
+      render(<FeatureFlags lang="ko" />);
+    });
+
+    expect(await screen.findByText('new_home')).toBeInTheDocument();
+    expect(screen.queryByText(/룰 우선 적용 중/)).not.toBeInTheDocument();
   });
 
   it('can include archived flags', async () => {
