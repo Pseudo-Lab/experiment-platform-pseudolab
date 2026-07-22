@@ -3,7 +3,7 @@ from app.api.v1.endpoints import (
     status, experiments, dashboard, bug_reports,
     events, feature_flags, analytics, decisions, reflections, segments,
     experiment_placements, experiment_analytics, placements, projects, visual_changes, sdk,
-    admin,
+    admin, access,
 )
 
 api_router = APIRouter()
@@ -25,3 +25,4 @@ api_router.include_router(reflections.router,                    prefix="/reflec
 api_router.include_router(experiment_placements.router,          prefix="/experiments",     tags=["experiment-placements"])
 api_router.include_router(placements.router,                     prefix="/placements",      tags=["placements"])
 api_router.include_router(admin.router,                          prefix="/admin",           tags=["admin"])
+api_router.include_router(access.router,                         prefix="/access",          tags=["access"])
