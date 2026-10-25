@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, BarChart2, Trophy, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, X, Check, Play, Pause, CheckCircle, Archive, SlidersHorizontal, Plus, Link2, ToggleLeft, ToggleRight, Trophy, AlertTriangle } from 'lucide-react';
 import {
   experimentApi, experimentPlacementApi, projectApi, featureFlagApi,
   type Experiment, type ExperimentStatus,
@@ -51,6 +51,8 @@ const translations = {
     save: 'Save',
     cancel: 'Cancel',
     saving: 'Saving...',
+    saveError: 'Could not save the experiment. Your input has been kept. Please try again.',
+    runningBlockedNoMetric: 'Set a primary metric in Edit before starting the experiment.',
     labelName: 'Name',
     none: '-',
     flagNone: '(none)',
@@ -133,7 +135,7 @@ const translations = {
     placementCreateError: 'Failed to create placement.',
     placementSaveError: 'Failed to save placement.',
     placementDeleteError: 'Failed to delete placement.',
-    tabOverview: 'Overview',
+    tabOverview: 'Design',
     tabAnalytics: 'Live Events',
     tabResults: 'Results',
     tabDashboard: 'Experiment Decisions',
@@ -181,6 +183,8 @@ const translations = {
     save: '저장',
     cancel: '취소',
     saving: '저장 중...',
+    saveError: '실험을 저장하지 못했습니다. 입력 내용은 유지됩니다. 다시 시도해주세요.',
+    runningBlockedNoMetric: '실험을 시작하려면 수정 화면에서 주요 지표를 먼저 설정해주세요.',
     labelName: '실험 이름',
     none: '-',
     flagNone: '(없음)',
@@ -263,7 +267,7 @@ const translations = {
     placementCreateError: 'Placement 생성에 실패했습니다.',
     placementSaveError: 'Placement 저장에 실패했습니다.',
     placementDeleteError: 'Placement 삭제에 실패했습니다.',
-    tabOverview: '개요',
+    tabOverview: '설계',
     tabAnalytics: '실시간 이벤트',
     tabResults: '결과',
     tabDashboard: '실험 판단',
@@ -401,6 +405,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [error, setError] = useState<string | null>(null);
 
   const [editing, setEditing] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editHypothesis, setEditHypothesis] = useState('');
   const [editExpectedEffect, setEditExpectedEffect] = useState('');
@@ -432,6 +437,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [flagEditing, setFlagEditing] = useState(false);
   const [availableFlags, setAvailableFlags] = useState<FeatureFlag[]>([]);
   const [flagSaving, setFlagSaving] = useState(false);
+  const [flagError, setFlagError] = useState<string | null>(null);
   const [linkedFlag, setLinkedFlag] = useState<FeatureFlag | null>(null);
   const [linkedFlagLoading, setLinkedFlagLoading] = useState(false);
   const [flagRolloutDraft, setFlagRolloutDraft] = useState(0);
@@ -440,7 +446,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const [flagToggling, setFlagToggling] = useState(false);
   const [linkedFlagExposure, setLinkedFlagExposure] = useState<FeatureFlagExposureSummary | null | undefined>(undefined);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'dashboard'>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedView = searchParams.get('view');
+  const activeTab = requestedView === 'health' || requestedView === 'results' || requestedView === 'decisions' ? requestedView : 'overview';
+  const setActiveTab = (view: string) => setSearchParams(view === 'overview' ? {} : { view });
 
   const [adoptWinnerVariant, setAdoptWinnerVariant] = useState<string | null>(null);
   const [adoptWinnerLoading, setAdoptWinnerLoading] = useState(false);
@@ -497,6 +506,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   }, [experiment?.flag_key]);
 
   const startFlagEdit = () => {
+    setFlagError(null);
     if (availableFlags.length === 0) {
       featureFlagApi.list(false).then(setAvailableFlags).catch(() => {});
     }
@@ -505,14 +515,17 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
 
   const handleFlagSave = async (newFlagKey: string) => {
     if (!experiment) return;
-    const flagKeyValue = newFlagKey === '__none__' ? undefined : newFlagKey;
+    // The existing update API ignores null/omitted fields; an empty key clears the link.
+    const flagKeyValue = newFlagKey === '__none__' ? '' : newFlagKey;
     setFlagSaving(true);
+    setFlagError(null);
     try {
       const updated = await experimentApi.update(experiment.id, { flag_key: flagKeyValue });
       setExperiment(updated);
       setFlagEditing(false);
+      setStatusError(null);
     } catch {
-      // silent — user can retry
+      setFlagError(t.flagErrorUpdate);
     } finally {
       setFlagSaving(false);
     }
@@ -521,11 +534,12 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const handleFlagToggle = async () => {
     if (!linkedFlag) return;
     setFlagToggling(true);
+    setFlagError(null);
     try {
       const updated = await featureFlagApi.update(linkedFlag.flag_key, { enabled: !linkedFlag.enabled });
       setLinkedFlag(updated);
     } catch {
-      // silent
+      setFlagError(t.flagErrorUpdate);
     } finally {
       setFlagToggling(false);
     }
@@ -534,11 +548,12 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const handleFlagRolloutSave = async () => {
     if (!linkedFlag || flagRolloutDraft === linkedFlag.rollout_pct) return;
     setFlagRolloutSaving(true);
+    setFlagError(null);
     try {
       const updated = await featureFlagApi.update(linkedFlag.flag_key, { rollout_pct: flagRolloutDraft });
       setLinkedFlag(updated);
     } catch {
-      setFlagRolloutDraft(linkedFlag.rollout_pct);
+      setFlagError(t.flagErrorUpdate);
     } finally {
       setFlagRolloutSaving(false);
     }
@@ -568,6 +583,8 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   };
 
   const startEdit = () => {
+    setSaveError(null);
+    setActiveTab('overview');
     if (!experiment) return;
     setEditName(experiment.name);
     setEditHypothesis(experiment.hypothesis || '');
@@ -585,6 +602,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const handleSave = async () => {
     if (!experiment) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const updated = await experimentApi.update(experiment.id, {
         name: editName.trim(),
@@ -600,8 +618,9 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       });
       setExperiment(updated);
       setEditing(false);
+      setStatusError(null);
     } catch {
-      // silent — retry available
+      setSaveError(t.saveError);
     } finally {
       setSaving(false);
     }
@@ -610,7 +629,12 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
   const handleStatusChange = async (to: ExperimentStatus) => {
     if (!experiment) return;
 
-    if (to === 'running' && experiment.experiment_type === 'ab_test') {
+    if (to === 'running' && experiment.status !== 'paused' && !experiment.primary_metric?.trim()) {
+      setStatusError(t.runningBlockedNoMetric);
+      return;
+    }
+
+    if (to === 'running' && experiment.status !== 'paused' && experiment.experiment_type === 'ab_test') {
       if (!experiment.flag_key) {
         setStatusError(t.runningBlockedNoFlag);
         return;
@@ -848,7 +872,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     : experiment.project_id || t.none;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <Button variant="ghost" className="gap-2 rounded-xl text-slate-500" onClick={() => navigate('/experiments')}>
           <ArrowLeft className="h-4 w-4" />
@@ -868,6 +892,29 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </div>
       </div>
 
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">{projectLabel} · {experimentTypeLabel}</p>
+          <h1 className="text-2xl font-semibold tracking-tight break-words">{experiment.name}</h1>
+          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${status.color}`}>{status[lang]}</span>
+        </div>
+        <nav className="flex flex-wrap gap-2 border-b border-border pb-3" aria-label={lang === 'ko' ? '실험 진행 단계' : 'Experiment workflow'}>
+          {([
+            ['overview', t.tabOverview],
+            ['health', lang === 'ko' ? '연동·수집 확인' : 'Collection health'],
+            ['results', lang === 'ko' ? '결과' : 'Results'],
+            ['decisions', lang === 'ko' ? '결정 기록' : 'Decision log'],
+          ] as const).map(([view, label], index) => (
+            <Button key={view} variant={activeTab === view ? 'default' : 'ghost'}
+              aria-current={activeTab === view ? 'page' : undefined}
+              onClick={() => setActiveTab(view)} disabled={editing}>
+              <span className="opacity-60 mr-2">{index + 1}</span>{label}
+            </Button>
+          ))}
+        </nav>
+      </div>
+
+      {activeTab === 'overview' && (
       <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <CardHeader className="pb-4">
           {editing ? (
@@ -875,7 +922,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelName}</label>
-                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded-xl text-lg font-bold" />
+                  <Input aria-label={t.labelName} value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded-xl text-lg font-bold" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelExperimentType}</label>
@@ -911,39 +958,40 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
 
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelHypothesis}</label>
-                <Textarea value={editHypothesis} onChange={(e) => setEditHypothesis(e.target.value)} className="rounded-xl resize-none" rows={2} />
+                <Textarea aria-label={t.labelHypothesis} value={editHypothesis} onChange={(e) => setEditHypothesis(e.target.value)} className="rounded-xl resize-none" rows={2} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelExpectedEffect}</label>
-                <Input value={editExpectedEffect} onChange={(e) => setEditExpectedEffect(e.target.value)} className="rounded-xl" />
+                <Input aria-label={t.labelExpectedEffect} value={editExpectedEffect} onChange={(e) => setEditExpectedEffect(e.target.value)} className="rounded-xl" />
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
-                  <Input value={editPrimaryMetric} onChange={(e) => setEditPrimaryMetric(e.target.value)} className="rounded-xl" />
+                  <Input aria-label={t.labelPrimaryMetric} value={editPrimaryMetric} onChange={(e) => setEditPrimaryMetric(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCompletionEvent}</label>
-                  <Input value={editCompletionEvent} onChange={(e) => setEditCompletionEvent(e.target.value)} className="rounded-xl" />
+                  <Input aria-label={t.labelCompletionEvent} value={editCompletionEvent} onChange={(e) => setEditCompletionEvent(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCohortId}</label>
-                  <Input value={editCohortId} onChange={(e) => setEditCohortId(e.target.value)} className="rounded-xl" />
+                  <Input aria-label={t.labelCohortId} value={editCohortId} onChange={(e) => setEditCohortId(e.target.value)} className="rounded-xl" />
                 </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelStartAt}</label>
-                  <Input value={editStartAt} onChange={(e) => setEditStartAt(e.target.value)} className="rounded-xl" type="datetime-local" />
+                  <Input aria-label={t.labelStartAt} value={editStartAt} onChange={(e) => setEditStartAt(e.target.value)} className="rounded-xl" type="datetime-local" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelEndAt}</label>
-                  <Input value={editEndAt} onChange={(e) => setEditEndAt(e.target.value)} className="rounded-xl" type="datetime-local" />
+                  <Input aria-label={t.labelEndAt} value={editEndAt} onChange={(e) => setEditEndAt(e.target.value)} className="rounded-xl" type="datetime-local" />
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 sm:col-span-2">{t.scheduleHelp}</p>
               </div>
+              {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
               <div className="flex gap-2 pt-1">
                 <Button size="sm" className="gap-1.5 rounded-xl" onClick={handleSave} disabled={saving}>
                   <Check className="h-3.5 w-3.5" />
@@ -957,7 +1005,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
             </div>
           ) : (
             <CardTitle className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-              {experiment.name}
+              {t.tabOverview}
             </CardTitle>
           )}
         </CardHeader>
@@ -1021,7 +1069,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                 )}
               </div>
               {statusError && (
-                <p className="text-xs text-rose-500 mt-1">{statusError}</p>
+                <p role="alert" className="text-xs text-destructive mt-1">{statusError}</p>
               )}
               {adoptWinnerMsg && (
                 <p className={`text-xs mt-1 ${adoptWinnerMsg === t.adoptWinnerSuccess ? 'text-emerald-600' : 'text-rose-500'}`}>
@@ -1112,6 +1160,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                   </button>
                 )}
               </div>
+              {flagError && <p role="alert" className="mb-2 text-sm text-destructive">{flagError}</p>}
               {flagEditing ? (
                 <div className="flex items-center gap-2">
                   <Select
@@ -1177,6 +1226,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
                       <span className="text-xs text-slate-500 shrink-0">{t.flagRollout}</span>
                       <input
                         type="range"
+                        aria-label={t.flagRollout}
                         min={0}
                         max={100}
                         value={flagRolloutDraft}
@@ -1236,31 +1286,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </CardContent>
       </Card>
 
-      {/* ── Tab bar ── */}
-      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800 pb-0">
-        {([
-          { key: 'overview', label: t.tabOverview, icon: <SlidersHorizontal className="h-3.5 w-3.5" /> },
-          { key: 'dashboard', label: t.tabDashboard, icon: <BarChart2 className="h-3.5 w-3.5" /> },
-        ] as const).map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === tab.key
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      )}
 
-      {/* ── Dashboard tab ── */}
-      {activeTab === 'dashboard' && id && experiment && (
-        <ExperimentDashboard experimentId={id} experiment={experiment} lang={lang} />
+      {activeTab !== 'overview' && id && experiment && (
+        <ExperimentDashboard key={id} experimentId={id} experiment={experiment} lang={lang} view={activeTab} />
       )}
 
       {!isQuasiExperiment && activeTab === 'overview' && (

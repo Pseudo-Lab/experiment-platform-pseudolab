@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
-import { Dashboard } from './features/dashboard/components/Dashboard';
 import { BugReport } from './features/dashboard/components/BugReport';
 import { BugReportDetail } from './features/dashboard/components/BugReportDetail';
 import { Experiments } from './features/dashboard/components/Experiments';
@@ -64,8 +63,9 @@ export default function App() {
       backendStatus={backendStatus}
     >
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard lang={lang} />} />
+        <Route path="/" element={<Navigate to="/experiments" replace />} />
+        <Route path="/dashboard" element={<Navigate to="/experiments" replace />} />
+        <Route path="/community" element={<Navigate to="/experiments" replace />} />
         <Route path="/experiments" element={<Experiments lang={lang} />} />
         <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} />} />
         <Route path="/metrics" element={<Navigate to="/metrics/github" replace />} />

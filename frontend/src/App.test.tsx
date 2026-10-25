@@ -82,12 +82,12 @@ describe('App Component', () => {
     );
   };
 
-  it('renders without crashing and navigates to dashboard by default', async () => {
+  it('renders without crashing and navigates to experiments by default', async () => {
     await act(async () => {
       renderApp(['/']); // Start from root
     });
     expect(screen.getByText('ExperiBase')).toBeInTheDocument(); // Checks if App/MainLayout renders
-    expect(screen.getByText('보유 데이터 규모와 최근 활동 흐름을 한 번에 확인하는 요약 화면입니다.')).toBeInTheDocument(); // Checks if Overview content renders
+    expect(screen.getByText('가설을 세우고, 수집된 데이터를 확인하고, 다음 결정을 기록하세요.')).toBeInTheDocument(); // Checks if Overview content renders
     // expect(window.location.pathname).toBe('/dashboard'); // Removed due to MemoryRouter behavior
   });
 

@@ -1,6 +1,9 @@
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { CreateExperimentModal } from '@/features/dashboard/components/CreateExperimentModal';
+import { useProject } from '@/contexts/ProjectContext';
 import { experimentApi, experimentPlacementApi } from '@/services/api';
+
+vi.mock('@/contexts/ProjectContext', () => ({ useProject: vi.fn() }));
 
 vi.mock('@/services/api', () => ({
   experimentApi: {
@@ -20,6 +23,7 @@ vi.mock('@/services/api', () => ({
 describe('CreateExperimentModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useProject).mockReturnValue({ currentProject: null } as any);
     (experimentApi.create as any).mockResolvedValue({
       id: 's12-mid-reflection',
       name: '12기 중간 회고',
@@ -55,6 +59,7 @@ describe('CreateExperimentModal', () => {
     fireEvent.change(screen.getByPlaceholderText('예: 버튼 색상 테스트'), {
       target: { value: '12기 중간 회고' },
     });
+    fireEvent.click(screen.getByText('수집·노출 세부 설정 (선택)'));
     fireEvent.change(screen.getByLabelText('실험 ID'), {
       target: { value: 's12-mid-reflection' },
     });
@@ -122,4 +127,25 @@ describe('CreateExperimentModal', () => {
     );
     expect(onCreated).toHaveBeenCalled();
   });
+  it('creates a minimal draft without an initial placement and returns its identity', async () => {
+    const onCreated = vi.fn();
+    render(<CreateExperimentModal lang="en" onClose={vi.fn()} onCreated={onCreated} />);
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('New Experiment');
+    const advanced = screen.getByText('Measurement and delivery settings (optional)').closest('details');
+    expect(advanced).not.toHaveAttribute('open');
+    fireEvent.change(screen.getByPlaceholderText('e.g. Button Color Test'), { target: { value: 'Signup hypothesis' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create' })); });
+    expect(experimentApi.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'Signup hypothesis', primary_metric: undefined }));
+    expect(experimentPlacementApi.create).not.toHaveBeenCalled();
+    expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: 's12-mid-reflection' }));
+  });
+
+  it('uses the selected project and its experiment type for the initial draft', async () => {
+    vi.mocked(useProject).mockReturnValue({ currentProject: { id: 'selected', project_type: 'ab_test' } } as any);
+    render(<CreateExperimentModal lang="en" onClose={vi.fn()} onCreated={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText('e.g. Button Color Test'), { target: { value: 'Project experiment' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create' })); });
+    expect(experimentApi.create).toHaveBeenCalledWith(expect.objectContaining({ project_id: 'selected', experiment_type: 'ab_test', variants: [{ name: 'control', traffic_ratio: 0.5 }, { name: 'treatment', traffic_ratio: 0.5 }] }));
+  });
+
 });

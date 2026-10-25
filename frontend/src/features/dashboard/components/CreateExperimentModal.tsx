@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { X, Plus, Trash2 } from 'lucide-react';
-import { experimentApi, experimentPlacementApi, featureFlagApi, projectApi, type FeatureFlag, type Project } from '../../../services/api';
+import { experimentApi, experimentPlacementApi, featureFlagApi, projectApi, type FeatureFlag, type Project, type Experiment } from '../../../services/api';
 import { useProject } from '../../../contexts/ProjectContext';
 
 interface VariantInput {
@@ -18,18 +18,20 @@ type ExperimentType = 'ab_test' | 'quasi_experiment' | 'rollout';
 interface CreateExperimentModalProps {
   lang: 'en' | 'ko';
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (experiment: Experiment) => void;
 }
 
 const translations = {
   en: {
     title: 'New Experiment',
+    advanced: 'Measurement and delivery settings (optional)',
+    close: 'Close',
     labelId: 'Experiment ID',
     placeholderId: 'e.g. s12-mid-reflection',
     idHelp: 'Stable API slug. Leave empty to auto-generate.',
     labelName: '* Experiment Name',
     placeholderName: 'e.g. Button Color Test',
-    requiredLegend: '* required',
+    requiredLegend: 'Save a draft first. Finish measurement and delivery settings before launch. * required',
     labelProduct: 'Product',
     placeholderProduct: 'e.g. lvup',
     productHelp: 'Product or service this experiment belongs to.',
@@ -112,12 +114,14 @@ const translations = {
   },
   ko: {
     title: '새 실험 생성',
+    advanced: '수집·노출 세부 설정 (선택)',
+    close: '닫기',
     labelId: '실험 ID',
     placeholderId: '예: s12-mid-reflection',
     idHelp: 'API와 운영 설정에서 쓰는 안정적인 slug입니다. 비워두면 자동 생성됩니다.',
     labelName: '* 실험 이름',
     placeholderName: '예: 버튼 색상 테스트',
-    requiredLegend: '* 필수 입력',
+    requiredLegend: '초안을 먼저 저장하고, 실험 시작 전에 수집·노출 설정을 채우세요. * 필수 입력',
     labelProduct: '제품/서비스',
     placeholderProduct: '예: lvup',
     productHelp: '이 실험이 속한 제품 또는 서비스입니다.',
@@ -238,7 +242,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   const { currentProject } = useProject();
   const [experimentId, setExperimentId] = useState('');
   const [name, setName] = useState('');
-  const [experimentType, setExperimentType] = useState<ExperimentType>('quasi_experiment');
+  const [experimentType, setExperimentType] = useState<ExperimentType>(currentProject?.project_type ?? 'quasi_experiment');
   const [hypothesis, setHypothesis] = useState('');
   const [primaryMetric, setPrimaryMetric] = useState('');
   const [completionEvent, setCompletionEvent] = useState('');
@@ -303,6 +307,38 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
       cancelled = true;
     };
   }, [flagKey]);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+    return () => {
+      document.body.style.overflow = overflow;
+      previous?.focus();
+    };
+  }, []);
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    // Select menus are portalled and manage their own keyboard focus.
+    if (!dialogRef.current?.contains(event.target as Node)) return;
+    if (event.key === 'Escape' && !submitting) {
+      event.preventDefault();
+      onClose();
+    }
+    if (event.key !== 'Tab') return;
+    const elements = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]',
+    )).filter(el => el.getClientRects().length > 0);
+    const first = elements[0], last = elements[elements.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  };
 
   const addVariant = () => setVariants((prev) => [...prev, { name: '', traffic_ratio: '0' }]);
   const removeVariant = (i: number) => setVariants((prev) => prev.filter((_, idx) => idx !== i));
@@ -382,7 +418,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
           window.alert(t.placementCreateFailed);
         }
       }
-      onCreated();
+      onCreated(created);
     } catch {
       setError(lang === 'ko' ? '생성 중 오류가 발생했습니다.' : 'Failed to create experiment.');
     } finally {
@@ -392,47 +428,18 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 p-6 space-y-5">
-        <div className="flex items-center justify-between">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="create-experiment-title" onKeyDown={handleDialogKeyDown} className="bg-background text-foreground rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 px-6 space-y-5">
+        <div className="sticky top-0 z-10 bg-background py-5 border-b flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h2>
+            <h2 id="create-experiment-title" className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t.requiredLegend}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" aria-label={t.close} onClick={onClose} disabled={submitting}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelId}</label>
-              <Input
-                value={experimentId}
-                onChange={(e) => setExperimentId(e.target.value)}
-                placeholder={t.placeholderId}
-                className="rounded-xl"
-                aria-label={t.labelId}
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t.idHelp}</p>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelType}</label>
-              <Select value={experimentType} onValueChange={(value) => setExperimentType(value as ExperimentType)}>
-                <SelectTrigger className="rounded-xl" aria-label={t.labelType}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {experimentTypeOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option[lang]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelName}</label>
               <Input
@@ -444,6 +451,22 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               />
           </div>
 
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelType}</label>
+              <Select value={experimentType} onValueChange={(value) => setExperimentType(value as ExperimentType)}>
+                <SelectTrigger className="rounded-xl" aria-label={t.labelType}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-[10000]">
+                  {experimentTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option[lang]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProduct}</label>
             <Select
@@ -453,7 +476,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               <SelectTrigger className="rounded-xl" aria-label={t.labelProduct}>
                 <SelectValue placeholder={t.placeholderProduct} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[10000]">
                 <SelectItem value="__none__">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
                 {availableProjects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name} ({p.id})</SelectItem>
@@ -475,6 +498,20 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             />
           </div>
 
+          <details className="rounded-xl border border-border p-4">
+            <summary className="cursor-pointer font-medium text-sm">{t.advanced}</summary>
+            <div className="space-y-4 pt-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelId}</label>
+              <Input
+                value={experimentId}
+                onChange={(e) => setExperimentId(e.target.value)}
+                placeholder={t.placeholderId}
+                className="rounded-xl"
+                aria-label={t.labelId}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t.idHelp}</p>
+            </div>
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
             <Input
@@ -512,7 +549,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                   <SelectTrigger className="rounded-xl" aria-label={t.labelFlagKey}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[10000]">
                     <SelectItem value="__none__">{t.flagKeyNone}</SelectItem>
                     {availableFlags.map((flag) => (
                       <SelectItem key={flag.flag_key} value={flag.flag_key}>
@@ -728,7 +765,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                         <SelectTrigger className="rounded-xl" aria-label={t.uiType}>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[10000]">
                           {uiTypeOptions.map((value) => (
                             <SelectItem key={value} value={value}>{value}</SelectItem>
                           ))}
@@ -792,11 +829,13 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               </div>
             )}
           </div>
+            </div>
+          </details>
         </div>
 
         {(() => {
           const missingMetric = !primaryMetric.trim();
-          const missingFlag = experimentType === 'ab_test' && !flagKey;
+          const missingFlag = experimentType === 'ab_test' && (flagMode === 'none' || (flagMode === 'existing' && !flagKey) || (flagMode === 'auto' && !autoFlagKey.trim()));
           if (!missingMetric && !missingFlag) return null;
           return (
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
@@ -809,9 +848,9 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
           );
         })()}
 
-        {error && <p className="text-sm text-rose-500">{error}</p>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="sticky bottom-0 bg-background border-t flex justify-end gap-2 py-4">
           <Button variant="outline" className="rounded-xl" onClick={onClose} disabled={submitting}>
             {t.cancel}
           </Button>

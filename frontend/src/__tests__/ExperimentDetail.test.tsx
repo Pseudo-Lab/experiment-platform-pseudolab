@@ -7,9 +7,13 @@ import {
   experimentPlacementApi,
   experimentResultApi,
   projectApi,
+  featureFlagApi,
 } from '@/services/api';
 
 vi.mock('@/services/api', () => ({
+  featureFlagApi: {
+    list: vi.fn(), exposureSummary: vi.fn(), listRules: vi.fn(), update: vi.fn(),
+  },
   experimentApi: {
     get: vi.fn(),
     update: vi.fn(),
@@ -64,12 +68,12 @@ const placement = {
   updated_at: '2026-05-25T00:00:00Z',
 };
 
-const renderDetail = async () => {
+const renderDetail = async (lang: 'ko' | 'en' = 'ko') => {
   await act(async () => {
     render(
       <MemoryRouter initialEntries={['/experiments/s12-mid-reflection']}>
         <Routes>
-          <Route path="/experiments/:id" element={<ExperimentDetail lang="ko" />} />
+          <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -78,7 +82,11 @@ const renderDetail = async () => {
 
 describe('ExperimentDetail placements', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    vi.mocked(projectApi.list).mockResolvedValue([]);
+    vi.mocked(featureFlagApi.list).mockResolvedValue([]);
+    vi.mocked(featureFlagApi.exposureSummary).mockResolvedValue({ total_exposures: 0 } as any);
+    vi.mocked(featureFlagApi.listRules).mockResolvedValue([]);
     (experimentApi.get as any).mockResolvedValue(experiment);
     (experimentPlacementApi.list as any).mockResolvedValue([placement]);
     (decisionApi.list as any).mockResolvedValue([]);
@@ -217,4 +225,69 @@ describe('ExperimentDetail placements', () => {
 
     (window.confirm as any).mockRestore();
   });
+
+  it.each(['ko', 'en'] as const)('keeps edited input and reports save failures in %s', async (lang) => {
+    vi.mocked(experimentApi.update).mockRejectedValueOnce(new Error('503'))
+      .mockResolvedValueOnce({ ...experiment, name: 'Retry name' } as any);
+    await renderDetail(lang);
+    fireEvent.click(screen.getAllByRole('button', { name: lang === 'ko' ? '수정' : 'Edit' })[0]);
+    const name = screen.getByLabelText(lang === 'ko' ? '실험 이름' : 'Name');
+    fireEvent.change(name, { target: { value: 'Retry name' } });
+    fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '저장' : 'Save' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(lang === 'ko' ? '입력 내용은 유지됩니다' : 'Your input has been kept');
+    expect(name).toHaveValue('Retry name');
+    fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '저장' : 'Save' }));
+    expect(await screen.findByRole('heading', { name: 'Retry name' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('explains the missing primary metric before submitting a start request', async () => {
+    vi.mocked(experimentApi.get).mockResolvedValue({ ...experiment, status: 'draft', primary_metric: null } as any);
+    await renderDetail();
+    fireEvent.click(screen.getByRole('button', { name: '시작' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('주요 지표를 먼저 설정');
+    expect(experimentApi.update).not.toHaveBeenCalled();
+  });
+
+  it('allows resuming a paused experiment without repeating draft-only checks', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(experimentApi.get).mockResolvedValue({ ...experiment, status: 'paused', experiment_type: 'ab_test', flag_key: null, primary_metric: null } as any);
+    vi.mocked(experimentApi.update).mockResolvedValue({ ...experiment, status: 'running' } as any);
+    try {
+      await renderDetail('en');
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Resume' })); });
+      expect(experimentApi.update).toHaveBeenCalledWith(experiment.id, { status: 'running' });
+    } finally { confirm.mockRestore(); }
+  });
+
+  it('preserves rollout input on failure and retries the same setting', async () => {
+    const flag = { flag_key: 'test-flag', enabled: true, rollout_pct: 20 } as any;
+    vi.mocked(experimentApi.get).mockResolvedValue({ ...experiment, flag_key: flag.flag_key } as any);
+    vi.mocked(featureFlagApi.list).mockResolvedValue([flag]);
+    vi.mocked(featureFlagApi.update).mockRejectedValueOnce(new Error('503'))
+      .mockResolvedValueOnce({ ...flag, rollout_pct: 35 });
+    await renderDetail('en');
+    const slider = await screen.findByRole('slider', { name: 'Rollout %' });
+    fireEvent.change(slider, { target: { value: '35' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Failed to update flag');
+    expect(slider).toHaveValue('35');
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await act(async () => {});
+    expect(featureFlagApi.update).toHaveBeenLastCalledWith('test-flag', { rollout_pct: 35 });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+
+  it('reports failed flag toggles without changing the shown enabled state', async () => {
+    const flag = { flag_key: 'test-flag', enabled: true, rollout_pct: 20 } as any;
+    vi.mocked(experimentApi.get).mockResolvedValue({ ...experiment, flag_key: flag.flag_key } as any);
+    vi.mocked(featureFlagApi.list).mockResolvedValue([flag]);
+    vi.mocked(featureFlagApi.update).mockRejectedValueOnce(new Error('503'));
+    await renderDetail('en');
+    fireEvent.click(await screen.findByRole('button', { name: 'Disabled' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Failed to update flag');
+    expect(screen.getByRole('button', { name: 'Disabled' })).toHaveTextContent('Enabled');
+  });
+
 });

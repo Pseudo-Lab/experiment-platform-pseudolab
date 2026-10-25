@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup, within } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
 import { useProject } from '@/contexts/ProjectContext';
@@ -162,8 +162,7 @@ describe('MainLayout Component', () => {
       renderMainLayout(['/dashboard']);
     });
 
-    const dashboardLink = screen.getByRole('button', { name: '개요' });
-    expect(dashboardLink).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '커뮤니티 현황' })).not.toBeInTheDocument();
 
     const experimentsLink = screen.getByRole('button', { name: '실험 관리' });
     await act(async () => {
@@ -171,4 +170,34 @@ describe('MainLayout Component', () => {
     });
     expect(mockedUseNavigate).toHaveBeenCalledWith('/experiments');
   });
+  it('keeps experiments accessible without a selected project and labels detail routes', async () => {
+    await act(async () => { renderMainLayout(['/experiments/test']); });
+    fireEvent.click(screen.getByRole('button', { name: '실험 관리' }));
+    expect(mockedUseNavigate).toHaveBeenCalledWith('/experiments');
+    expect(screen.getByRole('heading', { name: '실험 관리' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '설정' })).not.toBeInTheDocument();
+  });
+
+  it('groups project actions above navigation without changing the selected scope', async () => {
+    const setCurrentProjectId = vi.fn();
+    vi.mocked(useProject).mockReturnValue({ ...defaultProjectContext, setCurrentProjectId });
+    renderMainLayout(['/experiments']);
+    const projectArea = within(screen.getByRole('region', { name: '프로젝트 관리' }));
+    expect(projectArea.getByRole('combobox')).toBeInTheDocument();
+    fireEvent.click(projectArea.getByRole('button', { name: '새 프로젝트' }));
+    expect(mockedUseNavigate).toHaveBeenLastCalledWith('/projects?create=1');
+    fireEvent.click(projectArea.getByRole('button', { name: '프로젝트 관리' }));
+    expect(mockedUseNavigate).toHaveBeenLastCalledWith('/projects');
+    expect(setCurrentProjectId).not.toHaveBeenCalled();
+    expect(within(screen.getByRole('navigation')).queryByText(/프로젝트/)).not.toBeInTheDocument();
+  });
+
+  it('can reopen project controls from the collapsed sidebar', () => {
+    renderMainLayout();
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle sidebar' }));
+    fireEvent.click(screen.getByRole('button', { name: '프로젝트를 선택하세요' }));
+    expect(screen.getByRole('button', { name: '새 프로젝트' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '프로젝트 관리' })).toBeInTheDocument();
+  });
+
 });
