@@ -1,17 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     ChevronRight,
     ChevronLeft,
-    LayoutDashboard,
     FlaskConical,
-    GitBranch,
-    MessageSquare,
     Bug,
-    Settings,
     Menu,
-    Bell,
-    User,
     Sun,
     Moon,
     Globe,
@@ -52,6 +46,8 @@ const SidebarItem = ({
 }: SidebarItemProps) => (
     <button
         onClick={onClick}
+        aria-current={active ? "page" : undefined}
+        title={!expanded ? label : undefined}
         className={cn(
             "flex items-center w-full gap-3 px-3 rounded-lg group relative transition-all duration-200",
             secondary ? "py-1.5 text-xs font-medium" : "py-2.5 text-sm font-medium",
@@ -108,18 +104,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
-    const [toolsVisible, setToolsVisible] = useState(true);
+
     const location = useLocation();
     const navigate = useNavigate();
-    const { projects, currentProjectId, currentProject, setCurrentProjectId } = useProject();
-
-    useEffect(() => {
-        setToolsVisible(false);
-        const timer = setTimeout(() => setToolsVisible(true), 60);
-        return () => clearTimeout(timer);
-    }, [currentProject?.project_type]);
+    const { projects, currentProjectId, setCurrentProjectId } = useProject();
 
     const activePath = location.pathname;
+    const isCommunity = activePath.startsWith("/metrics");
 
     const handleNav = (path: string) => {
         navigate(path);
@@ -127,8 +118,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { dashboard: "Overview", experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", projects: "Projects", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project" },
-        ko: { dashboard: "개요", experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", projects: "Projects", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트" }
+        en: { experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", projects: "Project management", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project" },
+        ko: { experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", projects: "프로젝트 관리", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트" }
     };
 
     const t = translations[lang];
@@ -137,8 +128,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     const edgeSwipeZone = 48;
 
     const currentSectionLabel =
-        activePath === '/dashboard' ? t.dashboard :
-        activePath === '/experiments' ? t.experiments :
+        activePath.startsWith('/experiments') ? t.experiments :
         activePath === '/metrics/github' ? t.githubMetrics :
         activePath === '/metrics/discord' ? t.discordMetrics :
         activePath === '/bug-report' ? t.bugReport :
@@ -147,7 +137,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         activePath === '/projects' ? t.projects :
         activePath === '/api-key' ? t.apiKey :
         activePath.startsWith('/example') ? t.example :
-        t.dashboard;
+        t.experiments;
 
     const onTouchStart = (e: React.TouchEvent) => {
         setTouchEnd(null);
@@ -182,14 +172,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
     return (
         <div 
-            className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300"
+            className="flex min-h-screen bg-muted/30 text-foreground font-sans transition-colors duration-300"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
         >
             <aside
                 className={cn(
-                    "fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-slate-900 border-r dark:border-slate-800 transition-all duration-300 ease-in-out shadow-lg lg:shadow-none",
+                    "fixed inset-y-0 left-0 z-50 flex flex-col bg-background border-r border-border transition-all duration-300 ease-in-out shadow-lg lg:shadow-none",
                     isSidebarOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full lg:w-20 lg:translate-x-0"
                 )}
             >
@@ -224,24 +214,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     </button>
                 </div>
 
-                {isSidebarOpen && (
-                    <div className="px-3 pt-4">
-                        {projects.length === 0 ? (
-                            <button
-                                onClick={() => handleNav('/projects')}
-                                className="w-full rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-3 py-2.5 text-left text-sm font-medium text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
-                            >
-                                {t.selectProject}
-                            </button>
-                        ) : (
-                            <div className="flex flex-col gap-2">
+                {!isCommunity && (
+                    <section aria-label={t.projects} className="px-3 pt-4">
+                        {isSidebarOpen ? (
+                            <div className="space-y-2">
                                 <Select
                                     value={currentProjectId ?? '__all__'}
                                     onValueChange={(v) => setCurrentProjectId(v === '__all__' ? null : v)}
                                 >
-                                    <SelectTrigger className="w-full rounded-xl border-slate-200 dark:border-slate-700" aria-label={t.projects}>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <FolderOpen size={15} className="shrink-0 text-indigo-500" />
+                                    <SelectTrigger className="w-full min-w-0" aria-label={t.selectProject}>
+                                        <div className="flex items-center gap-2 min-w-0 truncate">
+                                            <FolderOpen size={15} className="shrink-0 text-muted-foreground" />
                                             <SelectValue />
                                         </div>
                                     </SelectTrigger>
@@ -252,56 +235,35 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <button
-                                    onClick={() => handleNav('/projects')}
-                                    className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 py-1.5 text-xs font-medium text-slate-400 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                                >
-                                    <Plus size={13} />{t.newProject}
-                                </button>
+                                <div className="flex gap-1">
+                                    <Button variant="ghost" size="sm" className="flex-1 gap-1 px-2 text-xs" onClick={() => handleNav('/projects?create=1')}>
+                                        <Plus size={13} />{t.newProject}
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="flex-1 px-2 text-xs" aria-current={activePath === '/projects' ? 'page' : undefined} onClick={() => handleNav('/projects')}>
+                                        {t.projects}
+                                    </Button>
+                                </div>
                             </div>
+                        ) : (
+                            <Button variant="ghost" size="icon" className="w-full" aria-label={t.selectProject} title={t.selectProject} onClick={() => setSidebarOpen(true)}>
+                                <FolderOpen size={20} />
+                            </Button>
                         )}
-                    </div>
+                    </section>
                 )}
 
                 <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
-                    {/* Project Tools Section */}
-                    <SectionDivider label={currentProject ? t.sectionProjectTools : t.sectionNoProject} expanded={isSidebarOpen} />
-
-                    {!currentProject ? (
-                        <>
-                            <div className="opacity-40 pointer-events-none">
-                                <SidebarItem icon={FlaskConical} label={t.experiments} active={false} expanded={isSidebarOpen} onClick={() => {}} />
-                            </div>
-                            {isSidebarOpen && (
-                                <p className="text-[10px] text-slate-400 dark:text-slate-500 px-3 pt-1 leading-relaxed">
-                                    {t.noProjectHint}
-                                </p>
-                            )}
-                        </>
-                    ) : (
-                        <div className={cn(
-                            "space-y-1 transition-all duration-200 ease-out",
-                            toolsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
-                        )}>
-                            <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
-                            <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath === '/experiments' || activePath.startsWith('/experiments/')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
-                            <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
-                        </div>
-                    )}
-
-                    {/* Secondary */}
-                    <SectionDivider label={t.sectionOther} expanded={isSidebarOpen} />
-                    <SidebarItem icon={LayoutDashboard} label={t.dashboard} active={activePath === '/dashboard'} expanded={isSidebarOpen} onClick={() => handleNav('/dashboard')} secondary />
-                    <SidebarItem icon={GitBranch} label={t.githubMetrics} active={activePath === '/metrics/github'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/github')} secondary />
-                    <SidebarItem icon={MessageSquare} label={t.discordMetrics} active={activePath === '/metrics/discord'} expanded={isSidebarOpen} onClick={() => handleNav('/metrics/discord')} secondary />
-                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath === '/bug-report'} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />
+                    <SectionDivider label={lang === 'ko' ? '실험 플랫폼' : 'Experiment platform'} expanded={isSidebarOpen} />
+                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath.startsWith('/experiments')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
+                    <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
+                    <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
+                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath.startsWith('/bug-report')} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />
                 </nav>
 
                 <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
                     {currentProjectId === 'demo-app' && (
                         <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} secondary />
                     )}
-                    <SidebarItem icon={Settings} label={t.settings} expanded={isSidebarOpen} onClick={() => { }} />
                 </div>
             </aside>
 
@@ -328,13 +290,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             <Globe size={14} /> {lang.toUpperCase()}
                         </Button>
 
-                        <Button variant="ghost" size="icon" className="relative text-slate-500 rounded-lg">
-                            <Bell size={20} />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-                        </Button>
-                        <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white cursor-pointer shadow-md hover:scale-105 transition-transform">
-                            <User size={18} />
-                        </div>
                     </div>
                 </header>
                 <div className="flex-1 p-4 md:p-8 overflow-auto">

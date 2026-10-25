@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import {
@@ -36,7 +36,7 @@ interface ExperimentsProps {
 const translations = {
   en: {
     title: 'Experiments',
-    description: 'Create and manage your A/B tests.',
+    description: 'Turn a hypothesis into a test, check the data, and record what you learn.',
     newExperiment: 'New Experiment',
     searchPlaceholder: 'Search experiments...',
     allStatus: 'All Status',
@@ -56,10 +56,11 @@ const translations = {
     error: 'Failed to load experiments.',
     empty: 'No experiments found.',
     deleteConfirm: 'Delete this experiment?',
+    retry: 'Retry', clear: 'Clear filters', filteredEmpty: 'No experiments match these filters.', scope: 'Scope', total: 'All experiments', next: 'Next step', design: 'Continue design', review: 'Review results', inspect: 'Check collection', actions: 'Experiment actions', deleteError: 'Could not delete the experiment. Please try again.', emptyHint: 'Start with a name and a hypothesis. Configure collection before launching.',
   },
   ko: {
     title: '실험 관리',
-    description: 'A/B 테스트를 생성하고 관리하세요.',
+    description: '가설을 세우고, 수집된 데이터를 확인하고, 다음 결정을 기록하세요.',
     newExperiment: '새 실험 생성',
     searchPlaceholder: '실험 검색...',
     allStatus: '모든 상태',
@@ -79,6 +80,7 @@ const translations = {
     error: '실험 목록을 불러오지 못했습니다.',
     empty: '실험이 없습니다.',
     deleteConfirm: '이 실험을 삭제하시겠습니까?',
+    retry: '다시 시도', clear: '필터 초기화', filteredEmpty: '조건에 맞는 실험이 없습니다.', scope: '조회 범위', total: '전체 실험', next: '다음 단계', design: '설계 이어가기', review: '결과 확인', inspect: '수집 확인', actions: '실험 작업', deleteError: '실험을 삭제하지 못했습니다. 다시 시도해주세요.', emptyHint: '이름과 가설부터 작성하세요. 데이터 수집 설정은 실험 시작 전에 채울 수 있습니다.',
   },
 };
 
@@ -93,23 +95,24 @@ const statusConfig = {
 export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
   const navigate = useNavigate();
   const t = translations[lang];
-  const { currentProjectId } = useProject();
+  const { currentProjectId, currentProject } = useProject();
 
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ExperimentStatus>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchExperiments = async () => {
     setLoading(true);
-    setError(null);
+    setError(false);
     try {
-      const data = await experimentApi.list(statusFilter === 'all' ? undefined : statusFilter);
+      const data = await experimentApi.list();
       setExperiments(data);
     } catch {
-      setError(t.error);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -117,31 +120,33 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
 
   useEffect(() => {
     fetchExperiments();
-  }, [statusFilter]);
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm(t.deleteConfirm)) return;
+    setDeleteError(false);
     try {
       await experimentApi.delete(id);
       setExperiments((prev) => prev.filter((e) => e.id !== id));
     } catch {
-      // silent fail — 목록 새로고침으로 대응
-      fetchExperiments();
+      setDeleteError(true);
     }
   };
 
-  const filteredExperiments = experiments.filter((exp) => {
-    const matchesSearch = exp.name.toLowerCase().includes(search.toLowerCase());
-    const matchesProject = !currentProjectId || (exp.project_id || exp.product) === currentProjectId;
-    return matchesSearch && matchesProject;
-  });
+  const scopedExperiments = experiments.filter((exp) => !currentProjectId || (exp.project_id || exp.product) === currentProjectId);
+  const filteredExperiments = scopedExperiments.filter((exp) =>
+    `${exp.name} ${exp.hypothesis || ''}`.toLowerCase().includes(search.toLowerCase()) &&
+    (statusFilter === 'all' || exp.status === statusFilter)
+  );
+  const nextStep = (exp: Experiment) => exp.status === 'draft' ? t.design : exp.status === 'running' ? t.inspect : t.review;
+  const nextPath = (exp: Experiment) => `/experiments/${encodeURIComponent(exp.id)}${exp.status === 'draft' ? '' : exp.status === 'running' ? '?view=health' : '?view=results'}`;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">{t.description}</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">{t.title}</h1>
+          <p className="text-muted-foreground mt-1">{t.description}</p>
         </div>
         <Button className="gap-2 rounded-xl shadow-lg" size="lg" onClick={() => setShowCreateModal(true)}>
           <Plus size={18} />
@@ -149,18 +154,32 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
         </Button>
       </div>
 
+      <p className="text-sm text-muted-foreground">{t.scope}: <span className="font-medium text-foreground">{currentProject?.name || currentProjectId || (lang === 'ko' ? '전체 프로젝트' : 'All projects')}</span></p>
+      <div role="group" className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label={t.allStatus}>
+        {(['all', 'draft', 'running', 'completed'] as const).map((status) => (
+          <Button key={status} variant="outline" aria-pressed={statusFilter === status}
+            onClick={() => setStatusFilter(status)}
+            className={`h-auto min-h-24 flex-col items-start gap-2 rounded-xl p-4 ${statusFilter === status ? 'border-primary bg-accent' : 'bg-card'}`}>
+            <span className="text-xs text-muted-foreground">{status === 'all' ? t.total : statusConfig[status][lang]}</span>
+            <span className="text-2xl font-semibold tabular-nums">{loading || error ? '—' : scopedExperiments.filter(exp => status === 'all' || exp.status === status).length}</span>
+          </Button>
+        ))}
+      </div>
+      {deleteError && <p role="alert" className="text-sm text-destructive">{t.deleteError}</p>}
+
       <div className="flex flex-col sm:flex-row items-center gap-4">
         <div className="relative flex-1 w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
+            aria-label={t.searchPlaceholder}
             placeholder={t.searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-12 rounded-xl bg-white dark:bg-slate-900"
+            className="pl-9 h-12 rounded-xl bg-card"
           />
         </div>
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-          <SelectTrigger className="w-full sm:w-40 h-12 rounded-xl bg-white dark:bg-slate-900" aria-label={t.allStatus}>
+          <SelectTrigger className="w-full sm:w-40 h-12 rounded-xl bg-card" aria-label={t.allStatus}>
             <SelectValue placeholder={t.allStatus} />
           </SelectTrigger>
           <SelectContent>
@@ -175,11 +194,14 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
       </div>
 
       {loading ? (
-        <p className="text-slate-500 dark:text-slate-400 text-sm">{t.loading}</p>
+        <p className="text-muted-foreground text-sm">{t.loading}</p>
       ) : error ? (
-        <p className="text-rose-500 text-sm">{error}</p>
+        <Card role="alert" className="p-6 space-y-3"><p>{t.error}</p><Button variant="outline" onClick={fetchExperiments}>{t.retry}</Button></Card>
       ) : filteredExperiments.length === 0 ? (
-        <p className="text-slate-500 dark:text-slate-400 text-sm">{t.empty}</p>
+        <Card className="p-10 text-center space-y-3">
+          <h2 className="font-semibold">{scopedExperiments.length ? t.filteredEmpty : t.empty}</h2>
+          {scopedExperiments.length ? <Button variant="outline" onClick={() => { setSearch(''); setStatusFilter('all'); }}>{t.clear}</Button> : <><p className="text-sm text-muted-foreground">{t.emptyHint}</p><Button onClick={() => setShowCreateModal(true)}>{t.newExperiment}</Button></>}
+        </Card>
       ) : (
         <>
           {/* 데스크탑 테이블 */}
@@ -189,7 +211,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                 <TableRow>
                   <TableHead className="font-bold text-slate-500">{t.colName}</TableHead>
                   <TableHead className="font-bold text-slate-500">{t.colStatus}</TableHead>
-                  <TableHead className="font-bold text-slate-500">{t.colVariants}</TableHead>
+                  <TableHead className="font-bold text-slate-500">{t.next}</TableHead>
                   <TableHead className="font-bold text-slate-500">{t.colCreatedAt}</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
@@ -203,10 +225,10 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                   >
                     <TableCell>
                       <p className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        {exp.name}
+                        <Link to={`/experiments/${encodeURIComponent(exp.id)}`} onClick={event => event.stopPropagation()}>{exp.name}</Link>
                       </p>
                       {exp.hypothesis && (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{exp.hypothesis}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">{exp.hypothesis}</p>
                       )}
                     </TableCell>
                     <TableCell>
@@ -215,9 +237,9 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                       </span>
                     </TableCell>
                     <TableCell className="text-slate-600 dark:text-slate-300 font-medium">
-                      {exp.variants.length}
+                      <Link className="underline underline-offset-4" to={nextPath(exp)} onClick={event => event.stopPropagation()}>{nextStep(exp)}</Link>
                     </TableCell>
-                    <TableCell className="text-slate-500 dark:text-slate-400 text-sm">
+                    <TableCell className="text-muted-foreground text-sm">
                       {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -226,7 +248,8 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                            aria-label={`${t.actions}: ${exp.name}`}
+                            className=" text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
@@ -255,19 +278,19 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
               <div
                 key={exp.id}
                 onClick={() => navigate(`/experiments/${exp.id}`)}
-                className="bg-white dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
+                className="bg-card rounded-2xl border dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <p className="font-bold text-slate-800 dark:text-slate-100 text-sm flex-1">{exp.name}</p>
+                  <p className="font-bold text-slate-800 dark:text-slate-100 text-sm flex-1"><Link to={`/experiments/${encodeURIComponent(exp.id)}`}>{exp.name}</Link></p>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${statusConfig[exp.status].color}`}>
                     {statusConfig[exp.status][lang]}
                   </span>
                 </div>
                 {exp.hypothesis && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mb-2">{exp.hypothesis}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{exp.hypothesis}</p>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">{t.colVariants}: {exp.variants.length}</span>
+                  <span className="text-xs text-slate-400"><Link to={nextPath(exp)} onClick={event => event.stopPropagation()}>{nextStep(exp)} →</Link></span>
                   <span className="text-xs text-slate-400">
                     {new Date(exp.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                   </span>
@@ -282,9 +305,9 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
         <CreateExperimentModal
           lang={lang}
           onClose={() => setShowCreateModal(false)}
-          onCreated={() => {
+          onCreated={(created) => {
             setShowCreateModal(false);
-            fetchExperiments();
+            navigate(`/experiments/${encodeURIComponent(created.id)}`);
           }}
         />
       )}

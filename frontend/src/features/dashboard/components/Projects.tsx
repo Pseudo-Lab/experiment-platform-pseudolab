@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -19,7 +19,8 @@ const PROJECT_ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,39}$/;
 
 const t = {
   ko: {
-    title: 'Projects',
+    title: '프로젝트 관리',
+    cancel: '취소',
     id: '프로젝트 ID',
     name: '프로젝트 이름',
     apiKey: 'API 키',
@@ -46,7 +47,8 @@ const t = {
     openVisualEditor: 'Visual Editor 열기',
   },
   en: {
-    title: 'Projects',
+    title: 'Project management',
+    cancel: 'Cancel',
     id: 'Project ID',
     name: 'Project Name',
     apiKey: 'API Key',
@@ -93,7 +95,15 @@ export function Projects({ lang }: Props) {
   const tr = t[lang];
   const navigate = useNavigate();
   const { projects, loading, reloadProjects, setCurrentProjectId } = useProject();
-  const [showForm, setShowForm] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const showForm = searchParams.get('create') === '1';
+  const setShowForm = (open: boolean) => {
+    setSearchParams((params) => {
+      if (open) params.set('create', '1');
+      else params.delete('create');
+      return params;
+    }, { replace: true });
+  };
   const [newId, setNewId] = useState('');
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -178,8 +188,9 @@ export function Projects({ lang }: Props) {
             {/* ID / Name fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1 block">{tr.id}</label>
+                <label htmlFor="new-project-id" className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1 block">{tr.id}</label>
                 <Input
+                  id="new-project-id"
                   value={newId}
                   onChange={(e) => setNewId(e.target.value)}
                   placeholder={tr.idPlaceholder}
@@ -188,8 +199,9 @@ export function Projects({ lang }: Props) {
                 <p className="text-xs text-slate-400 mt-1">{tr.idHelp}</p>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1 block">{tr.name}</label>
+                <label htmlFor="new-project-name" className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1 block">{tr.name}</label>
                 <Input
+                  id="new-project-name"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder={tr.namePlaceholder}
@@ -203,7 +215,7 @@ export function Projects({ lang }: Props) {
                 {creating ? tr.creating : tr.create}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setCreateError(null); }}>
-                Cancel
+                {tr.cancel}
               </Button>
             </div>
           </CardContent>
