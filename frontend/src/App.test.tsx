@@ -27,12 +27,24 @@ const mockMatchMedia = (matches: boolean) => {
   }));
 };
 
-// Mock fetch for backend status
-global.fetch = vi.fn(() =>
-  Promise.resolve({
-    json: () => Promise.resolve({ status: 'connected', version: '0.1.0' }),
-  })
-) as any;
+let authResponse: { authenticated: boolean; user: { username: string } | null } = {
+  authenticated: true,
+  user: { username: 'admin' },
+};
+
+const okJson = (data: unknown) => Promise.resolve({
+  ok: true,
+  status: 200,
+  json: () => Promise.resolve(data),
+} as Response);
+
+// Mock fetch for auth status and backend status
+global.fetch = vi.fn((input: RequestInfo | URL) => {
+  const url = String(input);
+  if (url.includes('/auth/me')) return okJson(authResponse);
+  if (url.includes('/status/')) return okJson({ status: 'connected', version: '0.1.0' });
+  return okJson({});
+}) as any;
 
 // Mock api service modules
 vi.mock('@/services/api', async (importOriginal) => {
@@ -40,6 +52,9 @@ vi.mock('@/services/api', async (importOriginal) => {
   return {
     ...actual,
     experimentApi: {
+      list: vi.fn(() => Promise.resolve([])),
+    },
+    projectApi: {
       list: vi.fn(() => Promise.resolve([])),
     },
   };
@@ -68,6 +83,7 @@ vi.mock('@/services/dashboardApi', () => ({
 describe('App Component', () => {
   beforeEach(() => {
     localStorage.clear(); // Clear localStorage before each test
+    authResponse = { authenticated: true, user: { username: 'admin' } };
     (global.fetch as any).mockClear();
   });
 
@@ -89,6 +105,23 @@ describe('App Component', () => {
     expect(screen.getByText('ExperiBase')).toBeInTheDocument(); // Checks if App/MainLayout renders
     expect(screen.getByText('가설을 세우고, 수집된 데이터를 확인하고, 다음 결정을 기록하세요.')).toBeInTheDocument(); // Checks if Overview content renders
     // expect(window.location.pathname).toBe('/dashboard'); // Removed due to MemoryRouter behavior
+  });
+
+  it('redirects anonymous users to the login page', async () => {
+    authResponse = { authenticated: false, user: null };
+
+    await act(async () => {
+      renderApp(['/dashboard']);
+    });
+
+    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
+    expect(screen.getByText('실험과 Feature Flag를 관리하려면 로그인하세요.')).toBeInTheDocument();
+  });
+
+  it('redirects to login when a management request expires the session', async () => {
+    await act(async () => { renderApp(['/experiments']); });
+    await act(async () => { window.dispatchEvent(new Event('auth:unauthorized')); });
+    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
   });
 
   it('persists language setting to localStorage', async () => {

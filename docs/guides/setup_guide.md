@@ -62,3 +62,17 @@ A: `docker compose logs -f [서비스명]` 명령어로 실시간 로그를 확�
 
 ---
 *도움이 필요하다면 프로젝트 카카오톡 채널에 언제든지 문의해 주세요!*
+
+
+## 관리자 로그인 설정
+
+관리 API는 단일 관리자 세션으로 보호한다. 설정이 전부 없거나 일부만 있으면 관리 API는 503으로 차단되며, 설정 완료 후 세션이 없으면 401을 반환한다. 공개 가입이나 사용자별 프로젝트 권한은 아직 지원하지 않는다.
+
+1. backend 환경에 `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`, `AUTH_SESSION_SECRET`을 설정한다. 비밀번호 해시는 backend 디렉터리에서 `python -m scripts.hash_admin_password`를 실행해 만든다. 서명 secret은 충분한 난수로 별도 생성한다. 실제 값은 문서·커밋·대화에 남기지 않는다.
+2. HTTPS 운영에서는 `AUTH_COOKIE_SECURE=true`, `AUTH_COOKIE_SAMESITE=lax`를 사용한다. 기본 세션 만료는 12시간이다. 같은 호스트의 `/api` 프록시를 권장한다.
+3. 별도 프런트 origin을 사용하면 `BACKEND_CORS_ORIGINS` JSON 배열에 scheme·host·port가 정확히 일치하는 origin을 넣는다. `*`는 기존 SDK CORS 호환을 위한 값이며 관리자 요청을 허용하지 않는다. 프록시 뒤에서는 외부 HTTPS origin 또는 올바른 forwarded scheme 설정을 확인한다.
+4. `/login`에서 로그인한 뒤 관리 기능을 사용한다. 일반 프로젝트 조회·생성·수정 응답에는 API 키가 없다. SDK 연동 화면은 인증된 `GET /api/v1/projects/{project_id}/api-key`로 키를 조회한다. 키 응답은 `Cache-Control: no-store`다.
+
+기존 프로젝트 키는 SDK와 `/access/decide`의 Bearer 인증에 함께 사용되므로 공개 브라우저 전용 키로 취급하지 않는다. 키 분리·교체는 연결 서비스를 확인하고 별도 전환 절차로 수행한다. `/admin/srm-check` 등 기존 무인 관리 호출도 이제 관리자 세션이 필요하므로 호출 담당자가 확인해야 한다. SDK·회고 외부 경로의 기존 인증 계약은 유지한다.
+
+상세 검증과 운영 전환 순서는 `docs/reports/handoffs/2026-10-26-urgent-admin-security.md`를 참고한다.

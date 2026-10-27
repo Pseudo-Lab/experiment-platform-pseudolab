@@ -13,6 +13,8 @@ Last-Validated: 2026-06-16
 4. 에이전트/병렬 작업은 `docs/guides/agent_collaboration.md`
 
 ## 1) Current Active Reports
+- `docs/reports/handoffs/2026-10-27-bin-4-security-validation.md` — BIN-4 보안 후보 재검증 및 Ops 인계
+- `docs/reports/handoffs/2026-10-26-urgent-admin-security.md` — 긴급 관리 API 인증과 프로젝트 키 노출 수정 (로컬 검증, 운영 미반영)
 - `docs/reports/dashboard-execution-plan-v1.md` — 대시보드 실행 계획
 - `docs/reports/team-lead-rebaseline-plan.md` — 팀장 기준 재정렬 계획
 - `docs/reports/kpi-definition-v2.md` — KPI 정의

@@ -1,5 +1,6 @@
 import type { Lang } from '../i18n'
 import { API_BASE_URL } from './apiBase'
+import { apiFetch } from '@/services/http'
 
 export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed' | 'archived'
 
@@ -42,7 +43,7 @@ export const experimentRegistry = {
   async refresh() {
     setState({ ...state, status: 'loading' })
     try {
-      const res = await fetch(`${API_BASE_URL}/experiments/`)
+      const res = await apiFetch(`${API_BASE_URL}/experiments/`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const items: Array<ExperimentMeta & { flag_key?: string | null }> = await res.json()
       const byName: Record<string, ExperimentMeta> = {}

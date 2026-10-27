@@ -293,3 +293,30 @@ def mock_r2(monkeypatch):
     monkeypatch.setattr("app.db.r2.upload", _upload)
     monkeypatch.setattr("app.db.r2.presigned_url", _presigned_url)
     monkeypatch.setattr("app.db.r2.delete", _delete)
+
+
+@pytest.fixture(autouse=True)
+def authenticated_management_requests(request, monkeypatch):
+    """Existing business tests run through real admin auth; security tests opt out.
+
+    No production auth dependency is bypassed. test_auth exercises anonymous,
+    missing-config, SDK-only, and invalid-session requests independently.
+    """
+    if request.node.path.name in {"test_auth.py", "test_upload_security.py"}:
+        return
+    from fastapi.testclient import TestClient
+    from app.core.auth import create_session_token, hash_password
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "test-admin")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD_HASH", hash_password("test-password", iterations=1000))
+    monkeypatch.setattr(settings, "AUTH_SESSION_SECRET", "isolated-test-session-secret")
+    token = create_session_token("test-admin")
+    original = TestClient.request
+
+    def authenticated_request(self, method, url, **kwargs):
+        headers = dict(kwargs.pop("headers", None) or {})
+        headers.setdefault("Cookie", f"{settings.AUTH_COOKIE_NAME}={token}")
+        return original(self, method, url, headers=headers, **kwargs)
+
+    monkeypatch.setattr(TestClient, "request", authenticated_request)

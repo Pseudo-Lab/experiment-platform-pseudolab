@@ -1,5 +1,6 @@
 import type { Lang } from '../i18n'
 import { API_BASE_URL } from './apiBase'
+import { apiFetch } from '@/services/http'
 
 export type FlagMeta = {
   flag_key: string
@@ -41,7 +42,7 @@ export const flagRegistry = {
   async refresh() {
     setState({ ...state, status: 'loading' })
     try {
-      const res = await fetch(`${API_BASE_URL}/feature-flags/?include_archived=true`)
+      const res = await apiFetch(`${API_BASE_URL}/feature-flags/?include_archived=true`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const flags: FlagMeta[] = await res.json()
       const byKey: Record<string, FlagMeta> = {}
