@@ -99,7 +99,7 @@ function AppShell() {
           <Route path="/" element={<Navigate to="/experiments" replace />} />
           <Route path="/dashboard" element={<Navigate to="/experiments" replace />} />
           <Route path="/community" element={<Navigate to="/experiments" replace />} />
-          <Route path="/experiments" element={<Experiments lang={lang} />} />
+          <Route path="/experiments" element={<Experiments lang={lang} isAdmin={user?.is_admin !== false} />} />
           <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} isAdmin={user?.is_admin !== false} />} />
           <Route path="/metrics" element={<Navigate to="/metrics/github" replace />} />
           <Route path="/metrics/github" element={user?.is_admin !== false ? <GitHubDashboard lang={lang} /> : <Navigate to="/projects" replace />} />

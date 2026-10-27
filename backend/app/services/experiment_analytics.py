@@ -69,7 +69,32 @@ def _two_proportion_z_test(
 
 class ExperimentAnalyticsService:
 
+    async def _owned_events(self, experiment_id: str) -> list[dict] | None:
+        rows = await d1.security_query(
+            "SELECT e.project_id, e.flag_key FROM experiments e JOIN project_owner o ON o.project_id = e.project_id WHERE e.id = ?",
+            [experiment_id],
+        )
+        if not rows:
+            return None
+        exp = rows[0]
+        return await d1.security_query(
+            """SELECT event_type, variant, url, substr(event_time, 1, 10) AS date
+               FROM project_experiment_event WHERE project_id = ?
+               AND (experiment_id = ? OR (experiment_id IS NULL AND experiment_key = ?))""",
+            [exp["project_id"], experiment_id, exp["flag_key"]],
+        )
+
     async def get_analytics(self, experiment_id: str) -> ExperimentAnalyticsResponse:
+        owned = await self._owned_events(experiment_id)
+        if owned is not None:
+            imp = [e for e in owned if e["event_type"] == "impression"]
+            conv = [e for e in owned if e["event_type"] == "conversion"]
+            impressions, conversions = self._build_impressions(imp), self._build_conversions(conv)
+            return ExperimentAnalyticsResponse(
+                impressions=impressions, conversions=conversions,
+                statistical_significance=self._compute_significance(impressions, conversions),
+                anomalies=self._detect_anomalies(imp, conv), srm_warning=_srm_check(impressions.by_variant),
+            )
         # resolve experiment key (flag_key) for events that lack experiment_id
         exp_rows = await d1.query(
             "SELECT flag_key, experiment_type, primary_metric FROM experiments WHERE id = ?",
@@ -305,6 +330,12 @@ class ExperimentAnalyticsService:
 
 
     async def get_available_events(self, experiment_id: str) -> AvailableEventsResponse:
+        owned = await self._owned_events(experiment_id)
+        if owned is not None:
+            types = sorted({e["event_type"] for e in owned})
+            return AvailableEventsResponse(event_types=types, has_impressions="impression" in types,
+                has_conversions="conversion" in types, conversion_events=[t for t in types if t == "conversion"],
+                total_events=len(owned))
         exp_rows = await d1.query(
             "SELECT flag_key, experiment_type, primary_metric FROM experiments WHERE id = ?",
             [experiment_id],

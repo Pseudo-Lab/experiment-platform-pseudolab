@@ -49,6 +49,8 @@ async def revoke_session(request: Request) -> None:
     if token.startswith("usr_"):
         ok = await d1.execute("DELETE FROM platform_session WHERE token_hash = ?", [token_hash(token)])
     else:
+        if not verify_session_token(token):
+            return
         ok = await d1.execute(
             "INSERT OR IGNORE INTO revoked_admin_session (token_hash, expires_at) VALUES (?, ?)",
             [token_hash(token), int(time.time()) + settings.AUTH_SESSION_TTL_SECONDS],

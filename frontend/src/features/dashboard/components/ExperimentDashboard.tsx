@@ -167,6 +167,7 @@ const copy = {
 
 type View = 'health' | 'results' | 'decisions';
 interface Props {
+  isAdmin?: boolean;
   experimentId: string;
   experiment: Experiment;
   lang: 'en' | 'ko';
@@ -178,6 +179,7 @@ export const ExperimentDashboard: React.FC<Props> = ({
   experiment,
   lang,
   view = 'health',
+  isAdmin = true,
 }) => {
   const t = copy[lang];
   const { setCurrentProjectId } = useProject();
@@ -202,9 +204,9 @@ export const ExperimentDashboard: React.FC<Props> = ({
     setErrors([]);
     Promise.allSettled([
       experimentAnalyticsApi.get(experimentId),
-      experimentResultApi.getResult(experimentId),
+      isAdmin ? experimentResultApi.getResult(experimentId) : Promise.resolve(null),
       availableEventsApi.get(experimentId),
-      decisionApi.list(experimentId),
+      isAdmin ? decisionApi.list(experimentId) : Promise.resolve([]),
     ]).then(([a, r, e, d]) => {
       if (cancelled) return;
       setAnalytics(a.status === 'fulfilled' ? a.value : null);
@@ -224,7 +226,7 @@ export const ExperimentDashboard: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [experimentId, revision]);
+  }, [experimentId, revision, isAdmin]);
 
   const saveDecision = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -427,7 +429,13 @@ export const ExperimentDashboard: React.FC<Props> = ({
                   {experiment.primary_metric || t.unspecified}
                 </code>
               </p>
-              {errors.includes('result') ? (
+              {!isAdmin ? (
+                <Card className="p-5 space-y-2">
+                  <p>{lang === 'ko' ? '프로젝트 SDK 이벤트 집계 (고유 방문자 수 아님)' : 'Project SDK event counts (not unique visitors)'}</p>
+                  <p>{lang === 'ko' ? '노출' : 'Impressions'}: {analytics?.impressions.total ?? '—'} · {lang === 'ko' ? '전환' : 'Conversions'}: {analytics?.conversions.total ?? '—'}</p>
+                  <p className="text-sm text-muted-foreground">{lang === 'ko' ? 'impression/conversion 이벤트만 집계합니다. 사용자 단위 결과·가드레일·출시 판단은 제공하지 않습니다.' : 'Counts impression/conversion events only. User-level results, guardrails and launch judgments are unavailable.'}</p>
+                </Card>
+              ) : errors.includes('result') ? (
                 retry(t.resultError)
               ) : !result || result.sample_size === 0 ? (
                 <Card className="p-6 text-muted-foreground">{t.noResult}</Card>

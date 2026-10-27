@@ -56,7 +56,7 @@ async def authorize_member(request: Request) -> None:
         project_id = await resource_project(table, key, parts[1])
         suffix = "/".join(parts[2:])
         allowed = ({"": {"GET", "PATCH", "DELETE"}, "adopt-winner": {"POST"},
-                    "visual-changes": {"GET", "POST"}}
+                    "visual-changes": {"GET", "POST"}, "analytics": {"GET"}, "available-events": {"GET"}}
                    if table == "experiments" else
                    {"": {"PATCH"}, "archive": {"POST"}, "restore": {"POST"},
                     "exposures": {"GET"}, "exposure-summary": {"GET"}, "rules": {"GET", "POST"}})
@@ -65,6 +65,8 @@ async def authorize_member(request: Request) -> None:
         if "project_id" in body and body["project_id"] != project_id:
             raise HTTPException(403, "Project reassignment is not allowed")
     await require_owned_project(user.account_id, project_id)
+    if table == "experiments" and body.get("experiment_type") in {"quasi_experiment", "rollout"}:
+        raise HTTPException(403, "Public accounts support A/B flag experiments only")
     if body.get("flag_key") and table == "experiments":
         if await resource_project("feature_flag", "flag_key", body["flag_key"]) != project_id:
             raise HTTPException(404, "Resource not found")

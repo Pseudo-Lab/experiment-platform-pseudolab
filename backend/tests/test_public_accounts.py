@@ -226,3 +226,124 @@ def test_security_storage_failure_blocks_admin(clients, monkeypatch):
     monkeypatch.setattr(d1, 'security_query', unavailable)
     r = admin.get('/api/v1/projects/')
     assert r.status_code == 503 and r.headers['cache-control'] == 'no-store'
+
+
+def test_invalid_logout_does_not_create_revocation(clients, mock_d1):
+    from app.core.auth import create_session_token
+    c = TestClient(app, base_url='https://testserver')
+    for token in [None, 'forged', 'a.b', create_session_token('admin', now=1)]:
+        headers = {'Cookie': f'{settings.AUTH_COOKIE_NAME}={token}'} if token else {}
+        response = c.post('/api/v1/auth/logout', headers=headers)
+        assert response.status_code == 200
+        assert 'Max-Age=0' in response.headers['set-cookie']
+    assert mock_d1.execute('SELECT count(*) FROM revoked_admin_session').fetchone()[0] == 0
+
+
+def test_capture_owner_lookup_failure_never_reads_person(clients, monkeypatch):
+    from app.db import d1
+    from app.services.event import event_service
+    from app.schemas.event import EventCapture
+    from fastapi import HTTPException
+    async def unavailable(*args, **kwargs):
+        raise HTTPException(503, 'unavailable')
+    async def forbidden(*args, **kwargs):
+        pytest.fail('Legacy lookup or write after security lookup failure')
+    monkeypatch.setattr(d1, 'security_query', unavailable)
+    monkeypatch.setattr(d1, 'query', forbidden)
+    monkeypatch.setattr(d1, 'execute', forbidden)
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(event_service.capture(EventCapture(event_name='click', user_id='u'), project_id='project-a'))
+    assert error.value.status_code == 503
+
+
+def test_owned_sdk_events_results_and_future_key_isolation(clients, mock_d1):
+    a, b, admin = clients
+    ka, kb = project(a, 'project-a'), project(b, 'project-b')
+    sdk = TestClient(app, base_url='https://testserver')
+    def track(key, event, headers):
+        return sdk.post('/api/v1/events', json={'type': event, 'key': key, 'user_id': 'visitor', 'variant': 'control'}, headers=headers)
+    assert track('future-b', 'impression', {'X-API-Key': ka}).status_code == 202
+    for client, name in [(a, 'a'), (b, 'b')]:
+        flag = 'flag-a' if name == 'a' else 'future-b'
+        assert client.post('/api/v1/feature-flags/', json={'flag_key': flag, 'project_id': 'project-' + name, 'enabled': True}).status_code == 201
+        assert client.post('/api/v1/experiments/', json={'id': 'exp-' + name, 'name': name, 'project_id': 'project-' + name, 'flag_key': flag, 'experiment_type': 'ab_test'}).status_code == 201
+    assert b.get('/api/v1/experiments/exp-b/analytics').json()['impressions']['total'] == 0
+    assert track('future-b', 'conversion', {'X-API-Key': ka}).status_code == 404
+    assert a.get('/api/v1/experiments/exp-b/analytics').status_code == 404
+    for event in ['impression', 'conversion']:
+        assert track('flag-a', event, {'X-API-Key': ka}).status_code == 202
+    assert sdk.post('/api/v1/decide', json={'key': 'flag-a', 'user_id': 'visitor'}, headers={'X-API-Key': ka}).status_code == 200
+    result = a.get('/api/v1/experiments/exp-a/analytics')
+    assert result.status_code == 200, result.text
+    assert result.json()['impressions']['total'] == 1
+    assert result.json()['conversions']['total'] == 1
+    assert a.get('/api/v1/experiments/exp-a/available-events').json()['total_events'] == 2
+    assert mock_d1.execute('SELECT count(*) FROM experiment_event').fetchone()[0] == 0
+    assert mock_d1.execute('SELECT count(*) FROM project_experiment_event').fetchone()[0] == 3
+    assert track('legacy-custom', 'conversion', {}).status_code == 202
+    assert mock_d1.execute('SELECT count(*) FROM experiment_event').fetchone()[0] == 1
+    for kind in ['quasi_experiment', 'rollout']:
+        assert a.patch('/api/v1/experiments/exp-a', json={'experiment_type': kind}).status_code == 403
+    migration = (Path(__file__).parents[1] / 'migrations/035_project_experiment_events.sql').read_text()
+    mock_d1.executescript(migration)
+    mock_d1.executescript(migration)
+    assert mock_d1.execute('SELECT count(*) FROM project_experiment_event').fetchone()[0] == 3
+    assert list(mock_d1.execute('PRAGMA foreign_key_check')) == []
+
+
+from app.db.d1 import query as real_d1_query
+
+@pytest.mark.parametrize('payload,fail', [
+    ({'success': True, 'result': [{'success': True, 'results': []}]}, False),
+    ({'success': True, 'result': []}, True),
+    ({'success': False, 'result': []}, True),
+    ({'success': True, 'result': [{'success': False, 'results': []}]}, True),
+    ({'success': True, 'result': [{'success': True}]}, True),
+])
+def test_real_security_transport_distinguishes_empty_and_failure(monkeypatch, payload, fail):
+    from app.db import d1
+    from fastapi import HTTPException
+    monkeypatch.setattr(d1, '_get_endpoint', lambda _: ('https://synthetic.invalid', 'synthetic'))
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))) as client:
+            async def get_client(): return client
+            monkeypatch.setattr(d1, 'get_client', get_client)
+            if fail:
+                with pytest.raises(HTTPException) as error:
+                    await real_d1_query('SELECT 1', fail_closed=True)
+                assert error.value.status_code == 503
+            else:
+                assert await real_d1_query('SELECT 1', fail_closed=True) == []
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize('failure', ['network', 'http', 'missing'])
+def test_security_transport_failures_closed(monkeypatch, failure):
+    from app.db import d1
+    from fastapi import HTTPException
+    monkeypatch.setattr(d1, '_get_endpoint', lambda _: None if failure == 'missing' else ('https://synthetic.invalid', 'synthetic'))
+    def handle(request):
+        if failure == 'network': raise httpx.ConnectError('offline')
+        return httpx.Response(500)
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            async def get_client(): return client
+            monkeypatch.setattr(d1, 'get_client', get_client)
+            with pytest.raises(HTTPException) as error:
+                await real_d1_query('SELECT 1', fail_closed=True)
+            assert error.value.status_code == 503
+    asyncio.run(run())
+
+
+def test_sdk_owner_storage_failure_does_not_fall_back_to_legacy(clients, monkeypatch):
+    from app.db import d1
+    from fastapi import HTTPException
+    a, _, _ = clients
+    key = project(a, 'project-a')
+    original = d1.security_query
+    async def query(sql, params=None):
+        if 'project_owner' in sql: raise HTTPException(503, 'unavailable')
+        return await original(sql, params)
+    monkeypatch.setattr(d1, 'security_query', query)
+    c = TestClient(app, base_url='https://testserver')
+    assert c.post('/api/v1/events', headers={'X-API-Key': key}, json={'key':'unknown','type':'conversion','user_id':'u'}).status_code == 503

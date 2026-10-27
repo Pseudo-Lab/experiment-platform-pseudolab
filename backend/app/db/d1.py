@@ -74,7 +74,7 @@ async def query(sql: str, params: list[Any] | None = None, database_id: Optional
             if fail_closed:
                 raise HTTPException(503, "Security storage unavailable")
             return []
-        if fail_closed and not isinstance(result[0].get("results"), list):
+        if fail_closed and (result[0].get("success") is False or not isinstance(result[0].get("results"), list)):
             raise HTTPException(503, "Security storage unavailable")
         return result[0].get("results") or []
     except Exception:

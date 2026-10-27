@@ -177,3 +177,14 @@ it('keeps a failed decision history distinct from an empty history', async () =>
     screen.queryByText('No decisions recorded yet.'),
   ).not.toBeInTheDocument();
 });
+
+it('shows member project event results without calling administrator result or decisions APIs', async () => {
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({
+    ...emptyAnalytics, impressions: { ...emptyAnalytics.impressions, total: 12 },
+    conversions: { total: 3, rate: { control: 0.25 } },
+  } as any);
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang="en" view="results" isAdmin={false} /></MemoryRouter>);
+  expect(await screen.findByText('Impressions: 12 · Conversions: 3')).toBeInTheDocument();
+  expect(experimentResultApi.getResult).not.toHaveBeenCalled();
+  expect(decisionApi.list).not.toHaveBeenCalled();
+});

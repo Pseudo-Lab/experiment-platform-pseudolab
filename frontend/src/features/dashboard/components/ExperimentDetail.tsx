@@ -449,7 +449,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
 
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedView = searchParams.get('view');
-  const activeTab = !isAdmin ? 'overview' : requestedView === 'health' || requestedView === 'results' || requestedView === 'decisions' ? requestedView : 'overview';
+  const activeTab = !isAdmin ? (requestedView === 'results' ? 'results' : 'overview') : requestedView === 'health' || requestedView === 'results' || requestedView === 'decisions' ? requestedView : 'overview';
   const setActiveTab = (view: string) => setSearchParams(view === 'overview' ? {} : { view });
 
   const [adoptWinnerVariant, setAdoptWinnerVariant] = useState<string | null>(null);
@@ -907,7 +907,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
             ['health', lang === 'ko' ? '연동·수집 확인' : 'Collection health'],
             ['results', lang === 'ko' ? '결과' : 'Results'],
             ['decisions', lang === 'ko' ? '결정 기록' : 'Decision log'],
-          ] as const).filter(([view]) => isAdmin || view === 'overview').map(([view, label], index) => (
+          ] as const).filter(([view]) => isAdmin || view === 'overview' || view === 'results').map(([view, label], index) => (
             <Button key={view} variant={activeTab === view ? 'default' : 'ghost'}
               aria-current={activeTab === view ? 'page' : undefined}
               onClick={() => setActiveTab(view)} disabled={editing}>
@@ -917,7 +917,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
         </nav>
       </div>
 
-      {!isAdmin && <p className="text-sm text-muted-foreground">{lang === 'ko' ? '공유 분석·세그먼트·Placement는 설치 관리자 전용입니다.' : 'Shared analytics, segments and placements require the installation administrator.'}</p>}
+      {!isAdmin && <p className="text-sm text-muted-foreground">{lang === 'ko' ? 'A/B 플래그 실험과 프로젝트 SDK 노출·전환 결과를 지원합니다. 준실험·공유 분석·세그먼트·Placement는 설치 관리자 전용입니다.' : 'A/B flag experiments and project SDK impression/conversion results are supported. Quasi experiments, shared analytics, segments and placements require the installation administrator.'}</p>}
       {activeTab === 'overview' && (
       <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <CardHeader className="pb-4">
@@ -935,7 +935,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {experimentTypeOptions.map((option) => (
+                      {experimentTypeOptions.filter(option => isAdmin || option.value === 'ab_test').map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option[lang]}
                         </SelectItem>
@@ -1293,7 +1293,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
       )}
 
       {activeTab !== 'overview' && id && experiment && (
-        <ExperimentDashboard key={id} experimentId={id} experiment={experiment} lang={lang} view={activeTab} />
+        <ExperimentDashboard isAdmin={isAdmin} key={id} experimentId={id} experiment={experiment} lang={lang} view={activeTab} />
       )}
 
       {!isQuasiExperiment && activeTab === 'overview' && (
