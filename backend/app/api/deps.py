@@ -16,7 +16,7 @@ async def get_project_from_api_key(
 
 
 async def require_project_from_bearer_token(request: Request) -> Project:
-    """Authenticate server-to-server requests with an existing project API key."""
+    """Authenticate server-to-server requests with a dedicated hashed server credential."""
     authorization = request.headers.get("Authorization", "")
     scheme, separator, token = authorization.partition(" ")
     if not separator or scheme.lower() != "bearer" or not token.strip():
@@ -26,7 +26,7 @@ async def require_project_from_bearer_token(request: Request) -> Project:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    project = await project_service.get_by_api_key(token.strip())
+    project = await project_service.get_by_server_key(token.strip())
     if not project:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -102,7 +102,7 @@ def test_all_management_routes_require_session(monkeypatch):
     # Independent contract inventory: a newly added management route is protected
     # unless it is explicitly reviewed as an SDK/external-service endpoint here.
     public = {
-        'GET': {'/api/v1/status/', '/api/v1/auth/me', '/api/v1/feature-flags/decide',
+        'GET': {'/api/v1/sdk/demo-config', '/api/v1/status/', '/api/v1/auth/me', '/api/v1/feature-flags/decide',
                 '/api/v1/experiments/assignment', '/api/v1/experiments/{experiment_id}/assign/{user_id}',
                 '/api/v1/placements/{key}/decide',
                 '/api/v1/experiments/{experiment_id}/placements/{placement_key}/decide',
@@ -166,9 +166,9 @@ def test_sdk_contracts_without_admin_session(monkeypatch, mock_d1):
     access = client.post('/api/v1/access/decide', json={})
     assert access.status_code == 401
     assert access.headers['www-authenticate'] == 'Bearer'
-    # Bearer auth passes to the endpoint's own request validation, without a cookie.
+    # Public SDK keys cannot authenticate server requests.
     authorized = client.post('/api/v1/access/decide', json={}, headers={'Authorization': 'Bearer sdk-test-key'})
-    assert authorized.status_code == 422
+    assert authorized.status_code == 401
     assert client.get('/api/v1/projects/', headers={'Authorization': 'Bearer sdk-test-key'}).status_code == 401
 
 
@@ -281,11 +281,11 @@ def test_removed_project_key_cannot_use_bearer_access(monkeypatch, mock_d1):
     mock_d1.commit()
     body = {'flag_key': 'missing', 'user_id': 'u'}
     with TestClient(app) as sdk:
-        assert sdk.post('/api/v1/access/decide', json=body, headers={'Authorization': 'Bearer old-test-key'}).status_code == 200
+        assert sdk.post('/api/v1/access/decide', json=body, headers={'Authorization': 'Bearer old-test-key'}).status_code == 401
         mock_d1.execute("UPDATE projects SET api_key = 'replacement-test-key' WHERE id = 'p'")
         mock_d1.commit()
         assert sdk.post('/api/v1/access/decide', json=body, headers={'Authorization': 'Bearer old-test-key'}).status_code == 401
-        assert sdk.post('/api/v1/access/decide', json=body, headers={'Authorization': 'Bearer replacement-test-key'}).status_code == 200
+        assert sdk.post('/api/v1/access/decide', json=body, headers={'Authorization': 'Bearer replacement-test-key'}).status_code == 401
         assert sdk.post('/api/v1/capture', json={'event': 'test', 'user_id': 'u'}, headers={'X-API-Key': 'old-test-key'}).status_code == 401
 
 
