@@ -19,6 +19,8 @@ DEFAULT_HASH_ITERATIONS = 260_000
 @dataclass(frozen=True)
 class AuthenticatedUser:
     username: str
+    account_id: str | None = None
+    is_admin: bool = True
 
 
 def _b64encode(raw: bytes) -> str:
@@ -109,6 +111,8 @@ def verify_session_token(token: str | None, *, now: int | None = None) -> Authen
 
 
 def get_session_user_from_request(request: Request) -> AuthenticatedUser | None:
+    if hasattr(request.state, "auth_user"):
+        return request.state.auth_user
     token = request.cookies.get(settings.AUTH_COOKIE_NAME)
     return verify_session_token(token)
 

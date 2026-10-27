@@ -114,14 +114,14 @@ describe('App Component', () => {
       renderApp(['/dashboard']);
     });
 
-    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument();
     expect(screen.getByText('실험과 Feature Flag를 관리하려면 로그인하세요.')).toBeInTheDocument();
   });
 
   it('redirects to login when a management request expires the session', async () => {
     await act(async () => { renderApp(['/experiments']); });
     await act(async () => { window.dispatchEvent(new Event('auth:unauthorized')); });
-    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument();
   });
 
   it('persists language setting to localStorage', async () => {

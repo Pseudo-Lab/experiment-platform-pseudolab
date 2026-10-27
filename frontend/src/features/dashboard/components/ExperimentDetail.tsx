@@ -16,6 +16,7 @@ import {
 import { ExperimentDashboard } from './ExperimentDashboard';
 
 interface ExperimentDetailProps {
+  isAdmin?: boolean;
   lang: 'en' | 'ko';
 }
 
@@ -395,7 +396,7 @@ const emptyPlacementForm = (variantKey: string | null = null): PlacementForm => 
   enabled: false,
 });
 
-export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
+export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmin = true }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const t = translations[lang];
@@ -448,7 +449,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedView = searchParams.get('view');
-  const activeTab = requestedView === 'health' || requestedView === 'results' || requestedView === 'decisions' ? requestedView : 'overview';
+  const activeTab = !isAdmin ? 'overview' : requestedView === 'health' || requestedView === 'results' || requestedView === 'decisions' ? requestedView : 'overview';
   const setActiveTab = (view: string) => setSearchParams(view === 'overview' ? {} : { view });
 
   const [adoptWinnerVariant, setAdoptWinnerVariant] = useState<string | null>(null);
@@ -461,6 +462,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
     experimentApi.get(id)
       .then((data) => { setExperiment(data); setLoading(false); })
       .catch(() => { setError(t.error); setLoading(false); });
+    if (isAdmin) {
     setPlacementsLoading(true);
     setPlacementsError(null);
     experimentPlacementApi.list(id)
@@ -473,6 +475,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
       })
       .catch(() => setPlacementsError(t.placementsError))
       .finally(() => setPlacementsLoading(false));
+    }
     projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
   }, [id]);
 
@@ -904,7 +907,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
             ['health', lang === 'ko' ? '연동·수집 확인' : 'Collection health'],
             ['results', lang === 'ko' ? '결과' : 'Results'],
             ['decisions', lang === 'ko' ? '결정 기록' : 'Decision log'],
-          ] as const).map(([view, label], index) => (
+          ] as const).filter(([view]) => isAdmin || view === 'overview').map(([view, label], index) => (
             <Button key={view} variant={activeTab === view ? 'default' : 'ghost'}
               aria-current={activeTab === view ? 'page' : undefined}
               onClick={() => setActiveTab(view)} disabled={editing}>
@@ -914,6 +917,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </nav>
       </div>
 
+      {!isAdmin && <p className="text-sm text-muted-foreground">{lang === 'ko' ? '공유 분석·세그먼트·Placement는 설치 관리자 전용입니다.' : 'Shared analytics, segments and placements require the installation administrator.'}</p>}
       {activeTab === 'overview' && (
       <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <CardHeader className="pb-4">
@@ -1400,7 +1404,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang }) => {
         </Card>
       )}
 
-      {activeTab === 'overview' && (!isAbTest || placementVariantKey !== null) && (
+      {isAdmin && activeTab === 'overview' && (!isAbTest || placementVariantKey !== null) && (
       <Card className="rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">

@@ -135,7 +135,7 @@ export class ExperibaseSDK {
       const params = new URLSearchParams({ experiment_id: experimentId, uid })
       const res = await fetch(
         `${this.baseUrl}/experiments/assignment?${params}`,
-        { signal: options?.signal },
+        { headers: { 'x-api-key': this.apiKey }, signal: options?.signal },
       )
       if (!res.ok) return FALLBACK
       return res.json() as Promise<AssignmentResult>
@@ -240,7 +240,7 @@ export class ExperibaseSDK {
     if (options?.scenario)  searchParams.set('scenario',   options.scenario)
     const res = await fetch(
       `${this.baseUrl}/experiments/${encodeURIComponent(experimentId)}/placements/${encodeURIComponent(placementKey)}/decide?${searchParams}`,
-      { signal: options?.signal },
+      { headers: { 'x-api-key': this.apiKey }, signal: options?.signal },
     )
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return res.json() as Promise<ExperimentPlacementDecisionResult>

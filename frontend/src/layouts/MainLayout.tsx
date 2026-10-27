@@ -93,6 +93,7 @@ interface MainLayoutProps {
     setTheme: (theme: 'light' | 'dark') => void;
     backendStatus: string;
     userLabel?: string;
+    isAdmin?: boolean;
     onLogout?: () => void | Promise<void>;
 }
 
@@ -104,6 +105,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     setTheme,
     backendStatus,
     userLabel,
+    isAdmin = true,
     onLogout
 }) => {
     const [logoutFailed, setLogoutFailed] = useState(false);
@@ -263,11 +265,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath.startsWith('/experiments')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
                     <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
                     <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
-                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath.startsWith('/bug-report')} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />
+                    {isAdmin && <SidebarItem icon={Bug} label={t.bugReport} active={activePath.startsWith('/bug-report')} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />}
                 </nav>
 
                 <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
-                    {currentProjectId === 'demo-app' && (
+                    {isAdmin && currentProjectId === 'demo-app' && (
                         <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} secondary />
                     )}
                 </div>

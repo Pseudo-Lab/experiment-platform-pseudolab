@@ -11,7 +11,8 @@ def _now() -> str:
 class EventService:
 
     async def capture(self, data: EventCapture, project_id: str | None = None) -> bool:
-        rows = await d1.query(
+        owned = project_id and await d1.query("SELECT 1 FROM project_owner WHERE project_id = ?", [project_id])
+        rows = [] if owned else await d1.query(
             "SELECT cohort_id FROM person WHERE user_id = ?", [data.user_id]
         )
         cohort_id = rows[0]["cohort_id"] if rows else None
@@ -26,7 +27,7 @@ class EventService:
                 event_time, created_at, project_id)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
-                data.event_id, data.user_id, cohort_id, data.event_name, properties,
+                (f"{project_id}:{data.event_id}" if owned and data.event_id else data.event_id), data.user_id, cohort_id, data.event_name, properties,
                 data.session_id, data.experiment_id, data.variant, data.device, data.anon_id,
                 event_time, _now(), project_id,
             ],

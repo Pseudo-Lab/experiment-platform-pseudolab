@@ -72,8 +72,13 @@ class FeatureFlagDecision:
 
 class FeatureFlagService:
 
-    async def list(self, include_archived: bool = False) -> List[FeatureFlag]:
-        if include_archived:
+    async def list(self, include_archived: bool = False, account_id: str | None = None) -> List[FeatureFlag]:
+        if account_id:
+            sql = "SELECT * FROM feature_flag WHERE project_id IN (SELECT project_id FROM project_owner WHERE account_id = ?)"
+            if not include_archived:
+                sql += " AND archived_at IS NULL"
+            rows = await d1.query(sql + " ORDER BY created_at DESC", [account_id])
+        elif include_archived:
             rows = await d1.query("SELECT * FROM feature_flag ORDER BY created_at DESC")
         else:
             rows = await d1.query("SELECT * FROM feature_flag WHERE archived_at IS NULL ORDER BY created_at DESC")

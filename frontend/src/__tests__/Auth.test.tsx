@@ -137,3 +137,17 @@ it('does not restore an outdated session after an unauthorized event', async () 
   await act(async () => restore(authenticated));
   expect(screen.getByText('anonymous:')).toBeInTheDocument();
 });
+
+
+it.each(['ko', 'en'] as const)('shows disabled Google login when unconfigured in %s', async (lang) => {
+  vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ google: false }) } as Response);
+  renderLogin(lang);
+  expect(await screen.findByText(lang === 'ko' ? '이 설치에는 Google 로그인이 설정되지 않았습니다.' : 'Google sign in is not configured for this installation.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: lang === 'ko' ? 'Google로 계속하기' : 'Continue with Google' })).toBeDisabled();
+});
+
+it('enables Google login only when provider configuration is available', async () => {
+  vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ google: true }) } as Response);
+  renderLogin('en');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeEnabled());
+});

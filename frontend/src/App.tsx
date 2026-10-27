@@ -91,6 +91,7 @@ function AppShell() {
         setTheme={setTheme}
         backendStatus={backendStatus}
         userLabel={user?.username}
+        isAdmin={user?.is_admin !== false}
         onLogout={logout}
       >
         <Routes>
@@ -99,17 +100,17 @@ function AppShell() {
           <Route path="/dashboard" element={<Navigate to="/experiments" replace />} />
           <Route path="/community" element={<Navigate to="/experiments" replace />} />
           <Route path="/experiments" element={<Experiments lang={lang} />} />
-          <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} />} />
+          <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} isAdmin={user?.is_admin !== false} />} />
           <Route path="/metrics" element={<Navigate to="/metrics/github" replace />} />
-          <Route path="/metrics/github" element={<GitHubDashboard lang={lang} />} />
-          <Route path="/metrics/discord" element={<DiscordDashboard lang={lang} />} />
-          <Route path="/bug-report" element={<BugReport lang={lang} />} />
-          <Route path="/bug-report/:id" element={<BugReportDetail lang={lang} />} />
+          <Route path="/metrics/github" element={user?.is_admin !== false ? <GitHubDashboard lang={lang} /> : <Navigate to="/projects" replace />} />
+          <Route path="/metrics/discord" element={user?.is_admin !== false ? <DiscordDashboard lang={lang} /> : <Navigate to="/projects" replace />} />
+          <Route path="/bug-report" element={user?.is_admin !== false ? <BugReport lang={lang} /> : <Navigate to="/projects" replace />} />
+          <Route path="/bug-report/:id" element={user?.is_admin !== false ? <BugReportDetail lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
-          <Route path="/placements" element={<Placements lang={lang} />} />
+          <Route path="/placements" element={user?.is_admin !== false ? <Placements lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="/projects" element={<Projects lang={lang} />} />
           <Route path="/api-key" element={<ApiKeyPage lang={lang} />} />
-          <Route path="/example/*" element={<ExampleApp lang={lang} />} />
+          <Route path="/example/*" element={user?.is_admin !== false ? <ExampleApp lang={lang} /> : <Navigate to="/projects" replace />} />
         </Routes>
       </MainLayout>
     </ProjectProvider>

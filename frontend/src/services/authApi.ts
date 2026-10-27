@@ -2,6 +2,7 @@ import { API_BASE_URL, apiFetch } from './http';
 
 export interface AuthUser {
   username: string;
+  is_admin?: boolean;
 }
 
 export interface AuthStatus {

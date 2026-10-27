@@ -28,11 +28,11 @@ def test_login_me_and_logout(monkeypatch):
 
     login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "secret"})
     assert login.status_code == 200
-    assert login.json() == {"authenticated": True, "user": {"username": "admin"}}
+    assert login.json() == {"authenticated": True, "user": {"username": "admin", "is_admin": True}}
 
     me = client.get("/api/v1/auth/me")
     assert me.status_code == 200
-    assert me.json() == {"authenticated": True, "user": {"username": "admin"}}
+    assert me.json() == {"authenticated": True, "user": {"username": "admin", "is_admin": True}}
 
     logout = client.post("/api/v1/auth/logout")
     assert logout.status_code == 200
@@ -102,7 +102,7 @@ def test_all_management_routes_require_session(monkeypatch):
     # Independent contract inventory: a newly added management route is protected
     # unless it is explicitly reviewed as an SDK/external-service endpoint here.
     public = {
-        'GET': {'/api/v1/status/', '/api/v1/auth/me', '/api/v1/feature-flags/decide',
+        'GET': {'/api/v1/auth/providers', '/api/v1/auth/google/start', '/api/v1/auth/google/callback', '/api/v1/status/', '/api/v1/auth/me', '/api/v1/feature-flags/decide',
                 '/api/v1/experiments/assignment', '/api/v1/experiments/{experiment_id}/assign/{user_id}',
                 '/api/v1/placements/{key}/decide',
                 '/api/v1/experiments/{experiment_id}/placements/{placement_key}/decide',

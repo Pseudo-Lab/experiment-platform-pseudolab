@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Request
 from typing import List, Optional
 from app.schemas.feature_flag import (
     FLAG_KEY_PATTERN,
@@ -36,8 +36,8 @@ async def decide(
 
 
 @router.get("/", response_model=List[FeatureFlag])
-async def list_flags(include_archived: bool = Query(default=False)):
-    return await feature_flag_service.list(include_archived=include_archived)
+async def list_flags(request: Request, include_archived: bool = Query(default=False)):
+    return await feature_flag_service.list(include_archived=include_archived, account_id=request.state.auth_user.account_id)
 
 
 @router.post("/", response_model=FeatureFlag, status_code=201)

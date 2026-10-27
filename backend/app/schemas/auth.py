@@ -8,6 +8,7 @@ class LoginRequest(BaseModel):
 
 class AuthUser(BaseModel):
     username: str
+    is_admin: bool = True
 
 
 class AuthStatus(BaseModel):

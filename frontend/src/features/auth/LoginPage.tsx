@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { LockKeyhole } from 'lucide-react';
 
+import { API_BASE_URL, apiFetch } from '@/services/http';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from './AuthContext';
@@ -14,6 +15,17 @@ export function LoginPage({ lang }: LoginPageProps) {
   const { state, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    apiFetch(`${API_BASE_URL}/auth/providers`)
+      .then(res => res.ok ? res.json() : { google: false })
+      .then(data => { if (active) setGoogleEnabled(data.google === true); })
+      .catch(() => { if (active) setGoogleEnabled(false); })
+      .finally(() => { if (active) setProvidersLoading(false); });
+    return () => { active = false; };
+  }, []);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +33,11 @@ export function LoginPage({ lang }: LoginPageProps) {
 
   const copy = {
     en: {
-      title: 'Admin sign in',
+      title: 'Sign in',
+      google: 'Continue with Google',
+      googleUnavailable: 'Google sign in is not configured for this installation.',
+      googleFailed: 'Google sign in was cancelled or failed. Please try again.',
+      checking: 'Checking sign-in options...',
       subtitle: 'Sign in to manage experiments and feature flags.',
       username: 'Username',
       password: 'Password',
@@ -31,7 +47,11 @@ export function LoginPage({ lang }: LoginPageProps) {
       unavailable: 'Sign in is unavailable. Please try again later.',
     },
     ko: {
-      title: '관리자 로그인',
+      title: '로그인',
+      google: 'Google로 계속하기',
+      googleUnavailable: '이 설치에는 Google 로그인이 설정되지 않았습니다.',
+      googleFailed: 'Google 로그인이 취소되었거나 실패했습니다. 다시 시도해 주세요.',
+      checking: '로그인 방식 확인 중...',
       subtitle: '실험과 Feature Flag를 관리하려면 로그인하세요.',
       username: '아이디',
       password: '비밀번호',
@@ -74,6 +94,13 @@ export function LoginPage({ lang }: LoginPageProps) {
             <p className="mt-1 text-sm text-muted-foreground">{copy.subtitle}</p>
           </div>
         </div>
+
+        <Button type="button" variant="outline" className="mb-3 w-full" disabled={!googleEnabled || providersLoading}
+          onClick={() => window.location.assign(`${API_BASE_URL}/auth/google/start`)}>{copy.google}</Button>
+        {providersLoading ? <p className="mb-4 text-sm text-muted-foreground" role="status">{copy.checking}</p> :
+          !googleEnabled && <p className="mb-4 text-sm text-muted-foreground">{copy.googleUnavailable}</p>}
+        {new URLSearchParams(location.search).get('oauth') === 'failed' &&
+          <p className="mb-4 text-sm text-destructive" role="alert">{copy.googleFailed}</p>}
 
         <label className="mb-4 block text-sm font-medium text-foreground">
           {copy.username}

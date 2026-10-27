@@ -41,7 +41,9 @@ async def login(data: LoginRequest, response: Response):
 
 
 @router.post("/logout", response_model=AuthStatus)
-async def logout(response: Response):
+async def logout(request: Request, response: Response):
+    from app.core.account_sessions import revoke_session
+    await revoke_session(request)
     response.delete_cookie(
         key=settings.AUTH_COOKIE_NAME, path="/", samesite=_cookie_samesite(),
         secure=settings.AUTH_COOKIE_SECURE, httponly=True,
@@ -54,4 +56,22 @@ async def me(request: Request):
     user = get_session_user_from_request(request)
     if user is None:
         return AuthStatus(authenticated=False, user=None)
-    return AuthStatus(authenticated=True, user=AuthUser(username=user.username))
+    return AuthStatus(authenticated=True, user=AuthUser(username=user.username, is_admin=user.is_admin))
+
+
+@router.get("/providers")
+async def providers():
+    from app.core.google_oidc import configured
+    return {"google": configured()}
+
+
+@router.get("/google/start")
+async def google_start():
+    from app.core.google_oidc import begin
+    return await begin()
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request):
+    from app.core.google_oidc import finish
+    return await finish(request)
