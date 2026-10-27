@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app.api.deps import get_project_from_api_key
 from app.schemas.project import Project
@@ -52,3 +52,15 @@ async def unified_decide(
         variant="treatment" if result.show else "control",
         payload={"completed": result.completed, "reason": result.reason},
     )
+
+
+@router.get("/sdk/demo-config")
+async def demo_config(response: Response):
+    """Public SDK identifier for the bundled demo; never a server credential."""
+    from app.services.project import project_service
+
+    response.headers["Cache-Control"] = "no-store"
+    project = await project_service.get("demo-app")
+    if project is None:
+        raise HTTPException(status_code=503, detail="Demo configuration unavailable")
+    return {"api_key": project.api_key}

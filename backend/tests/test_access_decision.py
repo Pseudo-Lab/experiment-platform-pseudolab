@@ -5,14 +5,19 @@ from app.main import app
 
 client = TestClient(app)
 BASE = "/api/v1/access/decide"
-TOKEN = "pk_live_lvup_access_test"
+TOKEN = "sk_live_lvup_access_test"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
 
 
 def _seed_project(mock_d1, project_id="lvup", api_key=TOKEN):
     mock_d1.execute(
         "INSERT INTO projects (id, name, api_key) VALUES (?, ?, ?)",
-        (project_id, project_id.upper(), api_key),
+        (project_id, project_id.upper(), "pk_sdk_" + project_id),
+    )
+    import hashlib
+    mock_d1.execute(
+        "INSERT INTO project_server_credential(token_hash, project_id) VALUES (?, ?)",
+        (hashlib.sha256(api_key.encode()).hexdigest(), project_id),
     )
     mock_d1.commit()
 
