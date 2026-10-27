@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Copy, Check, Plus, FolderOpen, Trash2 } from 'lucide-react';
+import { Plus, FolderOpen, Trash2 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { projectApi, type Project, type ProjectSdkStatus } from '../../../services/api';
@@ -23,7 +23,6 @@ const t = {
     cancel: '취소',
     id: '프로젝트 ID',
     name: '프로젝트 이름',
-    apiKey: 'API 키',
     createdAt: '생성일',
     addProject: '프로젝트 추가',
     idPlaceholder: 'e.g. my-app',
@@ -32,8 +31,6 @@ const t = {
     idError: 'ID는 영문 소문자·숫자·하이픈만 허용되며 2~40자여야 합니다.',
     create: '생성',
     creating: '생성 중...',
-    copied: '복사됨!',
-    copy: '복사',
     loading: '불러오는 중...',
     empty: '등록된 프로젝트가 없습니다.',
     errorCreate: '생성에 실패했습니다.',
@@ -51,7 +48,6 @@ const t = {
     cancel: 'Cancel',
     id: 'Project ID',
     name: 'Project Name',
-    apiKey: 'API Key',
     createdAt: 'Created',
     addProject: 'Add Project',
     idPlaceholder: 'e.g. my-app',
@@ -60,8 +56,6 @@ const t = {
     idError: 'ID must be 2–40 chars: lowercase letters, numbers, hyphens only.',
     create: 'Create',
     creating: 'Creating...',
-    copied: 'Copied!',
-    copy: 'Copy',
     loading: 'Loading...',
     empty: 'No projects yet.',
     errorCreate: 'Failed to create project.',
@@ -75,21 +69,6 @@ const t = {
     openVisualEditor: 'Open Visual Editor',
   },
 };
-
-function CopyButton({ value, labels }: { value: string; labels: { copy: string; copied: string } }) {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 px-2 gap-1 text-xs">
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-      {copied ? labels.copied : labels.copy}
-    </Button>
-  );
-}
 
 export function Projects({ lang }: Props) {
   const tr = t[lang];
@@ -265,14 +244,7 @@ export function Projects({ lang }: Props) {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-md px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                  <code className="text-xs font-mono text-slate-600 dark:text-slate-300 flex-1 truncate">
-                    {p.api_key}
-                  </code>
-                  <CopyButton value={p.api_key} labels={{ copy: tr.copy, copied: tr.copied }} />
-                </div>
-              </CardContent>
+
             </Card>
           ))}
         </div>

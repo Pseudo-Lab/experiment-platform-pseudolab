@@ -26,7 +26,7 @@ class TestProjectsCRUD:
         body = res.json()
         assert body["id"] == "my-project"
         assert body["name"] == "My Project"
-        assert body["api_key"].startswith("pk_live_my-project_")
+        assert "api_key" not in body
 
     def test_create_duplicate_returns_409(self, mock_d1):
         client.post("/api/v1/projects/", json={"id": "dup", "name": "Dup"})
@@ -45,7 +45,7 @@ class TestProjectsCRUD:
         res = client.get("/api/v1/projects/lvup")
         assert res.status_code == 200
         assert res.json()["id"] == "lvup"
-        assert res.json()["api_key"] == "pk_live_lvup_test"
+        assert "api_key" not in res.json()
 
     def test_get_unknown_returns_404(self, mock_d1):
         res = client.get("/api/v1/projects/no-such-project")

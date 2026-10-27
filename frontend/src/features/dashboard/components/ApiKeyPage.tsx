@@ -35,12 +35,14 @@ const tr = {
     noProjectDesc: '사이드바 상단의 드롭다운에서 프로젝트를 선택하면 해당 프로젝트의 API 키를 확인할 수 있어요.',
     goProjects: '프로젝트 목록으로',
     projectKey: '프로젝트 API 키',
-    keyDesc: '클라이언트 사이드 SDK에서 사용하는 공개 키입니다. 소스 코드에 포함해도 안전해요.',
+    keyDesc: '기존 연동과 서버 접근 판단에 함께 쓰이는 키입니다. 공개 코드에 추가하지 마세요. 교체 전 연결된 서비스를 확인하세요.',
+    keyLoading: '키를 불러오는 중...',
+    keyError: '키를 불러오지 못했습니다.',
+    retry: '다시 시도',
     reveal: '보기',
     hide: '숨기기',
     copy: '복사',
     copied: '복사됨!',
-    sdkSetup: 'SDK 설정 예시',
     baseUrl: '앱 도메인',
     baseUrlDesc: 'Visual Editor와 SDK에서 사용할 기본 URL입니다.',
     baseUrlPlaceholder: 'https://your-app.example.com',
@@ -52,7 +54,7 @@ const tr = {
     sdkNotConnected: 'SDK 대기 중',
     sdkChecking: '확인 중...',
     sdkConnectedDesc: 'SDK가 정상적으로 연결되어 실험 데이터를 수집하고 있습니다.',
-    sdkNotConnectedDesc: '아직 수신된 이벤트가 없습니다. 아래 설정 예시를 참고해 SDK를 설치하고, 앱을 방문하면 자동으로 연결됩니다.',
+    sdkNotConnectedDesc: '아직 수신된 이벤트가 없습니다. 연결된 서비스의 SDK 설정을 확인하세요.',
     openVisualEditor: 'Visual Editor 열기',
     abExperiments: 'A/B 테스트 실험',
     abExperimentsDesc: '이 프로젝트에 연결된 A/B 테스트 실험 목록입니다.',
@@ -71,12 +73,14 @@ const tr = {
     noProjectDesc: 'Choose a project from the dropdown at the top of the sidebar to view its API key.',
     goProjects: 'Go to projects',
     projectKey: 'Project API Key',
-    keyDesc: 'A public key for use with the client-side SDK. Safe to include in source code.',
+    keyDesc: 'This key is shared by existing integrations and server access decisions. Do not add it to public code. Check connected services before replacing it.',
+    keyLoading: 'Loading key...',
+    keyError: 'Failed to load key.',
+    retry: 'Retry',
     reveal: 'Reveal',
     hide: 'Hide',
     copy: 'Copy',
     copied: 'Copied!',
-    sdkSetup: 'SDK Setup Example',
     baseUrl: 'App Domain',
     baseUrlDesc: 'Default URL used by Visual Editor and the SDK.',
     baseUrlPlaceholder: 'https://your-app.example.com',
@@ -88,7 +92,7 @@ const tr = {
     sdkNotConnected: 'Awaiting connection',
     sdkChecking: 'Checking...',
     sdkConnectedDesc: 'The SDK is connected and collecting experiment data.',
-    sdkNotConnectedDesc: 'No events received yet. Install the SDK using the example below — once your app is visited, it will connect automatically.',
+    sdkNotConnectedDesc: 'No events received yet. Check the SDK configuration of the connected service.',
     openVisualEditor: 'Open Visual Editor',
     abExperiments: 'A/B Test Experiments',
     abExperimentsDesc: 'A/B test experiments linked to this project.',
@@ -120,42 +124,29 @@ function CopyButton({ value, labels }: { value: string; labels: { copy: string; 
   );
 }
 
-function SdkCodeBlock({ apiKey }: { apiKey: string }) {
-  const snippet = `import { ExperimentProvider } from './lib/ExperimentContext';
-
-<ExperimentProvider
-  apiKey="${apiKey}"
-  flagKeys={['my-flag', 'another-flag']}
->
-  <App />
-</ExperimentProvider>`;
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="relative rounded-xl bg-slate-900 dark:bg-slate-950">
-      <pre className="overflow-x-auto px-4 pt-4 pb-10 text-[12px] leading-relaxed text-slate-300 font-mono whitespace-pre">
-        <code>{snippet}</code>
-      </pre>
-      <button
-        onClick={async () => {
-          await navigator.clipboard.writeText(snippet);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        }}
-        className="absolute bottom-2.5 right-3 flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
-      >
-        {copied ? <Check size={11} /> : <Copy size={11} />}
-        {copied ? '복사됨' : '복사'}
-      </button>
-    </div>
-  );
-}
-
 export function ApiKeyPage({ lang }: Props) {
   const t = tr[lang];
   const navigate = useNavigate();
   const { currentProject, reloadProjects } = useProject();
 
   const [revealed, setRevealed] = useState(false);
+  const [keyResult, setKeyResult] = useState<{ projectId: string; key?: string; failed?: boolean } | null>(null);
+  const [keyAttempt, setKeyAttempt] = useState(0);
+  const projectId = currentProject?.id;
+  const currentKey = keyResult?.projectId === projectId ? keyResult : null;
+  const apiKey = currentKey?.key;
+
+  useEffect(() => {
+    let cancelled = false;
+    setRevealed(false);
+    setKeyResult(null);
+    if (projectId) {
+      projectApi.getApiKey(projectId)
+        .then(({ api_key }) => { if (!cancelled) setKeyResult({ projectId, key: api_key }); })
+        .catch(() => { if (!cancelled) setKeyResult({ projectId, failed: true }); });
+    }
+    return () => { cancelled = true; };
+  }, [projectId, keyAttempt]);
   const [sdkStatus, setSdkStatus] = useState<'checking' | 'connected' | 'not_connected'>('checking');
   const [editingBaseUrl, setEditingBaseUrl] = useState(false);
   const [baseUrlInput, setBaseUrlInput] = useState('');
@@ -220,7 +211,7 @@ export function ApiKeyPage({ lang }: Props) {
     );
   }
 
-  const maskedKey = currentProject.api_key.slice(0, 8) + '••••••••••••••••••••' + currentProject.api_key.slice(-4);
+  const maskedKey = '••••••••••••••••••••';
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -236,9 +227,9 @@ export function ApiKeyPage({ lang }: Props) {
             <Key size={15} className="text-indigo-500 shrink-0" />
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t.projectKey}</span>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2.5">
+          {apiKey ? <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2.5">
             <code className="flex-1 text-sm font-mono text-slate-700 dark:text-slate-200 break-all select-all">
-              {revealed ? currentProject.api_key : maskedKey}
+              {revealed ? apiKey : maskedKey}
             </code>
             <div className="flex items-center gap-1.5 shrink-0">
               <button
@@ -249,10 +240,13 @@ export function ApiKeyPage({ lang }: Props) {
               >
                 {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
-              <CopyButton value={currentProject.api_key} labels={{ copy: t.copy, copied: t.copied }} />
+              <CopyButton value={apiKey} labels={{ copy: t.copy, copied: t.copied }} />
             </div>
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">{t.keyDesc}</p>
+          : currentKey?.failed ? <div role="alert" className="text-destructive text-sm">
+            {t.keyError} <Button variant="outline" onClick={() => setKeyAttempt((n) => n + 1)}>{t.retry}</Button>
+          </div> : <p role="status">{t.keyLoading}</p>}
+          <p className="text-xs text-muted-foreground leading-relaxed">{t.keyDesc}</p>
         </CardContent>
       </Card>
 
@@ -281,14 +275,6 @@ export function ApiKeyPage({ lang }: Props) {
           <p className="text-xs text-slate-400 leading-relaxed">
             {sdkStatus === 'connected' ? t.sdkConnectedDesc : t.sdkNotConnectedDesc}
           </p>
-        </CardContent>
-      </Card>
-
-      {/* SDK Setup */}
-      <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
-        <CardContent className="pt-5 space-y-3">
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t.sdkSetup}</p>
-          <SdkCodeBlock apiKey={currentProject.api_key} />
         </CardContent>
       </Card>
 

@@ -9,6 +9,7 @@ import {
     Sun,
     Moon,
     Globe,
+    User,
     ToggleLeft,
     Code2,
     FolderOpen,
@@ -91,6 +92,8 @@ interface MainLayoutProps {
     theme: 'light' | 'dark';
     setTheme: (theme: 'light' | 'dark') => void;
     backendStatus: string;
+    userLabel?: string;
+    onLogout?: () => void | Promise<void>;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
@@ -99,8 +102,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     setLang,
     theme,
     setTheme,
-    backendStatus
+    backendStatus,
+    userLabel,
+    onLogout
 }) => {
+    const [logoutFailed, setLogoutFailed] = useState(false);
     const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -118,8 +124,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", projects: "Project management", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project" },
-        ko: { experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", projects: "프로젝트 관리", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트" }
+        en: { experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", projects: "Project management", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project", logout: "Logout" },
+        ko: { experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", projects: "프로젝트 관리", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트", logout: "로그아웃" }
     };
 
     const t = translations[lang];
@@ -290,6 +296,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             <Globe size={14} /> {lang.toUpperCase()}
                         </Button>
 
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                                setLogoutFailed(false);
+                                try { await onLogout?.(); } catch { setLogoutFailed(true); }
+                            }}
+                            className="gap-2 text-slate-500 rounded-lg"
+                            aria-label={t.logout}
+                        >
+                            <span className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md">
+                                <User size={16} />
+                            </span>
+                            <span className="hidden md:inline max-w-[120px] truncate">{userLabel || t.logout}</span>
+                        </Button>
+                        {logoutFailed && <span role="alert" className="text-sm text-destructive">{lang === 'ko' ? '로그아웃하지 못했습니다. 다시 시도해 주세요.' : 'Sign out failed. Please try again.'}</span>}
                     </div>
                 </header>
                 <div className="flex-1 p-4 md:p-8 overflow-auto">
