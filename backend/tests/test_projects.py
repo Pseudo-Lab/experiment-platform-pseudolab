@@ -102,6 +102,7 @@ class TestSdkStatus:
 
 class TestProjectsDelete:
     def test_delete_unreferenced_project(self, mock_d1):
+        mock_d1.execute("PRAGMA foreign_keys = ON")
         _seed_project("to-delete", "To Delete", "pk_live_todelete", mock_d1)
         res = client.delete("/api/v1/projects/to-delete")
         assert res.status_code == 204
@@ -199,3 +200,69 @@ class TestCaptureWithApiKey:
             headers={"x-api-key": "pk_live_bad_key"},
         )
         assert res.status_code == 401
+
+
+@pytest.mark.parametrize("revoked", [False, True])
+def test_delete_with_server_credential_returns_409(mock_d1, revoked):
+    mock_d1.execute("PRAGMA foreign_keys = ON")
+    assert mock_d1.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+    _seed_project("credential-owner", "Owner", "pk_sdk_fixture_owner", mock_d1)
+    mock_d1.execute(
+        "INSERT INTO project_server_credential(token_hash, project_id, revoked_at) VALUES (?, ?, ?)",
+        ("a" * 64, "credential-owner", "2026-01-01" if revoked else None),
+    )
+    mock_d1.commit()
+    res = client.delete("/api/v1/projects/credential-owner")
+    assert res.status_code == 409
+    assert "server credentials" in res.json()["detail"]
+    assert mock_d1.execute("SELECT COUNT(*) FROM projects").fetchone()[0] == 1
+    assert mock_d1.execute("SELECT COUNT(*) FROM project_server_credential").fetchone()[0] == 1
+
+
+@pytest.mark.parametrize("mode", ["provider", "result", "transport", "missing", "zero_rows", "racing_fk"])
+def test_delete_storage_failure_never_reports_204(mock_d1, monkeypatch, mode):
+    import importlib.util
+    import sqlite3
+    from pathlib import Path
+    from unittest.mock import AsyncMock, Mock
+    from app.db import d1
+
+    mock_d1.execute("PRAGMA foreign_keys = ON")
+    _seed_project("failure", "Failure", "pk_sdk_fixture_failure", mock_d1)
+    # Exercise the real fail-closed driver for the final write, with no network.
+    spec = importlib.util.spec_from_file_location("delete_d1", Path(d1.__file__))
+    driver = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(driver)
+    monkeypatch.setattr(driver, "_get_endpoint", lambda: None if mode == "missing" else ("https://fixture.invalid", "fixture"))
+    payload = {"success": mode != "provider", "result": [{"success": mode != "result", "results": []}]}
+    transport = AsyncMock()
+    transport.post = AsyncMock(return_value=Mock(raise_for_status=Mock(), json=Mock(return_value=payload)))
+    if mode == "transport":
+        transport.post.side_effect = RuntimeError("fixture provider failure")
+    monkeypatch.setattr(driver, "get_client", AsyncMock(return_value=transport))
+    query = d1.security_query
+
+    async def final_write(sql, params=None):
+        if not sql.startswith("DELETE"):
+            return await query(sql, params)
+        if mode == "racing_fk":
+            mock_d1.execute("INSERT INTO project_server_credential(token_hash,project_id) VALUES (?, 'failure')", ("b" * 64,))
+            mock_d1.commit()
+            with pytest.raises(sqlite3.IntegrityError):
+                mock_d1.execute(sql, params)
+            # D1 wraps the FK failure as a failed result.
+            payload["result"][0]["success"] = False
+        return await driver.security_query(sql, params)
+
+    monkeypatch.setattr(d1, "security_query", final_write)
+    res = client.delete("/api/v1/projects/failure")
+    assert res.status_code == (409 if mode == "zero_rows" else 503)
+    assert mock_d1.execute("SELECT COUNT(*) FROM projects").fetchone()[0] == 1
+
+
+def test_delete_preflight_storage_failure_is_503(mock_d1, monkeypatch):
+    from unittest.mock import AsyncMock
+    from fastapi import HTTPException
+    from app.db import d1
+    monkeypatch.setattr(d1, "security_query", AsyncMock(side_effect=HTTPException(503, "Credential storage unavailable")))
+    assert client.delete("/api/v1/projects/any").status_code == 503
