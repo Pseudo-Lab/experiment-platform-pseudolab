@@ -260,6 +260,8 @@ def mock_d1(monkeypatch):
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
+    from pathlib import Path
+    conn.executescript((Path(__file__).parents[1] / "migrations/036_project_server_credential.sql").read_text())
     conn.commit()
 
     async def _query(sql: str, params=None, database_id=None):
@@ -272,6 +274,7 @@ def mock_d1(monkeypatch):
         return True
 
     monkeypatch.setattr("app.db.d1.query", _query)
+    monkeypatch.setattr("app.db.d1.security_query", _query)
     monkeypatch.setattr("app.db.d1.execute", _execute)
 
     yield conn
@@ -302,7 +305,7 @@ def authenticated_management_requests(request, monkeypatch):
     No production auth dependency is bypassed. test_auth exercises anonymous,
     missing-config, SDK-only, and invalid-session requests independently.
     """
-    if request.node.path.name in {"test_auth.py", "test_upload_security.py"}:
+    if request.node.path.name in {"test_auth.py", "test_upload_security.py", "test_key_rotation.py"}:
         return
     from fastapi.testclient import TestClient
     from app.core.auth import create_session_token, hash_password

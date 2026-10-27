@@ -1,4 +1,5 @@
 import secrets
+import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import HTTPException
@@ -19,10 +20,37 @@ class ProjectService:
         return ProjectWithKey(**rows[0])
 
     async def get_by_api_key(self, api_key: str) -> Optional[Project]:
-        rows = await d1.query("SELECT * FROM projects WHERE api_key = ?", [api_key])
+        if api_key.startswith("sk_live_"):
+            return None
+        rows = await d1.security_query("SELECT * FROM projects WHERE api_key = ?", [api_key])
         if not rows:
             return None
         return Project(**rows[0])
+
+    async def get_by_server_key(self, token: str) -> Optional[Project]:
+        # No legacy public-key fallback, including missing/revoked rows or DB errors.
+        if not token.startswith("sk_live_"):
+            return None
+        try:
+            rows = await d1.security_query(
+                "SELECT p.* FROM projects p JOIN project_server_credential k "
+                "ON k.project_id = p.id WHERE k.token_hash = ? AND k.revoked_at IS NULL",
+                [hashlib.sha256(token.encode()).hexdigest()],
+            )
+        except Exception:
+            return None
+        return Project(**rows[0]) if rows else None
+
+    async def rotate_public_key(self, project_id: str, expected_key: str) -> str:
+        """Operator-only CAS; callers must never log the expected or returned key."""
+        new_key = f"pk_sdk_{secrets.token_urlsafe(32)}"
+        rows = await d1.security_query(
+            "UPDATE projects SET api_key = ? WHERE id = ? AND api_key = ? RETURNING id",
+            [new_key, project_id, expected_key],
+        )
+        if rows != [{"id": project_id}]:
+            raise HTTPException(status_code=409, detail="Project credential changed concurrently")
+        return new_key
 
     async def sdk_status(self, project_id: str) -> dict:
         existing = await d1.query("SELECT 1 FROM projects WHERE id = ?", [project_id])
@@ -71,7 +99,7 @@ class ProjectService:
         if existing:
             raise HTTPException(status_code=409, detail=f"Project '{data.id}' already exists")
 
-        api_key = f"pk_live_{data.id}_{secrets.token_hex(8)}"
+        api_key = f"pk_sdk_{secrets.token_urlsafe(32)}"
         ok = await d1.execute(
             "INSERT INTO projects (id, name, api_key, base_url, project_type) VALUES (?, ?, ?, ?, ?)",
             [data.id, data.name, api_key, data.base_url, data.project_type],

@@ -12,6 +12,7 @@ const okJson = (data: unknown) =>
 function mockExampleApi() {
   global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
+    if (url.endsWith('/sdk/demo-config')) return okJson({ api_key: 'pk_sdk_fixture_demo' })
 
     // SDK unified decide endpoint (POST /decide)
     if (url.includes('/decide') && init?.method === 'POST') {
@@ -111,4 +112,14 @@ describe('ExampleApp', () => {
     )
     expect(screen.getByText(/sponsor_slot_v1 =/)).toBeInTheDocument()
   })
+})
+
+
+it.each(['ko', 'en'] as const)('fails closed when %s demo config is unavailable', async (lang) => {
+  global.fetch = vi.fn().mockRejectedValue(new Error('offline'))
+  render(<MemoryRouter><ExampleApp lang={lang} /></MemoryRouter>)
+  expect(screen.getByRole('status')).toBeInTheDocument()
+  expect(await screen.findByRole('alert')).toHaveTextContent(lang === 'ko' ? '예제 설정을 불러오지 못했습니다' : 'Unable to load demo settings')
+  expect(global.fetch).toHaveBeenCalledTimes(1)
+  cleanup()
 })
