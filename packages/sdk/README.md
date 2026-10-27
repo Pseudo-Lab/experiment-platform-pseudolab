@@ -101,3 +101,26 @@ function App() {
 ## 더 자세한 설치 및 사용법
 
 → [SDK_PACKAGING_GUIDE.md](./SDK_PACKAGING_GUIDE.md)
+
+
+### Public signup and credential boundary
+
+With Google sign-in configured by the installation operator, sign in and create a
+project in **Projects**, then reveal that project's public SDK key under **SDK
+Integration**. Use that key as `apiKey`; platform account sessions and Google
+credentials must never be included in your application's SDK configuration.
+The SDK sends `X-API-Key` on assignment/decision requests. An owned resource must
+match the credential's project; another project's IDs do not grant access.
+
+Browser visitors do not need platform accounts. Public SDK keys identify a
+project, not a trusted visitor, and do not grant management or server access.
+Server keys from `POST /api/v1/projects/{project_id}/server-key` are one-time
+responses for server-side `/access/decide` only; keep them off the browser.
+`DELETE` on the same key endpoint revokes the current key. Existing legacy
+Bearer consumers require an explicit migration before an old project is assigned
+to a public account. This candidate does not rotate production credentials.
+
+The current SDK still automatically records impressions from `decide()` and uses
+two event endpoints. See [event contract #20](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues/20)
+for the pending decide/expose/track redesign; this login change does not implement
+that contract or enable shared/global analysis for public accounts.

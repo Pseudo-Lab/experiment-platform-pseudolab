@@ -11,7 +11,8 @@ def _now() -> str:
 class EventService:
 
     async def capture(self, data: EventCapture, project_id: str | None = None) -> bool:
-        rows = await d1.query(
+        owned = project_id and await d1.security_query("SELECT 1 FROM project_owner WHERE project_id = ?", [project_id])
+        rows = [] if owned else await d1.query(
             "SELECT cohort_id FROM person WHERE user_id = ?", [data.user_id]
         )
         cohort_id = rows[0]["cohort_id"] if rows else None
@@ -26,7 +27,7 @@ class EventService:
                 event_time, created_at, project_id)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
-                data.event_id, data.user_id, cohort_id, data.event_name, properties,
+                (f"{project_id}:{data.event_id}" if owned and data.event_id else data.event_id), data.user_id, cohort_id, data.event_name, properties,
                 data.session_id, data.experiment_id, data.variant, data.device, data.anon_id,
                 event_time, _now(), project_id,
             ],
@@ -41,10 +42,18 @@ class EventService:
                 succeeded += 1
         return succeeded
 
-    async def track_experiment_event(self, data: ExperimentEvent) -> bool:
+    async def track_experiment_event(self, data: ExperimentEvent, project_id: str | None = None) -> bool:
         now = _now()
         event_time = data.timestamp.isoformat() if data.timestamp else now
         properties = json.dumps(data.properties) if data.properties else None
+        if project_id:
+            return await d1.execute(
+                """INSERT INTO project_experiment_event
+                   (project_id, event_type, experiment_key, experiment_id, variant, url, user_id, properties, event_time, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                [project_id, data.type, data.key, data.experiment_id, data.variant,
+                 data.url, data.user_id, properties, event_time, now],
+            )
         return await d1.execute(
             """INSERT INTO experiment_event
                (event_type, experiment_key, experiment_id, variant, url, user_id, properties, event_time, created_at)

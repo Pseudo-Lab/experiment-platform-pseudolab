@@ -1,5 +1,6 @@
 import os
 import httpx
+from fastapi import HTTPException
 from typing import Any, Optional
 
 _ASYNC_CLIENT: Optional[httpx.AsyncClient] = None
@@ -40,10 +41,11 @@ async def get_client() -> httpx.AsyncClient:
     return _ASYNC_CLIENT
 
 
-async def query(sql: str, params: list[Any] | None = None, database_id: Optional[str] = None) -> list[dict[str, Any]]:
+async def query(sql: str, params: list[Any] | None = None, database_id: Optional[str] = None, *, fail_closed: bool = False) -> list[dict[str, Any]]:
     cfg = _get_endpoint(database_id)
     if cfg is None:
-        print(f"D1 Config missing for DB {database_id}: CLOUDFLARE_ACCOUNT_ID, API_TOKEN, or database_id")
+        if fail_closed:
+            raise HTTPException(503, "Security storage unavailable")
         return []
 
     endpoint, api_token = cfg
@@ -64,14 +66,20 @@ async def query(sql: str, params: list[Any] | None = None, database_id: Optional
         resp.raise_for_status()
         payload = resp.json()
         if not payload.get("success"):
-            print(f"D1 Query Error: {payload.get('errors')}")
+            if fail_closed:
+                raise HTTPException(503, "Security storage unavailable")
             return []
         result = payload.get("result") or []
         if not result:
+            if fail_closed:
+                raise HTTPException(503, "Security storage unavailable")
             return []
+        if fail_closed and (result[0].get("success") is False or not isinstance(result[0].get("results"), list)):
+            raise HTTPException(503, "Security storage unavailable")
         return result[0].get("results") or []
-    except Exception as e:
-        print(f"D1 Exception: {e}")
+    except Exception:
+        if fail_closed:
+            raise HTTPException(503, "Security storage unavailable") from None
         return []
 
 
@@ -99,8 +107,12 @@ async def execute(sql: str, params: list[Any] | None = None, database_id: Option
         resp.raise_for_status()
         payload = resp.json()
         if not payload.get("success"):
-            print(f"D1 Execute Error: {payload.get('errors')}")
+            print("D1 execution failed")
         return bool(payload.get("success"))
     except Exception as e:
-        print(f"D1 Exception: {e}")
+        print("D1 execution unavailable")
         return False
+
+
+async def security_query(sql: str, params: list[Any] | None = None) -> list[dict[str, Any]]:
+    return await query(sql, params, fail_closed=True)

@@ -8,8 +8,21 @@ class Settings(BaseSettings):
     TEAM_NAME: str = "이니셔티브 (Initiative)"
     
     # CORS
-    BACKEND_CORS_ORIGINS: List[str] = ["*"] # 실제 운영 시 구체화 필요
+    BACKEND_CORS_ORIGINS: List[str] = ["*"] # SDK origins; credentialed admin requests require an exact origin.
     EXPERIMENT_PLACEMENT_SCENARIO_OVERRIDE_ENABLED: bool = False
+
+    GOOGLE_OAUTH_CLIENT_ID: str | None = None
+    GOOGLE_OAUTH_CLIENT_SECRET: str | None = None
+    GOOGLE_OAUTH_REDIRECT_URI: str | None = None
+
+    # Admin auth
+    ADMIN_USERNAME: str | None = None
+    ADMIN_PASSWORD_HASH: str | None = None
+    AUTH_SESSION_SECRET: str | None = None
+    AUTH_SESSION_TTL_SECONDS: int = 60 * 60 * 12
+    AUTH_COOKIE_NAME: str = "experiment_platform_session"
+    AUTH_COOKIE_SECURE: bool = False
+    AUTH_COOKIE_SAMESITE: str = "lax"
 
     class Config:
         env_file = ".env"

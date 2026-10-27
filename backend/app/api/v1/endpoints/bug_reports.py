@@ -54,8 +54,10 @@ async def add_comment(report_id: str, data: CommentCreate):
 
 
 @router.post("/upload", response_model=AttachmentUploadResponse)
-async def upload_attachment(file: UploadFile = File(...)):
+async def upload_attachment(file: UploadFile = File(..., json_schema_extra={"format": "binary"})):
     content = await file.read()
+    if not content:
+        raise HTTPException(status_code=422, detail="Empty attachment")
     # 파일 확장자 추출 및 안전한 UUID 기반 키 생성
     _, ext = os.path.splitext(file.filename or "")
     key = f"bug-reports/{uuid.uuid4()}{ext}"

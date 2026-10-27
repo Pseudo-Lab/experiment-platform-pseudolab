@@ -8,8 +8,8 @@ from app.db import d1
 
 class ProjectService:
 
-    async def list(self) -> List[ProjectWithKey]:
-        rows = await d1.query("SELECT * FROM projects ORDER BY created_at DESC")
+    async def list(self, account_id: str | None = None) -> List[ProjectWithKey]:
+        rows = await d1.query("SELECT * FROM projects WHERE id IN (SELECT project_id FROM project_owner WHERE account_id = ?) ORDER BY created_at DESC", [account_id]) if account_id else await d1.query("SELECT * FROM projects ORDER BY created_at DESC")
         return [ProjectWithKey(**row) for row in rows]
 
     async def get(self, project_id: str) -> Optional[ProjectWithKey]:
@@ -64,20 +64,27 @@ class ProjectService:
                 detail=f"Cannot delete project '{project_id}': referenced by one or more feature flags",
             )
 
-        await d1.execute("DELETE FROM projects WHERE id = ?", [project_id])
+        if not await d1.execute("DELETE FROM projects WHERE id = ?", [project_id]):
+            raise HTTPException(409, "Project still has data references or storage is unavailable")
 
-    async def create(self, data: ProjectCreate) -> ProjectWithKey:
+    async def create(self, data: ProjectCreate, account_id: str | None = None) -> ProjectWithKey:
         existing = await d1.query("SELECT 1 FROM projects WHERE id = ?", [data.id])
         if existing:
             raise HTTPException(status_code=409, detail=f"Project '{data.id}' already exists")
 
-        api_key = f"pk_live_{data.id}_{secrets.token_hex(8)}"
+        api_key = f"pk_live_{data.id}_{secrets.token_hex(24)}"
         ok = await d1.execute(
             "INSERT INTO projects (id, name, api_key, base_url, project_type) VALUES (?, ?, ?, ?, ?)",
             [data.id, data.name, api_key, data.base_url, data.project_type],
         )
         if not ok:
             raise HTTPException(status_code=500, detail="Database error: project insert failed")
+        if account_id:
+            owned = await d1.execute("INSERT INTO project_owner (project_id, account_id) VALUES (?, ?)", [data.id, account_id])
+            if not owned:
+                # Never return a successful unowned public-account project.
+                await d1.execute("DELETE FROM projects WHERE id = ?", [data.id])
+                raise HTTPException(503, "Project ownership storage unavailable")
         result = await self.get(data.id)
         if not result:
             raise HTTPException(status_code=500, detail="Project creation failed")

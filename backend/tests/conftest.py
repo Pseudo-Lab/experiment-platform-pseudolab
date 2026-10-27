@@ -260,9 +260,12 @@ def mock_d1(monkeypatch):
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
+    from pathlib import Path
+    conn.executescript((Path(__file__).parents[1] / "migrations/034_public_accounts.sql").read_text())
+    conn.executescript((Path(__file__).parents[1] / "migrations/035_project_experiment_events.sql").read_text())
     conn.commit()
 
-    async def _query(sql: str, params=None, database_id=None):
+    async def _query(sql: str, params=None, database_id=None, **kwargs):
         cursor = conn.execute(sql, params or [])
         return [dict(row) for row in cursor.fetchall()]
 
@@ -293,3 +296,30 @@ def mock_r2(monkeypatch):
     monkeypatch.setattr("app.db.r2.upload", _upload)
     monkeypatch.setattr("app.db.r2.presigned_url", _presigned_url)
     monkeypatch.setattr("app.db.r2.delete", _delete)
+
+
+@pytest.fixture(autouse=True)
+def authenticated_management_requests(request, monkeypatch):
+    """Existing business tests run through real admin auth; security tests opt out.
+
+    No production auth dependency is bypassed. test_auth exercises anonymous,
+    missing-config, SDK-only, and invalid-session requests independently.
+    """
+    if request.node.path.name in {"test_auth.py", "test_upload_security.py", "test_public_accounts.py"}:
+        return
+    from fastapi.testclient import TestClient
+    from app.core.auth import create_session_token, hash_password
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "test-admin")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD_HASH", hash_password("test-password", iterations=1000))
+    monkeypatch.setattr(settings, "AUTH_SESSION_SECRET", "isolated-test-session-secret")
+    token = create_session_token("test-admin")
+    original = TestClient.request
+
+    def authenticated_request(self, method, url, **kwargs):
+        headers = dict(kwargs.pop("headers", None) or {})
+        headers.setdefault("Cookie", f"{settings.AUTH_COOKIE_NAME}={token}")
+        return original(self, method, url, headers=headers, **kwargs)
+
+    monkeypatch.setattr(TestClient, "request", authenticated_request)

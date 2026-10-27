@@ -30,6 +30,7 @@ import { useProject } from '../../../contexts/ProjectContext';
 import { CreateExperimentModal } from './CreateExperimentModal';
 
 interface ExperimentsProps {
+  isAdmin?: boolean;
   lang: 'en' | 'ko';
 }
 
@@ -92,7 +93,7 @@ const statusConfig = {
   archived: { en: 'Archived', ko: '보관', color: 'bg-rose-50 text-rose-400 dark:bg-rose-900/20 dark:text-rose-400' },
 };
 
-export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
+export const Experiments: React.FC<ExperimentsProps> = ({ lang, isAdmin = true }) => {
   const navigate = useNavigate();
   const t = translations[lang];
   const { currentProjectId, currentProject } = useProject();
@@ -303,6 +304,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang }) => {
 
       {showCreateModal && (
         <CreateExperimentModal
+          isAdmin={isAdmin}
           lang={lang}
           onClose={() => setShowCreateModal(false)}
           onCreated={(created) => {

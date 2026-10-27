@@ -38,8 +38,15 @@ def _parse_variant_names(value: Optional[str]) -> List[str]:
 
 class ExperimentService:
 
-    async def get_all(self, status: str | None = None) -> List[Experiment]:
-        if status:
+    async def get_all(self, status: str | None = None, account_id: str | None = None) -> List[Experiment]:
+        if account_id:
+            sql = "SELECT * FROM experiments WHERE project_id IN (SELECT project_id FROM project_owner WHERE account_id = ?)"
+            params = [account_id]
+            if status:
+                sql += " AND status = ?"
+                params.append(status)
+            rows = await d1.query(sql + " ORDER BY created_at DESC", params)
+        elif status:
             rows = await d1.query(
                 "SELECT * FROM experiments WHERE status = ? ORDER BY created_at DESC",
                 [status],

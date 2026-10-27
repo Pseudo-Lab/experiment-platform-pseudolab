@@ -26,7 +26,13 @@ async def require_project_from_bearer_token(request: Request) -> Project:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    project = await project_service.get_by_api_key(token.strip())
+    from app.db import d1
+    from app.core.account_sessions import token_hash
+    from app.schemas.project import Project
+    rows = await d1.security_query("SELECT p.* FROM projects p JOIN project_server_key k ON k.project_id = p.id WHERE k.token_hash = ?", [token_hash(token.strip())])
+    project = Project(**rows[0]) if rows else await project_service.get_by_api_key(token.strip())
+    if not rows and project and await d1.security_query("SELECT 1 FROM project_owner WHERE project_id = ?", [project.id]):
+        project = None  # Public keys never become server credentials for newly owned projects.
     if not project:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
