@@ -24,7 +24,7 @@ def _is_public_api_path(path: str, method: str) -> bool:
     # These routes retain their existing SDK/API-key/Bearer contracts.
     relative_path = path.removeprefix(settings.API_V1_STR).rstrip("/")
     public_routes = {
-        "GET": {"/openapi.json", "/status", "/auth/me", "/feature-flags/decide", "/experiments/assignment", "/reflections/check"},
+        "GET": {"/sdk/demo-config", "/openapi.json", "/status", "/auth/me", "/feature-flags/decide", "/experiments/assignment", "/reflections/check"},
         "POST": {"/auth/login", "/auth/logout", "/capture", "/identify", "/decide", "/events", "/ingest/events", "/access/decide", "/reflections"},
     }
     if relative_path in public_routes.get(method, set()):

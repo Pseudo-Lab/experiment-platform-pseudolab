@@ -104,3 +104,29 @@ async def execute(sql: str, params: list[Any] | None = None, database_id: Option
     except Exception as e:
         print(f"D1 Exception: {e}")
         return False
+
+
+async def security_query(sql: str, params: list[Any] | None = None) -> list[dict[str, Any]]:
+    """Fail closed without logging SQL, credentials, parameters or provider errors."""
+    from fastapi import HTTPException
+
+    cfg = _get_endpoint()
+    if cfg is None:
+        raise HTTPException(status_code=503, detail="Credential storage unavailable")
+    try:
+        endpoint, api_token = cfg
+        client = await get_client()
+        response = await client.post(
+            endpoint, headers={"Authorization": f"Bearer {api_token}"},
+            json={"sql": sql, "params": params or []},
+        )
+        response.raise_for_status()
+        payload = response.json()
+        result = payload.get("result")
+        if not payload.get("success") or not isinstance(result, list) or len(result) != 1:
+            raise ValueError("Invalid credential storage response")
+        if result[0].get("success") is False or not isinstance(result[0].get("results"), list):
+            raise ValueError("Invalid credential storage result")
+        return result[0]["results"]
+    except Exception:
+        raise HTTPException(status_code=503, detail="Credential storage unavailable") from None
