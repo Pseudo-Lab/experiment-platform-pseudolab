@@ -145,3 +145,24 @@ def test_fresh_seed_has_unique_random_public_identifiers():
     assert len(set(keys)) == 3
     assert all(key.startswith('pk_sdk_') and len(key) == 71 for key in keys)
     db.close()
+
+
+def test_server_credential_cannot_access_other_project_flag(mock_d1):
+    seed(mock_d1)
+    for project in ["demo-app", "other"]:
+        mock_d1.execute(
+            "INSERT INTO feature_flag(flag_key,project_id,enabled,rollout_pct,payload_json,created_at,updated_at) "
+            "VALUES (?, ?, 1, 100, ?, '2026-01-01', '2026-01-01')",
+            (project + "-flag", project, '{"access_mode":"public"}'),
+        )
+    mock_d1.commit()
+    for project, allowed in [("demo-app", True), ("other", False)]:
+        res = client.post('/api/v1/access/decide',
+                          headers={'Authorization': 'Bearer ' + SERVER},
+                          json={'user_id': 'fixture-user', 'flag_key': project + '-flag', 'route': '/'})
+        assert res.status_code == 200
+        assert res.json()['allow'] is allowed
+    assert client.get('/api/v1/feature-flags/other-flag', headers={'Authorization': 'Bearer ' + SERVER}).status_code == 401
+    assert client.get('/api/v1/feature-flags/decide?flag_key=other-flag&user_id=fixture&track=false',
+                      headers={'x-api-key': SERVER}).status_code == 401
+    assert mock_d1.execute('SELECT COUNT(*) FROM feature_flag_exposure').fetchone()[0] == 0
