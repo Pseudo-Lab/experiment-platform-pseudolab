@@ -70,11 +70,11 @@ class ProjectService:
         return {"project_id": project_id, "status": "connected" if connected else "not_connected"}
 
     async def delete(self, project_id: str) -> None:
-        existing = await d1.query("SELECT 1 FROM projects WHERE id = ?", [project_id])
+        existing = await d1.security_query("SELECT 1 FROM projects WHERE id = ?", [project_id])
         if not existing:
             raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
 
-        exp_refs = await d1.query(
+        exp_refs = await d1.security_query(
             "SELECT 1 FROM experiments WHERE project_id = ? LIMIT 1", [project_id]
         )
         if exp_refs:
@@ -83,7 +83,7 @@ class ProjectService:
                 detail=f"Cannot delete project '{project_id}': referenced by one or more experiments",
             )
 
-        flag_refs = await d1.query(
+        flag_refs = await d1.security_query(
             "SELECT 1 FROM feature_flag WHERE project_id = ? LIMIT 1", [project_id]
         )
         if flag_refs:
@@ -92,7 +92,23 @@ class ProjectService:
                 detail=f"Cannot delete project '{project_id}': referenced by one or more feature flags",
             )
 
-        await d1.execute("DELETE FROM projects WHERE id = ?", [project_id])
+        # Retain the migration 036 FK policy, including revoked credential history.
+        credential_refs = await d1.security_query(
+            "SELECT 1 FROM project_server_credential WHERE project_id = ? LIMIT 1",
+            [project_id],
+        )
+        if credential_refs:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot delete project '{project_id}': referenced by server credentials",
+            )
+
+        # A failed write (including a racing FK insert) must never become HTTP 204.
+        deleted = await d1.security_query(
+            "DELETE FROM projects WHERE id = ? RETURNING id", [project_id]
+        )
+        if deleted != [{"id": project_id}]:
+            raise HTTPException(status_code=409, detail="Project changed concurrently")
 
     async def create(self, data: ProjectCreate) -> ProjectWithKey:
         existing = await d1.query("SELECT 1 FROM projects WHERE id = ?", [data.id])
