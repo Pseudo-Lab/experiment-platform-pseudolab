@@ -106,7 +106,7 @@ function AppShell() {
           <Route path="/metrics/discord" element={user?.is_admin !== false ? <DiscordDashboard lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="/bug-report" element={user?.is_admin !== false ? <BugReport lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="/bug-report/:id" element={user?.is_admin !== false ? <BugReportDetail lang={lang} /> : <Navigate to="/projects" replace />} />
-          <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
+          <Route path="/feature-flags" element={<FeatureFlags lang={lang} isAdmin={user?.is_admin !== false} />} />
           <Route path="/placements" element={user?.is_admin !== false ? <Placements lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="/projects" element={<Projects lang={lang} />} />
           <Route path="/api-key" element={<ApiKeyPage lang={lang} />} />

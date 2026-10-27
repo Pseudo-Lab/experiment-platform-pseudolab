@@ -8,7 +8,7 @@ import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate, type FeatureF
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { useProject } from '../../../contexts/ProjectContext';
 
-interface Props { lang: 'en' | 'ko'; }
+interface Props { lang: 'en' | 'ko'; isAdmin?: boolean; }
 
 const t = {
   ko: {
@@ -93,7 +93,7 @@ const t = {
   },
 };
 
-export const FeatureFlags: React.FC<Props> = ({ lang }) => {
+export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
   const tr = t[lang];
   const { currentProjectId, projects: availableProjects } = useProject();
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
@@ -469,7 +469,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang }) => {
                       <Select
                         value={flag.project_id || flag.product || '__none__'}
                         onValueChange={(v) => handleAssignProject(flag, v === '__none__' ? null : v)}
-                        disabled={assigningProjectKey === flag.flag_key || isArchived}
+                        disabled={!isAdmin || assigningProjectKey === flag.flag_key || isArchived}
                       >
                         <SelectTrigger className="h-7 rounded-lg text-xs w-32 border-slate-200 dark:border-slate-700">
                           <SelectValue />

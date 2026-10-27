@@ -947,7 +947,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
 
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProject}</label>
-                <Select value={editProjectId || '__none__'} onValueChange={(value) => setEditProjectId(value === '__none__' ? '' : value)}>
+                <Select disabled={!isAdmin} value={editProjectId || '__none__'} onValueChange={(value) => setEditProjectId(value === '__none__' ? '' : value)}>
                   <SelectTrigger className="rounded-xl" aria-label={t.labelProject}>
                     <SelectValue />
                   </SelectTrigger>
