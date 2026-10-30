@@ -78,3 +78,41 @@ html[data-theme="dark"],
 @media (max-width: 1000px) { .member-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .members { padding-top: 28px; margin-top: 10px; } .member-grid { gap: 12px; } .member-card { padding: 20px 16px; } .member-card > p { font-size: 11px; } }
 @media (max-width: 359px) { .member-grid { grid-template-columns: 1fr; } }
+
+/* Desktop reading sizes; keep the existing mobile layout. */
+@media (min-width: 1024px) {
+  .nav nav, .github-button { font-size: 14px; }
+  .nav-actions button { font-size: 13px; }
+  .eyebrow { font-size: 12px; }
+  .hero-copy > p, .activity-hero .hero-copy > p,
+  .section-description, .update-body p,
+  .team-story > p, .team-story > p + p,
+  .members-intro, .member-card > p,
+  .resource-intro, .resource-grid p,
+  .stay p:not(.eyebrow) { font-size: 16px; }
+  .hero-actions button, .hero-actions .h-10,
+  .resource-grid .text-link, .member-card .text-link { font-size: 14px; }
+  .hero-note { font-size: 13px; }
+  .board-top { font-size: 11px; }
+  .board-season { font-size: 12px; }
+  .activity-board h2 { font-size: 22px; }
+  .board-item small { font-size: 11px; }
+  .board-number { font-size: 12px; }
+  .board-item h3 { font-size: 16px; }
+  .board-item p { font-size: 14px; }
+  .board-foot { font-size: 12px; }
+  .principles .wrap > div { font-size: 14px; }
+  .principles span { font-size: 12px; }
+  .update-title strong { font-size: 18px; }
+  .update-title small, .update-tag { font-size: 13px; }
+  .update-tag { min-width: 76px; }
+  .update-body { padding-left: 106px; }
+  .team-topics > span, .member-role, .resource-top span { font-size: 13px; }
+  .stay { gap: 36px; }
+  .stay > div:not(.stay-action):not(.stay-decor) { flex: 1; min-width: 0; }
+  .stay-action { flex: 0 1 420px; min-width: 0; }
+  .stay-action a { min-height: 48px; font-size: 14px; padding-inline: 20px; }
+  .stay-action small { font-size: 14px; max-width: 400px; line-height: 1.75; }
+  footer p, .footer-right > div { font-size: 13px; }
+  .footer-right small { font-size: 11px; }
+}
