@@ -14,13 +14,13 @@
   --foreground: 230 35% 93%;
   --primary: 250 52% 55%;
   --primary-foreground: 0 0% 100%;
-  --border: 225 24% 25%;
+  --border: 225 24% 34%;
   --ring: 250 70% 78%;
   --accent: 230 25% 21%;
-  --ink: #e7eaf5;
-  --muted: #aab3cc;
-  --purple: #b9adff;
-  --line: #30394e;
+  --ink: #f0f3fa;
+  --muted: #c4cddd;
+  --purple: #c8bcff;
+  --line: #46516a;
   --soft: #181e30;
 }
 html[data-theme="dark"],
@@ -28,38 +28,38 @@ html[data-theme="dark"],
 [data-theme="dark"] header { background: rgb(18 23 37 / 95%); }
 [data-theme="dark"] .brand-symbol { background: #292540; }
 [data-theme="dark"] .status-dot { background: #b9adff; box-shadow: 0 0 0 4px #302a4c; }
-[data-theme="dark"] .hero-note { color: #a0aac3; }
-[data-theme="dark"] .activity-board { background: #1b2133; border-color: var(--line); box-shadow: none; }
+[data-theme="dark"] .hero-note { color: #b9c4d8; }
+[data-theme="dark"] .activity-board { background: #20283b; border-color: var(--line); box-shadow: none; }
 [data-theme="dark"] .board-top,
-[data-theme="dark"] .board-foot { color: #a3adc6; }
+[data-theme="dark"] .board-foot { color: #b9c4d8; }
 [data-theme="dark"] .board-season { background: #302a4c; }
 [data-theme="dark"] .board-item { border-color: var(--line); }
-[data-theme="dark"] .board-number { color: #929db8; }
-[data-theme="dark"] .principles { background: #171d2c; }
+[data-theme="dark"] .board-number { color: #adb9d1; }
+[data-theme="dark"] .principles { background: #1a2232; }
 [data-theme="dark"] .principles span,
-[data-theme="dark"] .principles svg { color: #9ca7c2; }
-[data-theme="dark"] .updates { background: #161c2c; }
+[data-theme="dark"] .principles svg { color: #b9c4d8; }
+[data-theme="dark"] .updates { background: #181f2f; }
 [data-theme="dark"] .update-list,
 [data-theme="dark"] .update-list article { border-color: var(--line); }
 [data-theme="dark"] .update-toggle:hover { background: #20273b; }
 [data-theme="dark"] .update-title small,
-[data-theme="dark"] .update-indicator { color: #a3aec9; }
+[data-theme="dark"] .update-indicator { color: #bdc7dc; }
 [data-theme="dark"] .update-tag { background: #2b2648; border-color: #4d436f; }
 [data-theme="dark"] .tag-1 { background: #1d3833; color: #a0d3c2; border-color: #35594e; }
 [data-theme="dark"] .tag-2 { background: #383024; color: #dfc9a4; border-color: #5b4c35; }
-[data-theme="dark"] .team-topics > span { color: #b0bad1; border-color: var(--line); }
-[data-theme="dark"] .resources-section { background: #181e2e; }
-[data-theme="dark"] .resource-grid article { background: #20273a; }
-[data-theme="dark"] .resource-top span { color: #a8b3cc; }
-[data-theme="dark"] .stay { background: #26223d; border-color: #42395d; }
+[data-theme="dark"] .team-topics > span { color: #c4cddd; border-color: var(--line); }
+[data-theme="dark"] .resources-section { background: #1b2333; }
+[data-theme="dark"] .resource-grid article { background: #232d40; }
+[data-theme="dark"] .resource-top span { color: #bfc9dc; }
+[data-theme="dark"] .stay { background: #2a2642; border-color: #42395d; }
 [data-theme="dark"] .stay-decor { color: #393050; }
-[data-theme="dark"] .stay-action small { color: #b1abc8; }
+[data-theme="dark"] .stay-action small { color: #d4cdeb; }
 [data-theme="dark"] footer p,
 [data-theme="dark"] .footer-right small,
-[data-theme="dark"] .footer-brand svg { color: #9ca8c3; }
-[data-theme="dark"] .skip { background: #20273a; }
+[data-theme="dark"] .footer-brand svg { color: #b9c4d8; }
+[data-theme="dark"] .skip { background: #232d40; }
 @media (max-width: 700px) {
-  [data-theme="dark"] .nav nav.is-open { background: #171d2c; }
+  [data-theme="dark"] .nav nav.is-open { background: #1a2232; }
 }
 
 .members { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 35px; }
@@ -73,7 +73,7 @@ html[data-theme="dark"],
 .member-card h4 { margin: 6px 0 0; font-size: 18px; font-weight: 650; }
 .member-card > p { margin: 13px 0 23px; color: var(--muted); font-size: 12px; line-height: 1.85; }
 .member-card .text-link { margin-top: auto; color: var(--purple); font-size: 11px; }
-[data-theme="dark"] .member-card { background: #1b2133; }
+[data-theme="dark"] .member-card { background: #20283b; }
 [data-theme="dark"] .member-avatar { background: #302a4c; }
 @media (max-width: 1000px) { .member-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .members { padding-top: 28px; margin-top: 10px; } .member-grid { gap: 12px; } .member-card { padding: 20px 16px; } .member-card > p { font-size: 11px; } }
@@ -115,4 +115,38 @@ html[data-theme="dark"],
   .stay-action small { font-size: 14px; max-width: 400px; line-height: 1.75; }
   footer p, .footer-right > div { font-size: 13px; }
   .footer-right small { font-size: 11px; }
+}
+
+/* Keep supporting text legible on dark surfaces at smaller viewports too. */
+[data-theme="dark"] .stay-action small { font-size: 14px; }
+[data-theme="dark"] .hero-note,
+[data-theme="dark"] .board-top,
+[data-theme="dark"] .board-season,
+[data-theme="dark"] .board-foot,
+[data-theme="dark"] .board-number,
+[data-theme="dark"] .board-item small,
+[data-theme="dark"] .update-title small,
+[data-theme="dark"] .update-tag,
+[data-theme="dark"] .member-role,
+[data-theme="dark"] .resource-top span,
+[data-theme="dark"] .team-topics > span,
+[data-theme="dark"] .footer-right small { font-size: 12px; }
+@media (max-width: 1023px) {
+  [data-theme="dark"] .hero-copy > p,
+  [data-theme="dark"] .activity-hero .hero-copy > p,
+  [data-theme="dark"] .section-description,
+  [data-theme="dark"] .update-body p,
+  [data-theme="dark"] .team-story > p,
+  [data-theme="dark"] .team-story > p + p,
+  [data-theme="dark"] .members-intro,
+  [data-theme="dark"] .member-card > p,
+  [data-theme="dark"] .resource-intro,
+  [data-theme="dark"] .resource-grid p,
+  [data-theme="dark"] .stay p:not(.eyebrow) { font-size: 15px; }
+  [data-theme="dark"] .board-item p,
+  [data-theme="dark"] .member-card .text-link,
+  [data-theme="dark"] .resource-grid .text-link,
+  [data-theme="dark"] .stay-action a { font-size: 14px; }
+  [data-theme="dark"] .update-title strong { font-size: 16px; }
+  [data-theme="dark"] .eyebrow { font-size: 11px; }
 }
