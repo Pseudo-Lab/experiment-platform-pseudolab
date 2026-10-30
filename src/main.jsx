@@ -227,7 +227,7 @@ function App() {
   return <>
     <a className="skip" href="#main">{t.skip}</a>
     <header><div className="nav wrap">
-      <a href="#" className="brand"><span><b>Pseudo Lab</b><small>{t.name}</small></span></a>
+      <a href="#" className="brand"><span className="brand-text"><b>Pseudo Lab</b><small>{t.name}</small></span></a>
       <nav id="team-navigation" aria-label={lang === 'ko' ? '주 메뉴' : 'Main navigation'} className={menu ? 'is-open' : ''}>
         {ids.map((id, i) => <a key={id} href={'#' + id} onClick={navigateToSection}>{t.nav[i]}</a>)}
       </nav>
