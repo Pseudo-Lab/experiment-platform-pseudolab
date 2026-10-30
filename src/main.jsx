@@ -227,7 +227,7 @@ function App() {
   return <>
     <a className="skip" href="#main">{t.skip}</a>
     <header><div className="nav wrap">
-      <a href="#" className="brand"><span className="brand-text"><b>Pseudo Lab</b><small>{t.name}</small></span></a>
+      <a href="#" className="brand" aria-label={lang === 'ko' ? '데이터 이니셔티브 팀 홈' : 'Data Initiative Team home'}><img className="brand-mark" src={import.meta.env.BASE_URL + 'favicon.svg'} width="34" height="34" alt=""/><span className="brand-text"><b>Pseudo Lab</b><small>{t.name}</small></span></a>
       <nav id="team-navigation" aria-label={lang === 'ko' ? '주 메뉴' : 'Main navigation'} className={menu ? 'is-open' : ''}>
         {ids.map((id, i) => <a key={id} href={'#' + id} onClick={navigateToSection}>{t.nav[i]}</a>)}
       </nav>
