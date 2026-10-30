@@ -11,7 +11,7 @@ const urls = {
   org: 'https://www.pseudo-lab.com/',
   signup: 'https://docs.google.com/forms/d/e/1FAIpQLSerR1rw8fyUqiVQHZkrugJN-iMh9a2AA1aT69imKq2yDqbPKw/viewform?usp=dialog',
 };
-// Initial member cards from public PseudoLab profiles; edit these entries as introductions evolve.
+// Public profile photos/links with contribution descriptions confirmed by the user.
 const members = [
   {
     "name": "김수현",
@@ -19,8 +19,8 @@ const members = [
     "image": "https://zizxaljzqmfcwgjeiwvn.supabase.co/storage/v1/object/public/profiles/3f4fbfee-21b9-4a93-a21d-61fd587ba450/bad3826f-94bb-4895-94a7-0612702f18c5.jpg",
     "lead": true,
     "bio": {
-      "ko": "어제보다 나은 내일을 위한 여정",
-      "en": "A journey toward a better tomorrow."
+      "ko": "실험플랫폼을 개발하고, 실제 서비스에 연결하는 과정을 조율해요.",
+      "en": "I build the experiment platform and coordinate its integration with real services."
     }
   },
   {
@@ -29,8 +29,8 @@ const members = [
     "image": "https://zizxaljzqmfcwgjeiwvn.supabase.co/storage/v1/object/public/profiles/230f3a47-cb3f-4ed7-8f7c-ef19f03ccce8/c2c48110-6c2c-4c96-b245-4212ddad0ab7.jpg",
     "lead": false,
     "bio": {
-      "ko": "바람은 촛불을 꺼뜨리지만 모닥불은 살린다",
-      "en": "The wind puts out a candle but keeps a bonfire alive."
+      "ko": "실험에 활용할 데이터를 연결하고, 데이터 기반 서비스 개발에 참여해요.",
+      "en": "I connect data for experiments and contribute to data-driven services."
     }
   },
   {
@@ -39,8 +39,8 @@ const members = [
     "image": "https://zizxaljzqmfcwgjeiwvn.supabase.co/storage/v1/object/public/profiles/41b7b98e-2bc1-4c29-ba63-576aefddd4a4/98635ce4-eddc-4abf-9504-163d14fda97c.jpg",
     "lead": false,
     "bio": {
-      "ko": "기획자 · 문서정리 · 외부 커넥터",
-      "en": "Planning · Documentation · External connections"
+      "ko": "실험을 설계하고 분석하며, 검증할 기능 아이디어를 구체화해요.",
+      "en": "I design and analyze experiments, turning feature ideas into testable plans."
     }
   },
   {
@@ -49,8 +49,8 @@ const members = [
     "image": "https://zizxaljzqmfcwgjeiwvn.supabase.co/storage/v1/object/public/profiles/a081b635-7321-42eb-9936-1bcf94f944f0/bc441c7a-b702-46ec-998a-28ad48e1b29d.jpg",
     "lead": false,
     "bio": {
-      "ko": "안전지대에서 벗어나면 꿈꾸던 삶이 시작된다",
-      "en": "The life you dream of begins outside your comfort zone."
+      "ko": "서비스 개선에 필요한 지표를 정의하고, 실험 과정과 가이드를 정리해요.",
+      "en": "I define metrics for service improvements and document experiment workflows."
     }
   }
 ];
