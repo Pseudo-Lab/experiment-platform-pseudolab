@@ -98,9 +98,9 @@ const copy = {
     name: 'Experiment Platform Team', nav: ['Updates', 'Our team', 'Project & resources', 'Get involved'],
     lightMode: 'Switch to light mode', darkMode: 'Switch to dark mode',
     skip: 'Skip to content', menu: 'Open menu', close: 'Close menu', language: '한국어로 전환',
-    eyebrow: 'PSEUDOLAB · EXPERIMENT PLATFORM TEAM',
+    eyebrow: 'PSEUDO LAB · EXPERIMENT PLATFORM TEAM',
     title: <>Building a platform.<br/><span>Sharing the journey.</span></>,
-    intro: 'We build, study together, and learn from real services. Follow the work and progress of PseudoLab’s Experiment Platform Team.',
+    intro: 'We build, study together, and learn from real services. Follow the work and progress of Pseudo Lab’s Experiment Platform Team.',
     explore: 'Explore our updates', service: 'Open the platform',
     note: 'Visit ExperiBase for product information and use.',
     boardTitle: 'What we are working toward', season: 'Season 13',
@@ -111,11 +111,11 @@ const copy = {
     updatesIntro: 'Here’s what we’ve built, what we’ve learned, and what we’d like to try next.',
     updates: [
       ['Build', 'The foundations', 'From experiment management to SDK integration', 'We’ve been building the pieces for running experiments, from consistent assignment and feature flags to event collection and results. We’re also refining the management interface. You can explore the product on ExperiBase and follow the code and changes on GitHub.'],
-      ['Apply', 'Experience from a real service', 'Connecting Season 12 reflections on the PseudoLab website', 'We connected the platform to the Season 12 reflection entry UI on the PseudoLab website and checked the measurement flow from exposure to click to submission. Without a randomized control group, this quasi-experiment doesn’t establish that the feature improved outcomes. We’re taking what we learned about integration, event definitions, and interpretation into our next experiments.'],
+      ['Apply', 'Experience from a real service', 'Connecting Season 12 reflections on the Pseudo Lab website', 'We connected the platform to the Season 12 reflection entry UI on the Pseudo Lab website and checked the measurement flow from exposure to click to submission. Without a randomized control group, this quasi-experiment doesn’t establish that the feature improved outcomes. We’re taking what we learned about integration, event definitions, and interpretation into our next experiments.'],
       ['Up next', 'Learning and our Season 13 goal', 'From building to experimenting and deciding', 'In Season 13, we’d like to experience the full cycle together: improve a feature, run a real-user experiment, look at the results, and decide what to do next. We’re reviewing experiment questions and metrics and aiming to leave behind guides and lessons we can use again.'],
     ],
     teamTag: '02 / ABOUT THE TEAM', teamTitle: <>Connecting development<br/>and experimentation.</>,
-    teamText: 'At PseudoLab, we find problems in real services, build improvements, and examine outcomes through data. We are developing ExperiBase, an open-source experimentation platform that supports this process.',
+    teamText: 'At Pseudo Lab, we find problems in real services, build improvements, and examine outcomes through data. We are developing ExperiBase, an open-source experimentation platform that supports this process.',
     teamFoot: 'This page brings together short updates and team activities. Detailed technical writing belongs on the team blog; source code and change history live on GitHub.',
     teamTopics: ['Development & operations', 'Experiment design & analysis', 'Study & shared experience'],
     membersTitle: 'The people behind the project', membersIntro: 'Bringing different experiences together to build the platform.',
@@ -130,7 +130,7 @@ const copy = {
     stayTitle: <>Follow our progress.<br/>Explore ways to contribute.</>,
     stayText: 'Receive updates about the project, or let us know you would like to contribute when an opportunity fits.',
     stayCta: 'Updates & contribution interest', stayNote: 'Choose updates or interest in contributing in the Google Form.',
-    footer: 'Notes from PseudoLab’s Experiment Platform Team', org: 'PseudoLab', footerNote: 'BUILD TOGETHER · LEARN TOGETHER',
+    footer: 'Notes from Pseudo Lab’s Experiment Platform Team', org: 'Pseudo Lab', footerNote: 'BUILD TOGETHER · LEARN TOGETHER',
   },
 };
 
@@ -221,13 +221,13 @@ function App() {
   const ids = ['updates', 'team', 'resources', 'subscribe'];
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.title = lang === 'ko' ? '활동과 소식 | 가짜연구소 실험플랫폼 팀' : 'Team Log | PseudoLab Experiment Platform Team';
+    document.title = lang === 'ko' ? '활동과 소식 | 가짜연구소 실험플랫폼 팀' : 'Team Log | Pseudo Lab Experiment Platform Team';
     document.querySelector('meta[name="description"]').content = t.intro;
   }, [lang, t]);
   return <>
     <a className="skip" href="#main">{t.skip}</a>
     <header><div className="nav wrap">
-      <a href="#" className="brand"><span><b>{t.name}</b><small>{t.org}</small></span></a>
+      <a href="#" className="brand"><span><b>Pseudo Lab</b><small>{t.name}</small></span></a>
       <nav id="team-navigation" aria-label={lang === 'ko' ? '주 메뉴' : 'Main navigation'} className={menu ? 'is-open' : ''}>
         {ids.map((id, i) => <a key={id} href={'#' + id} onClick={navigateToSection}>{t.nav[i]}</a>)}
       </nav>
@@ -284,7 +284,7 @@ function App() {
         <div className="stay-action"><div className="stay-buttons"><Button asChild size="lg"><a href={urls.signup} target="_blank" rel="noreferrer">{t.stayCta}<ArrowUpRight size={17}/></a></Button><Button asChild size="lg" variant="outline"><a href={urls.repo} target="_blank" rel="noreferrer"><Github size={18}/>GitHub<ArrowUpRight size={17}/></a></Button></div><small>{t.stayNote}</small></div>
       </section>
     </main>
-    <footer className="wrap"><div><a className="footer-brand" href={urls.org} target="_blank" rel="noreferrer">{t.org}<ArrowUpRight size={16}/></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">ExperiBase ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
+    <footer className="wrap"><div><a className="footer-brand" href={urls.org} target="_blank" rel="noreferrer">Pseudo Lab<ArrowUpRight size={16}/></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">ExperiBase ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
   </>;
 }
 createRoot(document.getElementById('root')).render(<App/>);
