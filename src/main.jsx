@@ -227,7 +227,7 @@ function App() {
   return <>
     <a className="skip" href="#main">{t.skip}</a>
     <header><div className="nav wrap">
-      <a href="#" className="brand" aria-label={lang === 'ko' ? '데이터 이니셔티브 팀 홈' : 'Data Initiative Team home'}><img className="brand-mark" src={import.meta.env.BASE_URL + 'favicon.svg'} width="34" height="34" alt=""/><span className="brand-text"><b>Pseudo Lab</b><small>{t.name}</small></span></a>
+      <a href="#" className="brand" aria-label={lang === 'ko' ? '데이터 이니셔티브 팀 홈' : 'Data Initiative Team home'}><span className="brand-text"><b className="wordmark">Pseudo <span className="wordmark-lab">Lab</span></b><small>{t.name}</small></span></a>
       <nav id="team-navigation" aria-label={lang === 'ko' ? '주 메뉴' : 'Main navigation'} className={menu ? 'is-open' : ''}>
         {ids.map((id, i) => <a key={id} href={'#' + id} onClick={navigateToSection}>{t.nav[i]}</a>)}
       </nav>
@@ -284,7 +284,7 @@ function App() {
         <div className="stay-action"><div className="stay-buttons"><Button asChild size="lg"><a href={urls.signup} target="_blank" rel="noreferrer">{t.stayCta}<ArrowUpRight size={17}/></a></Button><Button asChild size="lg" variant="outline"><a href={urls.repo} target="_blank" rel="noreferrer"><Github size={18}/>GitHub<ArrowUpRight size={17}/></a></Button></div><small>{t.stayNote}</small></div>
       </section>
     </main>
-    <footer className="wrap"><div><a className="footer-brand" href={urls.org} target="_blank" rel="noreferrer">Pseudo Lab<ArrowUpRight size={16}/></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">ExperiBase ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
+    <footer className="wrap"><div><a className="footer-brand" href={urls.org} target="_blank" rel="noreferrer"><b className="wordmark">Pseudo <span className="wordmark-lab">Lab</span></b><ArrowUpRight size={16}/></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">ExperiBase ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
   </>;
 }
 createRoot(document.getElementById('root')).render(<App/>);
