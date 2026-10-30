@@ -11,6 +11,50 @@ const urls = {
   org: 'https://www.pseudo-lab.com/',
   signup: 'https://docs.google.com/forms/d/e/1FAIpQLSerR1rw8fyUqiVQHZkrugJN-iMh9a2AA1aT69imKq2yDqbPKw/viewform?usp=dialog',
 };
+// Initial member cards from public PseudoLab profiles; edit these entries as introductions evolve.
+const members = [
+  {
+    "name": "김수현",
+    "profile": "https://www.pseudo-lab.com/profile/3f4fbfee-21b9-4a93-a21d-61fd587ba450",
+    "image": "https://zizxaljzqmfcwgjeiwvn.supabase.co/storage/v1/object/public/profiles/3f4fbfee-21b9-4a93-a21d-61fd587ba450/bad3826f-94bb-4895-94a7-0612702f18c5.jpg",
+    "lead": true,
+    "bio": {
+      "ko": "어제보다 나은 내일을 위한 여정",
+      "en": "A journey toward a better tomorrow."
+    }
+  },
+  {
+    "name": "이동욱",
+    "profile": "https://www.pseudo-lab.com/profile/230f3a47-cb3f-4ed7-8f7c-ef19f03ccce8",
+    "image": "https://zizxaljzqmfcwgjeiwvn.supabase.co/storage/v1/object/public/profiles/230f3a47-cb3f-4ed7-8f7c-ef19f03ccce8/c2c48110-6c2c-4c96-b245-4212ddad0ab7.jpg",
+    "lead": false,
+    "bio": {
+      "ko": "바람은 촛불을 꺼뜨리지만 모닥불은 살린다",
+      "en": "The wind puts out a candle but keeps a bonfire alive."
+    }
+  },
+  {
+    "name": "최지환",
+    "profile": "https://www.pseudo-lab.com/profile/41b7b98e-2bc1-4c29-ba63-576aefddd4a4",
+    "image": "https://zizxaljzqmfcwgjeiwvn.supabase.co/storage/v1/object/public/profiles/41b7b98e-2bc1-4c29-ba63-576aefddd4a4/98635ce4-eddc-4abf-9504-163d14fda97c.jpg",
+    "lead": false,
+    "bio": {
+      "ko": "기획자 · 문서정리 · 외부 커넥터",
+      "en": "Planning · Documentation · External connections"
+    }
+  },
+  {
+    "name": "신진수",
+    "profile": "https://www.pseudo-lab.com/profile/a081b635-7321-42eb-9936-1bcf94f944f0",
+    "image": "https://zizxaljzqmfcwgjeiwvn.supabase.co/storage/v1/object/public/profiles/a081b635-7321-42eb-9936-1bcf94f944f0/bc441c7a-b702-46ec-998a-28ad48e1b29d.jpg",
+    "lead": false,
+    "bio": {
+      "ko": "안전지대에서 벗어나면 꿈꾸던 삶이 시작된다",
+      "en": "The life you dream of begins outside your comfort zone."
+    }
+  }
+];
+
 const copy = {
   ko: {
     name: '실험플랫폼 팀', nav: ['진행 소식', '팀 소개', '프로젝트와 기록'],
@@ -36,6 +80,8 @@ const copy = {
     teamText: '우리는 가짜연구소에서 실제 서비스의 문제를 발견하고, 개선안을 만들며, 데이터를 통해 결과를 살펴보는 팀입니다. 이 과정을 지원하는 오픈소스 실험플랫폼 ExperiBase를 개발하고 있습니다.',
     teamFoot: '이곳에는 팀의 활동과 짧은 진행 소식을 모읍니다. 자세한 기술 글은 팀 블로그로, 소스 코드와 변경 이력은 GitHub로 연결합니다.',
     teamTopics: ['개발과 운영', '실험 설계와 분석', '스터디와 경험 공유'],
+    membersTitle: '함께 만드는 사람들', membersIntro: '서로 다른 경험을 모아 실험플랫폼을 만들고 있어요.',
+    lead: '프로젝트 리더', member: '팀원', profile: '프로필 보기',
     linksTag: '03 / EXPLORE MORE', linksTitle: '프로젝트와 기록을 찾아보세요.',
     linksIntro: '제품 사용부터 자세한 기술 이야기까지, 필요한 곳으로 바로 연결합니다.',
     resources: [
@@ -72,6 +118,8 @@ const copy = {
     teamText: 'At PseudoLab, we find problems in real services, build improvements, and examine outcomes through data. We are developing ExperiBase, an open-source experimentation platform that supports this process.',
     teamFoot: 'This page brings together short updates and team activities. Detailed technical writing belongs on the team blog; source code and change history live on GitHub.',
     teamTopics: ['Development & operations', 'Experiment design & analysis', 'Study & shared experience'],
+    membersTitle: 'The people behind the project', membersIntro: 'Bringing different experiences together to build the platform.',
+    lead: 'Project lead', member: 'Team member', profile: 'View profile',
     linksTag: '03 / EXPLORE MORE', linksTitle: 'Explore the project and its resources.',
     linksIntro: 'Find the product, source code, and longer technical stories in their own spaces.',
     resources: [
@@ -206,6 +254,15 @@ function App() {
       <section id="team" tabIndex={-1} className="section wrap compact-team">
         <div><p className="eyebrow">{t.teamTag}</p><h2>{t.teamTitle}</h2></div>
         <div className="team-story"><p>{t.teamText}</p><p>{t.teamFoot}</p><div className="team-topics">{t.teamTopics.map(s => <span key={s}>{s}</span>)}</div></div>
+        <div id="members" className="members">
+          <h3>{t.membersTitle}</h3><p className="members-intro">{t.membersIntro}</p>
+          <div className="member-grid">{members.map(person => <article className="member-card" key={person.profile}>
+            <div className="member-avatar" aria-hidden="true"><span>{person.name.slice(0, 1)}</span><img src={person.image} alt="" width="56" height="56" loading="lazy" decoding="async" onError={event => { event.currentTarget.style.display = 'none'; }}/></div>
+            <span className="member-role">{person.lead ? t.lead : t.member}</span>
+            <h4>{person.name}</h4><p>{person.bio[lang]}</p>
+            <a className="text-link" href={person.profile} target="_blank" rel="noreferrer" aria-label={`${person.name} ${t.profile}`}>{t.profile}<ArrowUpRight size={15}/></a>
+          </article>)}</div>
+        </div>
       </section>
       <section id="resources" tabIndex={-1} className="resources-section"><div className="wrap">
         <p className="eyebrow">{t.linksTag}</p><h2>{t.linksTitle}</h2><p className="resource-intro">{t.linksIntro}</p>

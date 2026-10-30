@@ -61,3 +61,20 @@ html[data-theme="dark"],
 @media (max-width: 700px) {
   [data-theme="dark"] .nav nav.is-open { background: #171d2c; }
 }
+
+.members { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 35px; }
+.members > h3 { font-size: 22px; font-weight: 650; letter-spacing: -.6px; }
+.members-intro { margin-top: 9px; color: var(--muted); font-size: 13px; }
+.member-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 25px; }
+.member-card { display: flex; flex-direction: column; align-items: flex-start; padding: 25px 22px; border: 1px solid var(--line); border-radius: 10px; background: #fafbfe; }
+.member-avatar { position: relative; display: grid; place-items: center; width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; overflow: hidden; background: #eeecfa; color: var(--purple); font-size: 19px; font-weight: 600; }
+.member-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.member-role { margin-top: 22px; color: var(--purple); font-size: 10px; }
+.member-card h4 { margin: 6px 0 0; font-size: 18px; font-weight: 650; }
+.member-card > p { margin: 13px 0 23px; color: var(--muted); font-size: 12px; line-height: 1.85; }
+.member-card .text-link { margin-top: auto; color: var(--purple); font-size: 11px; }
+[data-theme="dark"] .member-card { background: #1b2133; }
+[data-theme="dark"] .member-avatar { background: #302a4c; }
+@media (max-width: 1000px) { .member-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .members { padding-top: 28px; margin-top: 10px; } .member-grid { gap: 12px; } .member-card { padding: 20px 16px; } .member-card > p { font-size: 11px; } }
+@media (max-width: 359px) { .member-grid { grid-template-columns: 1fr; } }
