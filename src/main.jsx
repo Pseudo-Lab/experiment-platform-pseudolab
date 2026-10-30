@@ -7,7 +7,7 @@ import './style.css';
 const urls = {
   repo: 'https://github.com/Pseudo-Lab/experiment-platform-pseudolab',
   service: 'https://exp.pseudolab-devfactory.com/',
-  blog: 'https://www.pseudo-lab.com/blog',
+  blog: 'https://www.pseudo-lab.com/projects/531b281c-32f8-4477-8e0e-ab5d3e51143c?tab=resources',
   org: 'https://www.pseudo-lab.com/',
   signup: 'https://docs.google.com/forms/d/e/1FAIpQLSerR1rw8fyUqiVQHZkrugJN-iMh9a2AA1aT69imKq2yDqbPKw/viewform?usp=dialog',
 };
@@ -33,14 +33,14 @@ const copy = {
     ],
     teamTag: '02 / ABOUT THE TEAM', teamTitle: <>개발과 실험을 연결하며,<br/>함께 배웁니다.</>,
     teamText: '우리는 가짜연구소에서 실제 서비스의 문제를 발견하고, 개선안을 만들며, 데이터를 통해 결과를 살펴보는 팀입니다. 이 과정을 지원하는 오픈소스 실험플랫폼 ExperiBase를 개발하고 있습니다.',
-    teamFoot: '이곳에는 팀의 활동과 짧은 진행 소식을 모읍니다. 자세한 기술 글은 가짜연구소 블로그로, 소스 코드와 변경 이력은 GitHub로 연결합니다.',
+    teamFoot: '이곳에는 팀의 활동과 짧은 진행 소식을 모읍니다. 자세한 기술 글은 팀 블로그로, 소스 코드와 변경 이력은 GitHub로 연결합니다.',
     teamTopics: ['개발과 운영', '실험 설계와 분석', '스터디와 경험 공유'],
     linksTag: '03 / EXPLORE MORE', linksTitle: '프로젝트와 기록을 찾아보세요.',
     linksIntro: '제품 사용부터 자세한 기술 이야기까지, 필요한 곳으로 바로 연결합니다.',
     resources: [
       ['ExperiBase', '서비스', '제품을 살펴보고 실험을 운영하는 공간입니다.', '플랫폼 바로가기', 'service'],
       ['GitHub', '코드와 변경 이력', '구현 내용과 개발 진행 상황을 저장소에서 확인하세요.', '저장소 살펴보기', 'repo'],
-      ['가짜연구소 블로그', '기술 글과 경험', '팀의 자세한 글을 공유할 가짜연구소 블로그입니다.', '블로그 둘러보기', 'blog'],
+      ['팀 블로그', '기술 글과 경험', '팀의 글과 자료를 모아둔 블로그입니다.', '블로그 둘러보기', 'blog'],
     ],
     stayTitle: <>팀의 다음 소식도<br/>함께 받아보세요.</>,
     stayText: '실험플랫폼의 개발 현황과 실제 적용 이야기, 팀의 활동 소식을 전합니다.',
@@ -68,14 +68,14 @@ const copy = {
     ],
     teamTag: '02 / ABOUT THE TEAM', teamTitle: <>Connecting development<br/>and experimentation.</>,
     teamText: 'At PseudoLab, we find problems in real services, build improvements, and examine outcomes through data. We are developing ExperiBase, an open-source experimentation platform that supports this process.',
-    teamFoot: 'This page brings together short updates and team activities. Detailed technical writing belongs on the PseudoLab blog; source code and change history live on GitHub.',
+    teamFoot: 'This page brings together short updates and team activities. Detailed technical writing belongs on the team blog; source code and change history live on GitHub.',
     teamTopics: ['Development & operations', 'Experiment design & analysis', 'Study & shared experience'],
     linksTag: '03 / EXPLORE MORE', linksTitle: 'Explore the project and its resources.',
     linksIntro: 'Find the product, source code, and longer technical stories in their own spaces.',
     resources: [
       ['ExperiBase', 'The service', 'Explore the product and manage experiments.', 'Open the platform', 'service'],
       ['GitHub', 'Code & change history', 'Explore the implementation and development progress.', 'Explore the repository', 'repo'],
-      ['PseudoLab Blog', 'Technical writing & experience', 'The PseudoLab blog, where we can share longer stories.', 'Explore the blog', 'blog'],
+      ['Team Blog', 'Technical writing & experience', 'Our team’s blog, bringing together articles and resources.', 'Explore the blog', 'blog'],
     ],
     stayTitle: <>Stay in the loop<br/>with our team.</>,
     stayText: 'Receive updates on platform development, real-world applications, and team activities.',
@@ -143,7 +143,7 @@ function App() {
         <div className="stay-action"><div className="stay-buttons"><Button asChild size="lg"><a href={urls.signup} target="_blank" rel="noreferrer">{t.stayCta}<ArrowUpRight size={17}/></a></Button><Button asChild size="lg" variant="outline"><a href={urls.repo} target="_blank" rel="noreferrer"><Github size={18}/>GitHub<ArrowUpRight size={17}/></a></Button></div><small>{t.stayNote}</small></div>
       </section>
     </main>
-    <footer className="wrap"><div><a className="footer-brand" href={urls.org} target="_blank" rel="noreferrer">PseudoLab<span>.</span><ArrowUpRight size={16}/></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">ExperiBase ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '블로그' : 'Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
+    <footer className="wrap"><div><a className="footer-brand" href={urls.org} target="_blank" rel="noreferrer">PseudoLab<span>.</span><ArrowUpRight size={16}/></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">ExperiBase ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
   </>;
 }
 createRoot(document.getElementById('root')).render(<App/>);

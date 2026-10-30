@@ -4,7 +4,7 @@ Status: active
 Last-Validated: 2026-10-30
 
 가짜연구소 실험플랫폼 팀의 진행 소식과 짧은 팀 소개를 모으고,
-ExperiBase·GitHub·가짜연구소 블로그·소식 신청으로 연결합니다.
+ExperiBase·GitHub·팀 블로그·소식 신청으로 연결합니다.
 한국어와 영어를 함께 제공합니다.
 
 - 공개 주소: https://pseudo-lab.github.io/experiment-platform-pseudolab/
@@ -33,7 +33,7 @@ GitHub Pages로 배포합니다. Pages의 게시 방식은 GitHub Actions이며,
 - 문구·진행 소식·외부 링크: `src/main.jsx`의 `copy`와 `urls`
 - 한국어(`ko`)와 영어(`en`)를 함께 수정합니다.
 - 스타일: `src/style.css`
-- 기술 글 원문은 가짜연구소 블로그에 게시하고 관련 링크로 연결합니다.
+- 기술 글 원문은 팀 블로그에 게시하고 관련 링크로 연결합니다.
 - 비밀값·운영 데이터·내부 회의록은 공개하지 않습니다.
 
 ## 이전 및 검증 인계
