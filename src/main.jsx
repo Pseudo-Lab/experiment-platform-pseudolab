@@ -57,7 +57,7 @@ const members = [
 
 const copy = {
   ko: {
-    name: '실험플랫폼 팀', nav: ['진행 소식', '팀 소개', '프로젝트와 기록'],
+    name: '실험플랫폼 팀', nav: ['진행 소식', '팀 소개', '프로젝트와 기록', '소식·기여'],
     lightMode: '라이트모드로 전환', darkMode: '다크모드로 전환',
     skip: '본문으로 이동', menu: '메뉴 열기', close: '메뉴 닫기', language: 'Switch to English',
     eyebrow: '가짜연구소 · EXPERIMENT PLATFORM TEAM',
@@ -95,7 +95,7 @@ const copy = {
     footer: '가짜연구소 실험플랫폼 팀의 활동 기록', org: '가짜연구소', footerNote: 'BUILD TOGETHER · LEARN TOGETHER',
   },
   en: {
-    name: 'Experiment Platform Team', nav: ['Updates', 'Our team', 'Project & resources'],
+    name: 'Experiment Platform Team', nav: ['Updates', 'Our team', 'Project & resources', 'Get involved'],
     lightMode: 'Switch to light mode', darkMode: 'Switch to dark mode',
     skip: 'Skip to content', menu: 'Open menu', close: 'Close menu', language: '한국어로 전환',
     eyebrow: 'PSEUDOLAB · EXPERIMENT PLATFORM TEAM',
@@ -137,6 +137,18 @@ const copy = {
 function App() {
   const [lang, setLang] = useState('ko');
   const [menu, setMenu] = useState(false);
+  const menuToggle = useRef(null);
+  useEffect(() => {
+    if (!menu) return;
+    const closeOnEscape = event => {
+      if (event.key === 'Escape') {
+        setMenu(false);
+        menuToggle.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [menu]);
   const [opened, setOpened] = useState(0);
   const cancelScroll = useRef(() => {});
   useEffect(() => () => cancelScroll.current(), []);
@@ -206,7 +218,7 @@ function App() {
     }
   }, [theme, themePreference]);
   const t = copy[lang];
-  const ids = ['updates', 'team', 'resources'];
+  const ids = ['updates', 'team', 'resources', 'subscribe'];
   useEffect(() => {
     document.documentElement.lang = lang;
     document.title = lang === 'ko' ? '활동과 소식 | 가짜연구소 실험플랫폼 팀' : 'Team Log | PseudoLab Experiment Platform Team';
@@ -216,7 +228,7 @@ function App() {
     <a className="skip" href="#main">{t.skip}</a>
     <header><div className="nav wrap">
       <a href="#" className="brand"><span className="brand-symbol"><FlaskConical size={22}/></span><span><b>PseudoLab<span className="brand-dot">.</span></b><small>{t.name}</small></span></a>
-      <nav aria-label={lang === 'ko' ? '주 메뉴' : 'Main navigation'} className={menu ? 'is-open' : ''}>
+      <nav id="team-navigation" aria-label={lang === 'ko' ? '주 메뉴' : 'Main navigation'} className={menu ? 'is-open' : ''}>
         {ids.map((id, i) => <a key={id} href={'#' + id} onClick={navigateToSection}>{t.nav[i]}</a>)}
       </nav>
       <div className="nav-actions">
@@ -225,10 +237,10 @@ function App() {
         </Button>
         <Button variant="ghost" size="sm" aria-label={t.language} onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')}>{lang === 'ko' ? 'EN' : 'KO'}</Button>
         <Button asChild variant="outline" className="github-button"><a href={urls.repo} target="_blank" rel="noreferrer"><Github size={16}/>GitHub<ArrowUpRight size={14}/></a></Button>
-        <Button variant="ghost" size="icon" className="menu-button" aria-expanded={menu} aria-label={menu ? t.close : t.menu} onClick={() => setMenu(!menu)}>{menu ? <X/> : <Menu/>}</Button>
+        <Button variant="ghost" size="icon" className="menu-button" ref={menuToggle} aria-controls="team-navigation" aria-expanded={menu} aria-label={menu ? t.close : t.menu} onClick={() => setMenu(!menu)}>{menu ? <X/> : <Menu/>}</Button>
       </div>
     </div></header>
-    <main id="main">
+    <main id="main" tabIndex={-1}>
       <section className="hero wrap activity-hero">
         <div className="hero-copy">
           <div className="eyebrow"><span className="status-dot"/>{t.eyebrow}</div>
@@ -268,7 +280,7 @@ function App() {
         <p className="eyebrow">{t.linksTag}</p><h2>{t.linksTitle}</h2><p className="resource-intro">{t.linksIntro}</p>
         <div className="resource-grid">{t.resources.map(([title, label, text, action, key], i) => { const Icon = [Compass, Code2, BookOpen][i]; return <article key={key}><div className="resource-top"><Icon size={24}/><span>{label}</span></div><h3>{title}</h3><p>{text}</p><a className="text-link" href={urls[key]} target="_blank" rel="noreferrer">{action}<ArrowUpRight size={17}/></a></article>; })}</div>
       </div></section>
-      <section id="subscribe" className="stay wrap"><div className="stay-decor" aria-hidden="true">✳</div><div><p className="eyebrow">KEEP IN THE LOOP</p><h2>{t.stayTitle}</h2><p>{t.stayText}</p></div>
+      <section id="subscribe" tabIndex={-1} className="stay wrap"><div className="stay-decor" aria-hidden="true">✳</div><div><p className="eyebrow">KEEP IN THE LOOP</p><h2>{t.stayTitle}</h2><p>{t.stayText}</p></div>
         <div className="stay-action"><div className="stay-buttons"><Button asChild size="lg"><a href={urls.signup} target="_blank" rel="noreferrer">{t.stayCta}<ArrowUpRight size={17}/></a></Button><Button asChild size="lg" variant="outline"><a href={urls.repo} target="_blank" rel="noreferrer"><Github size={18}/>GitHub<ArrowUpRight size={17}/></a></Button></div><small>{t.stayNote}</small></div>
       </section>
     </main>
