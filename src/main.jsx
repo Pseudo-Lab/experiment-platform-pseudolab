@@ -28,7 +28,7 @@ const copy = {
     updatesIntro: '만들어온 것, 적용하며 배운 것, 다음으로 확인할 것을 구분해 전합니다.',
     updates: [
       ['개발', '만들어온 기반', '실험 관리부터 SDK·API 연동까지', '실험 관리, 사용자별 버전 배정, Feature Flag, 대상 설정, 행동 수집과 결과 확인 기능을 개발해 왔습니다. 실험을 관리하는 화면도 개선하고 있습니다. 기능의 사용 방법은 ExperiBase에서, 구현과 변경 이력은 GitHub에서 확인할 수 있습니다.'],
-      ['적용', '실제 서비스에서의 경험', 'LVUP 회고 참여 흐름에 연결했습니다', 'LVUP의 12기 회고 진입 화면에 플랫폼을 연결하고, 노출부터 클릭과 제출까지 측정하는 흐름을 검증했습니다. 무작위 대조군이 없는 준실험으로, 기능의 개선 효과를 입증한 사례는 아닙니다. 서비스 연동과 이벤트 정의, 데이터 해석 과정에서 얻은 경험을 다음 실험의 기반으로 삼고 있습니다.'],
+      ['적용', '실제 서비스에서의 경험', '가짜연구소 홈페이지의 12기 회고에 적용했습니다', '가짜연구소 홈페이지의 12기 회고 진입 화면에 플랫폼을 연결하고, 노출부터 클릭과 제출까지 측정하는 흐름을 검증했습니다. 무작위 대조군이 없는 준실험으로, 기능의 개선 효과를 입증한 사례는 아닙니다. 서비스 연동과 이벤트 정의, 데이터 해석 과정에서 얻은 경험을 다음 실험의 기반으로 삼고 있습니다.'],
       ['다음 단계', '스터디와 13기 목표', '만드는 것에서 실험하고 판단하는 것까지', '13기에는 기능 개선부터 실제 사용자 대상 실험, 결과 분석과 후속 결정까지 한 사이클을 경험하는 것이 목표입니다. 무엇을 실험하고 어떤 지표로 확인할지 함께 검토하며, 사용·연동 가이드와 재사용할 수 있는 배움을 남기려 합니다.'],
     ],
     teamTag: '02 / ABOUT THE TEAM', teamTitle: <>개발과 실험을 연결하며,<br/>함께 배웁니다.</>,
@@ -63,7 +63,7 @@ const copy = {
     updatesIntro: 'Separating what we have built, what we have learned, and what we aim to explore next.',
     updates: [
       ['Build', 'The foundations', 'From experiment management to SDK integration', 'We have developed experiment management, consistent assignment, feature flags, targeting, event collection, and result views. We are also improving the management interface. Visit ExperiBase for product use and GitHub for the implementation and change history.'],
-      ['Apply', 'Experience from a real service', 'Connecting to the LVUP reflection flow', 'We integrated the platform with LVUP’s Season 12 reflection entry UI and validated a measurement flow from exposure to click to submission. This was a quasi-experiment without a randomized control group, rather than proof of an improvement caused by the feature. The experience informs our next experiments.'],
+      ['Apply', 'Experience from a real service', 'Applying the platform to Season 12 reflections on the PseudoLab website', 'We integrated the platform with the Season 12 reflection entry UI on the PseudoLab website and validated a measurement flow from exposure to click to submission. This was a quasi-experiment without a randomized control group, rather than proof of an improvement caused by the feature. The experience informs our next experiments.'],
       ['Up next', 'Learning and our Season 13 goal', 'From building to experimenting and deciding', 'Our Season 13 goal is a complete cycle: improve a feature, run a real-user experiment, analyze the results, and decide what follows. We review experiment questions and metrics together and aim to document reusable lessons and integration guidance.'],
     ],
     teamTag: '02 / ABOUT THE TEAM', teamTitle: <>Connecting development<br/>and experimentation.</>,
