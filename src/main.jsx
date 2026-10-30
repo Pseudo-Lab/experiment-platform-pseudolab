@@ -57,12 +57,12 @@ const members = [
 
 const copy = {
   ko: {
-    name: '실험플랫폼 팀', nav: ['진행 소식', '팀 소개', '프로젝트와 기록', '소식·기여'],
+    name: '데이터 이니셔티브 팀', nav: ['진행 소식', '팀 소개', '프로젝트와 기록', '소식·기여'],
     lightMode: '라이트모드로 전환', darkMode: '다크모드로 전환',
     skip: '본문으로 이동', menu: '메뉴 열기', close: '메뉴 닫기', language: 'Switch to English',
-    eyebrow: '가짜연구소 · EXPERIMENT PLATFORM TEAM',
+    eyebrow: '가짜연구소 · DATA INITIATIVE TEAM',
     title: <>실험플랫폼을 만드는<br/><span>과정과 배움을 기록합니다.</span></>,
-    intro: '개발하고, 함께 공부하고, 실제 서비스에 적용하며 배웁니다. 가짜연구소 실험플랫폼 팀의 활동과 진행 소식을 모았습니다.',
+    intro: '개발하고, 함께 공부하고, 실제 서비스에 적용하며 배웁니다. 가짜연구소 데이터 이니셔티브 팀의 활동과 진행 소식을 모았습니다.',
     explore: '진행 소식 살펴보기', service: '플랫폼 바로가기',
     note: '제품 소개와 사용은 ExperiBase에서 확인하세요.',
     boardTitle: '지금 우리가 향하는 곳', season: '13기 활동',
@@ -77,7 +77,7 @@ const copy = {
       ['다음 단계', '스터디와 13기 목표', '만드는 것에서 실험하고 판단하는 것까지', '13기에는 기능을 개선하고, 실제 사용자와 실험하고, 결과를 살펴 다음 결정을 내리는 과정을 함께 경험하려고 해요. 무엇을 실험하고 어떤 지표로 확인할지 검토하면서, 다음에도 활용할 수 있는 가이드와 배움을 남기는 게 목표예요.'],
     ],
     teamTag: '02 / ABOUT THE TEAM', teamTitle: <>개발과 실험을 연결하며,<br/>함께 배웁니다.</>,
-    teamText: '우리는 가짜연구소에서 실제 서비스의 문제를 발견하고, 개선안을 만들며, 데이터를 통해 결과를 살펴보는 팀입니다. 이 과정을 지원하는 오픈소스 실험플랫폼 ExperiBase를 개발하고 있습니다.',
+    teamText: '우리는 가짜연구소 데이터 이니셔티브 팀입니다. 실제 서비스의 문제를 발견하고, 개선안을 만들며, 데이터를 통해 결과를 살펴봅니다. 이 과정을 지원하는 오픈소스 실험플랫폼 ExperiBase를 개발하고 있습니다.',
     teamFoot: '이곳에는 팀의 활동과 짧은 진행 소식을 모읍니다. 자세한 기술 글은 팀 블로그로, 소스 코드와 변경 이력은 GitHub로 연결합니다.',
     teamTopics: ['개발과 운영', '실험 설계와 분석', '스터디와 경험 공유'],
     membersTitle: '함께 만드는 사람들', membersIntro: '서로 다른 경험을 모아 실험플랫폼을 만들고 있어요.',
@@ -92,15 +92,15 @@ const copy = {
     stayTitle: <>소식을 받아보고,<br/>함께할 뜻도 남겨주세요.</>,
     stayText: '프로젝트 소식을 받아보거나, 기여할 수 있는 부분이 있다면 함께하고 싶은 뜻을 남겨주세요.',
     stayCta: '소식·기여 관심 등록하기', stayNote: '구글폼에서 소식 받기와 기여 의향 중 원하는 방식을 선택할 수 있습니다.',
-    footer: '가짜연구소 실험플랫폼 팀의 활동 기록', org: '가짜연구소', footerNote: 'BUILD TOGETHER · LEARN TOGETHER',
+    footer: '가짜연구소 데이터 이니셔티브 팀의 활동 기록', org: '가짜연구소', footerNote: 'BUILD TOGETHER · LEARN TOGETHER',
   },
   en: {
-    name: 'Experiment Platform Team', nav: ['Updates', 'Our team', 'Project & resources', 'Get involved'],
+    name: 'Data Initiative Team', nav: ['Updates', 'Our team', 'Project & resources', 'Get involved'],
     lightMode: 'Switch to light mode', darkMode: 'Switch to dark mode',
     skip: 'Skip to content', menu: 'Open menu', close: 'Close menu', language: '한국어로 전환',
-    eyebrow: 'PSEUDO LAB · EXPERIMENT PLATFORM TEAM',
+    eyebrow: 'PSEUDO LAB · DATA INITIATIVE TEAM',
     title: <>Building a platform.<br/><span>Sharing the journey.</span></>,
-    intro: 'We build, study together, and learn from real services. Follow the work and progress of Pseudo Lab’s Experiment Platform Team.',
+    intro: 'We build, study together, and learn from real services. Follow the work and progress of Pseudo Lab’s Data Initiative Team.',
     explore: 'Explore our updates', service: 'Open the platform',
     note: 'Visit ExperiBase for product information and use.',
     boardTitle: 'What we are working toward', season: 'Season 13',
@@ -115,7 +115,7 @@ const copy = {
       ['Up next', 'Learning and our Season 13 goal', 'From building to experimenting and deciding', 'In Season 13, we’d like to experience the full cycle together: improve a feature, run a real-user experiment, look at the results, and decide what to do next. We’re reviewing experiment questions and metrics and aiming to leave behind guides and lessons we can use again.'],
     ],
     teamTag: '02 / ABOUT THE TEAM', teamTitle: <>Connecting development<br/>and experimentation.</>,
-    teamText: 'At Pseudo Lab, we find problems in real services, build improvements, and examine outcomes through data. We are developing ExperiBase, an open-source experimentation platform that supports this process.',
+    teamText: 'We are Pseudo Lab’s Data Initiative Team. We find problems in real services, build improvements, and examine outcomes through data. We are developing ExperiBase, an open-source experimentation platform that supports this process.',
     teamFoot: 'This page brings together short updates and team activities. Detailed technical writing belongs on the team blog; source code and change history live on GitHub.',
     teamTopics: ['Development & operations', 'Experiment design & analysis', 'Study & shared experience'],
     membersTitle: 'The people behind the project', membersIntro: 'Bringing different experiences together to build the platform.',
@@ -130,7 +130,7 @@ const copy = {
     stayTitle: <>Follow our progress.<br/>Explore ways to contribute.</>,
     stayText: 'Receive updates about the project, or let us know you would like to contribute when an opportunity fits.',
     stayCta: 'Updates & contribution interest', stayNote: 'Choose updates or interest in contributing in the Google Form.',
-    footer: 'Notes from Pseudo Lab’s Experiment Platform Team', org: 'Pseudo Lab', footerNote: 'BUILD TOGETHER · LEARN TOGETHER',
+    footer: 'Notes from Pseudo Lab’s Data Initiative Team', org: 'Pseudo Lab', footerNote: 'BUILD TOGETHER · LEARN TOGETHER',
   },
 };
 
@@ -221,7 +221,7 @@ function App() {
   const ids = ['updates', 'team', 'resources', 'subscribe'];
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.title = lang === 'ko' ? '활동과 소식 | 가짜연구소 실험플랫폼 팀' : 'Team Log | Pseudo Lab Experiment Platform Team';
+    document.title = lang === 'ko' ? '활동과 소식 | 가짜연구소 데이터 이니셔티브 팀' : 'Team Log | Pseudo Lab Data Initiative Team';
     document.querySelector('meta[name="description"]').content = t.intro;
   }, [lang, t]);
   return <>
