@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowUpRight, ArrowRight, FlaskConical, Github, Menu, X, Plus, Minus, Code2, BookOpen, Compass, Sun, Moon } from 'lucide-react';
 import { Button } from './components/ui/button';
@@ -90,6 +90,49 @@ function App() {
   const [lang, setLang] = useState('ko');
   const [menu, setMenu] = useState(false);
   const [opened, setOpened] = useState(0);
+  const cancelScroll = useRef(() => {});
+  useEffect(() => () => cancelScroll.current(), []);
+
+  function navigateToSection(event) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    cancelScroll.current();
+    setMenu(false);
+    const hash = event.currentTarget.hash;
+    const target = document.getElementById(hash.slice(1));
+    if (!target || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    event.preventDefault();
+    const root = document.documentElement;
+    const start = window.scrollY;
+    const offset = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
+    const end = Math.max(0, Math.min(start + target.getBoundingClientRect().top - offset, root.scrollHeight - window.innerHeight));
+    const previousBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = 'auto';
+    if (window.location.hash !== hash) window.history.pushState(null, '', hash);
+    const started = performance.now();
+    let frame;
+    const interruptions = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+    const stop = () => {
+      cancelAnimationFrame(frame);
+      root.style.scrollBehavior = previousBehavior;
+      interruptions.forEach(type => window.removeEventListener(type, stop));
+      cancelScroll.current = () => {};
+    };
+    cancelScroll.current = stop;
+    interruptions.forEach(type => window.addEventListener(type, stop, { passive: true }));
+    const animate = now => {
+      const progress = Math.min((now - started) / 750, 1);
+      const eased = (1 - Math.cos(Math.PI * progress)) / 2;
+      window.scrollTo(0, start + (end - start) * eased);
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate);
+      } else {
+        stop();
+        target.focus({ preventScroll: true });
+      }
+    };
+    frame = requestAnimationFrame(animate);
+  }
+
   const [themePreference, setThemePreference] = useState(() => {
     try {
       const saved = localStorage.getItem('team-theme');
@@ -126,7 +169,7 @@ function App() {
     <header><div className="nav wrap">
       <a href="#" className="brand"><span className="brand-symbol"><FlaskConical size={22}/></span><span><b>PseudoLab<span className="brand-dot">.</span></b><small>{t.name}</small></span></a>
       <nav aria-label={lang === 'ko' ? '주 메뉴' : 'Main navigation'} className={menu ? 'is-open' : ''}>
-        {ids.map((id, i) => <a key={id} href={'#' + id} onClick={() => setMenu(false)}>{t.nav[i]}</a>)}
+        {ids.map((id, i) => <a key={id} href={'#' + id} onClick={navigateToSection}>{t.nav[i]}</a>)}
       </nav>
       <div className="nav-actions">
         <Button variant="ghost" size="icon" className="theme-toggle" aria-label={theme === 'dark' ? t.lightMode : t.darkMode} title={theme === 'dark' ? t.lightMode : t.darkMode} onClick={() => setThemePreference(theme === 'dark' ? 'light' : 'dark')}>
@@ -142,7 +185,7 @@ function App() {
         <div className="hero-copy">
           <div className="eyebrow"><span className="status-dot"/>{t.eyebrow}</div>
           <h1>{t.title}</h1><p>{t.intro}</p>
-          <div className="hero-actions"><Button asChild size="lg"><a href={urls.service} target="_blank" rel="noreferrer">{t.service}<ArrowUpRight size={17}/></a></Button><Button asChild size="lg" variant="outline"><a href="#updates">{t.explore}<ArrowRight size={17}/></a></Button></div>
+          <div className="hero-actions"><Button asChild size="lg"><a href={urls.service} target="_blank" rel="noreferrer">{t.service}<ArrowUpRight size={17}/></a></Button><Button asChild size="lg" variant="outline"><a href="#updates" onClick={navigateToSection}>{t.explore}<ArrowRight size={17}/></a></Button></div>
           <div className="hero-note">{t.note}</div>
         </div>
         <aside className="activity-board" aria-label={t.boardTitle}>
@@ -153,18 +196,18 @@ function App() {
         </aside>
       </section>
       <div className="principles"><div className="wrap">{t.strip.map((s, i) => <div key={s}><span>0{i + 1}</span>{s}{i < 2 && <ArrowUpRight size={20}/>}</div>)}</div></div>
-      <section id="updates" className="updates section"><div className="wrap">
+      <section id="updates" tabIndex={-1} className="updates section"><div className="wrap">
         <div className="section-top"><div><p className="eyebrow">{t.updatesTag}</p><h2>{t.updatesTitle}</h2></div><p className="section-description">{t.updatesIntro}</p></div>
         <div className="update-list">{t.updates.map(([tag, sub, title, body], i) => <article className={opened === i ? 'expanded' : ''} key={tag}>
           <Button variant="ghost" className="update-toggle" aria-expanded={opened === i} aria-controls={'update-' + i} onClick={() => setOpened(opened === i ? null : i)}><span className={'update-tag tag-' + i}>{tag}</span><span className="update-title"><small>{sub}</small><strong>{title}</strong></span><span className="update-indicator">{opened === i ? <Minus size={20}/> : <Plus size={20}/>}</span></Button>
           <div id={'update-' + i} hidden={opened !== i} className="update-body"><p>{body}</p></div>
         </article>)}</div>
       </div></section>
-      <section id="team" className="section wrap compact-team">
+      <section id="team" tabIndex={-1} className="section wrap compact-team">
         <div><p className="eyebrow">{t.teamTag}</p><h2>{t.teamTitle}</h2></div>
         <div className="team-story"><p>{t.teamText}</p><p>{t.teamFoot}</p><div className="team-topics">{t.teamTopics.map(s => <span key={s}>{s}</span>)}</div></div>
       </section>
-      <section id="resources" className="resources-section"><div className="wrap">
+      <section id="resources" tabIndex={-1} className="resources-section"><div className="wrap">
         <p className="eyebrow">{t.linksTag}</p><h2>{t.linksTitle}</h2><p className="resource-intro">{t.linksIntro}</p>
         <div className="resource-grid">{t.resources.map(([title, label, text, action, key], i) => { const Icon = [Compass, Code2, BookOpen][i]; return <article key={key}><div className="resource-top"><Icon size={24}/><span>{label}</span></div><h3>{title}</h3><p>{text}</p><a className="text-link" href={urls[key]} target="_blank" rel="noreferrer">{action}<ArrowUpRight size={17}/></a></article>; })}</div>
       </div></section>
