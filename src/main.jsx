@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowUpRight, ArrowRight, FlaskConical, Github, Menu, X, Plus, Minus, Code2, BookOpen, Compass } from 'lucide-react';
+import { ArrowUpRight, ArrowRight, FlaskConical, Github, Menu, X, Plus, Minus, Code2, BookOpen, Compass, Sun, Moon } from 'lucide-react';
 import { Button } from './components/ui/button';
 import './style.css';
 
@@ -14,6 +14,7 @@ const urls = {
 const copy = {
   ko: {
     name: '실험플랫폼 팀', nav: ['진행 소식', '팀 소개', '프로젝트와 기록'],
+    lightMode: '라이트모드로 전환', darkMode: '다크모드로 전환',
     skip: '본문으로 이동', menu: '메뉴 열기', close: '메뉴 닫기', language: 'Switch to English',
     eyebrow: '가짜연구소 · EXPERIMENT PLATFORM TEAM',
     title: <>실험플랫폼을 만드는<br/><span>과정과 배움을 기록합니다.</span></>,
@@ -49,6 +50,7 @@ const copy = {
   },
   en: {
     name: 'Experiment Platform Team', nav: ['Updates', 'Our team', 'Project & resources'],
+    lightMode: 'Switch to light mode', darkMode: 'Switch to dark mode',
     skip: 'Skip to content', menu: 'Open menu', close: 'Close menu', language: '한국어로 전환',
     eyebrow: 'PSEUDOLAB · EXPERIMENT PLATFORM TEAM',
     title: <>Building a platform.<br/><span>Sharing the journey.</span></>,
@@ -88,6 +90,30 @@ function App() {
   const [lang, setLang] = useState('ko');
   const [menu, setMenu] = useState(false);
   const [opened, setOpened] = useState(0);
+  const [themePreference, setThemePreference] = useState(() => {
+    try {
+      const saved = localStorage.getItem('team-theme');
+      return saved === 'dark' || saved === 'light' ? saved : null;
+    } catch {
+      return null;
+    }
+  });
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const theme = themePreference ?? (systemDark ? 'dark' : 'light');
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const update = () => setSystemDark(media.matches);
+    media.addEventListener('change', update);
+    update();
+    return () => media.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#121725' : '#f8f9fc';
+    if (themePreference) {
+      try { localStorage.setItem('team-theme', themePreference); } catch { /* Theme still works without storage. */ }
+    }
+  }, [theme, themePreference]);
   const t = copy[lang];
   const ids = ['updates', 'team', 'resources'];
   useEffect(() => {
@@ -103,6 +129,9 @@ function App() {
         {ids.map((id, i) => <a key={id} href={'#' + id} onClick={() => setMenu(false)}>{t.nav[i]}</a>)}
       </nav>
       <div className="nav-actions">
+        <Button variant="ghost" size="icon" className="theme-toggle" aria-label={theme === 'dark' ? t.lightMode : t.darkMode} title={theme === 'dark' ? t.lightMode : t.darkMode} onClick={() => setThemePreference(theme === 'dark' ? 'light' : 'dark')}>
+          {theme === 'dark' ? <Sun size={18} aria-hidden="true"/> : <Moon size={18} aria-hidden="true"/>}
+        </Button>
         <Button variant="ghost" size="sm" aria-label={t.language} onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')}>{lang === 'ko' ? 'EN' : 'KO'}</Button>
         <Button asChild variant="outline" className="github-button"><a href={urls.repo} target="_blank" rel="noreferrer"><Github size={16}/>GitHub<ArrowUpRight size={14}/></a></Button>
         <Button variant="ghost" size="icon" className="menu-button" aria-expanded={menu} aria-label={menu ? t.close : t.menu} onClick={() => setMenu(!menu)}>{menu ? <X/> : <Menu/>}</Button>

@@ -6,6 +6,7 @@ Last-Validated: 2026-10-30
 가짜연구소 실험플랫폼 팀의 진행 소식과 짧은 팀 소개를 모으고,
 ExperiBase·GitHub·팀 블로그·소식 신청으로 연결합니다.
 한국어와 영어를 함께 제공합니다.
+다크모드는 기기 설정을 따르며, 상단 해·달 버튼으로 직접 선택한 모드는 다음 방문에도 유지됩니다.
 
 - 공개 주소: https://pseudo-lab.github.io/experiment-platform-pseudolab/
 - 홈페이지 소스 및 배포: 이 레포의 `pages` 브랜치
