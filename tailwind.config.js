@@ -1,0 +1,1 @@
+export default {content:['./index.html','./src/**/*.{jsx,tsx}'],theme:{extend:{colors:{primary:'hsl(var(--primary))','primary-foreground':'hsl(var(--primary-foreground))',ring:'hsl(var(--ring))',input:'hsl(var(--border))',background:'hsl(var(--background))',accent:'hsl(var(--accent))'}}}}
