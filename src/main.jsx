@@ -6,7 +6,7 @@ import './style.css';
 
 const urls = {
   repo: 'https://github.com/Pseudo-Lab/experiment-platform-pseudolab',
-  service: 'https://exp.pseudolab-devfactory.com/',
+  service: 'https://exp.pseudolab-devfactory.com/about',
   blog: 'https://www.pseudo-lab.com/projects/531b281c-32f8-4477-8e0e-ab5d3e51143c?tab=resources',
   org: 'https://www.pseudo-lab.com/',
   signup: 'https://docs.google.com/forms/d/e/1FAIpQLSerR1rw8fyUqiVQHZkrugJN-iMh9a2AA1aT69imKq2yDqbPKw/viewform?usp=dialog',
