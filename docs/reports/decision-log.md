@@ -77,3 +77,10 @@ Last-Validated: 2026-05-27
 - Why: 운영 서버가 ARM64이고, 기존 x64 runner + QEMU 기반 ARM64 backend 이미지 빌드가 배포 시간의 critical path였기 때문이다.
 - Impact: 이 서비스는 더 이상 `linux/amd64` 이미지를 publish하지 않는다. QEMU 설정은 제거되며, 첫 빌드는 cache miss가 날 수 있지만 이후 빌드는 dependency/build layer 재사용으로 단축될 수 있다.
 - Owner: soo
+
+
+- Date: 2026-10-31
+- Decision: 운영 GitOps에 연결된 이 앱에서 main 반영은 운영 배포 시작으로 취급한다. 해당 변경의 main 반영 승인에는 기존 자동 배포가 포함되며 별도 수동 배포나 재승인을 요구하지 않는다.
+- Why: 사용자 정정 — “앱들은 운영에 다 gitops로 연결돼있으니까 배포를 따로 할 필요는 없고 main 반영 == 배포야.” 다른 에이전트도 동일하게 해석하도록 AGENTS.md에 운영 기준을 명시했다.
+- Impact: 앱 변경은 사전 검증 후 main에 반영하고 기존 CI/GitOps 및 운영 반영 결과를 확인한다. 보고는 main 반영/자동 배포 진행/운영 확인 상태를 구분한다. docs-only 워크플로 제외는 유지하며 CI/Ops 설정은 변경하지 않는다.
+- Owner: soo

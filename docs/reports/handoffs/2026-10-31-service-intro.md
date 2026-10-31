@@ -199,3 +199,30 @@ Last-Validated: 2026-10-31
 - 검증: Gemini 3안 × 소개/로그인 × 1440/768/375/320px의 24개 조합, A 원안/개선안 × 소개/로그인 × 1440/1024/768/375/320px의 20개 조합에서 페이지 오류와 가로 넘침 없음. Gemini 화면의 320px 내부 잘림 없음 확인. 검토 도구 전환·키보드·시안 로그인 제출 시 네트워크 요청 없음, 0% 막대 너비 0 확인. 소개/로그인 데스크톱·모바일 캡처와 비교 이미지 저장. 실제 운영 인증 검증은 아님.
 - 전달: 기존 로컬 preview에 `/gemini-proposals`와 `/design-review-refined`를 추가했고 Tailnet에서 HTTP 200 확인. 파일은 `/home/ubuntu/.codex/visualizations/2026/10/30/01a18dcf-2898-70d3-b21d-8e592f442f60/experibase-gemini-review/`. 기존 원안·베리에이션·앱 소스의 변경은 보존했다. Figma 변경·커밋·푸시·배포 없음.
 - agy/Argon 활용 평가: 독립 시안의 정보 구조와 구체적인 예시를 참고하는 데 유용했다. 생성 약 7분 및 반응형/문구 검토 비용이 발생했고 Codex 수정이 필요했으므로, 검증이 필요한 초안으로만 활용했다.
+
+## 관리 화면 시안 01 — 소개/로그인과 같은 톤
+
+- 변경: 사용자 후속 요청으로 A 디자인을 관리 화면에 확장하는 HTML 시안을 작성했다. 실험 목록·상세(설계/수집/결과/결정)·프로젝트·Feature Flags·SDK 연동 5개 화면. PRD에 이번 프로젝트의 요청/시각 기준/검토 범위를 기록했다. 앱 소스와 운영은 변경하지 않았다.
+- 검증: KO/EN·명암 테마·5개 화면 폭 및 화면별 상태 총 120개 조합에서 페이지 오류·가로 넘침 없음. 검색/필터/탭 키보드/모바일 메뉴/dialog/시안 저장 및 네트워크 API 미요청을 확인했다. 실제 데이터·인증·연동 검증은 아니다. 스크립트 `/tmp/check-experibase-admin-concept.cjs`, `/tmp/check-experibase-admin-followup.cjs`.
+- 전달: 기존 로컬 preview의 `/design-review-admin` 경로, Tailnet HTTP 200 확인. 원본·캡처·검증 결과는 `experibase-admin-concept/` 산출물 디렉터리에 있다. 로컬 preview unit만 재시작했으며 기존 소개/로그인·시안 경로는 보존했다. 커밋·푸시·운영 배포 없음. agy는 이번 시안에 사용하지 않았다.
+
+## 관리 화면 시안 02 — Gemini 비교 후 선별 반영
+
+- 변경: 실제 Gemini 4 Argon High의 동일 5화면 시안과 비평을 받았다(SUCCESS, `b1d822f8-bdd8-4750-abed-23fe9a421aa3`, 327초). Codex 기존안·Gemini 원본을 보존하고 목록 요약 축소·수신 이력 분리·상단 다음 행동을 기존 A 톤의 HTML에 반영했다. 메뉴 구조는 기존안을 유지했다. 비교·미채택 근거는 PRD 마지막 절에 기록했다.
+- 검증: Gemini 원본 80개 조합에서 페이지 오류/외부 요청은 없었으나 320px 넘침 8건을 발견했다. 번역/프로젝트·실험 선택/복사 안내/플래그 상태 처리도 제한이 있다. 개선안 120개 조합과 비교 화면 12개 조합 검증 통과, API 요청 없음. 기존안의 첫 행 위치 542→453px(1440px), 681→543px(375px)를 확인했다. 새 스크립트 `/tmp/check-admin-gemini.cjs`, `/tmp/check-admin-comparison.cjs`.
+- 전달: `/design-review-admin-compare`에서 원안·Gemini 원본·개선안을 전환한다. `/design-review-admin`은 개선안이다. 산출물은 `experibase-admin-gemini-review/`에 보존했다. 앱 소스·운영 배포·Figma 변경, 커밋·푸시는 없다. agy는 독립 정보 구조 제안에 도움이 됐지만 코드를 그대로 반영하기에는 검토·수정 비용이 컸다.
+
+
+## 프로젝트 선택기 중복 정리 — 2026-10-31
+
+- 변경: 사용자 피드백에 따라 HTML 시안 하단의 별도 프로젝트 메뉴를 제거했다. 상단에 프로젝트 전환 역할을 표시하고 관리/추가 기능을 선택기 내부로 통합했다. 실제 앱 `MainLayout`도 기존 shadcn DropdownMenu의 radio 항목으로 전환/전체 조회를 제공하며, 관리/추가는 현재 선택을 바꾸지 않고 해당 경로로 이동한다. 기존 변경은 보존했다.
+- 검증: frontend **18개 파일·113개 테스트** 및 TypeScript/Vite build 통과. Chromium에서 앱과 시안 각각 KO/EN × light/dark × 1440/375/320px, 총 24개 조합 검증. 프로젝트 전환 후 현재 경로 유지, 관리/추가 이동, 모바일 메뉴 닫힘, 키보드 Enter/Escape 및 가로 넘침 없음 확인. 앱 데이터는 로컬 API fixture로 검증했으며 운영 인증·데이터 검증은 아니다. 기존 act/chart/Browserslist/bundle 경고는 남아 있다.
+- 전달: [갱신한 시안](https://agent-server.tail03ec4e.ts.net:9449/design-review-admin). `experibase-admin-concept/project-picker-{1440,375}.png`와 `project-picker-verification.json`, `/tmp/check-experibase-project-picker.cjs`에 검증 산출물을 저장했다. 기존 비교 원본은 보존했다. 이번 변경의 커밋·푸시·배포·Figma 변경은 없으며 관리 화면 전체 앱 구현 완료를 의미하지 않는다. agy는 이번 선택기 수정에 사용하지 않았다.
+
+
+## main 반영과 GitOps 운영 기준 정정 — 2026-10-31
+
+- 사용자 지시: 현재 변경을 main에 반영하고, main 반영이 곧 자동 운영 배포라는 기준을 다른 에이전트도 따르도록 기록한다. 별도 수동 배포 단계는 없다.
+- 범위: 프로젝트 선택기 정리와 해당 테스트, 기존 미커밋 시안/피드백 기록, 저장소 AGENTS.md 및 decision-log의 운영 기준. 공용 main worktree의 다른 작업은 포함하지 않는다. 공통 Codex 지침 `~/.codex/AGENTS.md`에도 GitOps 앱의 동일 원칙을 기록했다. 공통 지침은 이 저장소의 커밋 대상이 아니다.
+- 검증: 앱 코드는 직전 18개 파일·113개 테스트, TypeScript/Vite build, 브라우저 24개 조합 검증 이후 변경하지 않았다. 문서 변경에는 `git diff --check`를 적용한다. 기존 CI/GitOps 경로는 수정하지 않는다.
+- 상태: 아래 선택기 수정의 과거 ‘커밋·푸시·배포 없음’ 기록은 당시 상태다. 이번 사용자 지시로 main 게시와 자동 배포 확인을 진행한다. 관리 화면 전체 구현 완료를 뜻하지 않는다.

@@ -178,26 +178,62 @@ describe('MainLayout Component', () => {
     expect(screen.queryByRole('button', { name: '설정' })).not.toBeInTheDocument();
   });
 
-  it('groups project actions above navigation without changing the selected scope', async () => {
+  it('keeps management and creation inside the picker without changing project scope', () => {
     const setCurrentProjectId = vi.fn();
     vi.mocked(useProject).mockReturnValue({ ...defaultProjectContext, setCurrentProjectId });
     renderMainLayout(['/experiments']);
-    const projectArea = within(screen.getByRole('region', { name: '프로젝트 관리' }));
-    expect(projectArea.getByRole('combobox')).toBeInTheDocument();
-    fireEvent.click(projectArea.getByRole('button', { name: '새 프로젝트' }));
+    expect(screen.queryByRole('button', { name: '새 프로젝트' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('navigation')).queryByText(/프로젝트/)).not.toBeInTheDocument();
+    const picker = screen.getByRole('button', { name: '프로젝트를 선택하세요' });
+    fireEvent.keyDown(picker, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('menuitem', { name: '새 프로젝트' }));
     expect(mockedUseNavigate).toHaveBeenLastCalledWith('/projects?create=1');
-    fireEvent.click(projectArea.getByRole('button', { name: '프로젝트 관리' }));
+    fireEvent.keyDown(picker, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('menuitem', { name: '프로젝트 관리' }));
     expect(mockedUseNavigate).toHaveBeenLastCalledWith('/projects');
     expect(setCurrentProjectId).not.toHaveBeenCalled();
-    expect(within(screen.getByRole('navigation')).queryByText(/프로젝트/)).not.toBeInTheDocument();
+  });
+
+  it('switches scope through the picker while staying on the current screen', () => {
+    const setCurrentProjectId = vi.fn();
+    vi.mocked(useProject).mockReturnValue({ ...defaultProjectContext, setCurrentProjectId,
+      currentProjectId: 'alpha',
+      projects: [
+        { id: 'alpha', name: 'Alpha', project_type: 'ab_test', created_at: '2026-10-31' },
+        { id: 'beta', name: 'Beta', project_type: 'ab_test', created_at: '2026-10-31' },
+      ],
+    });
+    renderMainLayout(['/feature-flags']);
+    const picker = screen.getByRole('button', { name: '프로젝트를 선택하세요' });
+    expect(picker).toHaveTextContent('Alpha');
+    expect(picker).toHaveTextContent('프로젝트 전환');
+    fireEvent.keyDown(picker, { key: 'ArrowDown' });
+    expect(screen.getByRole('menuitemradio', { name: 'Alpha' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Beta' }));
+    expect(setCurrentProjectId).toHaveBeenLastCalledWith('beta');
+    fireEvent.keyDown(picker, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '전체 프로젝트' }));
+    expect(setCurrentProjectId).toHaveBeenLastCalledWith(null);
+    expect(mockedUseNavigate).not.toHaveBeenCalled();
   });
 
   it('can reopen project controls from the collapsed sidebar', () => {
     renderMainLayout();
     fireEvent.click(screen.getByRole('button', { name: 'Toggle sidebar' }));
     fireEvent.click(screen.getByRole('button', { name: '프로젝트를 선택하세요' }));
-    expect(screen.getByRole('button', { name: '새 프로젝트' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '프로젝트 관리' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('button', { name: '프로젝트를 선택하세요' }), { key: 'Enter' });
+    expect(screen.getByRole('menuitem', { name: '새 프로젝트' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: '프로젝트 관리' })).toBeInTheDocument();
+  });
+
+  it('closes the mobile sidebar when navigating to project management', () => {
+    window.innerWidth = 375;
+    renderMainLayout();
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar menu' }));
+    fireEvent.keyDown(screen.getByRole('button', { name: '프로젝트를 선택하세요' }), { key: 'Enter' });
+    fireEvent.click(screen.getByRole('menuitem', { name: '프로젝트 관리' }));
+    expect(mockedUseNavigate).toHaveBeenLastCalledWith('/projects');
+    expect(screen.getByRole('complementary')).toHaveClass('-translate-x-full');
   });
 
 });
