@@ -13,6 +13,7 @@ Last-Validated: 2026-10-31
 4. 에이전트/병렬 작업은 `docs/guides/agent_collaboration.md`
 
 ## 1) Current Active Reports
+- [12기 일회성 회고 신규 제출 종료](handoffs/2026-10-31-reflection-retirement.md) — 로컬 구현·검증, 기존 데이터 보존 및 운영 상태 미확인 사항
 - [ExperiBase 서비스 PRD와 구현 대조](experibase-service-prd.md) — 서비스 정의·이용 흐름·소개 배치·구현 차이의 검토 진입점. 요구사항/우선순위 제안은 미확정이며 운영 완료 선언이 아님.
 - [서비스 소개 로컬 구현](handoffs/2026-10-31-service-intro.md) — 로그인 소개·공개 `/about`·관리 화면 링크, 검증 및 인증 통합 범위
 - `docs/reports/handoffs/2026-10-27-bin-4-security-validation.md` — BIN-4 보안 후보 재검증 및 Ops 인계
