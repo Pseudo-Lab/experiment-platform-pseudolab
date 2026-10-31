@@ -226,3 +226,9 @@ Last-Validated: 2026-10-31
 - 범위: 프로젝트 선택기 정리와 해당 테스트, 기존 미커밋 시안/피드백 기록, 저장소 AGENTS.md 및 decision-log의 운영 기준. 공용 main worktree의 다른 작업은 포함하지 않는다. 공통 Codex 지침 `~/.codex/AGENTS.md`에도 GitOps 앱의 동일 원칙을 기록했다. 공통 지침은 이 저장소의 커밋 대상이 아니다.
 - 검증: 앱 코드는 직전 18개 파일·113개 테스트, TypeScript/Vite build, 브라우저 24개 조합 검증 이후 변경하지 않았다. 문서 변경에는 `git diff --check`를 적용한다. 기존 CI/GitOps 경로는 수정하지 않는다.
 - 상태: 아래 선택기 수정의 과거 ‘커밋·푸시·배포 없음’ 기록은 당시 상태다. 이번 사용자 지시로 main 게시와 자동 배포 확인을 진행한다. 관리 화면 전체 구현 완료를 뜻하지 않는다.
+
+
+### main 반영 결과
+
+- 앱 및 운영 기준 커밋 `be4485ee1e4c313d55e6e5af1620194e64c51671`을 origin/main에 반영했다. [CI 41191639193](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41191639193), [GitOps 41191735404](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41191735404) 모두 성공했다. Ops의 frontend/backend 태그가 같은 SHA인 것을 확인했다.
+- 운영 `/`, `/login`, `/api/v1/status/` 200, 비로그인 `/api/v1/projects/` 401 확인. 19:16 KST 확인 시 공개 앱은 이전 JS 파일 `index-Bws3MtIO.js`를 제공했다. 따라서 런타임 새 버전 반영은 아직 확인하지 못했다. ArgoCD Application의 automated prune/selfHeal 설정은 확인했으며 수동 sync/재배포는 실행하지 않았다. main 게시와 기존 자동 배포 경로 실행은 완료된 상태다.
