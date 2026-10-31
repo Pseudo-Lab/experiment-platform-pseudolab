@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     ChevronRight,
     ChevronLeft,
     FlaskConical,
+    Info,
     Bug,
     Menu,
     Sun,
@@ -267,6 +268,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 </nav>
 
                 <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
+                    <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? '서비스 소개' : 'About ExperiBase'}>
+                        <Link to="/about" aria-label={lang === 'ko' ? '서비스 소개' : 'About ExperiBase'}>
+                            <Info aria-hidden="true" className="shrink-0" />
+                            {isSidebarOpen && <span>{lang === 'ko' ? '서비스 소개' : 'About ExperiBase'}</span>}
+                        </Link>
+                    </Button>
                     {currentProjectId === 'demo-app' && (
                         <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} secondary />
                     )}
