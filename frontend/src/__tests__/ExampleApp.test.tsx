@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ExampleApp } from '@/features/example/ExampleApp'
 
@@ -48,12 +48,14 @@ function mockExampleApi() {
       return okJson([
         {
           id: 'exp-home',
+          flag_key: 'home_layout_v1',
           name: 'home_layout_exp_v1',
           status: 'running',
           primary_metric: 'study_card_clicked',
         },
         {
           id: 'exp-sponsor',
+          flag_key: 'sponsor_slot_v1',
           name: 'sponsor_slot_exp_v1',
           status: 'running',
           primary_metric: 'sponsor_clicked',
@@ -80,6 +82,29 @@ describe('ExampleApp', () => {
   afterEach(() => {
     cleanup()
     vi.unstubAllGlobals()
+  })
+
+  it('preserves legacy SDK events through the real provider, bridge and action hook', async () => {
+    render(<MemoryRouter initialEntries={['/example/experiments']}>
+      <Routes><Route path="/example/*" element={<ExampleApp lang="en" />} /></Routes>
+    </MemoryRouter>)
+    const requests = () => vi.mocked(fetch).mock.calls
+      .filter(([, init]) => init?.method === 'POST')
+      .map(([url, init]) => ({ url: String(url), body: JSON.parse(String(init?.body)) }))
+    await waitFor(() => {
+      expect(requests().some(r => r.url.endsWith('/events') && r.body.type === 'impression')).toBe(true)
+      expect(requests().some(r => r.url.endsWith('/capture') && r.body.event_name === 'exp_exposure')).toBe(true)
+    })
+    for (const request of requests().filter(r => r.url.endsWith('/decide'))) {
+      expect(request.body.event_model).toBeUndefined()
+      expect(request.body.track).toBeUndefined()
+    }
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Send test event' }))[0])
+    await waitFor(() => {
+      expect(requests().some(r => r.url.endsWith('/capture') && r.body.event_name === 'showcase_cta_clicked')).toBe(true)
+      expect(requests().some(r => r.url.endsWith('/events') && r.body.type === 'conversion'
+        && r.body.key === 'home_layout_v1')).toBe(true)
+    })
   })
 
   it('renders the home example route with English copy', async () => {

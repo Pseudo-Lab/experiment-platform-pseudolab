@@ -16,6 +16,7 @@ from app.schemas.experiment import (
     ExperimentResult, VariantResult, GuardrailMetricResult,
 )
 from app.db import d1
+from app.services.sdk_events import read_sdk_events
 
 
 def _now() -> str:
@@ -61,6 +62,10 @@ class ExperimentService:
 
         if data.flag_key:
             await self._require_flag(data.flag_key)
+            if data.event_model == "sdk_v1":
+                flags = await d1.query("SELECT project_id FROM feature_flag WHERE flag_key = ?", [data.flag_key])
+                if flags[0]["project_id"] != data.project_id:
+                    raise HTTPException(status_code=422, detail="Flag and experiment project must match")
 
         # variants는 단순 이름 배열로 저장. linked 실험은 flag rules에서 derive되므로
         # variant_names_json는 unlinked 실험의 진실 공급원.
@@ -73,8 +78,8 @@ class ExperimentService:
             """INSERT INTO experiments
                (id, name, hypothesis, expected_effect, primary_metric, completion_event,
                 experiment_type, cohort_id, flag_key, variant_names_json, product, project_id,
-                status, owner_id, start_at, end_at, guardrail_metrics, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)""",
+                status, owner_id, start_at, end_at, guardrail_metrics, created_at, updated_at, event_model)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?)""",
             [
                 exp_id,
                 data.name,
@@ -92,7 +97,7 @@ class ExperimentService:
                 _serialize_datetime(data.start_at),
                 _serialize_datetime(data.end_at),
                 guardrail_metrics_json,
-                now, now,
+                now, now, data.event_model,
             ]
         )
         if not ok:
@@ -101,6 +106,11 @@ class ExperimentService:
 
     async def update(self, experiment_id: str, data: ExperimentUpdate) -> Optional[Experiment]:
         patch = {k: v for k, v in data.model_dump().items() if v is not None}
+        current = await self.get(experiment_id)
+        if current and current.event_model == "sdk_v1":
+            if any(key in patch and patch[key] != getattr(current, key)
+                   for key in ("project_id", "flag_key", "experiment_type")):
+                raise HTTPException(status_code=422, detail="SDK v1 attribution identity is immutable")
         if not patch:
             return await self.get(experiment_id)
 
@@ -268,18 +278,26 @@ class ExperimentService:
         if exp.experiment_type == ExperimentType.QUASI_EXPERIMENT:
             return await self._get_quasi_result(exp, experiment_id)
 
-        # ── 분모 결정: exp_exposure 이벤트 우선, 없으면 experiment_assignments 폴백 ──
-        # 분모는 "배정"이 아닌 "실제 노출"이어야 정확한 CTR/전환율 계산 가능.
-        # exp_exposure 이벤트에는 properties.variant 가 필수(control|treatment).
-        exposure_rows = await d1.query(
-            """SELECT user_id,
-                      json_extract(properties, '$.variant') AS variant
-                 FROM event_log
-                WHERE event_name = 'exp_exposure'
-                  AND json_extract(properties, '$.experiment_id') = ?
-                GROUP BY user_id""",
-            [experiment_id],
-        )
+        sdk_v1 = exp.event_model == "sdk_v1"
+        sdk_rows = await read_sdk_events(experiment_id, exp.project_id) if sdk_v1 else []
+        if sdk_v1:
+            # A v1 cohort never mixes with uncorrelated historical dual writes.
+            exposure_rows = [r for r in sdk_rows if r["sdk_event_type"] == "exposure"]
+            # A user observed in multiple variants is not a valid randomized unit.
+            seen: dict[str, set[str]] = {}
+            for row in exposure_rows:
+                seen.setdefault(row["user_id"], set()).add(row["variant"])
+            exposure_rows = [r for r in exposure_rows if len(seen[r["user_id"]]) == 1]
+        else:
+            exposure_rows = await d1.query(
+                """SELECT user_id,
+                          json_extract(properties, '$.variant') AS variant
+                     FROM event_log
+                    WHERE event_name = 'exp_exposure'
+                      AND json_extract(properties, '$.experiment_id') = ?
+                    GROUP BY user_id""",
+                [experiment_id],
+            )
 
         denominator_source: str
         variant_users: dict[str, set[str]] = {}
@@ -312,6 +330,14 @@ class ExperimentService:
                 message="exp_exposure 이벤트에 유효한 variant 값이 없습니다. properties.variant(control|treatment) 확인이 필요합니다.",
             )
 
+        if sdk_v1 and len(variant_users) < 2:
+            return ExperimentResult(
+                experiment_id=experiment_id, primary_metric=exp.primary_metric,
+                sample_size=len({uid for users in variant_users.values() for uid in users}),
+                denominator_source=denominator_source,
+                message="control 또는 treatment 사용자가 없습니다",
+            )
+
         # variant_users 키 순서는 쿼리 반환 순서라 비결정적이다.
         # treatment는 반드시 control이 아닌 variant 중에서 골라야 한다
         # (이전엔 variant_names[1]을 썼는데 그 자리에 control이 오면
@@ -325,7 +351,11 @@ class ExperimentService:
 
         # ── 전환 유저 조회 (primary_metric 이벤트 발생 여부) ──
         all_user_ids = list({uid for uids in variant_users.values() for uid in uids})
-        converted_users = await self._users_with_event(exp.primary_metric, all_user_ids)
+        converted_users = (
+            {r["user_id"] for r in sdk_rows if r["attributed"] and r["event_name"] == exp.primary_metric
+             and r["sdk_event_type"] != "exposure"}
+            if sdk_v1 else await self._users_with_event(exp.primary_metric, all_user_ids)
+        )
 
         c_users = variant_users.get(control_name, set())
         t_users = variant_users.get(treatment_name, set())
@@ -370,7 +400,11 @@ class ExperimentService:
         if exp.guardrail_metrics:
             guardrail_results = []
             for gm in exp.guardrail_metrics:
-                gm_converted = await self._users_with_event(gm, all_user_ids)
+                gm_converted = (
+                    {r["user_id"] for r in sdk_rows if r["attributed"] and r["event_name"] == gm
+                     and r["sdk_event_type"] != "exposure"}
+                    if sdk_v1 else await self._users_with_event(gm, all_user_ids)
+                )
                 gm_c_rate = len(c_users & gm_converted) / c_total if c_total > 0 else 0.0
                 gm_t_rate = len(t_users & gm_converted) / t_total if t_total > 0 else 0.0
                 gm_uplift = round(gm_t_rate - gm_c_rate, 4)
@@ -540,6 +574,7 @@ class ExperimentService:
             guardrail_metrics = None
 
         return Experiment(
+            event_model=row["event_model"],
             id=row["id"],
             name=row["name"],
             hypothesis=row.get("hypothesis"),

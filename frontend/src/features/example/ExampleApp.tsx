@@ -60,6 +60,7 @@ export function ExampleApp({ lang }: Props) {
 
   return (
     <ExperibaseProvider
+      eventModel="legacy"
       key={apiKey}
       apiKey={apiKey}
       baseUrl={API_BASE_URL}

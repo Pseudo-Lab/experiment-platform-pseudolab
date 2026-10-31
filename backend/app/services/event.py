@@ -1,5 +1,7 @@
 import json
 from datetime import datetime, timezone
+from uuid import NAMESPACE_URL, uuid5
+from fastapi import HTTPException
 from app.schemas.event import EventCapture, EventBatch, ExperimentEvent, PersonIdentify
 from app.db import d1
 
@@ -11,12 +13,41 @@ def _now() -> str:
 class EventService:
 
     async def capture(self, data: EventCapture, project_id: str | None = None) -> bool:
+        if data.tracking_context:
+            context = data.tracking_context
+            if context.project_id != project_id:
+                raise HTTPException(status_code=403, detail="Matching project SDK key required")
+            flags = await d1.query("SELECT project_id FROM feature_flag WHERE flag_key = ?", [context.key])
+            if not flags or flags[0]["project_id"] != project_id:
+                raise HTTPException(status_code=403, detail="Flag does not belong to SDK project")
+            if context.experiment_id:
+                experiments = await d1.query(
+                    """SELECT id FROM experiments WHERE id = ? AND flag_key = ?
+                       AND project_id IS ? AND experiment_type = 'ab_test' AND event_model = 'sdk_v1'""",
+                    [context.experiment_id, context.key, project_id],
+                )
+                if not experiments:
+                    raise HTTPException(status_code=403, detail="Invalid experiment attribution")
+            expected = str(uuid5(NAMESPACE_URL, json.dumps([
+                project_id, context.experiment_id, context.key, context.user_id, context.variant,
+            ])))
+            if context.assignment_id != expected:
+                raise HTTPException(status_code=422, detail="Invalid assignment identity")
+            data = data.model_copy(update={
+                "event_id": "sdk_v1:" + json.dumps([project_id, data.user_id, data.event_id]),
+                "properties": {**(data.properties or {}), **context.model_dump(),
+                               "event_model": "sdk_v1", "sdk_event_type": data.sdk_event_type},
+            })
+        elif data.properties and data.properties.get("event_model") == "sdk_v1":
+            raise HTTPException(status_code=422, detail="tracking_context required for sdk_v1")
         rows = await d1.query(
             "SELECT cohort_id FROM person WHERE user_id = ?", [data.user_id]
         )
         cohort_id = rows[0]["cohort_id"] if rows else None
 
         event_time = data.timestamp.isoformat() if data.timestamp else _now()
+        if data.tracking_context and data.timestamp:
+            event_time = data.timestamp.replace(tzinfo=data.timestamp.tzinfo or timezone.utc).astimezone(timezone.utc).isoformat()
         properties = json.dumps(data.properties) if data.properties else None
 
         return await d1.execute(

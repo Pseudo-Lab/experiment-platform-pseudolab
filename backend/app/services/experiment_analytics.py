@@ -1,6 +1,7 @@
 import math
 from collections import defaultdict
 from app.db import d1
+from app.services.sdk_events import read_sdk_events
 from app.schemas.experiment_analytics import (
     AnomalyWarning, AvailableEventsResponse, ConversionData,
     ExperimentAnalyticsResponse, ImpressionData, ImpressionTimeSeries,
@@ -72,14 +73,22 @@ class ExperimentAnalyticsService:
     async def get_analytics(self, experiment_id: str) -> ExperimentAnalyticsResponse:
         # resolve experiment key (flag_key) for events that lack experiment_id
         exp_rows = await d1.query(
-            "SELECT flag_key, experiment_type, primary_metric FROM experiments WHERE id = ?",
+            "SELECT flag_key, experiment_type, primary_metric, project_id, event_model FROM experiments WHERE id = ?",
             [experiment_id],
         )
         flag_key: str | None = exp_rows[0]["flag_key"] if exp_rows else None
         experiment_type: str = (exp_rows[0]["experiment_type"] or "ab_test") if exp_rows else "ab_test"
         primary_metric: str | None = exp_rows[0]["primary_metric"] if exp_rows else None
 
-        if experiment_type == "quasi_experiment":
+        sdk_v1 = bool(exp_rows and exp_rows[0]["event_model"] == "sdk_v1")
+        sdk_rows = await read_sdk_events(experiment_id, exp_rows[0].get("project_id")) if sdk_v1 else []
+        if sdk_v1:
+            imp_rows = [r for r in sdk_rows if r["sdk_event_type"] == "exposure"]
+            # One primary-metric success per visible instance, even for repeated actions.
+            conv_rows = list({(r["user_id"], r["impression_id"]): r for r in sdk_rows
+                              if r["sdk_event_type"] != "exposure" and r["attributed"]
+                              and r["event_name"] == primary_metric}.values())
+        elif experiment_type == "quasi_experiment":
             # 준실험: luvp trackEvent → /capture → event_log 테이블로 쌓임
             # properties.experiment_id 로 필터, primary_metric 일치 여부로 impression/conversion 구분
             imp_rows = await self._fetch_events_from_log(experiment_id, primary_metric, "impression")
@@ -90,10 +99,26 @@ class ExperimentAnalyticsService:
 
         impressions = self._build_impressions(imp_rows)
         conversions = self._build_conversions(conv_rows)
-        significance = self._compute_significance(impressions, conversions)
+        if sdk_v1:
+            # Live charts describe visible instances, not independent randomized units.
+            # Do not infer a winner from repeated views. User-level inference is /result.
+            conversions.rate.update({variant: conversions.by_variant.get(variant, 0) / count
+                                     for variant, count in impressions.by_variant.items() if count})
+            significance = StatisticalSignificance(
+                p_value=None, is_significant=False, confidence=0.95, winner=None,
+            )
+            users: dict[str, set[str]] = {}
+            for row in imp_rows:
+                users.setdefault(row["user_id"], set()).add(row["variant"])
+            counts: dict[str, int] = defaultdict(int)
+            for variants in users.values():
+                if len(variants) == 1:
+                    counts[next(iter(variants))] += 1
+            srm_warning = _srm_check(counts)
+        else:
+            significance = self._compute_significance(impressions, conversions)
+            srm_warning = _srm_check(impressions.by_variant)
         anomalies = self._detect_anomalies(imp_rows, conv_rows)
-
-        srm_warning = _srm_check(impressions.by_variant)
 
         return ExperimentAnalyticsResponse(
             impressions=impressions,
@@ -306,13 +331,24 @@ class ExperimentAnalyticsService:
 
     async def get_available_events(self, experiment_id: str) -> AvailableEventsResponse:
         exp_rows = await d1.query(
-            "SELECT flag_key, experiment_type, primary_metric FROM experiments WHERE id = ?",
+            "SELECT flag_key, experiment_type, primary_metric, project_id, event_model FROM experiments WHERE id = ?",
             [experiment_id],
         )
         flag_key: str | None = exp_rows[0]["flag_key"] if exp_rows else None
         experiment_type: str = (exp_rows[0]["experiment_type"] or "ab_test") if exp_rows else "ab_test"
         primary_metric: str | None = exp_rows[0]["primary_metric"] if exp_rows else None
 
+        sdk_v1 = bool(exp_rows and exp_rows[0]["event_model"] == "sdk_v1")
+        sdk_rows = await read_sdk_events(experiment_id, exp_rows[0].get("project_id")) if sdk_v1 else []
+        if sdk_v1:
+            event_types = sorted({r["event_name"] for r in sdk_rows})
+            conversion_events = [name for name in event_types if name == primary_metric and name != "exp_exposure"]
+            return AvailableEventsResponse(
+                event_types=event_types,
+                has_impressions=any(r["sdk_event_type"] == "exposure" for r in sdk_rows),
+                has_conversions=any(r["attributed"] and r["event_name"] in conversion_events for r in sdk_rows),
+                conversion_events=conversion_events, total_events=len(sdk_rows),
+            )
         if experiment_type == "quasi_experiment":
             # event_log 기반 이벤트 목록 집계 (smoke_test 제외)
             SMOKE_FILTER = "AND (json_extract(properties, '$.smoke_test') IS NULL OR json_extract(properties, '$.smoke_test') = 0)"

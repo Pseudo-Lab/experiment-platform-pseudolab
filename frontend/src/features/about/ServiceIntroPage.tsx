@@ -36,7 +36,7 @@ const copy = {
       ['결과·결정', '결과를 검토하고 판단과 그 근거를 기록합니다.'],
     ],
     measurement: '이벤트 수집과 개선 효과의 확인은 다릅니다. 결과는 수집된 데이터와 실험 설계를 함께 살펴 해석하세요.',
-    teamLink: '팀 활동 보기', language: 'Switch to English', theme: '화면 테마 변경',
+    sdkGuide: 'SDK 가이드', teamLink: '팀 활동 보기', language: 'Switch to English', theme: '화면 테마 변경',
   },
   en: {
     label: 'Open-source experimentation', title: 'Better products start', titleAccent: 'with an experiment.',
@@ -61,7 +61,7 @@ const copy = {
       ['Review results and decide', 'Review the results and record your decision and reasoning.'],
     ],
     measurement: 'Receiving events and demonstrating an improvement are different checks. Interpret results alongside your data and experiment design.',
-    teamLink: 'Team activities', language: '한국어로 변경', theme: 'Toggle theme',
+    sdkGuide: 'SDK guide', teamLink: 'Team activities', language: '한국어로 변경', theme: 'Toggle theme',
   },
 };
 
@@ -78,6 +78,7 @@ export function ServiceIntroPage({ lang, setLang, theme, setTheme, authenticated
         </Link>
         <nav aria-label={t.features} className="ml-auto hidden items-center gap-6 text-sm text-muted-foreground md:flex">
           <a href="#features" className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.features}</a>
+          <Link to="/docs/sdk" state={location.state} className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.sdkGuide}</Link>
           <a href="#how-it-works" className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.flowLink}</a>
         </nav>
         <div className="flex items-center gap-1">
@@ -132,7 +133,7 @@ export function ServiceIntroPage({ lang, setLang, theme, setTheme, authenticated
         </section>
       </main>
       <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-border px-4 py-6 text-xs text-muted-foreground md:px-6">
-        <span>ExperiBase · {t.label}</span><a className="inline-flex items-center gap-2 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" href="https://pseudo-lab.github.io/experiment-platform-pseudolab/">{t.teamLink}<ArrowRight aria-hidden="true" className="h-3 w-3" /></a>
+        <span>ExperiBase · {t.label}</span><Link to="/docs/sdk" state={location.state} className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.sdkGuide}</Link><a className="inline-flex items-center gap-2 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" href="https://pseudo-lab.github.io/experiment-platform-pseudolab/">{t.teamLink}<ArrowRight aria-hidden="true" className="h-3 w-3" /></a>
       </footer>
     </div>
   );

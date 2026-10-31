@@ -262,6 +262,7 @@ def mock_d1(monkeypatch):
     conn.executescript(_SCHEMA)
     from pathlib import Path
     conn.executescript((Path(__file__).parents[1] / "migrations/036_project_server_credential.sql").read_text())
+    conn.executescript((Path(__file__).parents[1] / "migrations/038_sdk_event_model.sql").read_text())
     conn.commit()
 
     async def _query(sql: str, params=None, database_id=None):
