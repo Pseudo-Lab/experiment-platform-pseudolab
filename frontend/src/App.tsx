@@ -43,7 +43,7 @@ function AppShell() {
   const [backendStatus, setBackendStatus] = useState<string>("connecting...");
   const { state: authState, user, logout } = useAuth();
   const location = useLocation();
-  const isServiceIntro = location.pathname === '/about' || location.pathname === '/about/';
+  const isServiceIntro = location.pathname === '/' || location.pathname === '/about' || location.pathname === '/about/';
 
   useEffect(() => {
     if (isServiceIntro) return;
@@ -69,6 +69,9 @@ function AppShell() {
   }, [theme]);
 
   if (isServiceIntro) {
+    if (location.pathname !== '/') {
+      return <Navigate to={{ pathname: '/', search: location.search, hash: location.hash }} replace state={location.state} />;
+    }
     return <ServiceIntroPage lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} authenticated={authState === 'authenticated'} />;
   }
 
@@ -102,7 +105,6 @@ function AppShell() {
       >
         <Routes>
           <Route path="/login" element={<Navigate to="/experiments" replace />} />
-          <Route path="/" element={<Navigate to="/experiments" replace />} />
           <Route path="/dashboard" element={<Navigate to="/experiments" replace />} />
           <Route path="/community" element={<Navigate to="/experiments" replace />} />
           <Route path="/experiments" element={<Experiments lang={lang} />} />
