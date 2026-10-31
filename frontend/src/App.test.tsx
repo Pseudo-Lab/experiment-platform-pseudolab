@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom'; // Use MemoryRouter for isolated testing
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'; // Use MemoryRouter for isolated testing
 import App from '@/App';
 import { authApi } from '@/services/authApi';
 import { projectApi } from '@/services/api';
@@ -101,13 +101,36 @@ describe('App Component', () => {
     );
   };
 
-  it('renders without crashing and navigates to experiments by default', async () => {
+  it.each([true, false])('shows the public introduction at root with authenticated=%s', async (authenticated) => {
+    authResponse = { authenticated, user: authenticated ? { username: 'admin' } : null };
+    await act(async () => { renderApp(['/']); });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
+    expect(screen.getAllByRole('link', { name: authenticated ? '관리 화면 열기' : '관리자 로그인' })[0])
+      .toHaveAttribute('href', authenticated ? '/experiments' : '/login');
+    expect(projectApi.list).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/status/'));
+  });
+
+  it('replaces a legacy introduction URL while preserving its query, anchor and return state', async () => {
+    authResponse = { authenticated: false, user: null };
+    function RouteProbe() {
+      const location = useLocation();
+      const navigate = useNavigate();
+      return <><output data-testid="location">{location.pathname + location.search + location.hash}</output>
+        <output data-testid="return-path">{location.state?.from?.pathname}</output>
+        <button onClick={() => navigate(-1)}>Go back</button></>;
+    }
     await act(async () => {
-      renderApp(['/']); // Start from root
+      render(<MemoryRouter initialEntries={['/login', { pathname: '/about', search: '?source=legacy', hash: '#features', state: { from: { pathname: '/projects' } } }]}>
+        <App /><RouteProbe />
+      </MemoryRouter>);
     });
-    expect(screen.getByText('ExperiBase')).toBeInTheDocument(); // Checks if App/MainLayout renders
-    expect(screen.getByText('가설을 세우고, 수집된 데이터를 확인하고, 다음 결정을 기록하세요.')).toBeInTheDocument(); // Checks if Overview content renders
-    // expect(window.location.pathname).toBe('/dashboard'); // Removed due to MemoryRouter behavior
+    expect(screen.getByTestId('location')).toHaveTextContent('/?source=legacy#features');
+    expect(screen.getByTestId('return-path')).toHaveTextContent('/projects');
+    expect(projectApi.list).not.toHaveBeenCalled();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Go back' })); });
+    expect(screen.getByTestId('location')).toHaveTextContent('/login');
+    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
   });
 
   it('redirects anonymous users to the login page', async () => {
@@ -191,7 +214,7 @@ describe('App Component', () => {
   });
   it('shows the public introduction while session restoration is pending without loading projects', async () => {
     vi.spyOn(authApi, 'me').mockReturnValue(new Promise(() => {}));
-    await act(async () => { renderApp(['/about']); });
+    await act(async () => { renderApp(['/']); });
     expect(screen.getByRole('heading', { level: 1, name: /더 나은 제품을 만드는/  })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: '관리자 로그인' })[0]).toHaveAttribute('href', '/login');
     expect(projectApi.list).not.toHaveBeenCalled();
@@ -208,8 +231,8 @@ describe('App Component', () => {
     expect(screen.getAllByRole('link', { name: 'Admin sign in' })[0]).toBeInTheDocument();
   });
 
-  it('offers a workspace link to signed-in visitors and keeps the about route public on expiry', async () => {
-    await act(async () => { renderApp(['/about']); });
+  it('offers a workspace link to signed-in visitors and keeps the root public on expiry', async () => {
+    await act(async () => { renderApp(['/']); });
     expect(screen.getAllByRole('link', { name: '관리 화면 열기' })[0]).toHaveAttribute('href', '/experiments');
     expect(projectApi.list).not.toHaveBeenCalled();
     await act(async () => { window.dispatchEvent(new Event('auth:unauthorized')); });

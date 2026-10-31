@@ -83,10 +83,10 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
   return (
     <div className="service-entry min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
-        <Link to="/about" state={location.state} className="flex items-center gap-2 rounded-md font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Link to="/" state={location.state} className="flex items-center gap-2 rounded-md font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Diamond aria-hidden="true" className="h-8 w-8 rounded-lg bg-primary p-1.5 text-primary-foreground" />ExperiBase
         </Link>
-        <div className="flex items-center gap-1"><Button asChild variant="ghost" className="mr-3 hidden sm:inline-flex"><Link to="/about" state={location.state}>{copy.about}</Link></Button>
+        <div className="flex items-center gap-1"><Button asChild variant="ghost" className="mr-3 hidden sm:inline-flex"><Link to="/" state={location.state}>{copy.about}</Link></Button>
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={copy.themeLabel}>{theme === 'light' ? <Moon /> : <Sun />}</Button>
           <Button variant="outline" size="sm" onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} aria-label={copy.language}><Globe aria-hidden="true" />{lang === 'ko' ? 'EN' : 'KO'}</Button>
         </div>
@@ -142,7 +142,7 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
             {submitting ? copy.submitting : copy.submit}<ArrowRight aria-hidden="true" />
           </Button>
           <p className="mt-4 text-xs leading-loose text-muted-foreground">{copy.access}</p>
-          <Link to="/about" state={location.state} className="mt-6 block rounded text-center text-xs text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{copy.back}</Link>
+          <Link to="/" state={location.state} className="mt-6 block rounded text-center text-xs text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{copy.back}</Link>
         </form>
       </div>
       </main>

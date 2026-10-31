@@ -22,6 +22,13 @@ Last-Validated: 2026-10-31
 - 배포 전환 중 첫 확인에서 API 502가 관찰됐고, 이후 status 200 및 익명 experiments 401로 회복됐다. 재실행한 운영 브라우저 검증도 통과했다. 운영 데이터 쓰기나 실제 관리자 자격증명 사용은 없었다. 로그인 성공·로그아웃·인증 후 관리 화면 및 ArgoCD Health/Pod readiness 직접 조회는 이번 운영 검증에 포함하지 않았다.
 - 임시 증거: `/tmp/experibase-production-evidence/result.json`과 화면 캡처, `/tmp/check-experibase-production.cjs`, `/tmp/experibase-release-ci.log`, `/tmp/experibase-release-gitops-complete.log`. 관리 화면의 PRD 후속 요구와 Figma 동기화는 별도다.
 
+## 대표 주소 후속 — 공개 소개를 `/`에 배치
+
+- 총괄 요청 `033ad4cf-6988-45b9-90a9-1138d7f28783`을 기존 소개·로그인 작업에 합류했다. 앞선 A 개선안 배포 완료 후 순차 진행하며 인프라·인증 방식·Google 가입 변경은 포함하지 않는다. 아래 루트 기존 동작 유지 기록은 이 후속으로 대체된다.
+- `/`는 인증 상태에 관계없이 공개 소개다. `/about`·`/about/`은 query/hash/location.state를 보존해 `/`로 replace 이동한다. 내부 소개 링크도 `/`를 사용한다. CTA는 익명 `/login`, 인증 `/experiments`; 보호된 관리 경로와 로그인 복귀 계약은 유지한다.
+- frontend 18개 파일·111개 테스트 통과. 익명·인증 루트, 인증 지연/실패/만료, 관리 데이터 미요청, 이전 주소 replace와 상태 보존, 로그인/관리 왕복을 포함한다. 브라우저 인증 상태는 로컬 API stub으로 확인하며 실제 운영 계정 로그인과 구분한다.
+- TypeScript/Vite production build 통과. Chromium KO/EN × 익명/인증 4개 조합에서 `/`·기존 `/about/`의 query/hash 이동·`/login`·`/experiments` 진입을 로컬 stub으로 검증했고 페이지 오류·가로 넘침 없음. `/`의 요청은 auth/me만 발생했다. `/tmp/check-experibase-root.cjs`, `/tmp/experibase-root-tests.log`, `/tmp/experibase-root-build.log`에 검증 근거를 보관했다. 후속 운영 반영 결과는 완료 후 추가한다.
+
 ## 요청과 결정
 
 사용자는 현재 UI에 맞는 서비스 소개 위치를 검토하고 구현하도록 요청했다. 별도 대형 홈페이지나 공개 가입 구현을 요구한 것은 아니다.
