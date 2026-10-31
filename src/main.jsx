@@ -67,7 +67,6 @@ const copy = {
     note: '제품 소개와 사용은 ExperiBase에서 확인하세요.',
     boardTitle: '지금 우리가 향하는 곳', season: '13기 활동',
     boardItems: [['BUILD', '실험을 위한 기반 만들기', '실험 관리 · SDK/API · 계측'], ['LEARN', '실제 서비스에서 배우기', '개발과 분석을 연결하는 과정'], ['NEXT', '하나의 실험 사이클 완성하기', '기능 개선 → 실험 → 분석과 결정']],
-    boardNote: '현재 활동 방향과 목표',
     strip: ['개발 과정', '함께하는 스터디', '실제 적용과 배움'],
     updatesTag: '01 / TEAM LOG', updatesTitle: '무엇을 하고 있나요?',
     updatesIntro: '만들어온 것과 적용하며 배운 것, 다음으로 해볼 일을 나눠요.',
@@ -105,7 +104,6 @@ const copy = {
     note: 'Visit ExperiBase for product information and use.',
     boardTitle: 'What we are working toward', season: 'Season 13',
     boardItems: [['BUILD', 'Build the foundations', 'Experiment management · SDK/API · measurement'], ['LEARN', 'Learn from real services', 'Connect development and analysis'], ['NEXT', 'Complete an experiment cycle', 'Improve → experiment → analyze and decide']],
-    boardNote: 'Our current direction and goals',
     strip: ['Development journey', 'Learning together', 'Lessons from practice'],
     updatesTag: '01 / TEAM LOG', updatesTitle: 'What have we been working on?',
     updatesIntro: 'Here’s what we’ve built, what we’ve learned, and what we’d like to try next.',
@@ -252,7 +250,6 @@ function App() {
           <div className="board-top"><span>FIELD NOTES / 013</span><span className="board-season">{t.season}</span></div>
           <h2>{t.boardTitle}</h2>
           <div className="board-items">{t.boardItems.map(([tag, title, desc], i) => <div className="board-item" key={tag}><span className="board-number">0{i + 1}</span><div><small>{tag}</small><h3>{title}</h3><p>{desc}</p></div></div>)}</div>
-          <div className="board-foot"><span className="status-dot"/>{t.boardNote}<span aria-hidden="true">↗</span></div>
         </aside>
       </section>
       <div className="principles"><div className="wrap">{t.strip.map((s, i) => <div key={s}><span>0{i + 1}</span>{s}{i < 2 && <ArrowUpRight size={20}/>}</div>)}</div></div>
