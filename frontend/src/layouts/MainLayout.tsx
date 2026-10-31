@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     ChevronRight,
     ChevronLeft,
+    ChevronDown,
     FlaskConical,
     Info,
     Bug,
@@ -22,7 +23,7 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Button } from '../components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuItem } from '../components/ui/dropdown-menu';
 import { useProject } from '../contexts/ProjectContext';
 
 function cn(...inputs: ClassValue[]) {
@@ -114,7 +115,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
     const location = useLocation();
     const navigate = useNavigate();
-    const { projects, currentProjectId, setCurrentProjectId } = useProject();
+    const { projects, currentProjectId, setCurrentProjectId, loading } = useProject();
+    const selectedProject = projects.find(project => project.id === currentProjectId);
 
     const activePath = location.pathname;
     const isCommunity = activePath.startsWith("/metrics");
@@ -224,33 +226,34 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 {!isCommunity && (
                     <section aria-label={t.projects} className="px-3 pt-4">
                         {isSidebarOpen ? (
-                            <div className="space-y-2">
-                                <Select
-                                    value={currentProjectId ?? '__all__'}
-                                    onValueChange={(v) => setCurrentProjectId(v === '__all__' ? null : v)}
-                                >
-                                    <SelectTrigger className="w-full min-w-0" aria-label={t.selectProject}>
-                                        <div className="flex items-center gap-2 min-w-0 truncate">
-                                            <FolderOpen size={15} className="shrink-0 text-muted-foreground" />
-                                            <SelectValue />
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="__all__">{t.allProjects}</SelectItem>
-                                        {projects.map((p) => (
-                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <div className="flex gap-1">
-                                    <Button variant="ghost" size="sm" className="flex-1 gap-1 px-2 text-xs" onClick={() => handleNav('/projects?create=1')}>
-                                        <Plus size={13} />{t.newProject}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="service-entry h-auto w-full justify-start gap-3 bg-background p-3 text-left" aria-label={t.selectProject}>
+                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                            <FolderOpen size={18} />
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate font-semibold">{selectedProject?.name || currentProjectId || t.allProjects}</span>
+                                            <span className="block truncate text-xs font-normal text-muted-foreground">{lang === 'ko' ? '프로젝트 전환' : 'Switch project'}</span>
+                                        </span>
+                                        <ChevronDown size={16} className="shrink-0 text-muted-foreground" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="flex-1 px-2 text-xs" aria-current={activePath === '/projects' ? 'page' : undefined} onClick={() => handleNav('/projects')}>
-                                        {t.projects}
-                                    </Button>
-                                </div>
-                            </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="service-entry w-60 max-w-[calc(100vw-2rem)]">
+                                    <DropdownMenuRadioGroup value={currentProjectId ?? '__all__'} onValueChange={value => setCurrentProjectId(value === '__all__' ? null : value)} className="max-h-64 overflow-y-auto">
+                                        <DropdownMenuRadioItem value="__all__">{t.allProjects}</DropdownMenuRadioItem>
+                                        {loading && <DropdownMenuItem disabled>{lang === 'ko' ? '불러오는 중...' : 'Loading...'}</DropdownMenuItem>}
+                                        {projects.map(project => <DropdownMenuRadioItem key={project.id} value={project.id}><span className="truncate">{project.name}</span></DropdownMenuRadioItem>)}
+                                    </DropdownMenuRadioGroup>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="gap-2" onSelect={() => handleNav('/projects')}>
+                                        <FolderOpen size={15} />{t.projects}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="gap-2" onSelect={() => handleNav('/projects?create=1')}>
+                                        <Plus size={15} />{t.newProject}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         ) : (
                             <Button variant="ghost" size="icon" className="w-full" aria-label={t.selectProject} title={t.selectProject} onClick={() => setSidebarOpen(true)}>
                                 <FolderOpen size={20} />
