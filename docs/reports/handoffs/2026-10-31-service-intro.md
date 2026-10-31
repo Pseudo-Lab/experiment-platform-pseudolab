@@ -27,7 +27,14 @@ Last-Validated: 2026-10-31
 - 총괄 요청 `033ad4cf-6988-45b9-90a9-1138d7f28783`을 기존 소개·로그인 작업에 합류했다. 앞선 A 개선안 배포 완료 후 순차 진행하며 인프라·인증 방식·Google 가입 변경은 포함하지 않는다. 아래 루트 기존 동작 유지 기록은 이 후속으로 대체된다.
 - `/`는 인증 상태에 관계없이 공개 소개다. `/about`·`/about/`은 query/hash/location.state를 보존해 `/`로 replace 이동한다. 내부 소개 링크도 `/`를 사용한다. CTA는 익명 `/login`, 인증 `/experiments`; 보호된 관리 경로와 로그인 복귀 계약은 유지한다.
 - frontend 18개 파일·111개 테스트 통과. 익명·인증 루트, 인증 지연/실패/만료, 관리 데이터 미요청, 이전 주소 replace와 상태 보존, 로그인/관리 왕복을 포함한다. 브라우저 인증 상태는 로컬 API stub으로 확인하며 실제 운영 계정 로그인과 구분한다.
-- TypeScript/Vite production build 통과. Chromium KO/EN × 익명/인증 4개 조합에서 `/`·기존 `/about/`의 query/hash 이동·`/login`·`/experiments` 진입을 로컬 stub으로 검증했고 페이지 오류·가로 넘침 없음. `/`의 요청은 auth/me만 발생했다. `/tmp/check-experibase-root.cjs`, `/tmp/experibase-root-tests.log`, `/tmp/experibase-root-build.log`에 검증 근거를 보관했다. 후속 운영 반영 결과는 완료 후 추가한다.
+- TypeScript/Vite production build 통과. Chromium KO/EN × 익명/인증 4개 조합에서 `/`·기존 `/about/`의 query/hash 이동·`/login`·`/experiments` 진입을 로컬 stub으로 검증했고 페이지 오류·가로 넘침 없음. `/`의 요청은 auth/me만 발생했다. `/tmp/check-experibase-root.cjs`, `/tmp/experibase-root-tests.log`, `/tmp/experibase-root-build.log`에 검증 근거를 보관했다. 후속 운영 반영 결과는 아래와 같다.
+
+### 대표 경로 운영 반영 완료 — 2026-10-31 18:35 KST
+
+- 앱 main/배포 커밋 `8c7023b98b5848f23f414ad241782144becdbff5`. [CI 41188932679](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41188932679) 및 [GitOps 41189003663](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41189003663) 성공. Ops `54ccbcfb156ef19b28cd75cdc39377ac0a1692fb`에서 두 운영 이미지 태그가 해당 SHA로 갱신됐다.
+- 운영 대표 주소 `https://exp.pseudolab-devfactory.com/`는 로그인으로 이동하지 않고 소개를 표시한다. 실제 JS `index-Bws3MtIO.js` 제공 확인. `/about?source=legacy#features`는 `/?source=legacy#features`로 이동하며, 소개↔로그인 왕복 및 익명 `/experiments`→`/login`, 관리 API 401을 확인했다.
+- 운영 Chromium KO/light/1440px, EN/dark/375px 검증 통과, 페이지 오류·가로 넘침 없음. status API 200. 증거: `/tmp/check-experibase-root-production.cjs`, `/tmp/experibase-root-production-evidence/result.json` 및 캡처.
+- 인증 사용자의 `/` 소개·관리 CTA→`/experiments`는 로컬 브라우저 API stub과 자동 테스트로 검증했다. 실제 운영 계정 로그인·로그아웃 및 ArgoCD Health/Pod readiness 직접 조회는 수행하지 않았다. 인프라나 인증 계약의 추가 변경은 없다.
 
 ## 요청과 결정
 
