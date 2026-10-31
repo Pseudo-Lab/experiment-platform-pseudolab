@@ -232,3 +232,10 @@ Last-Validated: 2026-10-31
 
 - 앱 및 운영 기준 커밋 `be4485ee1e4c313d55e6e5af1620194e64c51671`을 origin/main에 반영했다. [CI 41191639193](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41191639193), [GitOps 41191735404](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41191735404) 모두 성공했다. Ops의 frontend/backend 태그가 같은 SHA인 것을 확인했다.
 - 운영 `/`, `/login`, `/api/v1/status/` 200, 비로그인 `/api/v1/projects/` 401 확인. 19:16 KST 확인 시 공개 앱은 이전 JS 파일 `index-Bws3MtIO.js`를 제공했다. 따라서 런타임 새 버전 반영은 아직 확인하지 못했다. ArgoCD Application의 automated prune/selfHeal 설정은 확인했으며 수동 sync/재배포는 실행하지 않았다. main 게시와 기존 자동 배포 경로 실행은 완료된 상태다.
+
+
+## 팀 소개와 실험플랫폼 파비콘 통일 — 2026-10-31
+
+- 사용자 요청: 팀 소개 탭 제목을 정리하고 파비콘을 실험플랫폼과 맞춘다. 운영 앱에 기본 `/vite.svg` 참조만 남아 있고 실제 파일이 없어, 기존 ExperiBase 헤더의 보라색 다이아몬드 마크를 두 사이트의 동일 SVG/홈 화면 PNG로 적용한다. 앱 제목·인증·라우팅은 변경하지 않는다.
+- 팀 소개는 `pages` 브랜치의 `Data Initiative | 팀 소개` / `Data Initiative | About the team` 제목과 함께 반영한다. 앱은 `main`의 기존 GitOps, 팀 소개는 기존 GitHub Pages 자동 게시 경로를 사용한다.
+- 검증: frontend 19개 파일·138개 테스트 및 두 사이트 production build 통과. 팀 소개 KO/EN 제목 전환, 1440/375px × 명암 테마, SVG/PNG 200 응답과 배포 하위 경로를 확인했다. 두 사이트 아이콘 파일의 바이트 일치와 빌드 산출물의 실제 참조도 확인했다.
