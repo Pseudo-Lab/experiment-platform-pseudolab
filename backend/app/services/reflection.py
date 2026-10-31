@@ -18,6 +18,9 @@ def _now() -> str:
 class ReflectionService:
 
     async def submit(self, data: ReflectionCreate) -> Reflection:
+        if data.experiment_id == "s12-mid-reflection":
+            raise HTTPException(status_code=410, detail="This one-time reflection has ended.")
+
         exp = await d1.query("SELECT id, completion_event FROM experiments WHERE id = ?", [data.experiment_id])
         if not exp:
             raise HTTPException(status_code=404, detail="Experiment not found")
