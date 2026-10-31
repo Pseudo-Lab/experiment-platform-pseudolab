@@ -3,7 +3,7 @@ Last-Validated: 2026-10-31
 
 # 서비스 소개 배치 및 구현
 
-## 최신 상태 — A 개선안 승인 및 운영 반영 준비
+## 최신 상태 — A 개선안 운영 반영 완료
 
 - 사용자 최종 지시: “응 좋다 이대로 반영해줘 운영배포까지 main커밋”. 승인된 A 개선안을 소개·로그인에 반영하고 main 커밋·운영 배포까지 진행하는 범위다. 아래의 커밋·푸시·배포 없음 및 선택 전 문구는 해당 단계의 과거 기록이다.
 - 구현: 중앙 제목·indigo 강조·넓은 제품 예시, 가설/A/B/지표 구분, 기능별 작은 예시, 네 단계 사용 흐름, 제품 맥락을 담은 로그인. KO/EN·light/dark를 함께 구현하고 기존 관리자 인증과 로그인 목적지 복귀를 유지했다. 관리 화면은 기존 소개 링크 외에 확장하지 않았다.
@@ -12,6 +12,15 @@ Last-Validated: 2026-10-31
 - 배포 준비: 기준 원격 main과 운영 Ops 이미지 태그는 `c9935477d51462102c732c3b11c1c35244c88db2`. 전용 worktree 변경만 커밋하며 공용 worktree의 로컬 main `92e468a` 및 미커밋 변경은 보존한다. 기존 ci → gitops-ci → DevFactory-Ops → ArgoCD 흐름을 사용한다. 운영 로그인 HTTP 200, 익명 experiments API 401 사전 확인.
 - 총괄 정보 요청 `95e649e4-cb8f-470e-ae15-dfe6e0c68a45` 응답 완료: 총괄은 현재 게시 작업 없음, 다른 세션 전체의 부재를 보장하지 않으므로 게시 직전 main/CI 재확인. Google PR #26은 별도 유지.
 - 사용자가 “오늘은 주말이잖아”라고 정정했다. 기존 운영 반영 승인과 함께 이번 소개·로그인 작업은 당일 퇴근 시각 없이 실제 시각으로 커밋·게시한다. 공용 상태에 이번 작업 범위의 예외를 기록했다. 기존 자동 GitOps 흐름으로 배포하며 Figma 최신 디자인 동기화는 이번 배포 범위에 포함하지 않는다.
+
+## 운영 배포 검증 — 2026-10-31 18:25 KST
+
+- 앱 main 커밋: `a8a4a636ce6af032cf593bf4ecaa2ea50f04f57a` (`feat: introduce ExperiBase and refresh administrator sign in`). 전용 worktree의 11개 파일만 반영했고 공용 로컬 main 및 기존 미커밋 변경은 수정하지 않았다.
+- [CI 41188174725](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41188174725) 전체 성공, [GitOps 41188235200](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41188235200) 성공. 수동 배포 설정 변경 없이 기존 자동 흐름을 사용했다.
+- Ops 커밋 `0cb2a39cab3ce5e707ba9cd6be884136d99e82f0`이 운영 frontend/backend 태그를 모두 앱 SHA로 갱신했다. 빌드 결과 manifest digest: frontend `sha256:ccbd313bf94bfc69bd1158373012c2a2646aa1c42ddad1b7fda8105cffd7d769`, backend `sha256:15c1b07ead0ba426f2be98671625069cb5ee33d56221abf9507144a308d8fa77`. 실행 중인 Pod의 digest를 직접 조회한 값은 아니다.
+- 운영 [소개](https://exp.pseudolab-devfactory.com/about)·[로그인](https://exp.pseudolab-devfactory.com/login)에서 승인된 새 화면 확인. JS `index-Q_T_8Jns.js`, CSS `index-D9aLeYVq.css`가 제공된다. KO/light/1440px, EN/dark/375px의 두 화면·소개 왕복·제품 예시 전환·루트의 익명 로그인 이동 검증 통과. 가로 넘침과 페이지 오류 없음.
+- 배포 전환 중 첫 확인에서 API 502가 관찰됐고, 이후 status 200 및 익명 experiments 401로 회복됐다. 재실행한 운영 브라우저 검증도 통과했다. 운영 데이터 쓰기나 실제 관리자 자격증명 사용은 없었다. 로그인 성공·로그아웃·인증 후 관리 화면 및 ArgoCD Health/Pod readiness 직접 조회는 이번 운영 검증에 포함하지 않았다.
+- 임시 증거: `/tmp/experibase-production-evidence/result.json`과 화면 캡처, `/tmp/check-experibase-production.cjs`, `/tmp/experibase-release-ci.log`, `/tmp/experibase-release-gitops-complete.log`. 관리 화면의 PRD 후속 요구와 Figma 동기화는 별도다.
 
 ## 요청과 결정
 
