@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
 import { AuthProvider, useAuth } from './features/auth/AuthContext';
+import { ServiceIntroPage } from './features/about/ServiceIntroPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { BugReport } from './features/dashboard/components/BugReport';
 import { BugReportDetail } from './features/dashboard/components/BugReportDetail';
@@ -42,15 +43,17 @@ function AppShell() {
   const [backendStatus, setBackendStatus] = useState<string>("connecting...");
   const { state: authState, user, logout } = useAuth();
   const location = useLocation();
+  const isServiceIntro = location.pathname === '/about' || location.pathname === '/about/';
 
   useEffect(() => {
+    if (isServiceIntro) return;
     const apiBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL || '/api/v1';
 
     fetch(`${apiBaseUrl}/status/`)
       .then(res => res.json())
       .then(data => setBackendStatus(data.status === 'connected' ? 'Online' : 'Error'))
       .catch(() => setBackendStatus('Offline'));
-  }, []);
+  }, [isServiceIntro]);
 
   useEffect(() => {
     localStorage.setItem('lang', lang);
@@ -65,6 +68,10 @@ function AppShell() {
     }
   }, [theme]);
 
+  if (isServiceIntro) {
+    return <ServiceIntroPage lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} authenticated={authState === 'authenticated'} />;
+  }
+
   if (authState === 'loading') {
     return (
       <main className="min-h-screen bg-background text-foreground flex items-center justify-center">
@@ -76,7 +83,7 @@ function AppShell() {
   if (authState === 'anonymous') {
     return (
       <Routes>
-        <Route path="/login" element={<LoginPage lang={lang} />} />
+        <Route path="/login" element={<LoginPage lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} />} />
         <Route path="*" element={<Navigate to="/login" replace state={{ from: location }} />} />
       </Routes>
     );

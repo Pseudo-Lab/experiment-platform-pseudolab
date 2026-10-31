@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom'; // Use MemoryRouter for isolated testing
 import App from '@/App';
+import { authApi } from '@/services/authApi';
+import { projectApi } from '@/services/api';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -85,9 +87,10 @@ describe('App Component', () => {
     localStorage.clear(); // Clear localStorage before each test
     authResponse = { authenticated: true, user: { username: 'admin' } };
     (global.fetch as any).mockClear();
+    vi.mocked(projectApi.list).mockClear();
   });
 
-  afterEach(cleanup); // Clean up DOM after each test
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); }); // Clean up DOM after each test
 
   // Helper to render App with necessary router context
   const renderApp = (initialEntries = ['/dashboard']) => {
@@ -186,4 +189,88 @@ describe('App Component', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     expect(localStorage.getItem('theme')).toBe('dark');
   });
+  it('shows the public introduction while session restoration is pending without loading projects', async () => {
+    vi.spyOn(authApi, 'me').mockReturnValue(new Promise(() => {}));
+    await act(async () => { renderApp(['/about']); });
+    expect(screen.getByRole('heading', { level: 1, name: /더 나은 제품을 만드는/  })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: '관리자 로그인' })[0]).toHaveAttribute('href', '/login');
+    expect(projectApi.list).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps the introduction readable when session restoration fails', async () => {
+    vi.spyOn(authApi, 'me').mockRejectedValue(new Error('offline'));
+    await act(async () => { renderApp(['/about/']); });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
+    expect(projectApi.list).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Better products');
+    expect(screen.getAllByRole('link', { name: 'Admin sign in' })[0]).toBeInTheDocument();
+  });
+
+  it('offers a workspace link to signed-in visitors and keeps the about route public on expiry', async () => {
+    await act(async () => { renderApp(['/about']); });
+    expect(screen.getAllByRole('link', { name: '관리 화면 열기' })[0]).toHaveAttribute('href', '/experiments');
+    expect(projectApi.list).not.toHaveBeenCalled();
+    await act(async () => { window.dispatchEvent(new Event('auth:unauthorized')); });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
+    expect(screen.getAllByRole('link', { name: '관리자 로그인' })[0]).toBeInTheDocument();
+  });
+
+  it('connects the anonymous login screen to the introduction and back', async () => {
+    authResponse = { authenticated: false, user: null };
+    await act(async () => { renderApp(['/projects']); });
+    fireEvent.click(screen.getByRole('link', { name: '서비스 살펴보기' }));
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
+    fireEvent.click(screen.getAllByRole('link', { name: '관리자 로그인' })[0]);
+    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
+    expect(projectApi.list).not.toHaveBeenCalled();
+  });
+
+  it('lets signed-in users visit the introduction from the sidebar and return', async () => {
+    await act(async () => { renderApp(['/experiments']); });
+    fireEvent.click(screen.getByRole('link', { name: '서비스 소개' }));
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getAllByRole('link', { name: '관리 화면 열기' })[0]); });
+    expect(screen.getByRole('complementary')).toBeInTheDocument();
+  });
+
+  it('changes language and theme at login while preserving credentials and the return route through about', async () => {
+    authResponse = { authenticated: false, user: null };
+    const login = vi.spyOn(authApi, 'login').mockResolvedValue({ authenticated: true, user: { username: 'admin' } });
+    await act(async () => { renderApp(['/experiments']); });
+    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'admin' } });
+    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
+    expect(screen.getByLabelText('Username')).toHaveValue('admin');
+    expect(screen.getByLabelText('Password')).toHaveValue('secret');
+    const previousTheme = localStorage.getItem('theme');
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle theme' }));
+    expect(localStorage.getItem('theme')).not.toBe(previousTheme);
+    fireEvent.click(screen.getByRole('link', { name: 'Explore ExperiBase' }));
+    expect(screen.getByRole('region', { name: 'From an experiment to your next decision' })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('link', { name: 'Admin sign in' })[0]);
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'admin' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Sign in' })); });
+    expect(login).toHaveBeenCalledWith('admin', 'secret');
+    expect(screen.getByRole('heading', { name: 'Experiments', level: 1 })).toBeInTheDocument();
+  });
+
+  it('explores illustrative product states without requesting management data', async () => {
+    authResponse = { authenticated: false, user: null };
+    await act(async () => { renderApp(['/about']); });
+    expect(screen.getAllByText('설명용 예시')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: '기능 공개' }));
+    expect(screen.getByRole('button', { name: '기능 공개' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByText('비활성').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: '결과·결정' }));
+    expect(screen.getByText('아직 수집된 데이터가 없습니다')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
+    expect(screen.getByText('No data collected yet')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Experiment design' }));
+    expect(screen.getAllByText('Compare signup messages').length).toBeGreaterThan(0);
+    expect(projectApi.list).not.toHaveBeenCalled();
+  });
+
 });

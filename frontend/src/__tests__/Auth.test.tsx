@@ -16,7 +16,7 @@ function SessionProbe() {
 function renderLogin(lang: 'ko' | 'en') {
   return render(<MemoryRouter initialEntries={[{ pathname: '/login', state: { from: { pathname: '/experiments' } } }]}>
     <AuthProvider><Routes>
-      <Route path="/login" element={<LoginPage lang={lang} />} />
+      <Route path="/login" element={<LoginPage lang={lang} setLang={() => {}} theme="light" setTheme={() => {}} />} />
       <Route path="/experiments" element={<SessionProbe />} />
     </Routes></AuthProvider>
   </MemoryRouter>);

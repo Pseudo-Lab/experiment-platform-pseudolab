@@ -53,3 +53,15 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+
+/* Public introduction and sign-in share the approved ExperiBase identity. */
+.service-entry {
+  --primary: 245 74% 60%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 245 74% 60%;
+}
+.dark .service-entry {
+  --primary: 239 84% 77%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --ring: 239 84% 77%;
+}
