@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { ExperibaseSDK } from './core.js'
 import type {
+  SDKConfig,
   AssignmentOptions,
   AssignmentResult,
   DecideResult,
@@ -34,6 +35,8 @@ const ExperibaseContext = createContext<ExperibaseContextValue | null>(null)
 const CACHE_PREFIX = 'experibase:flag:'
 
 export interface ProviderProps {
+  /** Fixed for this provider lifetime; remount when changing event contracts. */
+  eventModel?: SDKConfig['eventModel']
   apiKey: string
   baseUrl: string
   userId?: string
@@ -49,12 +52,13 @@ export function ExperibaseProvider({
   apiKey,
   baseUrl,
   userId,
+  eventModel,
   flagKeys = [],
   children,
 }: ProviderProps) {
   const sdkRef = useRef<ExperibaseSDK | null>(null)
   if (!sdkRef.current) {
-    sdkRef.current = new ExperibaseSDK({ apiKey, baseUrl, userId })
+    sdkRef.current = new ExperibaseSDK({ apiKey, baseUrl, userId, eventModel })
   }
   const sdk = sdkRef.current
   const uid = sdk.userId

@@ -1,8 +1,37 @@
+/** Attribution for an evaluation; not proof that the UI was displayed. */
+export interface TrackingContext {
+  experiment_id: string | null
+  key: string
+  variant: string
+  project_id: string | null
+  source: 'sdk_v1'
+  /** Stable evaluation identity for project/experiment/key/user/variant; not a session. */
+  assignment_id: string
+  user_id: string
+}
+
+export interface ExposureContext extends TrackingContext {
+  /** Original visibility time, preserved when retrying exposure delivery. */
+  exposed_at: string
+  /** One visible UI instance. Reuse for its click/conversion and retries. */
+  impression_id: string
+  /** Browser tab visit (sessionStorage); stable per SDK instance outside browsers. */
+  session_id: string
+}
+
+export interface TrackOptions {
+  tracking_context: ExposureContext
+  type?: 'click' | 'conversion'
+  /** Reuse only when retrying the same action. */
+  eventId?: string
+}
+
 export interface DecideResult {
   key: string
   type: 'flag' | 'placement'
   show: boolean
   variant: string | null
+  tracking_context?: TrackingContext | null
   payload: Record<string, unknown> | null
 }
 
@@ -31,6 +60,10 @@ export interface PlacementOptions {
 }
 
 export interface SDKConfig {
+  /** Explicit migration boundary. Legacy preserves 0.1.5 evaluation/dual-write behavior. */
+  eventModel?: 'sdk_v1' | 'legacy'
+  /** Migration only: count evaluations as exposures. Default false. */
+  autoExpose?: boolean
   apiKey: string
   baseUrl: string
   userId?: string

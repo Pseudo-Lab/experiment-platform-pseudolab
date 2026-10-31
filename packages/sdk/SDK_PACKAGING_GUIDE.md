@@ -5,6 +5,109 @@ Feature flag 결정, A/B 테스트 노출, 이벤트 트래킹을 위한 경량 
 
 ---
 
+## 현재 배포판 빠른 연동 및 가이드 탭 구성 초안
+
+확인 기준: `origin/main be4485e`의 SDK/키/수집 코드, npm registry `latest=0.1.5` 및 실제 설치한 0.1.5 패키지의 mock-fetch 검증. 현재 운영 런타임 SHA와 실제 운영 이벤트 저장은 이번 작업에서 확인하지 않았습니다. 아래 기존 패키징 절보다 이 절의 현재 계약 구분을 우선합니다. #20 미배포 후보는 [README](./README.md)를 따릅니다.
+
+### 1. 설치·프로젝트·공개 키
+
+```sh
+npm install --save-exact @pseudo-lab/experibase-sdk@0.1.5
+```
+
+관리자로 플랫폼에 로그인하여 프로젝트를 만들고, 선택한 프로젝트의 SDK 연동 화면에서 **프로젝트 공개 SDK 키**를 확인합니다. 프로젝트 생성 API는 관리자 세션으로 `POST /api/v1/projects/`, 본문 예시는 `{"id":"guide-demo","name":"Guide demo","project_type":"ab_test"}`입니다. 응답은 키를 포함하지 않으며, 키 조회는 인증된 `GET /api/v1/projects/guide-demo/api-key`입니다. 관리 세션이나 서버 credential을 소비 앱에 전달하지 않습니다.
+
+브라우저 SDK의 `apiKey`는 `x-api-key`로 보내는 공개 키입니다. `sk_live_...` 서버 credential은 브라우저/프런트엔드 환경변수에 넣지 않습니다. 현재 main 백엔드는 공개 키와 서버 Bearer credential을 구분합니다. 다만 SDK 연동 화면의 키 설명에는 과거의 “서버 접근 판단에 함께 쓰는 키” 문구가 남아 있어, 탭 구현 담당자가 문구를 별도로 정합화해야 합니다. 화면 설명과 실제 키 용도가 다르면 백엔드의 공개 키/서버 credential 구분을 확인하세요.
+
+`baseUrl`은 **플랫폼 API 주소 + `/api/v1`**입니다. 프로젝트 설정의 “앱 도메인”은 소비 서비스/Visual Editor 대상 URL이므로 SDK API 주소로 복사하지 않습니다. 아래 `.invalid` 주소와 키는 실행 불가능한 가짜 예시입니다.
+
+### 2. 현재 0.1.5의 판단·실제 노출·행동 예시
+
+같은 프로젝트의 flag와 A/B 실험을 만들고 flag를 연결한 뒤 실행 조건을 충족합니다. primary metric은 아래 행동 이름 `purchase_completed`로 맞춥니다. 실제 ID와 키는 해당 테스트 프로젝트 값을 사용합니다.
+
+```ts
+import { ExperibaseSDK } from '@pseudo-lab/experibase-sdk'
+
+const sdk = new ExperibaseSDK({
+  apiKey: 'pk_example_not_a_real_key',
+  baseUrl: 'https://platform.example.invalid/api/v1',
+  userId: 'guide-test-user',
+})
+const flagKey = 'checkout-cta'
+const experimentId = 'YOUR_RUNNING_EXPERIMENT_ID'
+const decision = await sdk.decide(flagKey)
+const variant = decision.variant ?? 'control'
+// 이 시점에 0.1.5는 /events impression을 자동 전송합니다.
+// 이것을 실제 UI visibility의 증거로 취급하지 않습니다.
+
+// 서비스가 variant를 렌더하고 실제 visibility 조건을 충족했을 때:
+await sdk.trackExposure(experimentId, variant, { flag_key: flagKey })
+
+// 실제 구매 완료 콜백에서만:
+await sdk.track('purchase_completed', {
+  experiment_id: experimentId,
+  key: flagKey,
+  variant,
+})
+```
+
+flag의 `show:false`는 control 배정일 수 있습니다. control UI도 실제로 보였다면 노출을 기록합니다. `trackExposure`는 브라우저 sessionStorage에서 실험별 세션 1회 가드이며 개별 UI 노출을 식별하지 않습니다. 오류여도 가드를 먼저 설정하므로 같은 세션의 재시도가 자동 복구를 보장하지 않습니다. 동일 실험의 여러 사용자로 테스트하려면 별도 브라우저 세션을 사용하세요.
+
+0.1.5에는 `expose()`, `tracking_context`, SDK 자동 impression 해제 옵션이 없습니다. `decide()` 호출 자체가 서버 flag 평가 기록 및 `/events` impression을 만들고, `track()`은 `/capture`와 `/events`에 이중 저장합니다. `trackExposure()`는 `/capture`에만 `exp_exposure`를 보냅니다. 이 예시는 현재 API를 정확히 사용하는 방법이며, 과거 집계 오귀속 문제를 해결한 계약이라는 뜻은 아닙니다.
+
+### 3. 첫 수집 확인과 오류 확인
+
+새 테스트 프로젝트에서 개발자 도구 Network의 요청 본문과 응답을 확인합니다. 운영 실험에 가짜 구매 이벤트를 보내서 검증하지 않습니다.
+
+| 단계 | 확인할 요청/응답 | 의미와 주의 |
+|---|---|---|
+| 판단 | `POST /decide` 200, 응답 variant | UI를 봤다는 증거는 아님 |
+| 자동 impression | `POST /events` 202 | 0.1.5 평가 직후의 기록 |
+| 실제 노출 호출 | `POST /capture` 202, event_name=`exp_exposure`, properties의 experiment_id/variant | legacy 결과 분모 입력. 반복 호출은 세션 가드로 요청이 없을 수 있음 |
+| 행동 | `/capture` 202 + `/events` 202, 동일 실험/flag/variant 확인 | 두 저장소의 합산 금지. 원시 행동과 Live Events의 conversion 의미가 다름 |
+| 연결 상태 | 관리자 `GET /projects/{id}/sdk-status` | 최근 30일 event_log **또는 flag 평가 기록** 존재 여부. connected만으로 정확한 수집·귀속을 확정하지 않음 |
+| 집계 | 관리자 `GET /experiments/{id}/result`, `/analytics`, `/available-events` | legacy result는 event_log, A/B analytics는 experiment_event. 숫자가 같다는 보장이 없음 |
+
+- 401: 프로젝트 공개 키 유효성, API 도메인 확인. 관리 조회의 401은 관리자 세션 문제일 수 있습니다. 서버 비밀 키로 대체하지 않습니다.
+- 404 또는 not_found: URL의 `/api/v1`, 실제 flag/experiment ID와 응답 본문을 확인합니다. 알려지지 않은 decide key는 placement fallback으로 200/show=false가 올 수도 있습니다.
+- 422: 필수 user_id, JSON 타입/필드 확인. #20 전용 필드를 현재 API의 지원 증거로 해석하지 않습니다(일부 추가 필드는 무시될 수 있음).
+- CORS/네트워크: 브라우저 Console·Network에서 API 주소와 허용 origin을 확인합니다. 클라이언트에서 인증을 우회하는 임시 코드를 넣지 않습니다.
+- 502: 수집 저장 실패. 응답과 요청 ID/시각을 운영 담당자에게 전달하되 실제 키·사용자 민감값은 제거합니다.
+- 0.1.5의 `track()`/`trackExposure()`는 모든 실패를 호출자에게 throw하지 않습니다. `await` 완료만으로 성공을 판단하지 말고 Network 응답을 확인합니다.
+- 빈 결과: primary metric 이름, 실제 exposure 수신, control/treatment 관측 여부를 확인합니다. assignment만 있고 exposure가 없으면 분석 분모가 없습니다. legacy의 ID 없는 전환 범위 문제는 별도 미결 사항입니다.
+
+### 4. #20 전환 비교
+
+| 항목 | 현재 main / npm 0.1.5 | #20 로컬 후보 |
+|---|---|---|
+| 판단 | 자동 impression + 서버 평가 기록 | 판단만, autoExpose 명시 옵션 |
+| 실제 노출 | trackExposure(expId, variant), 세션 가드 | expose(decision), 노출별 ID/시각 |
+| 행동 귀속 | properties 직접 전달 | track 3번째 인자 tracking_context |
+| 저장 | capture/events 이중 경로 | capture/event_log 단일 경로 |
+| 실험 소스 | legacy 경로 분리 | 새 실험 생성 시 불변 event_model=sdk_v1 |
+| 연결 키 | session/experiment 정도 | session/assignment/impression/event 구분 |
+| 배포 상태 | npm 0.1.5 조회·설치 검증 | migration 038 및 앱/SDK 릴리스 미적용 |
+
+기존 실험은 현재 버전을 고정합니다. #20 검토·반영 이후 새 실험 ID로 v1을 시작하고 README의 예시를 적용합니다. event_model을 기존 실험에서 바꾸거나 현재 npm 0.1.5에 expose를 호출하면 안 됩니다. 후보 코드의 package.json도 아직 0.1.5이므로 버전 문자열만으로 후보 배포 여부를 판단할 수 없습니다. 출시 담당자가 실제 버전·배포 호환 범위를 확정해야 합니다.
+
+후보 SDK에는 별도 `eventModel: 'legacy'` 호환 옵션이 추가됐습니다. 내부 `/example`은 npm 설치본이 아니라 Vite의 SDK 소스 alias를 사용하므로, ExampleApp Provider가 `eventModel="legacy"`를 명시합니다. 이 경로는 기존 자동 impression/track 이중 기록을 보존하며, 기본 v1 경로는 `/events`를 쓰지 않습니다. 후보 출시 버전은 미정이며 현재 npm 0.1.5에는 이 옵션이 없습니다.
+
+v1 Live Events의 건수/전환율은 노출 인스턴스 단위입니다. p-value와 winner는 null, is_significant는 false로 비활성화되며, 반복 노출로 승자를 판단하지 않습니다. SRM은 결과·배치와 같은 고유 사용자 단위로 계산하고 다중 variant 사용자는 제외합니다. 노출 건수와 사용자 표본 수를 같은 단위로 표시하지 마세요. 사용자 단위 추론은 `/result`를 확인합니다.
+
+### 5. 향후 플랫폼 내 SDK 가이드 탭 구성 초안
+
+문서 구성 제안이며 앱 구현 완료 상태가 아닙니다.
+
+1. **지원 버전/준비**: 현재 지원 SDK·API 조합, 프로젝트 선택, 설치 명령.
+2. **키와 주소**: 공개 SDK 키 보기/복사, 플랫폼 API 주소와 앱 도메인의 차이. 서버 비밀 키 노출 금지.
+3. **첫 실험**: 선택한 실험/flag의 판단 → 실제 노출 → 행동 예제. legacy/v1을 명확히 표시하고 미지원 API 복사를 방지.
+4. **수집 확인**: 요청별 성공 응답, 연결 상태의 제한, 결과/Live Events 소스 설명.
+5. **문제 해결·전환**: 오류 상태, 버전별 차이, 새 v1 실험으로 전환 절차.
+
+후보 v1 계약은 [README](./README.md)를 참고하세요. 운영 런타임 버전, 운영 키 공개 이행 상태, 실제 외부 서비스 CORS, 최종 출시 버전과 PR #26 통합은 아직 확인되지 않았습니다.
+
+---
+
 ## 목차
 
 1. [패키지 구조](#1-패키지-구조)

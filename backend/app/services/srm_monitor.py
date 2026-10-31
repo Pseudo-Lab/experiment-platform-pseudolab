@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from scipy.stats import chisquare
 
 from app.db import d1
+from app.services.sdk_events import read_sdk_events
 
 
 def _now() -> str:
@@ -65,17 +66,31 @@ class SRMMonitor:
         - 등분산(all equal) 귀무가설 하에 검정
         - p < 0.001 → SRM 감지
         """
-        rows = await d1.query(
-            """
-            SELECT json_extract(properties, '$.variant') AS variant,
-                   COUNT(DISTINCT user_id)               AS cnt
-              FROM event_log
-             WHERE event_name = 'exp_exposure'
-               AND json_extract(properties, '$.experiment_id') = ?
-             GROUP BY 1
-            """,
-            [experiment_id],
-        )
+        experiments = await d1.query("SELECT event_model, project_id FROM experiments WHERE id = ?", [experiment_id])
+        if experiments and experiments[0]["event_model"] == "sdk_v1":
+            events = await read_sdk_events(experiment_id, experiments[0]["project_id"])
+            users: dict[str, set[str]] = {}
+            for event in events:
+                if event["sdk_event_type"] == "exposure":
+                    users.setdefault(event["user_id"], set()).add(event["variant"])
+            counts_by_variant: dict[str, int] = {}
+            for variants in users.values():
+                if len(variants) == 1:
+                    variant = next(iter(variants))
+                    counts_by_variant[variant] = counts_by_variant.get(variant, 0) + 1
+            rows = [{"variant": v, "cnt": count} for v, count in counts_by_variant.items()]
+        else:
+            rows = await d1.query(
+                """
+                SELECT json_extract(properties, '$.variant') AS variant,
+                       COUNT(DISTINCT user_id)               AS cnt
+                  FROM event_log
+                 WHERE event_name = 'exp_exposure'
+                   AND json_extract(properties, '$.experiment_id') = ?
+                 GROUP BY 1
+                """,
+                [experiment_id],
+            )
 
         if not rows or len(rows) < 2:
             return False

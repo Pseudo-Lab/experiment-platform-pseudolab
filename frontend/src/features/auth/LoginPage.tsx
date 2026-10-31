@@ -24,7 +24,7 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
 
   const copy = {
     en: {
-      title: 'Admin sign in',
+      title: 'Admin sign in', sdkGuide: 'SDK guide',
       introTitle: 'Your next product decision starts here.',
       platform: 'OPEN-SOURCE EXPERIMENTATION',
       sample: 'Illustrative example', project: 'Example project · Signup experience', experiment: 'Compare signup messages', experimentText: 'Define a hypothesis and variants, then check signup completion events.', variants: ['A · Original message', 'B · Clear next step'], draft: 'Draft · No data collected', flow: 'Configure → Integrate → Check events → Decide', back: 'Back to the introduction',
@@ -41,7 +41,7 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
       unavailable: 'Sign in is unavailable. Please try again later.',
     },
     ko: {
-      title: '관리자 로그인',
+      title: '관리자 로그인', sdkGuide: 'SDK 가이드',
       introTitle: '다음 제품 결정, ExperiBase에서 시작하세요.',
       platform: 'OPEN-SOURCE EXPERIMENTATION',
       sample: '설명용 예시', project: '예시 프로젝트 · 가입 경험 개선', experiment: '가입 안내 문구 비교', experimentText: '가설과 비교할 버전을 정하고, 가입 완료 이벤트를 확인하는 실험입니다.', variants: ['A · 기존 안내', 'B · 다음 행동 강조'], draft: '초안 · 데이터 수집 전', flow: '설정 → 서비스 연동 → 수집 확인 → 결과·결정', back: '서비스 소개로 돌아가기',
@@ -142,6 +142,7 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
             {submitting ? copy.submitting : copy.submit}<ArrowRight aria-hidden="true" />
           </Button>
           <p className="mt-4 text-xs leading-loose text-muted-foreground">{copy.access}</p>
+          <Link to="/docs/sdk" state={location.state} className="mt-4 block rounded text-center text-sm text-primary underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring">{copy.sdkGuide}</Link>
           <Link to="/" state={location.state} className="mt-6 block rounded text-center text-xs text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{copy.back}</Link>
         </form>
       </div>

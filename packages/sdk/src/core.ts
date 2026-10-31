@@ -1,4 +1,6 @@
 import type {
+  ExposureContext,
+  TrackOptions,
   AssignmentOptions,
   AssignmentResult,
   DecideResult,
@@ -63,8 +65,17 @@ export class ExperibaseSDK {
   readonly apiKey: string
   readonly baseUrl: string
   private _userId: string
+  private readonly _sessionId = resolveSessionId()
+  private readonly _autoExpose: boolean
+  private readonly _eventModel: 'sdk_v1' | 'legacy'
+  private readonly _exposures = new WeakMap<DecideResult, ExposureContext>()
 
   constructor(config: SDKConfig) {
+    this._eventModel = config.eventModel ?? 'sdk_v1'
+    if (this._eventModel === 'legacy' && config.autoExpose) {
+      throw new Error('autoExpose is a v1 option; legacy already sends automatic impressions')
+    }
+    this._autoExpose = config.autoExpose ?? false
     this.apiKey    = config.apiKey
     this.baseUrl   = config.baseUrl.replace(/\/$/, '')
     this._userId   = config.userId ?? resolveUserId()
@@ -74,35 +85,26 @@ export class ExperibaseSDK {
 
   identify(userId: string): void { this._userId = userId }
 
-  // ── 내부: experiment_event 테이블용 이벤트 전송 ──────────────────────────
-  private async _sendEvent(payload: {
-    type: string
-    key: string
-    variant: string
-    url?: string | null
-    user_id: string
-    experiment_id?: string
-    properties?: Record<string, unknown>
-  }): Promise<void> {
+  // Explicit legacy consumers retain the 0.1.5 best-effort /events mirror.
+  private async _sendLegacyEvent(type: string, key: string, variant: string,
+    userId: string, properties?: Record<string, unknown>): Promise<void> {
     try {
       const res = await fetch(`${this.baseUrl}/events`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-        },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json', 'x-api-key': this.apiKey },
+        body: JSON.stringify({ type, key, variant, user_id: userId, properties,
+          url: typeof window !== 'undefined' ? window.location.pathname : null }),
       })
-      if (!res.ok) console.warn(`[ExperibaseSDK] Event not saved (HTTP ${res.status})`, payload)
+      if (!res.ok) console.warn(`[ExperibaseSDK] Legacy event not saved (HTTP ${res.status})`)
     } catch (err) {
-      console.warn('[ExperibaseSDK] Failed to send event:', err)
+      console.warn('[ExperibaseSDK] Legacy event failed:', err)
     }
   }
 
   // ── 공통 이벤트 프로퍼티 빌더 ───────────────────────────────────────────
   private _commonProps(): Record<string, unknown> {
     return {
-      session_id: resolveSessionId(),
+      session_id: this._sessionId,
       device:     resolveDevice(),
     }
   }
@@ -188,23 +190,63 @@ export class ExperibaseSDK {
 
   // ── Feature flag decide ──────────────────────────────────────────────────
 
-  async decide(key: string, options?: { userId?: string }): Promise<DecideResult> {
+  async decide(key: string, options?: { userId?: string; experimentId?: string }): Promise<DecideResult> {
     const uid = options?.userId ?? this._userId
     const res = await fetch(`${this.baseUrl}/decide`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': this.apiKey },
-      body:    JSON.stringify({ key, user_id: uid }),
+      body:    JSON.stringify(this._eventModel === 'legacy'
+        ? { key, user_id: uid }
+        : { key, user_id: uid, track: false, event_model: 'sdk_v1', experiment_id: options?.experimentId }),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const result = await res.json() as DecideResult
-    this._sendEvent({
-      type:    'impression',
-      key,
-      variant: result.variant ?? 'unknown',
-      url:     typeof window !== 'undefined' ? window.location.pathname : null,
-      user_id: uid,
-    })
+    if (this._eventModel === 'legacy') {
+      void this._sendLegacyEvent('impression', key, result.variant ?? 'unknown', uid)
+    }
+    if (this._autoExpose && result.tracking_context) await this.expose(result)
     return result
+  }
+
+  /** Call after actual rendering/visibility. Same decision object reuses its exposure ID.
+   * Pass a new impressionId for another visible instance of the same decision.
+   * Errors reject: retry with the same decision/ID after a failed response.
+   */
+  async expose(decision: DecideResult, options?: { impressionId?: string }): Promise<ExposureContext> {
+    if (this._eventModel === 'legacy') throw new Error('expose requires sdk_v1 mode')
+    const context = decision.tracking_context
+    if (!context || !decision.variant || (decision.type === 'placement' && !decision.show)) {
+      throw new Error('Decision has no exposable tracking context')
+    }
+    const previous = this._exposures.get(decision)
+    const exposure = previous && (!options?.impressionId || options.impressionId === previous.impression_id)
+      ? previous
+      : {
+          ...context, exposed_at: new Date().toISOString(), session_id: this._sessionId,
+          impression_id: options?.impressionId ?? crypto.randomUUID(),
+        }
+    this._exposures.set(decision, exposure)
+    await this._captureAttributed('exp_exposure', {}, exposure, 'exposure', exposure.impression_id)
+    return exposure
+  }
+
+  private async _captureAttributed(
+    event: string, properties: Record<string, unknown>, context: ExposureContext,
+    type: 'exposure' | 'click' | 'conversion', eventId: string,
+  ): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/capture`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': this.apiKey },
+      body: JSON.stringify({
+        user_id: context.user_id, event_name: event, event_id: eventId,
+        timestamp: type === 'exposure' ? context.exposed_at : new Date().toISOString(),
+        session_id: context.session_id, experiment_id: context.experiment_id,
+        variant: context.variant, device: resolveDevice(),
+        tracking_context: context, sdk_event_type: type,
+        properties: { ...properties, url: typeof window !== 'undefined' ? window.location.pathname : null },
+      }),
+    })
+    if (!res.ok) throw new Error(`Event not saved (HTTP ${res.status})`)
   }
 
   // ── Placement (준실험) ───────────────────────────────────────────────────
@@ -267,7 +309,13 @@ export class ExperibaseSDK {
    *   position:      0,
    * })
    */
-  async track(event: string, properties?: Record<string, unknown>): Promise<void> {
+  async track(event: string, properties?: Record<string, unknown>, options?: TrackOptions): Promise<void> {
+    if (options) {
+      if (this._eventModel === 'legacy') throw new Error('tracking_context requires sdk_v1 mode')
+      await this._captureAttributed(event, properties ?? {}, options.tracking_context,
+        options.type ?? 'conversion', options.eventId ?? crypto.randomUUID())
+      return
+    }
     const enriched = { ...this._commonProps(), ...properties }
     const body = {
       user_id:       this._userId,
@@ -288,15 +336,10 @@ export class ExperibaseSDK {
     } catch (err) {
       console.warn('[ExperibaseSDK] track failed:', err)
     }
-    const key     = (properties?.placement_key ?? properties?.key ?? event) as string
-    const variant = (properties?.variant ?? 'unknown') as string
-    this._sendEvent({
-      type:    'conversion',
-      key,
-      variant,
-      url:     typeof window !== 'undefined' ? window.location.pathname : null,
-      user_id: this._userId,
-      properties: enriched,
-    })
+    if (this._eventModel === 'legacy') {
+      await this._sendLegacyEvent('conversion',
+        (properties?.placement_key ?? properties?.key ?? event) as string,
+        (properties?.variant ?? 'unknown') as string, this._userId, enriched)
+    }
   }
 }

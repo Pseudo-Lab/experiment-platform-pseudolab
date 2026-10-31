@@ -2,7 +2,7 @@ import re
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from enum import Enum
 
 
@@ -52,6 +52,7 @@ class Variant(BaseModel):
 
 # Experiment schemas
 class ExperimentCreate(BaseModel):
+    event_model: Literal["legacy", "sdk_v1"] = "legacy"
     id: Optional[str] = None
     name: str
     hypothesis: Optional[str] = None
@@ -83,6 +84,8 @@ class ExperimentCreate(BaseModel):
 
     @model_validator(mode="after")
     def check_create_contract(self):
+        if self.event_model == "sdk_v1" and (self.experiment_type != ExperimentType.AB_TEST or not self.flag_key):
+            raise ValueError("sdk_v1 requires an ab_test with flag_key")
         if self.variants:
             total = sum(v.traffic_ratio for v in self.variants)
             if abs(total - 1.0) > 0.01:
@@ -93,6 +96,13 @@ class ExperimentCreate(BaseModel):
 
 
 class ExperimentUpdate(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def immutable_event_model(cls, value):
+        if isinstance(value, dict) and "event_model" in value:
+            raise ValueError("event_model is immutable; create a new experiment")
+        return value
+
     name: Optional[str] = None
     hypothesis: Optional[str] = None
     expected_effect: Optional[str] = None
@@ -123,6 +133,7 @@ class AdoptWinnerRequest(BaseModel):
 
 
 class Experiment(BaseModel):
+    event_model: Literal["legacy", "sdk_v1"] = "legacy"
     id: str
     name: str
     hypothesis: Optional[str] = None
