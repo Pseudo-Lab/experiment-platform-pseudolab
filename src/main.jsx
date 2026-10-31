@@ -219,7 +219,7 @@ function App() {
   const ids = ['updates', 'team', 'resources', 'subscribe'];
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.title = lang === 'ko' ? '활동과 소식 | 가짜연구소 데이터 이니셔티브' : 'Team Log | Pseudo Lab Data Initiative';
+    document.title = lang === 'ko' ? 'Data Initiative | 팀 소개' : 'Data Initiative | About the team';
     document.querySelector('meta[name="description"]').content = t.intro;
   }, [lang, t]);
   return <>
