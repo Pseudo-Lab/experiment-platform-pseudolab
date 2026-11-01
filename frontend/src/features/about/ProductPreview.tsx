@@ -37,7 +37,7 @@ export function ProductPreview({ lang }: { lang: 'ko' | 'en' }) {
   return (
     <Card className="min-w-0 overflow-hidden rounded-xl border-border shadow-xl shadow-primary/5">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/20 px-5 py-3.5 text-xs">
-        <span><span aria-hidden="true" className="mr-3 tracking-widest text-muted-foreground">•••</span>ExperiBase / {t.example}</span>
+        <span><span aria-hidden="true" className="mr-3 tracking-widest text-muted-foreground">•••</span>Iterglow / {t.example}</span>
         <span className="rounded-full border border-primary/20 bg-primary/5 px-2 py-1 text-[10px] text-primary">{t.sample}</span>
       </div>
       <div className="grid md:grid-cols-[155px_minmax(0,1fr)]">

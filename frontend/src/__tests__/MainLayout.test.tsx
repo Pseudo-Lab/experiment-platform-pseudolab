@@ -96,7 +96,7 @@ describe('MainLayout Component', () => {
       renderMainLayout();
     });
     expect(screen.getByText('Test Children')).toBeInTheDocument();
-    expect(screen.getByText('ExperiBase')).toBeInTheDocument(); // Check if sidebar title is present
+    expect(screen.getByText('Iterglow')).toBeInTheDocument(); // Check if sidebar title is present
     const asideElement = screen.getByRole('complementary');
     expect(asideElement).toHaveClass('w-64'); // Sidebar should be open on desktop by default
   });

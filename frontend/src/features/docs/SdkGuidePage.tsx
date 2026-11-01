@@ -34,7 +34,7 @@ const copy = {
   ko: {
     title: '개발자 SDK 가이드', intro: '서비스에 실험을 연결하고 첫 이벤트를 확인하세요.', home: '서비스 소개', login: '관리자 로그인', language: 'Switch to English', theme: '화면 테마 변경', contents: '이 페이지에서', code: '코드 예시',
     sections: ['지원 버전과 이용 조건', '프로젝트와 공개 키 준비', '설치와 API 주소', '판단 → 실제 노출 → 행동', '첫 수집 확인', '오류 진단', '출시 예정 · 이벤트 모델 전환'],
-    support: '현재 npm 배포판 0.1.5 기준입니다. 관리자 계정과 프로젝트 공개 SDK 키가 필요합니다. JavaScript/TypeScript에서 사용하며 React 연동은 React 18 이상을 지원합니다. 가이드는 로그인 없이 읽을 수 있습니다.',
+    support: '현재 npm 배포판 0.1.5 기준입니다. 관리자 계정과 프로젝트 공개 SDK 키가 필요합니다. JavaScript/TypeScript에서 사용하며 React 연동은 React 18 이상을 지원합니다. 가이드는 로그인 없이 읽을 수 있습니다. Iterglow(이터글로)의 SDK 패키지명은 @pseudo-lab/experibase-sdk이며, 클래스명은 ExperibaseSDK를 사용합니다.',
     scope: '아래 예시는 flag에 연결된 기존 A/B 실험용입니다. 준실험·placement 연동은 별도 계약입니다. 실제 운영 API 버전과 CORS 허용 origin은 관리자에게 확인하세요.',
     prepare: ['관리자로 로그인하고 프로젝트를 만들거나 선택합니다.', '선택한 프로젝트의 SDK 연동 화면에서 프로젝트 공개 SDK 키를 확인합니다.', '같은 프로젝트에 flag와 A/B 실험을 만들고 연결한 뒤 실행 조건을 충족합니다. 주요 지표 이름은 예시의 purchase_completed와 맞춥니다.'],
     key: '공개 SDK 키는 x-api-key로 전송합니다. 관리자 세션·서버 credential을 브라우저나 프런트엔드 환경변수에 넣지 마세요. 공개 키는 방문자의 신원을 보증하지 않습니다.',
@@ -65,7 +65,7 @@ const copy = {
   en: {
     title: 'Developer SDK guide', intro: 'Connect your service to an experiment and verify your first events.', home: 'Introduction', login: 'Admin sign in', language: '한국어로 변경', theme: 'Toggle theme', contents: 'On this page', code: 'Code example',
     sections: ['Supported version and access', 'Prepare a project and public key', 'Install and set the API URL', 'Decide → actual exposure → action', 'Verify the first events', 'Troubleshooting', 'Upcoming · event model migration'],
-    support: 'This guide targets the published npm version 0.1.5. An administrator account and a project public SDK key are required. Use JavaScript/TypeScript; the React integration supports React 18 and later. Reading this guide does not require sign in.',
+    support: 'This guide targets the published npm version 0.1.5. An administrator account and a project public SDK key are required. Use JavaScript/TypeScript; the React integration supports React 18 and later. Reading this guide does not require sign in. Iterglow uses the @pseudo-lab/experibase-sdk package and the ExperibaseSDK class.',
     scope: 'These examples cover legacy flag-linked A/B experiments. Quasi-experiments and placements use separate contracts. Confirm the deployed API version and allowed CORS origin with your administrator.',
     prepare: ['Sign in as an administrator and create or select a project.', 'Find the project public SDK key in the selected project’s SDK Integration screen.', 'Create and connect a flag and A/B experiment in the same project, then meet its start requirements. Match the primary metric to purchase_completed in this example.'],
     key: 'The public SDK key is sent as x-api-key. Never put administrator sessions or server credentials in a browser or frontend environment variables. A public key does not authenticate visitors.',
@@ -103,7 +103,7 @@ export function SdkGuidePage({ lang, setLang, theme, setTheme }: Props) {
   return (
     <div className="service-entry min-h-screen bg-background text-foreground" lang={lang}>
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
-        <Link to="/" state={location.state} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring">ExperiBase</Link>
+        <Link to="/" state={location.state} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring">Iterglow</Link>
         <div className="flex items-center gap-1">
           <Button asChild variant="ghost" size="sm"><Link to="/" state={location.state}>{t.home}</Link></Button>
           <Button variant="ghost" size="icon" aria-label={t.theme} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon /> : <Sun />}</Button>

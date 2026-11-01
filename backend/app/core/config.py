@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import List
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "가짜연구소 실험 플랫폼"
+    PROJECT_NAME: str = "Iterglow"
     PROJECT_VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
     TEAM_NAME: str = "이니셔티브 (Initiative)"

@@ -1,4 +1,4 @@
-# 🔬 실험 플랫폼: 데이터로 서비스를 개선하기
+# Iterglow · 이터글로
 
 <div align="center">
   <a href="https://pseudo-lab.com"><img src="https://img.shields.io/badge/PseudoLab-S12-808080" alt="PseudoLab Season 12"/></a>
@@ -12,13 +12,13 @@
 </div>
 <br>
 
-> **ExperiBase — Open-source experimentation platform**
+> **오픈소스 A/B 테스트·실험 플랫폼**
 >
 > 가짜연구소의 실제 서비스를 개선하며, A/B 테스트를 운영할 수 있는 오픈소스 실험 플랫폼을 개발합니다.
 
 [서비스 홈페이지](https://exp.pseudolab-devfactory.com) · [팀 소개 및 활동](https://pseudo-lab.github.io/experiment-platform-pseudolab/)
 
-ExperiBase는 사용자 그룹에 서로 다른 기능 버전을 제공하고, 이후의 행동을 비교할 수 있도록 실험을 지원하는 플랫폼입니다. 실험 도구를 직접 개발하고 서비스에 적용하면서 **문제 발견 → 기능 개발 → 실험 → 분석·개선**으로 이어지는 과정을 만들어갑니다.
+Iterglow는 사용자 그룹에 서로 다른 기능 버전을 제공하고, 이후의 행동을 비교할 수 있도록 실험을 지원하는 플랫폼입니다. 실험 도구를 직접 개발하고 서비스에 적용하면서 **문제 발견 → 기능 개발 → 실험 → 분석·개선**으로 이어지는 과정을 만들어갑니다.
 
 12기에서 시작한 플랫폼 개발을 이어, 13기에는 가짜연구소 홈페이지와 서비스에 적용해 실제 기능 개선 사이클을 완주하는 데 집중합니다.
 
@@ -153,7 +153,7 @@ Issue와 Pull Request에도 개인정보, 내부 회의 내용, 실제 운영 �
 이 프로젝트는 가짜연구소 Open Academy로 진행됩니다.
 여러분의 참여와 기여가 ‘우연한 혁명(Serendipity Revolution)’을 가능하게 합니다. 모두에게 깊은 감사를 전합니다.
 
-ExperiBase is developed as part of Pseudo-Lab's Open Research Initiative. Special thanks to our contributors and the open source community for their valuable insights and contributions.
+Iterglow is developed as part of Pseudo-Lab's Open Research Initiative. Special thanks to our contributors and the open source community for their valuable insights and contributions.
 
 ## About Pseudo Lab 👋🏼
 
@@ -162,7 +162,7 @@ ExperiBase is developed as part of Pseudo-Lab's Open Research Initiative. Specia
 ## Contributors 😃
 
 <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Pseudo-Lab/experiment-platform-pseudolab" alt="ExperiBase contributors" />
+  <img src="https://contrib.rocks/image?repo=Pseudo-Lab/experiment-platform-pseudolab" alt="Iterglow contributors" />
 </a>
 
 ## License 🗞

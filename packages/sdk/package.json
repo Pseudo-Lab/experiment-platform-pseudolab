@@ -6,7 +6,7 @@
     "registry": "https://registry.npmjs.org",
     "access": "public"
   },
-  "description": "ExperiBase SDK — feature flag & A/B test client",
+  "description": "Iterglow SDK — feature flag & A/B test client",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -59,6 +59,7 @@
     "typescript": "^5.6.3"
   },
   "keywords": [
+    "iterglow",
     "experibase",
     "feature-flag",
     "ab-test",

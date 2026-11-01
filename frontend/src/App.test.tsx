@@ -270,7 +270,7 @@ describe('App Component', () => {
     const previousTheme = localStorage.getItem('theme');
     fireEvent.click(screen.getByRole('button', { name: 'Toggle theme' }));
     expect(localStorage.getItem('theme')).not.toBe(previousTheme);
-    fireEvent.click(screen.getByRole('link', { name: 'Explore ExperiBase' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Explore Iterglow' }));
     expect(screen.getByRole('region', { name: 'From an experiment to your next decision' })).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('link', { name: 'Admin sign in' })[0]);
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'admin' } });

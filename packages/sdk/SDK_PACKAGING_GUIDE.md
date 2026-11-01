@@ -1,7 +1,9 @@
-# ExperiBase SDK Packaging Guide
+# Iterglow SDK Packaging Guide
 
-`@pseudo-lab/experibase-sdk` — ExperiBase 플랫폼의 공식 클라이언트 SDK.
+`@pseudo-lab/experibase-sdk` — Iterglow 플랫폼의 공식 클라이언트 SDK.
 Feature flag 결정, A/B 테스트 노출, 이벤트 트래킹을 위한 경량 TypeScript 라이브러리입니다.
+
+플랫폼 브랜드는 Iterglow(이터글로)이며, 현재 npm 패키지명과 공개 클래스·훅 이름은 기존 예제대로 유지합니다.
 
 ---
 
@@ -153,7 +155,7 @@ packages/sdk/
 
 ### 방법 A — 소스 직접 참조 (모노레포 권장)
 
-ExperiBase 모노레포 내부에서 작업할 때 사용합니다.  
+Iterglow 모노레포 내부에서 작업할 때 사용합니다.
 별도 빌드 없이 TypeScript 소스를 직접 사용합니다.
 
 **frontend/package.json**

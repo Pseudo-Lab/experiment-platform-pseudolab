@@ -54,7 +54,7 @@ body {
   color: hsl(var(--foreground));
 }
 
-/* Public introduction and sign-in share the approved ExperiBase identity. */
+/* Public introduction and sign-in share the approved Iterglow identity. */
 .service-entry {
   --primary: 245 74% 60%;
   --primary-foreground: 0 0% 100%;

@@ -26,10 +26,10 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
     en: {
       title: 'Admin sign in', sdkGuide: 'SDK guide',
       introTitle: 'Your next product decision starts here.',
-      platform: 'OPEN-SOURCE EXPERIMENTATION',
+      platform: 'Open-source A/B testing & experimentation platform',
       sample: 'Illustrative example', project: 'Example project · Signup experience', experiment: 'Compare signup messages', experimentText: 'Define a hypothesis and variants, then check signup completion events.', variants: ['A · Original message', 'B · Clear next step'], draft: 'Draft · No data collected', flow: 'Configure → Integrate → Check events → Decide', back: 'Back to the introduction',
-      introText: 'Compare screens and features, collect user behavior, and inform your next decision with ExperiBase.',
-      about: 'Explore ExperiBase',
+      introText: 'Compare screens and features, collect user behavior, and inform your next decision with Iterglow.',
+      about: 'Explore Iterglow',
       access: 'An administrator account is required. Connect your service through the SDK or API to collect experiment data.',
       language: '한국어로 변경', themeLabel: 'Toggle theme',
       subtitle: 'Sign in to manage experiments and feature flags.',
@@ -42,10 +42,10 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
     },
     ko: {
       title: '관리자 로그인', sdkGuide: 'SDK 가이드',
-      introTitle: '다음 제품 결정, ExperiBase에서 시작하세요.',
-      platform: 'OPEN-SOURCE EXPERIMENTATION',
+      introTitle: '다음 제품 결정, 이터글로에서 시작하세요.',
+      platform: '오픈소스 A/B 테스트·실험 플랫폼',
       sample: '설명용 예시', project: '예시 프로젝트 · 가입 경험 개선', experiment: '가입 안내 문구 비교', experimentText: '가설과 비교할 버전을 정하고, 가입 완료 이벤트를 확인하는 실험입니다.', variants: ['A · 기존 안내', 'B · 다음 행동 강조'], draft: '초안 · 데이터 수집 전', flow: '설정 → 서비스 연동 → 수집 확인 → 결과·결정', back: '서비스 소개로 돌아가기',
-      introText: '화면과 기능을 비교하고, 사용자 행동을 수집해 다음 결정을 돕는 실험 플랫폼 ExperiBase입니다.',
+      introText: '화면과 기능을 비교하고, 사용자 행동을 수집해 다음 결정을 돕는 실험 플랫폼 이터글로입니다.',
       about: '서비스 살펴보기',
       access: '관리자 계정으로 이용합니다. 실험 데이터를 수집하려면 서비스에 SDK 또는 API를 연동해야 합니다.',
       language: 'Switch to English', themeLabel: '화면 테마 변경',
@@ -84,7 +84,7 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
     <div className="service-entry min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
         <Link to="/" state={location.state} className="flex items-center gap-2 rounded-md font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Diamond aria-hidden="true" className="h-8 w-8 rounded-lg bg-primary p-1.5 text-primary-foreground" />ExperiBase
+          <Diamond aria-hidden="true" className="h-8 w-8 rounded-lg bg-primary p-1.5 text-primary-foreground" />Iterglow
         </Link>
         <div className="flex items-center gap-1"><Button asChild variant="ghost" className="mr-3 hidden sm:inline-flex"><Link to="/" state={location.state}>{copy.about}</Link></Button>
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={copy.themeLabel}>{theme === 'light' ? <Moon /> : <Sun />}</Button>
@@ -93,7 +93,7 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
       </header>
       <main className="mx-auto flex max-w-6xl items-center justify-center px-4 py-8 md:px-6 lg:py-16">
       <div className="grid w-full items-center gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-20">
-        <section aria-label="ExperiBase" className="min-w-0 space-y-5 lg:rounded-2xl lg:border lg:border-primary/15 lg:bg-primary/5 lg:p-9">
+        <section aria-label="Iterglow" className="min-w-0 space-y-5 lg:rounded-2xl lg:border lg:border-primary/15 lg:bg-primary/5 lg:p-9">
           <p className="text-xs font-semibold tracking-widest text-primary">{copy.platform}</p>
           <h2 className="max-w-xl text-2xl font-bold leading-snug tracking-tight break-keep md:text-4xl md:leading-snug">{copy.introTitle}</h2>
           <p className="max-w-lg text-sm leading-relaxed text-muted-foreground md:text-base">{copy.introText}</p>

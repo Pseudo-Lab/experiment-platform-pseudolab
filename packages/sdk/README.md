@@ -1,4 +1,6 @@
-# ExperiBase SDK
+# Iterglow SDK
+
+플랫폼 이름은 **Iterglow(이터글로)**입니다. 현재 npm 패키지명 `@pseudo-lab/experibase-sdk`와 `ExperibaseSDK`·`ExperibaseProvider` 등 공개 코드 이름은 유지합니다. 아래 설치·import 예제도 해당 이름을 사용합니다.
 
 SDK v1 이벤트 모델의 로컬 후보입니다. 아직 npm에 배포하지 않았습니다. 기존 배포판을 사용하는 실험은 해당 버전을 고정하고 새 실험으로 전환하세요. 이 문서의 이벤트 계약은 이전의 자동 impression/이중 저장 계약을 대체합니다.
 

@@ -208,7 +208,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             <FlaskConical className="text-white" size={20} />
                         </div>
                         <div className={cn("ml-3 flex flex-col transition-all duration-300 overflow-hidden", isSidebarOpen ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0")}>
-                            <span className="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100 whitespace-nowrap">ExperiBase</span>
+                            <span className="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100 whitespace-nowrap">Iterglow</span>
                             <span className={cn("text-[10px] font-black px-1.5 py-0.5 rounded-md w-fit uppercase whitespace-nowrap", backendStatus === 'Online' ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400")}>
                                 {backendStatus}
                             </span>
@@ -278,10 +278,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             {isSidebarOpen && <span>{lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}</span>}
                         </Link>
                     </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? '서비스 소개' : 'About ExperiBase'}>
-                        <Link to="/" aria-label={lang === 'ko' ? '서비스 소개' : 'About ExperiBase'}>
+                    <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? '서비스 소개' : 'About Iterglow'}>
+                        <Link to="/" aria-label={lang === 'ko' ? '서비스 소개' : 'About Iterglow'}>
                             <Info aria-hidden="true" className="shrink-0" />
-                            {isSidebarOpen && <span>{lang === 'ko' ? '서비스 소개' : 'About ExperiBase'}</span>}
+                            {isSidebarOpen && <span>{lang === 'ko' ? '서비스 소개' : 'About Iterglow'}</span>}
                         </Link>
                     </Button>
                     {currentProjectId === 'demo-app' && (

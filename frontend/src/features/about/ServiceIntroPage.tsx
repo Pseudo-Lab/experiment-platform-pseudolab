@@ -14,8 +14,8 @@ interface Props {
 
 const copy = {
   ko: {
-    label: '오픈소스 실험 플랫폼', title: '더 나은 제품을 만드는', titleAccent: '실험의 시작.',
-    description: '화면과 기능을 비교하고, 사용자 행동을 수집해 다음 결정을 돕는 오픈소스 실험 플랫폼입니다.',
+    label: '오픈소스 A/B 테스트·실험 플랫폼', title: '더 나은 제품을 만드는', titleAccent: '실험의 시작.',
+    description: '이터글로는 화면과 기능을 비교하고, 사용자 행동을 수집해 다음 결정을 돕는 오픈소스 실험 플랫폼입니다.',
     login: '관리자 로그인', manage: '관리 화면 열기', features: '제품 기능', featuresLink: '제품 기능 살펴보기', flowLink: '사용 흐름',
     access: '현재 관리자 계정으로 이용합니다.', integration: '서비스에 SDK 또는 API를 연동해 실험 데이터를 수집하세요.',
     cycle: '실험에서 다음 결정까지', uses: '가설부터 다음 결정까지.',
@@ -39,8 +39,8 @@ const copy = {
     sdkGuide: 'SDK 가이드', teamLink: '팀 활동 보기', language: 'Switch to English', theme: '화면 테마 변경',
   },
   en: {
-    label: 'Open-source experimentation', title: 'Better products start', titleAccent: 'with an experiment.',
-    description: 'An open-source experimentation platform for comparing screens and features, collecting user behavior, and informing your next decision.',
+    label: 'Open-source A/B testing & experimentation platform', title: 'Better products start', titleAccent: 'with an experiment.',
+    description: 'Iterglow is an open-source experimentation platform for comparing screens and features, collecting user behavior, and informing your next decision.',
     login: 'Admin sign in', manage: 'Open workspace', features: 'Product', featuresLink: 'Explore the product', flowLink: 'Workflow',
     access: 'Access currently requires an administrator account.', integration: 'Connect your service through the SDK or API to collect experiment data.',
     cycle: 'From an experiment to your next decision', uses: 'From a hypothesis to your next decision.',
@@ -74,7 +74,7 @@ export function ServiceIntroPage({ lang, setLang, theme, setTheme, authenticated
     <div className="service-entry min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
         <Link to="/" state={location.state} className="flex items-center gap-2 rounded-md text-lg font-bold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Diamond aria-hidden="true" className="h-8 w-8 rounded-lg bg-primary p-1.5 text-primary-foreground" />ExperiBase
+          <Diamond aria-hidden="true" className="h-8 w-8 rounded-lg bg-primary p-1.5 text-primary-foreground" />Iterglow
         </Link>
         <nav aria-label={t.features} className="ml-auto hidden items-center gap-6 text-sm text-muted-foreground md:flex">
           <a href="#features" className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.features}</a>
@@ -133,7 +133,7 @@ export function ServiceIntroPage({ lang, setLang, theme, setTheme, authenticated
         </section>
       </main>
       <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-border px-4 py-6 text-xs text-muted-foreground md:px-6">
-        <span>ExperiBase · {t.label}</span><Link to="/docs/sdk" state={location.state} className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.sdkGuide}</Link><a className="inline-flex items-center gap-2 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" href="https://pseudo-lab.github.io/experiment-platform-pseudolab/">{t.teamLink}<ArrowRight aria-hidden="true" className="h-3 w-3" /></a>
+        <span>Iterglow · {t.label}</span><Link to="/docs/sdk" state={location.state} className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.sdkGuide}</Link><a className="inline-flex items-center gap-2 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" href="https://pseudo-lab.github.io/experiment-platform-pseudolab/">{t.teamLink}<ArrowRight aria-hidden="true" className="h-3 w-3" /></a>
       </footer>
     </div>
   );
