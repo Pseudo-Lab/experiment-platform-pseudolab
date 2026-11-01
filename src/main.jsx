@@ -64,19 +64,19 @@ const copy = {
     title: <>실험플랫폼을 만드는<br/><span>과정과 배움을 기록합니다.</span></>,
     intro: '개발하고, 함께 공부하고, 실제 서비스에 적용하며 배웁니다. 가짜연구소 데이터 이니셔티브의 활동과 진행 소식을 모았습니다.',
     explore: '진행 소식 살펴보기', service: '플랫폼 바로가기',
-    note: '제품 소개와 사용은 ExperiBase에서 확인하세요.',
+    note: '제품 소개와 사용은 Iterglow(이터글로)에서 확인하세요.',
     boardTitle: '지금 우리가 향하는 곳', season: '13기 활동',
     boardItems: [['BUILD', '실험을 위한 기반 만들기', '실험 관리 · SDK/API · 계측'], ['LEARN', '실제 서비스에서 배우기', '개발과 분석을 연결하는 과정'], ['NEXT', '하나의 실험 사이클 완성하기', '기능 개선 → 실험 → 분석과 결정']],
     strip: ['개발 과정', '함께하는 스터디', '실제 적용과 배움'],
     updatesTag: '01 / TEAM LOG', updatesTitle: '무엇을 하고 있나요?',
     updatesIntro: '만들어온 것과 적용하며 배운 것, 다음으로 해볼 일을 나눠요.',
     updates: [
-      ['개발', '만들어온 기반', '실험 관리부터 SDK·API 연동까지', '실험 관리부터 사용자별 버전 배정, Feature Flag, 행동 수집과 결과 확인까지 필요한 기능을 만들어 왔어요. 실험을 관리하는 화면도 다듬고 있어요. 사용 방법은 ExperiBase에서, 코드와 변경 이력은 GitHub에서 확인할 수 있어요.'],
+      ['개발', '만들어온 기반', '실험 관리부터 SDK·API 연동까지', '실험 관리부터 사용자별 버전 배정, Feature Flag, 행동 수집과 결과 확인까지 필요한 기능을 만들어 왔어요. 실험을 관리하는 화면도 다듬고 있어요. 사용 방법은 Iterglow에서, 코드와 변경 이력은 GitHub에서 확인할 수 있어요.'],
       ['적용', '실제 서비스에서의 경험', '가짜연구소 홈페이지의 12기 회고 연동', '가짜연구소 홈페이지의 12기 회고 진입 화면에 플랫폼을 연결해, 노출부터 클릭과 제출까지 측정하는 흐름을 확인했어요. 무작위 대조군이 없는 준실험이라 기능의 개선 효과까지 입증한 사례는 아니에요. 서비스 연동과 이벤트 정의, 데이터 해석 과정에서 배운 점을 다음 실험으로 이어가고 있어요.'],
       ['다음 단계', '스터디와 13기 목표', '만드는 것에서 실험하고 판단하는 것까지', '13기에는 기능을 개선하고, 실제 사용자와 실험하고, 결과를 살펴 다음 결정을 내리는 과정을 함께 경험하려고 해요. 무엇을 실험하고 어떤 지표로 확인할지 검토하면서, 다음에도 활용할 수 있는 가이드와 배움을 남기는 게 목표예요.'],
     ],
     teamTag: '02 / ABOUT THE TEAM', teamTitle: <>개발과 실험을 연결하며,<br/>함께 배웁니다.</>,
-    teamText: '우리는 가짜연구소 데이터 이니셔티브입니다. 실제 서비스의 문제를 발견하고, 개선안을 만들며, 데이터를 통해 결과를 살펴봅니다. 이 과정을 지원하는 오픈소스 실험플랫폼 ExperiBase를 개발하고 있습니다.',
+    teamText: '우리는 가짜연구소 데이터 이니셔티브입니다. 실제 서비스의 문제를 발견하고, 개선안을 만들며, 데이터를 통해 결과를 살펴봅니다. 이 과정을 지원하는 오픈소스 A/B 테스트·실험 플랫폼 Iterglow(이터글로)를 개발하고 있습니다.',
     teamFoot: '이곳에는 팀의 활동과 짧은 진행 소식을 모읍니다. 자세한 기술 글은 팀 블로그로, 소스 코드와 변경 이력은 GitHub로 연결합니다.',
     teamTopics: ['개발과 운영', '실험 설계와 분석', '스터디와 경험 공유'],
     membersTitle: '함께 만드는 사람들', membersIntro: '서로 다른 경험을 모아 실험플랫폼을 만들고 있어요.',
@@ -84,7 +84,7 @@ const copy = {
     linksTag: '03 / EXPLORE MORE', linksTitle: '프로젝트와 기록을 찾아보세요.',
     linksIntro: '제품 사용부터 자세한 기술 이야기까지, 필요한 곳으로 바로 연결합니다.',
     resources: [
-      ['ExperiBase', '서비스', '제품을 살펴보고 실험을 운영하는 공간입니다.', '플랫폼 바로가기', 'service'],
+      ['Iterglow(이터글로)', '서비스', '제품을 살펴보고 실험을 운영하는 공간입니다.', '플랫폼 바로가기', 'service'],
       ['GitHub', '코드와 변경 이력', '구현 내용과 개발 진행 상황을 저장소에서 확인하세요.', '저장소 살펴보기', 'repo'],
       ['팀 블로그', '기술 글과 경험', '팀의 글과 자료를 모아둔 블로그입니다.', '블로그 둘러보기', 'blog'],
     ],
@@ -101,19 +101,19 @@ const copy = {
     title: <>Building a platform.<br/><span>Sharing the journey.</span></>,
     intro: 'We build, study together, and learn from real services. Follow the work and progress of Pseudo Lab’s Data Initiative.',
     explore: 'Explore our updates', service: 'Open the platform',
-    note: 'Visit ExperiBase for product information and use.',
+    note: 'Visit Iterglow for product information and use.',
     boardTitle: 'What we are working toward', season: 'Season 13',
     boardItems: [['BUILD', 'Build the foundations', 'Experiment management · SDK/API · measurement'], ['LEARN', 'Learn from real services', 'Connect development and analysis'], ['NEXT', 'Complete an experiment cycle', 'Improve → experiment → analyze and decide']],
     strip: ['Development journey', 'Learning together', 'Lessons from practice'],
     updatesTag: '01 / TEAM LOG', updatesTitle: 'What have we been working on?',
     updatesIntro: 'Here’s what we’ve built, what we’ve learned, and what we’d like to try next.',
     updates: [
-      ['Build', 'The foundations', 'From experiment management to SDK integration', 'We’ve been building the pieces for running experiments, from consistent assignment and feature flags to event collection and results. We’re also refining the management interface. You can explore the product on ExperiBase and follow the code and changes on GitHub.'],
+      ['Build', 'The foundations', 'From experiment management to SDK integration', 'We’ve been building the pieces for running experiments, from consistent assignment and feature flags to event collection and results. We’re also refining the management interface. You can explore the product on Iterglow and follow the code and changes on GitHub.'],
       ['Apply', 'Experience from a real service', 'Connecting Season 12 reflections on the Pseudo Lab website', 'We connected the platform to the Season 12 reflection entry UI on the Pseudo Lab website and checked the measurement flow from exposure to click to submission. Without a randomized control group, this quasi-experiment doesn’t establish that the feature improved outcomes. We’re taking what we learned about integration, event definitions, and interpretation into our next experiments.'],
       ['Up next', 'Learning and our Season 13 goal', 'From building to experimenting and deciding', 'In Season 13, we’d like to experience the full cycle together: improve a feature, run a real-user experiment, look at the results, and decide what to do next. We’re reviewing experiment questions and metrics and aiming to leave behind guides and lessons we can use again.'],
     ],
     teamTag: '02 / ABOUT THE TEAM', teamTitle: <>Connecting development<br/>and experimentation.</>,
-    teamText: 'We are Pseudo Lab’s Data Initiative. We find problems in real services, build improvements, and examine outcomes through data. We are developing ExperiBase, an open-source experimentation platform that supports this process.',
+    teamText: 'We are Pseudo Lab’s Data Initiative. We find problems in real services, build improvements, and examine outcomes through data. We are developing Iterglow, an open-source A/B testing & experimentation platform that supports this process.',
     teamFoot: 'This page brings together short updates and team activities. Detailed technical writing belongs on the team blog; source code and change history live on GitHub.',
     teamTopics: ['Development & operations', 'Experiment design & analysis', 'Study & shared experience'],
     membersTitle: 'The people behind the project', membersIntro: 'Bringing different experiences together to build the platform.',
@@ -121,7 +121,7 @@ const copy = {
     linksTag: '03 / EXPLORE MORE', linksTitle: 'Explore the project and its resources.',
     linksIntro: 'Find the product, source code, and longer technical stories in their own spaces.',
     resources: [
-      ['ExperiBase', 'The service', 'Explore the product and manage experiments.', 'Open the platform', 'service'],
+      ['Iterglow', 'The service', 'Explore the product and manage experiments.', 'Open the platform', 'service'],
       ['GitHub', 'Code & change history', 'Explore the implementation and development progress.', 'Explore the repository', 'repo'],
       ['Team Blog', 'Technical writing & experience', 'Our team’s blog, bringing together articles and resources.', 'Explore the blog', 'blog'],
     ],
@@ -281,7 +281,7 @@ function App() {
         <div className="stay-action"><div className="stay-buttons"><Button asChild size="lg"><a href={urls.signup} target="_blank" rel="noreferrer">{t.stayCta}<ArrowUpRight size={17}/></a></Button><Button asChild size="lg" variant="outline"><a href={urls.repo} target="_blank" rel="noreferrer"><Github size={18}/>GitHub<ArrowUpRight size={17}/></a></Button></div><small>{t.stayNote}</small></div>
       </section>
     </main>
-    <footer className="wrap"><div><a className="footer-brand" href="#"><b className="wordmark">Data <span className="wordmark-lab">Initiative</span></b></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">ExperiBase ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
+    <footer className="wrap"><div><a className="footer-brand" href="#"><b className="wordmark">Data <span className="wordmark-lab">Initiative</span></b></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">Iterglow ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
   </>;
 }
 createRoot(document.getElementById('root')).render(<App/>);
