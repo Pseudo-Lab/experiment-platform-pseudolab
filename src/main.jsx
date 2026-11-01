@@ -80,7 +80,7 @@ const copy = {
     teamFoot: '이곳에는 팀의 활동과 짧은 진행 소식을 모읍니다. 자세한 기술 글은 팀 블로그로, 소스 코드와 변경 이력은 GitHub로 연결합니다.',
     teamTopics: ['개발과 운영', '실험 설계와 분석', '스터디와 경험 공유'],
     membersTitle: '함께 만드는 사람들', membersIntro: '서로 다른 경험을 모아 실험플랫폼을 만들고 있어요.',
-    lead: '프로젝트 리더', member: '팀원', profile: '프로필 보기',
+    lead: '리드 빌더', member: '빌더', profile: '프로필 보기',
     linksTag: '03 / EXPLORE MORE', linksTitle: '프로젝트와 기록을 찾아보세요.',
     linksIntro: '제품 사용부터 자세한 기술 이야기까지, 필요한 곳으로 바로 연결합니다.',
     resources: [
@@ -117,7 +117,7 @@ const copy = {
     teamFoot: 'This page brings together short updates and team activities. Detailed technical writing belongs on the team blog; source code and change history live on GitHub.',
     teamTopics: ['Development & operations', 'Experiment design & analysis', 'Study & shared experience'],
     membersTitle: 'The people behind the project', membersIntro: 'Bringing different experiences together to build the platform.',
-    lead: 'Project lead', member: 'Team member', profile: 'View profile',
+    lead: 'Lead Builder', member: 'Builder', profile: 'View profile',
     linksTag: '03 / EXPLORE MORE', linksTitle: 'Explore the project and its resources.',
     linksIntro: 'Find the product, source code, and longer technical stories in their own spaces.',
     resources: [
