@@ -18,11 +18,14 @@ Last-Validated: 2026-11-04
 
 ## 검증
 
-- 전체 frontend 테스트에서 137개 통과, 링크의 KO 접근성 이름을 EN으로 찾던 테스트 1개 실패. 해당 기대값 교정 후 MainLayout 9개 모두 통과했다(총 138개 테스트의 성공 확인).
+- frontend 전체 19개 파일 / 138개 테스트 통과. 로컬에서 발견한 KO 링크 기대값을 교정한 후 CI 전체 실행으로 재확인했다. CI의 backend 테스트도 345개 통과했다.
 - SDK 빌드 및 frontend TypeScript/Vite 빌드 성공. 기존 대형 번들 경고는 이번 자산 교체 범위 밖이다.
 - 실제 Chromium에서 소개·로그인·SDK 가이드·관리 화면 × light/dark × 1440/375/320px의 24가지 조합 통과. 이미지 로딩, 가로 넘침, KO/EN 홈 링크, 문서 제목, 접힌 사이드바 심볼을 확인했다. API는 로컬 stub이며 운영 데이터에 쓰지 않았다.
 - 제공된 승인 자산 6개와 로컬 HTTP 응답의 SHA256 모두 일치. 화면 캡처·검증 결과: `/tmp/iterglow-brand-evidence/`, 재현 스크립트: `/tmp/check-iterglow-brand.cjs` (서버 임시 파일).
-- 운영 반영 상태: 로컬 검증 완료, main/자동 배포는 아직 진행 전.
+- [PR #30](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pull/30) main 반영: `2c0a8e0f0b2fc6217989eb53eafba92dd8932ffb`.
+- [main CI](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41667076911) 및 [GitOps](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/41667328369) 성공. Ops `6e4a9ec1d0260930335e7c0cb3fb2294ff53b4bd`에서 frontend/backend 이미지 태그가 해당 main SHA로 자동 갱신됐다. 수동 배포/동기화는 실행하지 않았다.
+- 운영 반영 확인 완료: `https://exp.pseudolab-devfactory.com/`에서 JS `index-DWf6MZL3.js`와 새 아이콘 링크를 확인했다. 공개 소개·로그인·SDK 가이드 × KO/light/1440px 및 EN/dark/375px 총 6가지 실제 브라우저 검증 통과(로고·홈 링크·제목·가로 넘침·페이지 오류). 승인 자산 6개의 운영 HTTP 응답 SHA256도 원본과 일치했다.
+- 운영 검증은 익명 공개 화면 및 GET 요청만 사용했다. 인증된 사이드바는 로컬 stub 환경에서 검증했으며 운영 계정 로그인을 수행하지 않았다. 운영 근거는 `/tmp/iterglow-brand-live/validation.json`, 재현 스크립트는 `/tmp/check-iterglow-brand-live.cjs`에 있다.
 
 ## 통합 주의
 
