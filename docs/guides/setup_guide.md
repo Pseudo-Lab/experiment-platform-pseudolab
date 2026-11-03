@@ -76,3 +76,16 @@ A: `docker compose logs -f [서비스명]` 명령어로 실시간 로그를 확�
 기존 프로젝트 키는 SDK와 `/access/decide`의 Bearer 인증에 함께 사용되므로 공개 브라우저 전용 키로 취급하지 않는다. 키 분리·교체는 연결 서비스를 확인하고 별도 전환 절차로 수행한다. `/admin/srm-check` 등 기존 무인 관리 호출도 이제 관리자 세션이 필요하므로 호출 담당자가 확인해야 한다. SDK·회고 외부 경로의 기존 인증 계약은 유지한다.
 
 상세 검증과 운영 전환 순서는 `docs/reports/handoffs/2026-10-26-urgent-admin-security.md`를 참고한다.
+
+
+### Google 로그인과 호스트 전환
+
+Google 로그인을 활성화한 설치는 계정별 프로젝트 소유권을 사용한다. 위 관리자 전용 설명은 초기 도입 당시 기준이다. 서버 자격증명은 공개 SDK 키와 분리된 credential을 사용한다.
+
+- 자체 호스팅은 자기 HTTPS origin을 사용한다. frontend 기본 `/api/v1`, SDK의 명시적 API base 설정, `.env.sample`의 예시 도메인을 운영 도메인으로 하드코딩하지 않는다.
+- Iterglow canonical 설정은 `GOOGLE_OAUTH_REDIRECT_URI=https://iterglow.pseudolab-devfactory.com/api/v1/auth/google/callback`, `AUTH_COOKIE_SECURE=true`, `AUTH_COOKIE_SAMESITE=lax`다. 동일 Web client의 Google 허용 redirect URI에 새 주소를 추가하고 기존 URI는 전환 검증 전 유지한다. 저장한 client JSON을 다시 발급하거나 덮어쓸 필요는 없다.
+- `BACKEND_CORS_ORIGINS`는 기존 허용 origin을 보존한 상태에서 `https://iterglow.pseudolab-devfactory.com`을 추가한다. 전환 중 기존 `https://exp.pseudolab-devfactory.com`도 유지한다. 전체 목록을 이 두 개로 임의 축소하지 않는다.
+- OAuth 시도 쿠키·세션 쿠키는 host-only이고 복귀 경로의 sessionStorage도 origin별이다. 기존 로그인 상태와 복귀 경로는 새 호스트로 이동하지 않는다. 새 canonical에서 로그인하는 흐름을 사용하며 쿠키 Domain을 상위 도메인으로 넓히지 않는다.
+- 앱의 Google 시작 GET은 검증된 callback 설정에서 파생한 고정 canonical로만 이동하며, canonical에서만 OAuth state/cookie를 만든다. `/login`과 관리자 POST, SDK/API, callback 경로 전체를 redirect하지 않는다. old host는 향후 폐기 대상이며 old 로그인 성공·호스트 간 복귀는 출시 조건이 아니다. 기존 DNS/Ingress/API는 새 로그인·SDK 확인 후 별도 폐기 단계에서 정리한다.
+
+이 설정은 운영 전환 완료를 뜻하지 않는다. provider inactive 앱 배포 뒤 새 origin CORS와 Google 설정을 활성화해야 한다. Origin 검증 완화로 우회하지 않는다.

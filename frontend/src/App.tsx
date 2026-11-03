@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { SdkGuidePage } from './features/docs/SdkGuidePage';
 import { MainLayout } from './layouts/MainLayout';
@@ -32,15 +32,6 @@ function AppShell() {
     return (savedLang === 'en' || savedLang === 'ko') ? savedLang : 'ko';
   });
 
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
-    // Check system preference if no saved theme
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-    return 'light';
-  });
   const [backendStatus, setBackendStatus] = useState<string>("connecting...");
   const { state: authState, user, logout } = useAuth();
   const location = useLocation();
@@ -62,24 +53,20 @@ function AppShell() {
     localStorage.setItem('lang', lang);
   }, [lang]);
 
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+  useLayoutEffect(() => {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.style.colorScheme = 'light';
+  }, []);
 
   if (isServiceIntro) {
     if (location.pathname !== '/') {
       return <Navigate to={{ pathname: '/', search: location.search, hash: location.hash }} replace state={location.state} />;
     }
-    return <ServiceIntroPage lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} authenticated={authState === 'authenticated'} />;
+    return <ServiceIntroPage lang={lang} setLang={setLang} authenticated={authState === 'authenticated'} />;
   }
 
   if (isSdkGuide) {
-    return <SdkGuidePage lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} />;
+    return <SdkGuidePage lang={lang} setLang={setLang} />;
   }
 
   if (authState === 'loading') {
@@ -90,10 +77,14 @@ function AppShell() {
     );
   }
 
+  if (location.pathname === '/login') {
+    return <LoginPage lang={lang} setLang={setLang} />;
+  }
+
   if (authState === 'anonymous') {
     return (
       <Routes>
-        <Route path="/login" element={<LoginPage lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} />} />
+        <Route path="/login" element={<LoginPage lang={lang} setLang={setLang} />} />
         <Route path="*" element={<Navigate to="/login" replace state={{ from: location }} />} />
       </Routes>
     );
@@ -104,28 +95,27 @@ function AppShell() {
       <MainLayout
         lang={lang}
         setLang={setLang}
-        theme={theme}
-        setTheme={setTheme}
         backendStatus={backendStatus}
         userLabel={user?.username}
+        isAdmin={user?.is_admin !== false}
         onLogout={logout}
       >
         <Routes>
           <Route path="/login" element={<Navigate to="/experiments" replace />} />
           <Route path="/dashboard" element={<Navigate to="/experiments" replace />} />
           <Route path="/community" element={<Navigate to="/experiments" replace />} />
-          <Route path="/experiments" element={<Experiments lang={lang} />} />
-          <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} />} />
+          <Route path="/experiments" element={<Experiments lang={lang} isAdmin={user?.is_admin !== false} />} />
+          <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} isAdmin={user?.is_admin !== false} />} />
           <Route path="/metrics" element={<Navigate to="/metrics/github" replace />} />
-          <Route path="/metrics/github" element={<GitHubDashboard lang={lang} />} />
-          <Route path="/metrics/discord" element={<DiscordDashboard lang={lang} />} />
-          <Route path="/bug-report" element={<BugReport lang={lang} />} />
-          <Route path="/bug-report/:id" element={<BugReportDetail lang={lang} />} />
-          <Route path="/feature-flags" element={<FeatureFlags lang={lang} />} />
-          <Route path="/placements" element={<Placements lang={lang} />} />
+          <Route path="/metrics/github" element={user?.is_admin !== false ? <GitHubDashboard lang={lang} /> : <Navigate to="/projects" replace />} />
+          <Route path="/metrics/discord" element={user?.is_admin !== false ? <DiscordDashboard lang={lang} /> : <Navigate to="/projects" replace />} />
+          <Route path="/bug-report" element={user?.is_admin !== false ? <BugReport lang={lang} /> : <Navigate to="/projects" replace />} />
+          <Route path="/bug-report/:id" element={user?.is_admin !== false ? <BugReportDetail lang={lang} /> : <Navigate to="/projects" replace />} />
+          <Route path="/feature-flags" element={<FeatureFlags lang={lang} isAdmin={user?.is_admin !== false} />} />
+          <Route path="/placements" element={user?.is_admin !== false ? <Placements lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="/projects" element={<Projects lang={lang} />} />
           <Route path="/api-key" element={<ApiKeyPage lang={lang} />} />
-          <Route path="/example/*" element={<ExampleApp lang={lang} />} />
+          <Route path="/example/*" element={user?.is_admin !== false ? <ExampleApp lang={lang} /> : <Navigate to="/projects" replace />} />
         </Routes>
       </MainLayout>
     </ProjectProvider>

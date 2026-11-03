@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = ["*"] # SDK origins; credentialed admin requests require an exact origin.
     EXPERIMENT_PLACEMENT_SCENARIO_OVERRIDE_ENABLED: bool = False
 
+    GOOGLE_OAUTH_CLIENT_ID: str | None = None
+    GOOGLE_OAUTH_CLIENT_SECRET: str | None = None
+    GOOGLE_OAUTH_REDIRECT_URI: str | None = None
+
     # Admin auth
     ADMIN_USERNAME: str | None = None
     ADMIN_PASSWORD_HASH: str | None = None

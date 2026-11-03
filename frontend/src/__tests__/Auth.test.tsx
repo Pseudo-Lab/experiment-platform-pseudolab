@@ -23,6 +23,7 @@ function renderLogin(lang: 'ko' | 'en') {
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   vi.spyOn(authApi, 'me').mockResolvedValue(anonymous);
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -137,3 +138,33 @@ it('does not restore an outdated session after an unauthorized event', async () 
   await act(async () => restore(authenticated));
   expect(screen.getByText('anonymous:')).toBeInTheDocument();
 });
+
+
+it.each(['ko', 'en'] as const)('shows disabled Google login when unconfigured in %s', async (lang) => {
+  vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ google: false }) } as Response);
+  renderLogin(lang);
+  expect(await screen.findByText(lang === 'ko' ? '이 설치에는 Google 로그인이 설정되지 않았습니다.' : 'Google sign in is not configured for this installation.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: lang === 'ko' ? 'Google로 계속하기' : 'Continue with Google' })).toBeDisabled();
+});
+
+it('enables Google login only when provider configuration is available', async () => {
+  vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ google: true }) } as Response);
+  renderLogin('en');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeEnabled());
+});
+
+
+it.each(['/api-key', '/bug-report', '//evil.invalid', '/\\evil.invalid', 'https://evil.invalid', '/%2fexample', '/%252fexample', '/%5cfoo', '/%0dfoo', '/\u007ffoo'])(
+  'restores only a safe local OAuth return path: %s', async (path) => {
+    sessionStorage.setItem('oauthReturnPath', path);
+    vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
+    render(<MemoryRouter initialEntries={['/login?oauth=success']}><AuthProvider><Routes>
+      <Route path="/login" element={<LoginPage lang="en" setLang={() => {}} theme="light" setTheme={() => {}} />} />
+      <Route path="/api-key" element={<span>Original destination</span>} />
+      <Route path="/bug-report" element={<span>Original destination</span>} />
+      <Route path="/projects" element={<span>Safe default destination</span>} />
+    </Routes></AuthProvider></MemoryRouter>);
+    expect(await screen.findByText(['/api-key', '/bug-report'].includes(path) ? 'Original destination' : 'Safe default destination')).toBeInTheDocument();
+    expect(sessionStorage.getItem('oauthReturnPath')).toBeNull();
+  },
+);

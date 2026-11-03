@@ -36,3 +36,7 @@ typing_extensions==4.16.0
 tzdata==2026.5
 urllib3==2.8.0
 uvicorn==0.30.1
+PyJWT[crypto]==2.10.1
+cryptography==50.0.2
+cffi==2.1.1
+pycparser==3.12

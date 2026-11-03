@@ -69,12 +69,12 @@ const placement = {
   updated_at: '2026-05-25T00:00:00Z',
 };
 
-const renderDetail = async (lang: 'ko' | 'en' = 'ko') => {
+const renderDetail = async (lang: 'ko' | 'en' = 'ko', isAdmin = true) => {
   await act(async () => {
     render(
       <MemoryRouter initialEntries={['/experiments/s12-mid-reflection']}>
         <Routes>
-          <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} />} />
+          <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} isAdmin={isAdmin} />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -289,6 +289,24 @@ describe('ExperimentDetail placements', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Disabled' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to update flag');
     expect(screen.getByRole('button', { name: 'Disabled' })).toHaveTextContent('Enabled');
+  });
+
+  it.each(['ko', 'en'] as const)('keeps member variants usable without placement controls or requests in %s', async (lang) => {
+    vi.mocked(experimentApi.get).mockResolvedValue({ ...experiment, experiment_type: 'ab_test', status: 'draft', flag_key: 'test-flag',
+      variants: [{ name: 'control', traffic_ratio: 0.5 }, { name: 'treatment', traffic_ratio: 0.5 }],
+    } as any);
+    await renderDetail(lang, false);
+    expect(screen.getByText('treatment')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Placement|placement/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(lang === 'ko' ? '연결된 Placement 없음' : 'No placements linked')).not.toBeInTheDocument();
+    expect(experimentPlacementApi.list).not.toHaveBeenCalled();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      vi.mocked(experimentApi.update).mockResolvedValue({ ...experiment, status: 'running' } as any);
+      fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '시작' : 'Start' }));
+      await act(async () => {});
+      expect(experimentApi.update).toHaveBeenCalledWith(experiment.id, { status: 'running' });
+    } finally { confirm.mockRestore(); }
   });
 
 });

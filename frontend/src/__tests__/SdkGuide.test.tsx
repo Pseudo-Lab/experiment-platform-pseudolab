@@ -47,13 +47,13 @@ it('switches KO/EN, retains the exact install version and provides focusable cod
   for (const link of screen.getAllByRole('link').filter(link => link.getAttribute('href')?.startsWith('#'))) {
     expect(document.getElementById(link.getAttribute('href')!.slice(1))).toBeInTheDocument();
   }
-  fireEvent.click(screen.getByRole('button', { name: 'Toggle theme' }));
-  expect(document.documentElement).toHaveClass('dark');
+  expect(screen.queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
+  expect(document.documentElement).not.toHaveClass('dark');
 });
 
 it.each(['/experiments', '/projects', '/api-key', '/docs/sdk/missing'])('preserves anonymous protection/fallback for %s', async (path) => {
   open(path);
-  expect(await screen.findByRole('heading', { level: 1, name: '관리자 로그인' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { level: 1, name: '로그인' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: '개발자 SDK 가이드' })).not.toBeInTheDocument();
 });
 
@@ -84,7 +84,7 @@ it.each([
   localStorage.setItem('lang', lang);
   const login = vi.spyOn(authApi, 'login').mockResolvedValue({ authenticated: true, user: { username: 'admin' } });
   render(<MemoryRouter initialEntries={[{ pathname: '/experiments/review-original', search: '?tab=summary', hash: '#details', state: { review: 'keep' } }]}><App /><LocationProbe /></MemoryRouter>);
-  const loginTitle = lang === 'ko' ? '관리자 로그인' : 'Admin sign in';
+  const loginTitle = lang === 'ko' ? '로그인' : 'Sign in';
   const guideLabel = lang === 'ko' ? 'SDK 가이드' : 'SDK guide';
   const readLocation = () => JSON.parse(screen.getByTestId('location').textContent!);
   await screen.findByRole('heading', { level: 1, name: loginTitle });
@@ -122,7 +122,7 @@ it.each(['ko', 'en'] as const)('uses the existing default destination after dire
   vi.spyOn(authApi, 'login').mockResolvedValue({ authenticated: true, user: { username: 'admin' } });
   render(<MemoryRouter initialEntries={['/docs/sdk']}><App /><LocationProbe /></MemoryRouter>);
   await act(async () => {});
-  fireEvent.click(screen.getByRole('link', { name: lang === 'ko' ? '관리자 로그인' : 'Admin sign in' }));
+  fireEvent.click(screen.getByRole('link', { name: lang === 'ko' ? '로그인' : 'Sign in' }));
   expect(JSON.parse(screen.getByTestId('location').textContent!).state).toBeNull();
   fireEvent.change(screen.getByLabelText(lang === 'ko' ? '아이디' : 'Username'), { target: { value: 'admin' } });
   fireEvent.change(screen.getByLabelText(lang === 'ko' ? '비밀번호' : 'Password'), { target: { value: 'test-password' } });

@@ -1,8 +1,9 @@
 import { IterglowLogo } from '@/components/IterglowLogo';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Globe, Moon, Sun } from 'lucide-react';
+import { ArrowRight, Globe } from 'lucide-react';
 
+import { API_BASE_URL, apiFetch } from '@/services/http';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from './AuthContext';
@@ -10,14 +11,39 @@ import { useAuth } from './AuthContext';
 interface LoginPageProps {
   lang: 'en' | 'ko';
   setLang: (lang: 'en' | 'ko') => void;
-  theme: 'light' | 'dark';
-  setTheme: (theme: 'light' | 'dark') => void;
+  theme?: 'light' | 'dark';
+  setTheme?: (theme: 'light' | 'dark') => void;
 }
 
-export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
-  const { state, login } = useAuth();
+export function LoginPage({ lang, setLang }: LoginPageProps) {
+  const { state, user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const oauthResult = new URLSearchParams(location.search).get('oauth');
+  const [oauthReturnPath] = useState(() => {
+    if (!oauthResult) return null;
+    try { return sessionStorage.getItem('oauthReturnPath'); } catch { return null; }
+  });
+  const requestedPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || oauthReturnPath;
+  const nextPath = requestedPath && /^\/(?!\/)[^\\\x00-\x20\x7f]*$/.test(requestedPath)
+    && !/%(?:0[0-9a-f]|1[0-9a-f]|20|25|2f|5c|7f)/i.test(requestedPath)
+    ? requestedPath : user?.is_admin === false ? '/projects' : '/experiments';
+  useEffect(() => {
+    if (state === 'authenticated') {
+      try { sessionStorage.removeItem('oauthReturnPath'); } catch { /* Storage is optional. */ }
+    }
+  }, [state]);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    apiFetch(`${API_BASE_URL}/auth/providers`)
+      .then(res => res.ok ? res.json() : { google: false })
+      .then(data => { if (active) setGoogleEnabled(data.google === true); })
+      .catch(() => { if (active) setGoogleEnabled(false); })
+      .finally(() => { if (active) setProvidersLoading(false); });
+    return () => { active = false; };
+  }, []);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -25,14 +51,18 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
 
   const copy = {
     en: {
-      title: 'Admin sign in', sdkGuide: 'SDK guide',
+      title: 'Sign in', sdkGuide: 'SDK guide',
       introTitle: 'Your next product decision starts here.',
       platform: 'Open-source A/B testing & experimentation platform',
       sample: 'Illustrative example', project: 'Example project · Signup experience', experiment: 'Compare signup messages', experimentText: 'Define a hypothesis and variants, then check signup completion events.', variants: ['A · Original message', 'B · Clear next step'], draft: 'Draft · No data collected', flow: 'Configure → Integrate → Check events → Decide', back: 'Back to the introduction',
       introText: 'Compare screens and features, collect user behavior, and inform your next decision with Iterglow.',
       about: 'Explore Iterglow',
-      access: 'An administrator account is required. Connect your service through the SDK or API to collect experiment data.',
-      language: '한국어로 변경', themeLabel: 'Toggle theme',
+      access: 'Use Google to create your account and projects, or sign in with an existing administrator account. Connect your service through the SDK or API to collect experiment data.',
+      language: '한국어로 변경',
+      google: 'Continue with Google',
+      googleUnavailable: 'Google sign in is not configured for this installation.',
+      googleFailed: 'Google sign in was cancelled or failed. Please try again.',
+      checking: 'Checking sign-in options...',
       subtitle: 'Sign in to manage experiments and feature flags.',
       username: 'Username',
       password: 'Password',
@@ -42,14 +72,18 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
       unavailable: 'Sign in is unavailable. Please try again later.',
     },
     ko: {
-      title: '관리자 로그인', sdkGuide: 'SDK 가이드',
+      title: '로그인', sdkGuide: 'SDK 가이드',
       introTitle: '다음 제품 결정, 이터글로에서 시작하세요.',
       platform: '오픈소스 A/B 테스트·실험 플랫폼',
       sample: '설명용 예시', project: '예시 프로젝트 · 가입 경험 개선', experiment: '가입 안내 문구 비교', experimentText: '가설과 비교할 버전을 정하고, 가입 완료 이벤트를 확인하는 실험입니다.', variants: ['A · 기존 안내', 'B · 다음 행동 강조'], draft: '초안 · 데이터 수집 전', flow: '설정 → 서비스 연동 → 수집 확인 → 결과·결정', back: '서비스 소개로 돌아가기',
       introText: '화면과 기능을 비교하고, 사용자 행동을 수집해 다음 결정을 돕는 실험 플랫폼 이터글로입니다.',
       about: '서비스 살펴보기',
-      access: '관리자 계정으로 이용합니다. 실험 데이터를 수집하려면 서비스에 SDK 또는 API를 연동해야 합니다.',
-      language: 'Switch to English', themeLabel: '화면 테마 변경',
+      access: 'Google로 가입해 프로젝트를 만들거나 기존 관리자 계정으로 로그인하세요. 실험 데이터를 수집하려면 서비스에 SDK 또는 API를 연동해야 합니다.',
+      language: 'Switch to English',
+      google: 'Google로 계속하기',
+      googleUnavailable: '이 설치에는 Google 로그인이 설정되지 않았습니다.',
+      googleFailed: 'Google 로그인이 취소되었거나 실패했습니다. 다시 시도해 주세요.',
+      checking: '로그인 방식 확인 중...',
       subtitle: '실험과 Feature Flag를 관리하려면 로그인하세요.',
       username: '아이디',
       password: '비밀번호',
@@ -61,7 +95,6 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
   }[lang];
 
   if (state === 'authenticated') {
-    const nextPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/experiments';
     return <Navigate to={nextPath} replace />;
   }
 
@@ -72,8 +105,7 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
     setSubmitting(true);
     try {
       await login(username, password);
-      const nextPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/experiments';
-      navigate(nextPath, { replace: true });
+        navigate(nextPath, { replace: true });
     } catch (error) {
       setError(error instanceof Error && error.message === 'invalid_credentials' ? copy.error : copy.unavailable);
     } finally {
@@ -88,7 +120,6 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
           <IterglowLogo lang={lang} />
         </Link>
         <div className="flex items-center gap-1"><Button asChild variant="ghost" className="mr-3 hidden sm:inline-flex"><Link to="/" state={location.state}>{copy.about}</Link></Button>
-          <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={copy.themeLabel}>{theme === 'light' ? <Moon /> : <Sun />}</Button>
           <Button variant="outline" size="sm" onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} aria-label={copy.language}><Globe aria-hidden="true" />{lang === 'ko' ? 'EN' : 'KO'}</Button>
         </div>
       </header>
@@ -114,16 +145,26 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{copy.subtitle}</p>
           </div>
 
-          <label className="mb-4 block text-sm font-medium text-foreground">
-            {copy.username}
-            <Input
-              className="mt-2 bg-background border-input text-foreground"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              autoComplete="username"
-              required
-            />
-          </label>
+        <Button type="button" variant="outline" className="mb-3 w-full" disabled={!googleEnabled || providersLoading}
+          onClick={() => {
+            try { sessionStorage.setItem('oauthReturnPath', requestedPath || '/projects'); } catch { /* Use the default destination. */ }
+            window.location.assign(`${API_BASE_URL}/auth/google/start`);
+          }}>{copy.google}</Button>
+        {providersLoading ? <p className="mb-4 text-sm text-muted-foreground" role="status">{copy.checking}</p> :
+          !googleEnabled && <p className="mb-4 text-sm text-muted-foreground">{copy.googleUnavailable}</p>}
+        {new URLSearchParams(location.search).get('oauth') === 'failed' &&
+          <p className="mb-4 text-sm text-destructive" role="alert">{copy.googleFailed}</p>}
+
+        <label className="mb-4 block text-sm font-medium text-foreground">
+          {copy.username}
+          <Input
+            className="mt-2 bg-background border-input text-foreground"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            autoComplete="username"
+            required
+          />
+        </label>
 
           <label className="mb-4 block text-sm font-medium text-foreground">
             {copy.password}

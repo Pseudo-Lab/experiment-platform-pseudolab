@@ -39,8 +39,15 @@ def _parse_variant_names(value: Optional[str]) -> List[str]:
 
 class ExperimentService:
 
-    async def get_all(self, status: str | None = None) -> List[Experiment]:
-        if status:
+    async def get_all(self, status: str | None = None, account_id: str | None = None) -> List[Experiment]:
+        if account_id:
+            sql = "SELECT * FROM experiments WHERE project_id IN (SELECT project_id FROM project_owner WHERE account_id = ?)"
+            params = [account_id]
+            if status:
+                sql += " AND status = ?"
+                params.append(status)
+            rows = await d1.query(sql + " ORDER BY created_at DESC", params)
+        elif status:
             rows = await d1.query(
                 "SELECT * FROM experiments WHERE status = ? ORDER BY created_at DESC",
                 [status],
@@ -604,7 +611,7 @@ class ExperimentService:
     async def _validate_running_preconditions(self, current: Experiment, patch: dict) -> None:
         """draft → running 전환 시 사전 조건 검증.
         - primary_metric: 모든 type 필수 (없으면 결과 계산 불가)
-        - ab_test 한정: flag_key 필수, non-control variant마다 placement 연결 필수
+        - ab_test: flag_key 필수. 소유 프로젝트는 SDK flag 흐름, 기존 공용 실험은 placement 필수
         - quasi_experiment/rollout: placement 기반 운영이므로 이하 검증 스킵
         paused → running(재개)은 이미 draft → running 시 검증을 통과한 상태이므로 재검증 생략.
         """
@@ -636,6 +643,19 @@ class ExperimentService:
                 status_code=400,
                 detail="Feature flag must be connected before starting",
             )
+
+        next_project_id = patch.get("project_id", current.project_id)
+        if next_project_id and await d1.security_query(
+            "SELECT 1 FROM project_owner WHERE project_id = ?", [next_project_id]
+        ):
+            # Account-owned experiments use SDK flags; shared placements are admin-only.
+            flags = await d1.security_query(
+                "SELECT 1 FROM feature_flag WHERE flag_key = ? AND project_id = ? AND archived_at IS NULL AND enabled = 1",
+                [next_flag_key, next_project_id],
+            )
+            if not flags:
+                raise HTTPException(400, "An active flag in the same project must be connected before starting")
+            return
 
         placement_rows = await d1.query(
             "SELECT DISTINCT variant_key FROM experiment_placement_config WHERE experiment_id = ?",

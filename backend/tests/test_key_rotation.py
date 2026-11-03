@@ -27,10 +27,11 @@ PUBLIC = 'pk_sdk_fixture_public'
 SERVER = 'sk_live_fixture_server'
 
 
-def seed(db):
+def seed(db, *, server=True):
     db.execute("INSERT INTO projects(id,name,api_key) VALUES ('demo-app','Demo',?)", (PUBLIC,))
     db.execute("INSERT INTO projects(id,name,api_key) VALUES ('other','Other','pk_sdk_other')")
-    db.execute("INSERT INTO project_server_credential(token_hash,project_id) VALUES (?,'demo-app')", (hashlib.sha256(SERVER.encode()).hexdigest(),))
+    if server:
+        db.execute("INSERT INTO project_server_credential(token_hash,project_id) VALUES (?,'demo-app')", (hashlib.sha256(SERVER.encode()).hexdigest(),))
     db.commit()
 
 
@@ -92,7 +93,7 @@ def test_cas_wrong_project(mock_d1):
 
 
 def test_demo_runtime_config_only_demo_and_no_cache(mock_d1):
-    seed(mock_d1)
+    seed(mock_d1, server=False)
     response = client.get('/api/v1/sdk/demo-config')
     assert response.status_code == 200
     assert response.json() == {'api_key': PUBLIC}

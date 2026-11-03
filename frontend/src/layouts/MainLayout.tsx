@@ -10,8 +10,6 @@ import {
     BookOpen,
     Bug,
     Menu,
-    Sun,
-    Moon,
     Globe,
     User,
     ToggleLeft,
@@ -93,10 +91,11 @@ interface MainLayoutProps {
     children: React.ReactNode;
     lang: 'en' | 'ko';
     setLang: (lang: 'en' | 'ko') => void;
-    theme: 'light' | 'dark';
-    setTheme: (theme: 'light' | 'dark') => void;
+    theme?: 'light' | 'dark';
+    setTheme?: (theme: 'light' | 'dark') => void;
     backendStatus: string;
     userLabel?: string;
+    isAdmin?: boolean;
     onLogout?: () => void | Promise<void>;
 }
 
@@ -104,10 +103,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     children,
     lang,
     setLang,
-    theme,
-    setTheme,
     backendStatus,
     userLabel,
+    isAdmin = true,
     onLogout
 }) => {
     const [logoutFailed, setLogoutFailed] = useState(false);
@@ -268,7 +266,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath.startsWith('/experiments')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
                     <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
                     <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
-                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath.startsWith('/bug-report')} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />
+                    {isAdmin && <SidebarItem icon={Bug} label={t.bugReport} active={activePath.startsWith('/bug-report')} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />}
                 </nav>
 
                 <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
@@ -284,7 +282,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             {isSidebarOpen && <span>{lang === 'ko' ? '서비스 소개' : 'About Iterglow'}</span>}
                         </Link>
                     </Button>
-                    {currentProjectId === 'demo-app' && (
+                    {isAdmin && currentProjectId === 'demo-app' && (
                         <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} secondary />
                     )}
                 </div>
@@ -304,11 +302,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-4">
-
-                        <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="text-slate-500 rounded-lg" aria-label="Toggle theme">
-                            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-                        </Button>
-
                         <Button variant="outline" size="sm" onClick={() => setLang(lang === 'en' ? 'ko' : 'en')} className="gap-1 font-bold text-slate-500 rounded-lg" aria-label="Toggle language">
                             <Globe size={14} /> {lang.toUpperCase()}
                         </Button>

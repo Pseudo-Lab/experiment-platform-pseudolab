@@ -16,6 +16,7 @@ interface VariantInput {
 type ExperimentType = 'ab_test' | 'quasi_experiment' | 'rollout';
 
 interface CreateExperimentModalProps {
+  isAdmin?: boolean;
   lang: 'en' | 'ko';
   onClose: () => void;
   onCreated: (experiment: Experiment) => void;
@@ -237,12 +238,12 @@ const parseCsvList = (value: string) => value
   .map((item) => item.trim())
   .filter(Boolean);
 
-export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ lang, onClose, onCreated }) => {
+export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ lang, onClose, onCreated, isAdmin = true }) => {
   const t = translations[lang];
   const { currentProject } = useProject();
   const [experimentId, setExperimentId] = useState('');
   const [name, setName] = useState('');
-  const [experimentType, setExperimentType] = useState<ExperimentType>(currentProject?.project_type ?? 'quasi_experiment');
+  const [experimentType, setExperimentType] = useState<ExperimentType>(isAdmin ? (currentProject?.project_type ?? 'quasi_experiment') : 'ab_test');
   const [hypothesis, setHypothesis] = useState('');
   const [primaryMetric, setPrimaryMetric] = useState('');
   const [completionEvent, setCompletionEvent] = useState('');
@@ -458,7 +459,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="z-[10000]">
-                  {experimentTypeOptions.map((option) => (
+                  {experimentTypeOptions.filter(option => isAdmin || option.value === 'ab_test').map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option[lang]}
                     </SelectItem>
@@ -662,10 +663,12 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               <input
                 type="checkbox"
                 className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                disabled={!isAdmin}
                 checked={configurePlacement}
                 onChange={(e) => setConfigurePlacement(e.target.checked)}
               />
               {t.configurePlacement}
+              {!isAdmin && (lang === 'ko' ? ' (설치 관리자 전용)' : ' (installation administrator only)')}
             </label>
 
             {configurePlacement && (

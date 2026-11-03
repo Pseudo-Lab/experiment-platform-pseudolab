@@ -105,7 +105,7 @@ describe('App Component', () => {
     authResponse = { authenticated, user: authenticated ? { username: 'admin' } : null };
     await act(async () => { renderApp(['/']); });
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
-    expect(screen.getAllByRole('link', { name: authenticated ? '관리 화면 열기' : '관리자 로그인' })[0])
+    expect(screen.getAllByRole('link', { name: authenticated ? '관리 화면 열기' : '로그인' })[0])
       .toHaveAttribute('href', authenticated ? '/experiments' : '/login');
     expect(projectApi.list).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/status/'));
@@ -130,7 +130,7 @@ describe('App Component', () => {
     expect(projectApi.list).not.toHaveBeenCalled();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Go back' })); });
     expect(screen.getByTestId('location')).toHaveTextContent('/login');
-    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument();
   });
 
   it('redirects anonymous users to the login page', async () => {
@@ -140,14 +140,14 @@ describe('App Component', () => {
       renderApp(['/dashboard']);
     });
 
-    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument();
     expect(screen.getByText('실험과 Feature Flag를 관리하려면 로그인하세요.')).toBeInTheDocument();
   });
 
   it('redirects to login when a management request expires the session', async () => {
     await act(async () => { renderApp(['/experiments']); });
     await act(async () => { window.dispatchEvent(new Event('auth:unauthorized')); });
-    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument();
   });
 
   it('persists language setting to localStorage', async () => {
@@ -172,51 +172,22 @@ describe('App Component', () => {
     expect(screen.getByRole('button', { name: 'Toggle language' })).toHaveTextContent('EN');
   });
 
-  it('persists theme setting to localStorage and respects system preference', async () => {
-    // Mock system preference to dark initially
+  it.each(['/', '/login', '/docs/sdk', '/experiments'])('keeps %s light with stored and system dark preferences', async (path) => {
+    localStorage.setItem('theme', 'dark');
+    document.documentElement.classList.add('dark');
     Object.defineProperty(window, 'matchMedia', { value: mockMatchMedia(true) });
 
-    await act(async () => {
-      renderApp();
-    });
-    // Check initial state from system preference (dark)
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(localStorage.getItem('theme')).toBe('dark');
+    await act(async () => { renderApp([path]); });
 
-    // Simulate theme change to light via button click
-    const themeToggleButton = screen.getByRole('button', { name: 'Toggle theme' }); // Query by aria-label
-    await act(async () => {
-      fireEvent.click(themeToggleButton);
-    });
-    expect(document.documentElement.classList.contains('dark')).toBe(false); // Should be light
-    expect(localStorage.getItem('theme')).toBe('light');
-
-    // Clear localStorage and mock system preference to light for re-initialization
-    localStorage.clear();
-    Object.defineProperty(window, 'matchMedia', { value: mockMatchMedia(false) }); // System preference is light
-
-    cleanup(); // Clear previous render
-    await act(async () => {
-      renderApp();
-    });
-
-    // Should load 'light' from system preference
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
-    expect(localStorage.getItem('theme')).toBe('light');
-
-    // Click to change theme to 'dark'
-    const lightThemeToggleButton = screen.getByRole('button', { name: 'Toggle theme' }); // Button still has the same aria-label
-    await act(async () => {
-      fireEvent.click(lightThemeToggleButton);
-    });
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(localStorage.getItem('theme')).toBe('dark');
+    expect(document.documentElement).not.toHaveClass('dark');
+    expect(document.documentElement.style.colorScheme).toBe('light');
+    expect(screen.queryByRole('button', { name: /Toggle theme|화면 테마 변경/ })).not.toBeInTheDocument();
   });
   it('shows the public introduction while session restoration is pending without loading projects', async () => {
     vi.spyOn(authApi, 'me').mockReturnValue(new Promise(() => {}));
     await act(async () => { renderApp(['/']); });
     expect(screen.getByRole('heading', { level: 1, name: /더 나은 제품을 만드는/  })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: '관리자 로그인' })[0]).toHaveAttribute('href', '/login');
+    expect(screen.getAllByRole('link', { name: '로그인' })[0]).toHaveAttribute('href', '/login');
     expect(projectApi.list).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -228,7 +199,7 @@ describe('App Component', () => {
     expect(projectApi.list).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Better products');
-    expect(screen.getAllByRole('link', { name: 'Admin sign in' })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Sign in' })[0]).toBeInTheDocument();
   });
 
   it('offers a workspace link to signed-in visitors and keeps the root public on expiry', async () => {
@@ -237,7 +208,7 @@ describe('App Component', () => {
     expect(projectApi.list).not.toHaveBeenCalled();
     await act(async () => { window.dispatchEvent(new Event('auth:unauthorized')); });
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
-    expect(screen.getAllByRole('link', { name: '관리자 로그인' })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: '로그인' })[0]).toBeInTheDocument();
   });
 
   it('connects the anonymous login screen to the introduction and back', async () => {
@@ -245,8 +216,8 @@ describe('App Component', () => {
     await act(async () => { renderApp(['/projects']); });
     fireEvent.click(screen.getByRole('link', { name: '서비스 살펴보기' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
-    fireEvent.click(screen.getAllByRole('link', { name: '관리자 로그인' })[0]);
-    expect(screen.getByRole('heading', { name: '관리자 로그인' })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('link', { name: '로그인' })[0]);
+    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument();
     expect(projectApi.list).not.toHaveBeenCalled();
   });
 
@@ -258,7 +229,7 @@ describe('App Component', () => {
     expect(screen.getByRole('complementary')).toBeInTheDocument();
   });
 
-  it('changes language and theme at login while preserving credentials and the return route through about', async () => {
+  it('changes language at login while preserving credentials and the return route through about', async () => {
     authResponse = { authenticated: false, user: null };
     const login = vi.spyOn(authApi, 'login').mockResolvedValue({ authenticated: true, user: { username: 'admin' } });
     await act(async () => { renderApp(['/experiments']); });
@@ -267,12 +238,10 @@ describe('App Component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
     expect(screen.getByLabelText('Username')).toHaveValue('admin');
     expect(screen.getByLabelText('Password')).toHaveValue('secret');
-    const previousTheme = localStorage.getItem('theme');
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle theme' }));
-    expect(localStorage.getItem('theme')).not.toBe(previousTheme);
+    expect(screen.queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: 'Explore Iterglow' }));
     expect(screen.getByRole('region', { name: 'From an experiment to your next decision' })).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('link', { name: 'Admin sign in' })[0]);
+    fireEvent.click(screen.getAllByRole('link', { name: 'Sign in' })[0]);
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'admin' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Sign in' })); });

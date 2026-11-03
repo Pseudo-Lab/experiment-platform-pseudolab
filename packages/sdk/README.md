@@ -100,3 +100,17 @@ Live Events의 건수·전환율은 인스턴스 단위, 결과는 고유 사용
 `useDecide()`의 성공 result를 `sdk.expose()`에 전달할 수 있습니다. `useFlag`, `<Experiment>`, `<ExperimentSwitch>`는 variant 렌더링만 하며 실제 visibility를 자동 측정하지 않습니다. 캐시된 variant만으로 attribution을 만들지 마세요. React StrictMode/remount를 넘어 동일 노출을 유지하려면 서비스가 impression ID와 성공한 decision을 보관해야 합니다. viewport helper는 이번 범위에 포함하지 않습니다.
 
 패키징: [SDK_PACKAGING_GUIDE.md](./SDK_PACKAGING_GUIDE.md). 검증: `npm test --prefix packages/sdk`.
+### Public signup and credential boundary
+
+With Google sign-in configured by the installation operator, sign in and create a
+project in **Projects**, then reveal that project's public SDK key under **SDK
+Integration**. Use that key as `apiKey`; platform account sessions and Google
+credentials must never be included in your application's SDK configuration.
+The SDK sends `X-API-Key` on assignment/decision requests. An owned resource must
+match the credential's project; another project's IDs do not grant access.
+
+Browser visitors do not need platform accounts. Public SDK keys identify a
+project, not a trusted visitor, and do not grant management or server access.
+Server keys from `POST /api/v1/projects/{project_id}/server-key` are one-time
+responses for server-side `/access/decide` only; keep them off the browser.
+`DELETE` on the same key endpoint revokes the current key. Public SDK keys are never accepted as server Bearer credentials. This candidate does not rotate production credentials.

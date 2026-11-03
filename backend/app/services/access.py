@@ -53,6 +53,9 @@ class AccessDecisionService:
             segment_id = payload.get("committee_segment_id")
             if not isinstance(segment_id, str) or not segment_id:
                 return self._deny("private", "evaluation_error")
+            from app.db import d1
+            if await d1.security_query("SELECT 1 FROM project_owner WHERE project_id = ?", [project.id]):
+                return self._deny("private", "evaluation_error")
             segment = await segment_service.get(segment_id)
             if segment is None or not segment.enabled:
                 return self._deny("private", "evaluation_error")
