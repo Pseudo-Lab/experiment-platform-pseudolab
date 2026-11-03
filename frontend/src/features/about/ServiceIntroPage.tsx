@@ -1,5 +1,6 @@
+import { IterglowLogo } from '@/components/IterglowLogo';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, Diamond, Globe, Moon, Sun } from 'lucide-react';
+import { ArrowRight, Globe, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProductPreview } from './ProductPreview';
@@ -73,8 +74,8 @@ export function ServiceIntroPage({ lang, setLang, theme, setTheme, authenticated
   return (
     <div className="service-entry min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
-        <Link to="/" state={location.state} className="flex items-center gap-2 rounded-md text-lg font-bold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Diamond aria-hidden="true" className="h-8 w-8 rounded-lg bg-primary p-1.5 text-primary-foreground" />Iterglow
+        <Link to="/" state={location.state} aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="flex items-center gap-2 rounded-md text-lg font-bold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <IterglowLogo lang={lang} />
         </Link>
         <nav aria-label={t.features} className="ml-auto hidden items-center gap-6 text-sm text-muted-foreground md:flex">
           <a href="#features" className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.features}</a>

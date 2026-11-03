@@ -93,7 +93,7 @@ it.each([
   fireEvent.click(screen.getByRole('link', { name: guideLabel }));
   expect(readLocation().state).toEqual(returnState);
   if (via !== 'login') {
-    fireEvent.click(screen.getByRole('link', { name: via === 'brand' ? 'Iterglow' : lang === 'ko' ? '서비스 소개' : 'Introduction' }));
+    fireEvent.click(screen.getByRole('link', { name: via === 'brand' ? (lang === 'ko' ? '이터글로 홈' : 'Iterglow home') : lang === 'ko' ? '서비스 소개' : 'Introduction' }));
     expect(readLocation().pathname).toBe('/');
     expect(readLocation().state).toEqual(returnState);
     if (via === 'introduction-guide') {
