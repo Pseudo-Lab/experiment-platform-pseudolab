@@ -1,6 +1,7 @@
+import { IterglowLogo } from '@/components/IterglowLogo';
 import React, { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Diamond, Globe, Moon, Sun } from 'lucide-react';
+import { ArrowRight, Globe, Moon, Sun } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,8 +84,8 @@ export function LoginPage({ lang, setLang, theme, setTheme }: LoginPageProps) {
   return (
     <div className="service-entry min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
-        <Link to="/" state={location.state} className="flex items-center gap-2 rounded-md font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Diamond aria-hidden="true" className="h-8 w-8 rounded-lg bg-primary p-1.5 text-primary-foreground" />Iterglow
+        <Link to="/" state={location.state} aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="flex items-center gap-2 rounded-md font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <IterglowLogo lang={lang} />
         </Link>
         <div className="flex items-center gap-1"><Button asChild variant="ghost" className="mr-3 hidden sm:inline-flex"><Link to="/" state={location.state}>{copy.about}</Link></Button>
           <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={copy.themeLabel}>{theme === 'light' ? <Moon /> : <Sun />}</Button>

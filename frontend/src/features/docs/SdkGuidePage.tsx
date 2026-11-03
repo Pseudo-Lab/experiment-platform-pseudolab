@@ -1,3 +1,4 @@
+import { IterglowLogo } from '@/components/IterglowLogo';
 import { Link, useLocation } from 'react-router-dom';
 import { Globe, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -103,7 +104,7 @@ export function SdkGuidePage({ lang, setLang, theme, setTheme }: Props) {
   return (
     <div className="service-entry min-h-screen bg-background text-foreground" lang={lang}>
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
-        <Link to="/" state={location.state} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring">Iterglow</Link>
+        <Link to="/" state={location.state} aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring"><IterglowLogo lang={lang} /></Link>
         <div className="flex items-center gap-1">
           <Button asChild variant="ghost" size="sm"><Link to="/" state={location.state}>{t.home}</Link></Button>
           <Button variant="ghost" size="icon" aria-label={t.theme} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon /> : <Sun />}</Button>

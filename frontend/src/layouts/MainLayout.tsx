@@ -1,3 +1,4 @@
+import { IterglowLogo } from '../components/IterglowLogo';
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -203,16 +204,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 </button>
 
                 <div className="flex items-center justify-between h-16 px-4 lg:px-6 border-b dark:border-slate-800">
-                    <div className="flex items-center">
-                        <div className="bg-indigo-600 p-1.5 rounded-lg shrink-0 shadow-md shadow-indigo-200 dark:shadow-none">
-                            <FlaskConical className="text-white" size={20} />
-                        </div>
-                        <div className={cn("ml-3 flex flex-col transition-all duration-300 overflow-hidden", isSidebarOpen ? "opacity-100 max-w-[200px]" : "opacity-0 max-w-0")}>
-                            <span className="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100 whitespace-nowrap">Iterglow</span>
+                    <div className="flex flex-col gap-1">
+                        <Link to="/" aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            <IterglowLogo lang={lang} compact={!isSidebarOpen} />
+                        </Link>
+                        {isSidebarOpen && (
                             <span className={cn("text-[10px] font-black px-1.5 py-0.5 rounded-md w-fit uppercase whitespace-nowrap", backendStatus === 'Online' ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400")}>
                                 {backendStatus}
                             </span>
-                        </div>
+                        )}
                     </div>
                     {/* Mobile Close Button */}
                     <button 
