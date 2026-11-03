@@ -154,3 +154,6 @@ html[data-theme="dark"],
 .resource-top span, .stay-action small, footer p, .footer-right small,
 .footer-brand svg { color: var(--muted); }
 .tag-2 { color: #705b38; }
+
+/* Product logo assets; team identity remains Data Initiative. */
+.resource-grid .service-logo{display:block;width:180px;max-width:100%;height:auto}
