@@ -1,0 +1,42 @@
+{
+  "brand": "Iterglow",
+  "version": "1.0.0",
+  "approved": "2026-11-04",
+  "sourceSha256": "cc217712b1df78bc1c9c0a84f48d557bb0fb083d789c2860d5176e614eca1f9d",
+  "colors": {
+    "coral": "#F36A58",
+    "plum": "#542D48",
+    "paper": "#FFF9F3",
+    "ink": "#28262A"
+  },
+  "hashes": {
+    "apple-touch-icon.png": "c3111932a41be74b7ec62a29879c4a4d1ce8e5fb4e3400d115de4f228ad19435",
+    "favicon.ico": "f714a574e47d9aade8787b07f5df4f773fc7f5b4729277dfa4adc9c427090adf",
+    "favicon.svg": "01039ea9228e07a5813dece85d44de61b23942d298a30454ceb60b8152d06fee",
+    "icon-16.png": "4342e526d445ecb27ef413548492cfe378118c8727dd715e9c4207854b51afde",
+    "icon-192.png": "d34aa0e4abb9e968b904bafa3d25d7f2f2771a2cebafc7b01ccfd3c0b38ceddb",
+    "icon-32.png": "1de01f23e8ba90d1e65439c23e6da98eb91835788e0bfd599422a44f3dbeb62c",
+    "icon-48.png": "b50842ebfe6211abc9845b9ec94e6b86ee3534b3c50cbb246c560f40ff7bd218",
+    "icon-512.png": "4f0c51c1c87f9b80b4cb1fb1e80a4c85cb56eefb03d3905bb69bd86c54ac73c0",
+    "icon-64.png": "ba6a5d3e81d39cad2dce0a317465821907c04d1e058d9ccb3fdc383f7afd5e1d",
+    "iterglow-logo-dark.png": "4f2f8f4afd88f73ecc76bbcd3992ff08bb9d17686779a9fea87108c7de67890e",
+    "iterglow-logo-dark.svg": "d26e00d1d4c457636a15ddd90755f6fb2a78fa22605fe20d651c8165043918fb",
+    "iterglow-logo-mono.svg": "4b47837b2a38a4d08fec94d7d8416495bc0006fc6bd8f22f6d1867886ad54d98",
+    "iterglow-logo-tagline-dark.png": "7d5b2615bb3806f79746ccc57969d479494e0c271b7e99f36a96513c6d193a87",
+    "iterglow-logo-tagline-dark.svg": "7bb9262a2fc7c043df802a5def80aee04c4c3dc7985ffa6bdb0da68e47db743b",
+    "iterglow-logo-tagline-mono.svg": "ef7553ac6a3339db2b451e49794706401c7545acba27d44d244031bef05a7205",
+    "iterglow-logo-tagline-white.svg": "4bfd850fcca7aec57be2477ea7e1f4db866ebc81aa43b9d7365d6b1e7276f495",
+    "iterglow-logo-tagline.png": "efc5249dbb7c888dfd05c2b6fd074c3235c082275b362592c889ff5f1289113d",
+    "iterglow-logo-tagline.svg": "751a806251881de45174e87f5f10f3e353ea3138071b686e0f649af8e55256df",
+    "iterglow-logo-white.svg": "8f553f72e7b40ac2d3acbfa986ebdce451fbee6e130d012006aa49225c0aa36a",
+    "iterglow-logo.png": "c9c41519eba48a73172b23711fc683b70ef9576d5aaf183c3c80fb4845478905",
+    "iterglow-logo.svg": "fbb38fbe8ebc76aab9143852ea93973b7d56c41d54a2bbbf5c21433c366e11e4",
+    "iterglow-symbol-mono.svg": "59961928e847226876f08e7d775fe33fc9f38f433d159a9a0827de5733e86e6e",
+    "iterglow-symbol-white.png": "a827df807acd3bf65e75e7c52214a657b697b983cdcfc9f45ebc7fa759ce4e67",
+    "iterglow-symbol-white.svg": "8c04c3c82831a976e9128c4f2de06b075db6907878904ec4c248f5885e3c5722",
+    "iterglow-symbol.png": "d94d494ad4bf52f06b80430661239db3c9fb7b7506fb4ce3fc0fb6d8780c446d",
+    "iterglow-symbol.svg": "fdae5ca5dab55b905e33a885d06fe343b3f5b6f8b3b7bb05debfefe2dbbb9c6f",
+    "iterglow-wordmark.svg": "27f5324bbc058532e398063a5d89d41e60ed852af7eed411f382fd125a6fa4c1",
+    "tokens.css": "8c194ff45d71e3712ed46c00f497f9a01060d2a4a08a58e4db483dd7ffd9e697"
+  }
+}

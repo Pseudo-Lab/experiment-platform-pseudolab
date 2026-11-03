@@ -1,0 +1,43 @@
+{
+  "method": "Color-region classification and spline outline tracing; original glyph contours, no substitute font.",
+  "vtracer": "0.6.15",
+  "layers": [
+    {
+      "kind": "symbol",
+      "bounds": [
+        385,
+        235,
+        521,
+        235
+      ],
+      "count": 55032
+    },
+    {
+      "kind": "wordmark",
+      "bounds": [
+        953,
+        235,
+        834,
+        222
+      ],
+      "count": 59300
+    },
+    {
+      "kind": "descriptor",
+      "bounds": [
+        963,
+        463,
+        807,
+        58
+      ],
+      "count": 9292
+    }
+  ],
+  "colors": {
+    "coral": "#F36A58",
+    "plum": "#542D48",
+    "paper": "#FFF9F3",
+    "ink": "#28262A",
+    "muted": "#67616A"
+  }
+}
