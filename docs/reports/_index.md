@@ -49,6 +49,7 @@ Last-Validated: 2026-10-31
 ## 2) Guides
 - `docs/guides/setup_guide.md` — 개발/운영 설정
 - `docs/guides/design_system.md` — UI/디자인 시스템
+- [Iterglow CI 사용 가이드](../guides/iterglow-brand.md) — 승인 로고·색상·파비콘·다운로드 자산
 - `docs/guides/data_access.md` — 데이터 접근 규칙
 - `docs/guides/experiment_platform_concepts.md` — 실험 플랫폼/feature flag 첫 진입 개념 가이드
 - `docs/guides/agent_collaboration.md` — 에이전트 협업/워크트리/핸드오프 규칙

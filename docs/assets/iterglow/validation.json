@@ -1,0 +1,18 @@
+{
+  "symbol": {
+    "outlineIoU": 0.98102,
+    "outsideOnePixelRatio": 0.000357
+  },
+  "wordmark": {
+    "outlineIoU": 0.96889,
+    "outsideOnePixelRatio": 0.000016
+  },
+  "descriptor": {
+    "outlineIoU": 0.92587,
+    "outsideOnePixelRatio": 0
+  },
+  "plumOnPaperContrast": 10.89,
+  "coralOnWhiteContrast": 2.99,
+  "note": "Coral is a logo/decorative accent. Use plum for text or white-label action backgrounds.",
+  "files": 28
+}

@@ -134,6 +134,7 @@ docker compose -f docker-compose.dev.yml up -d --build
 | 실험 플랫폼·Feature Flag 개념 | [실험 플랫폼 개념 가이드](./docs/guides/experiment_platform_concepts.md) |
 | 서비스 연동 | [SDK 설치·사용 안내](./packages/sdk/README.md) |
 | 데이터 접근 기준 | [데이터 접근 가이드](./docs/guides/data_access.md) |
+| 로고·색상·파비콘 사용 | [Iterglow CI 사용 가이드](./docs/guides/iterglow-brand.md) |
 | 문서 구조·관리 규칙 | [Docs Guide](./docs/README.md) |
 
 문서는 `active / superseded / archive` 상태로 관리하며, `docs/guides`, `docs/reports`, `docs/archive`, `docs/superseded`로 구분합니다.
