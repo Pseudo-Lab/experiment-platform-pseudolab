@@ -253,3 +253,19 @@ it.each([375, 1024])('keeps logo navigation inside projects and closes the mobil
   expect(screen.queryByText('Online')).not.toBeInTheDocument();
   cleanup();
 });
+
+it.each([375, 1024])('leaves the previous experiment detail when switching project at width %s', (width) => {
+  window.innerWidth = width;
+  mockedUseNavigate.mockClear();
+  const setCurrentProjectId = vi.fn();
+  const projects = [{ id: 'alpha', name: 'Alpha', project_type: 'ab_test' as const, created_at: '' }, { id: 'beta', name: 'Beta', project_type: 'ab_test' as const, created_at: '' }];
+  vi.mocked(useProject).mockReturnValue({ projects, loading: false, currentProjectId: 'alpha', currentProject: projects[0], setCurrentProjectId, reloadProjects: vi.fn() });
+  render(<MemoryRouter initialEntries={['/experiments/alpha-experiment']}><MainLayout lang="en" setLang={() => {}} backendStatus="Online">Workspace</MainLayout></MemoryRouter>);
+  if (width < 1024) fireEvent.click(screen.getByRole('button', { name: 'Open sidebar menu' }));
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Select a project' }), { key: 'Enter' });
+  fireEvent.click(screen.getByRole('menuitemradio', { name: 'Beta' }));
+  expect(setCurrentProjectId).toHaveBeenLastCalledWith('beta');
+  expect(mockedUseNavigate).toHaveBeenLastCalledWith('/experiments');
+  if (width < 1024) expect(screen.getByRole('complementary')).toHaveClass('-translate-x-full');
+  cleanup();
+});

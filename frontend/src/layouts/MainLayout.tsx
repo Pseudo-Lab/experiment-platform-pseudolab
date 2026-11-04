@@ -233,7 +233,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="service-entry w-60 max-w-[calc(100vw-2rem)]">
-                                    <DropdownMenuRadioGroup value={currentProjectId ?? '__all__'} onValueChange={value => setCurrentProjectId(value === '__all__' ? null : value)} className="max-h-64 overflow-y-auto">
+                                    <DropdownMenuRadioGroup value={currentProjectId ?? '__all__'} onValueChange={value => {
+                                        setCurrentProjectId(value === '__all__' ? null : value);
+                                        if (activePath.startsWith('/experiments/')) handleNav('/experiments');
+                                        else if (window.innerWidth < 1024) setSidebarOpen(false);
+                                    }} className="max-h-64 overflow-y-auto">
                                         <DropdownMenuRadioItem value="__all__">{t.allProjects}</DropdownMenuRadioItem>
                                         {loading && <DropdownMenuItem disabled>{lang === 'ko' ? '불러오는 중...' : 'Loading...'}</DropdownMenuItem>}
                                         {projects.map(project => <DropdownMenuRadioItem key={project.id} value={project.id}><span className="truncate">{project.name}</span></DropdownMenuRadioItem>)}
