@@ -65,6 +65,22 @@ def test_accounts_projects_and_revocation(clients, mock_d1):
     assert admin.get('/api/v1/projects/', headers={'Cookie': f'{settings.AUTH_COOKIE_NAME}={admin_token}'}).status_code == 401
 
 
+def test_automatic_project_id_keeps_ownership_and_sdk_scope(clients, mock_d1):
+    a, b, _ = clients
+    response = a.post('/api/v1/projects/', json={'name': 'Automatic'})
+    assert response.status_code == 201
+    project_id = response.json()['id']
+    assert mock_d1.execute("SELECT account_id FROM project_owner WHERE project_id=?", [project_id]).fetchone()[0] == 'a'
+    assert a.get('/api/v1/projects/' + project_id).status_code == 200
+    assert b.get('/api/v1/projects/' + project_id).status_code == 404
+    assert b.get('/api/v1/projects/' + project_id + '/api-key').status_code == 404
+    assert b.get('/api/v1/projects/').json() == []
+    key = a.get('/api/v1/projects/' + project_id + '/api-key').json()['api_key']
+    sdk = TestClient(app, base_url='https://testserver')
+    assert sdk.post('/api/v1/capture', json={'event_name': 'click', 'user_id': 'visitor'}, headers={'X-API-Key': key}).status_code == 202
+    assert mock_d1.execute("SELECT project_id FROM event_log WHERE user_id='visitor'").fetchone()[0] == project_id
+
+
 def test_resource_payloads_sdk_and_server_keys(clients):
     a, b, admin = clients
     ka, kb = project(a, 'project-a'), project(b, 'project-b')

@@ -96,7 +96,8 @@ describe('MainLayout Component', () => {
       renderMainLayout();
     });
     expect(screen.getByText('Test Children')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '이터글로 홈' })).toHaveAttribute('href', '/');
+    expect(screen.queryByText('Online')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '이터글로 홈' })).toHaveAttribute('href', '/projects');
     const asideElement = screen.getByRole('complementary');
     expect(asideElement).toHaveClass('w-64'); // Sidebar should be open on desktop by default
   });
@@ -236,4 +237,19 @@ describe('MainLayout Component', () => {
     expect(screen.getByRole('complementary')).toHaveClass('-translate-x-full');
   });
 
+});
+
+
+it.each([375, 1024])('keeps logo navigation inside projects and closes the mobile sidebar at width %s', (width) => {
+  window.innerWidth = width;
+  vi.mocked(useProject).mockReturnValue({ projects: [], loading: false, currentProjectId: null, currentProject: null, setCurrentProjectId: vi.fn(), reloadProjects: vi.fn() });
+  render(<MemoryRouter initialEntries={['/experiments/detail']}><MainLayout lang="en" setLang={() => {}} backendStatus="Online">Workspace</MainLayout></MemoryRouter>);
+  if (width < 1024) fireEvent.click(screen.getByRole('button', { name: 'Open sidebar menu' }));
+  else fireEvent.click(screen.getByRole('button', { name: 'Toggle sidebar' }));
+  const logo = screen.getByRole('link', { name: 'Iterglow home' });
+  expect(logo).toHaveAttribute('href', '/projects');
+  fireEvent.click(logo);
+  if (width < 1024) expect(screen.getByRole('complementary')).toHaveClass('-translate-x-full');
+  expect(screen.queryByText('Online')).not.toBeInTheDocument();
+  cleanup();
 });

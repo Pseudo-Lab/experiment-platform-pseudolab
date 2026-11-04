@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { authApi } from '@/services/authApi';
@@ -149,7 +149,7 @@ it('enables Google login only when provider configuration is available', async (
 });
 
 
-it.each(['/api-key', '/bug-report', '//evil.invalid', '/\\evil.invalid', 'https://evil.invalid', '/%2fexample', '/%252fexample', '/%5cfoo', '/%0dfoo', '/\u007ffoo'])(
+it.each(['/api-key', '/bug-report', '/login', '/login?oauth=success', '//evil.invalid', '/\\evil.invalid', 'https://evil.invalid', '/%2fexample', '/%252fexample', '/%5cfoo', '/%0dfoo', '/\u007ffoo'])(
   'restores only a safe local OAuth return path: %s', async (path) => {
     sessionStorage.setItem('oauthReturnPath', path);
     vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
@@ -181,4 +181,15 @@ it('keeps Google disabled on provider lookup failure without exposing password l
   await screen.findByText('Google sign in is not configured for this installation.');
   expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeDisabled();
   expect(document.querySelector('input[type="password"]')).toBeNull();
+});
+
+
+it('restores query and hash from the protected screen before Google redirection', async () => {
+  vi.mocked(authApi.me).mockResolvedValue(authenticated);
+  function Destination() { const location = useLocation(); return <output>{location.pathname + location.search + location.hash}</output>; }
+  render(<MemoryRouter initialEntries={[{ pathname: '/login', state: { from: { pathname: '/experiments', search: '?view=results', hash: '#conversions' } } }]}><AuthProvider><Routes>
+    <Route path="/login" element={<LoginPage lang="en" setLang={() => {}} />} />
+    <Route path="/experiments" element={<Destination />} />
+  </Routes></AuthProvider></MemoryRouter>);
+  expect(await screen.findByText('/experiments?view=results#conversions')).toBeInTheDocument();
 });

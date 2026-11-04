@@ -103,7 +103,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     children,
     lang,
     setLang,
-    backendStatus,
     userLabel,
     isAdmin = true,
     onLogout
@@ -203,14 +202,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
                 <div className="flex items-center justify-between h-16 px-4 lg:px-6 border-b dark:border-slate-800">
                     <div className="flex flex-col gap-1">
-                        <Link to="/" aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <Link to="/projects" onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false); }} aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                             <IterglowLogo lang={lang} compact={!isSidebarOpen} />
                         </Link>
-                        {isSidebarOpen && (
-                            <span className={cn("text-[10px] font-black px-1.5 py-0.5 rounded-md w-fit uppercase whitespace-nowrap", backendStatus === 'Online' ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400")}>
-                                {backendStatus}
-                            </span>
-                        )}
                     </div>
                     {/* Mobile Close Button */}
                     <button 
@@ -271,7 +265,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
                 <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
                     <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
-                        <Link to="/docs/sdk" aria-label={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
+                        <Link to="/docs/sdk" state={{ from: location }} aria-label={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
                             <BookOpen aria-hidden="true" className="shrink-0" />
                             {isSidebarOpen && <span>{lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}</span>}
                         </Link>

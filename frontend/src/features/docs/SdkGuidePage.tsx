@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/features/auth/AuthContext';
+import { safeReturnPath } from '@/lib/returnPath';
 
 interface Props {
   lang: 'ko' | 'en';
@@ -100,13 +102,17 @@ const sectionIds = ['support', 'prepare', 'install', 'flow', 'verify', 'errors',
 export function SdkGuidePage({ lang, setLang }: Props) {
   const t = copy[lang];
   const location = useLocation();
+  const { state } = useAuth();
+  const authenticated = state === 'authenticated';
+  const workspacePath = safeReturnPath((location.state as { from?: unknown } | null)?.from) || '/projects';
+  const workspaceLabel = lang === 'ko' ? '작업공간으로 돌아가기' : 'Back to workspace';
   const code = (value: string) => <pre tabIndex={0} aria-label={t.code} className="max-w-full overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 text-xs leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><code>{value}</code></pre>;
   return (
     <div className="service-entry min-h-screen bg-background text-foreground" lang={lang}>
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
-        <Link to="/" state={location.state} aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring"><IterglowLogo lang={lang} /></Link>
+        <Link to={authenticated ? workspacePath : '/'} state={location.state} aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring"><IterglowLogo lang={lang} /></Link>
         <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="sm"><Link to="/" state={location.state}>{t.home}</Link></Button>
+          <Button asChild variant="ghost" size="sm"><Link to={authenticated ? workspacePath : '/'} state={location.state}>{authenticated ? workspaceLabel : t.home}</Link></Button>
           <Button variant="outline" size="sm" aria-label={t.language} onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')}><Globe aria-hidden="true" />{lang === 'ko' ? 'EN' : 'KO'}</Button>
         </div>
       </header>
@@ -123,7 +129,7 @@ export function SdkGuidePage({ lang, setLang }: Props) {
             {t.sections.map((title, index) => <section key={sectionIds[index]} id={sectionIds[index]} aria-labelledby={`sdk-${sectionIds[index]}`} className="min-w-0 scroll-mt-6 space-y-4 border-t border-border pt-6">
               <h2 id={`sdk-${sectionIds[index]}`} className="text-xl font-semibold">{title}</h2>
               {index === 0 && <><p>{t.support}</p><p className="text-muted-foreground">{t.scope}</p></>}
-              {index === 1 && <><ol className="list-decimal space-y-2 pl-5">{t.prepare.map(step => <li key={step}>{step}</li>)}</ol><p>{t.key}</p><Button asChild variant="outline"><Link to="/login" state={location.state}>{t.login}</Link></Button></>}
+              {index === 1 && <><ol className="list-decimal space-y-2 pl-5">{t.prepare.map(step => <li key={step}>{step}</li>)}</ol><p>{t.key}</p><Button asChild variant="outline"><Link to={authenticated ? workspacePath : '/login'} state={location.state}>{authenticated ? workspaceLabel : t.login}</Link></Button></>}
               {index === 2 && <>{code('npm install --save-exact @pseudo-lab/experibase-sdk@0.1.5')}<p>{t.address}</p></>}
               {index === 3 && <><p>{t.decide}</p>{code(setupCode)}<p>{t.exposure}</p>{code(exposureCode)}<p className="text-muted-foreground">{t.guard}</p><p>{t.action}</p>{code(actionCode)}<Card className="shadow-none"><CardContent className="p-4">{t.limits}</CardContent></Card></>}
               {index === 4 && <><p>{t.verify}</p><dl className="space-y-4">{t.checks.map(([label, request, detail]) => <div key={label}><dt className="font-semibold">{label} <span className="block break-words font-mono text-xs text-primary">{request}</span></dt><dd className="text-muted-foreground">{detail}</dd></div>)}</dl><p>{t.status}</p></>}

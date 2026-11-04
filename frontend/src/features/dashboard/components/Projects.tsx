@@ -15,20 +15,14 @@ function cn(...inputs: ClassValue[]) {
 
 interface Props { lang: 'en' | 'ko'; }
 
-const PROJECT_ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,39}$/;
-
 const t = {
   ko: {
     title: '프로젝트 관리',
     cancel: '취소',
-    id: '프로젝트 ID',
     name: '프로젝트 이름',
     createdAt: '생성일',
     addProject: '프로젝트 추가',
-    idPlaceholder: 'e.g. my-app',
     namePlaceholder: 'e.g. My App',
-    idHelp: '영문 소문자, 숫자, 하이픈. 2~40자.',
-    idError: 'ID는 영문 소문자·숫자·하이픈만 허용되며 2~40자여야 합니다.',
     create: '생성',
     creating: '생성 중...',
     loading: '불러오는 중...',
@@ -46,14 +40,10 @@ const t = {
   en: {
     title: 'Project management',
     cancel: 'Cancel',
-    id: 'Project ID',
     name: 'Project Name',
     createdAt: 'Created',
     addProject: 'Add Project',
-    idPlaceholder: 'e.g. my-app',
     namePlaceholder: 'e.g. My App',
-    idHelp: 'Lowercase letters, numbers, hyphens. 2–40 chars.',
-    idError: 'ID must be 2–40 chars: lowercase letters, numbers, hyphens only.',
     create: 'Create',
     creating: 'Creating...',
     loading: 'Loading...',
@@ -83,7 +73,6 @@ export function Projects({ lang }: Props) {
       return params;
     }, { replace: true });
   };
-  const [newId, setNewId] = useState('');
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -106,18 +95,12 @@ export function Projects({ lang }: Props) {
   }, [projects]);
 
   const handleCreate = async () => {
-    if (!newId.trim() || !newName.trim()) return;
+    if (!newName.trim()) return;
     setCreating(true);
     setCreateError(null);
-    if (!PROJECT_ID_PATTERN.test(newId.trim())) {
-      setCreateError(tr.idError);
-      setCreating(false);
-      return;
-    }
     try {
-      await projectApi.create({ id: newId.trim(), name: newName.trim() });
+      await projectApi.create({ name: newName.trim() });
       await reloadProjects();
-      setNewId('');
       setNewName('');
       setShowForm(false);
     } catch (e) {
@@ -164,33 +147,19 @@ export function Projects({ lang }: Props) {
       {showForm && (
         <Card>
           <CardContent className="pt-6 space-y-4">
-            {/* ID / Name fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="new-project-id" className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1 block">{tr.id}</label>
-                <Input
-                  id="new-project-id"
-                  value={newId}
-                  onChange={(e) => setNewId(e.target.value)}
-                  placeholder={tr.idPlaceholder}
-                  className="text-sm"
-                />
-                <p className="text-xs text-slate-400 mt-1">{tr.idHelp}</p>
-              </div>
-              <div>
-                <label htmlFor="new-project-name" className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1 block">{tr.name}</label>
-                <Input
-                  id="new-project-name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder={tr.namePlaceholder}
-                  className="text-sm"
-                />
-              </div>
+            <div>
+              <label htmlFor="new-project-name" className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1 block">{tr.name}</label>
+              <Input
+                id="new-project-name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder={tr.namePlaceholder}
+                className="text-sm"
+              />
             </div>
             {createError && <p className="text-xs text-rose-500">{createError}</p>}
             <div className="flex gap-2">
-              <Button onClick={handleCreate} disabled={creating || !newId.trim() || !newName.trim()} size="sm">
+              <Button onClick={handleCreate} disabled={creating || !newName.trim()} size="sm">
                 {creating ? tr.creating : tr.create}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setCreateError(null); }}>

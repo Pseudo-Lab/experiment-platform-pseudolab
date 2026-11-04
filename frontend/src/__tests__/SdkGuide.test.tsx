@@ -108,13 +108,13 @@ it.each([
   await screen.findByRole('heading', { level: 1, name: loginTitle });
   expect(readLocation().state).toEqual(returnState);
   expect(screen.getByRole('button', { name: lang === 'ko' ? 'Google로 계속하기' : 'Continue with Google' })).toBeInTheDocument();
-  sessionStorage.setItem('oauthReturnPath', readLocation().state.from.pathname);
+  sessionStorage.setItem('oauthReturnPath', readLocation().state.from.pathname + readLocation().state.from.search + readLocation().state.from.hash);
   cleanup();
   vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'google-member', is_admin: false } });
   render(<MemoryRouter initialEntries={['/login?oauth=success']}><App /><LocationProbe /></MemoryRouter>);
   await waitFor(() => expect(readLocation().pathname).toBe('/experiments/review-original'));
-  expect(readLocation().search).toBe('');
-  expect(readLocation().hash).toBe('');
+  expect(readLocation().search).toBe('?tab=summary');
+  expect(readLocation().hash).toBe('#details');
 });
 
 it.each(['ko', 'en'] as const)('uses the existing default destination after direct guide access in %s', async (lang) => {
@@ -128,4 +128,24 @@ it.each(['ko', 'en'] as const)('uses the existing default destination after dire
   vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'google-admin', is_admin: true } });
   render(<MemoryRouter initialEntries={['/login?oauth=success']}><App /><LocationProbe /></MemoryRouter>);
   await waitFor(() => expect(JSON.parse(screen.getByTestId('location').textContent!).pathname).toBe('/experiments'));
+});
+
+
+it('returns an authenticated guide reader to the exact workspace screen', async () => {
+  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
+  render(<MemoryRouter initialEntries={['/api-key?view=keys#details']}><App /><LocationProbe /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('link', { name: 'SDK 가이드' }));
+  await screen.findByRole('heading', { name: '개발자 SDK 가이드' });
+  const links = await screen.findAllByRole('link', { name: '작업공간으로 돌아가기' });
+  expect(links[0]).toHaveAttribute('href', '/api-key?view=keys#details');
+  expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
+  fireEvent.click(links[0]);
+  await waitFor(() => expect(JSON.parse(screen.getByTestId('location').textContent!)).toMatchObject({ pathname: '/api-key', search: '?view=keys', hash: '#details' }));
+});
+
+it('sends an authenticated unknown route to project management instead of a blank screen', async () => {
+  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
+  render(<MemoryRouter initialEntries={['/docs/sdk/missing']}><App /><LocationProbe /></MemoryRouter>);
+  await waitFor(() => expect(JSON.parse(screen.getByTestId('location').textContent!).pathname).toBe('/projects'));
+  expect(screen.getByRole('heading', { level: 1, name: '프로젝트 관리' })).toBeInTheDocument();
 });

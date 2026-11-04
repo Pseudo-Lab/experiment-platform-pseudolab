@@ -6,6 +6,7 @@ import { Globe } from 'lucide-react';
 import { API_BASE_URL, apiFetch } from '@/services/http';
 import { Button } from '@/components/ui/button';
 import { useAuth } from './AuthContext';
+import { safeReturnPath } from '@/lib/returnPath';
 
 interface LoginPageProps {
   lang: 'en' | 'ko';
@@ -22,10 +23,9 @@ export function LoginPage({ lang, setLang }: LoginPageProps) {
     if (!oauthResult) return null;
     try { return sessionStorage.getItem('oauthReturnPath'); } catch { return null; }
   });
-  const requestedPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || oauthReturnPath;
-  const nextPath = requestedPath && /^\/(?!\/)[^\\\x00-\x20\x7f]*$/.test(requestedPath)
-    && !/%(?:0[0-9a-f]|1[0-9a-f]|20|25|2f|5c|7f)/i.test(requestedPath)
-    ? requestedPath : user?.is_admin === false ? '/projects' : '/experiments';
+  const requestedPath = safeReturnPath((location.state as { from?: unknown } | null)?.from)
+    || safeReturnPath(oauthReturnPath);
+  const nextPath = requestedPath || (user?.is_admin === false ? '/projects' : '/experiments');
   useEffect(() => {
     if (state === 'authenticated') {
       try { sessionStorage.removeItem('oauthReturnPath'); } catch { /* Storage is optional. */ }

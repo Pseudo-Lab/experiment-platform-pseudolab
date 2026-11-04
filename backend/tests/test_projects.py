@@ -28,6 +28,37 @@ class TestProjectsCRUD:
         assert body["name"] == "My Project"
         assert "api_key" not in body
 
+    def test_create_without_id_generates_unique_uuid_and_separate_key(self, mock_d1):
+        from uuid import UUID
+        ids = []
+        for _ in range(2):
+            res = client.post("/api/v1/projects/", json={"name": "Same name"})
+            assert res.status_code == 201
+            body = res.json()
+            assert str(UUID(body["id"], version=4)) == body["id"]
+            assert body["name"] == "Same name"
+            assert "api_key" not in body
+            key = client.get(f"/api/v1/projects/{body['id']}/api-key").json()["api_key"]
+            assert key.startswith("pk_sdk_") and key != body["id"]
+            ids.append(body["id"])
+        assert len(set(ids)) == 2
+
+    def test_generated_id_collision_preserves_existing_project(self, mock_d1, monkeypatch):
+        from app.schemas import project as schema
+        from uuid import UUID
+        generated = UUID("00000000-0000-4000-8000-000000000001")
+        monkeypatch.setattr(schema, "uuid4", lambda: generated)
+        _seed_project(str(generated), "Existing", "pk_sdk_existing", mock_d1)
+        res = client.post("/api/v1/projects/", json={"name": "New"})
+        assert res.status_code == 409
+        row = mock_d1.execute("SELECT name, api_key FROM projects WHERE id = ?", [str(generated)]).fetchone()
+        assert tuple(row) == ("Existing", "pk_sdk_existing")
+
+    @pytest.mark.parametrize("invalid_id", ["", None, "UPPERCASE", "x", "bad_id"])
+    def test_explicit_invalid_id_still_rejected(self, mock_d1, invalid_id):
+        res = client.post("/api/v1/projects/", json={"id": invalid_id, "name": "Invalid"})
+        assert res.status_code == 422
+
     def test_create_duplicate_returns_409(self, mock_d1):
         client.post("/api/v1/projects/", json={"id": "dup", "name": "Dup"})
         res = client.post("/api/v1/projects/", json={"id": "dup", "name": "Dup Again"})

@@ -16,29 +16,30 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 it('opens the existing create form directly and removes only its query on cancel', () => {
   show('/projects?create=1&keep=yes');
-  expect(screen.getByLabelText('프로젝트 ID')).toBeInTheDocument();
+  expect(screen.getByLabelText('프로젝트 이름')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '취소' }));
-  expect(screen.queryByLabelText('프로젝트 ID')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('프로젝트 이름')).not.toBeInTheDocument();
   expect(screen.getByTestId('location')).toHaveTextContent('?keep=yes');
 });
 
 it('opens management without the form and allows adding a project in English', () => {
   show('/projects', 'en');
   expect(screen.getByRole('heading', { name: 'Project management' })).toBeInTheDocument();
-  expect(screen.queryByLabelText('Project ID')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Project Name')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Add Project' }));
-  expect(screen.getByLabelText('Project ID')).toBeInTheDocument();
+  expect(screen.getByLabelText('Project Name')).toBeInTheDocument();
 });
 
 it('keeps the form on failure and closes it after a successful retry', async () => {
   vi.mocked(projectApi.create).mockRejectedValueOnce(new Error('Create failed')).mockResolvedValueOnce({} as any);
   show('/projects?create=1');
-  fireEvent.change(screen.getByLabelText('프로젝트 ID'), { target: { value: 'new-app' } });
   fireEvent.change(screen.getByLabelText('프로젝트 이름'), { target: { value: 'New App' } });
   fireEvent.click(screen.getByRole('button', { name: '생성' }));
   expect(await screen.findByText('Create failed')).toBeInTheDocument();
-  expect(screen.getByLabelText('프로젝트 ID')).toHaveValue('new-app');
+  expect(projectApi.create).toHaveBeenCalledWith({ name: 'New App' });
+  expect(screen.queryByLabelText('프로젝트 ID')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('New App');
   fireEvent.click(screen.getByRole('button', { name: '생성' }));
-  await waitFor(() => expect(screen.queryByLabelText('프로젝트 ID')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByLabelText('프로젝트 이름')).not.toBeInTheDocument());
   expect(screen.getByTestId('location')).toBeEmptyDOMElement();
 });

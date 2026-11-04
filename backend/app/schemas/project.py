@@ -1,11 +1,12 @@
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
+from uuid import uuid4
 
 PROJECT_ID_PATTERN = r"^[a-z0-9][a-z0-9-]{1,39}$"
 
 
 class ProjectCreate(BaseModel):
-    id: str = Field(..., pattern=PROJECT_ID_PATTERN)
+    id: str = Field(default_factory=lambda: str(uuid4()), pattern=PROJECT_ID_PATTERN)
     name: str = Field(..., min_length=1, max_length=80)
     base_url: Optional[str] = None
     project_type: Literal['ab_test', 'quasi_experiment'] = 'ab_test'

@@ -13,7 +13,7 @@ export interface Project {
   created_at: string;
 }
 export interface ProjectCreate {
-  id: string;
+  id?: string;
   name: string;
   base_url?: string;
   project_type?: 'ab_test' | 'quasi_experiment';

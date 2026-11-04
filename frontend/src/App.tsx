@@ -116,6 +116,7 @@ function AppShell() {
           <Route path="/projects" element={<Projects lang={lang} />} />
           <Route path="/api-key" element={<ApiKeyPage lang={lang} />} />
           <Route path="/example/*" element={user?.is_admin !== false ? <ExampleApp lang={lang} /> : <Navigate to="/projects" replace />} />
+          <Route path="*" element={<Navigate to="/projects" replace />} />
         </Routes>
       </MainLayout>
     </ProjectProvider>
