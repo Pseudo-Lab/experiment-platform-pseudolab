@@ -37,7 +37,7 @@ async def decide(
 
 @router.get("/", response_model=List[FeatureFlag])
 async def list_flags(request: Request, include_archived: bool = Query(default=False)):
-    return await feature_flag_service.list(include_archived=include_archived, account_id=request.state.auth_user.account_id)
+    return await feature_flag_service.list(include_archived=include_archived, account_id=None if request.state.auth_user.is_admin else request.state.auth_user.account_id)
 
 
 @router.post("/", response_model=FeatureFlag, status_code=201)

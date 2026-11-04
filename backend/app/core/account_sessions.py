@@ -1,4 +1,4 @@
-"""Revocable public-account sessions; no email-based linking or administrator promotion."""
+"""Revocable Google-account sessions with explicit installation administrator selection."""
 import hashlib
 import secrets
 import time
@@ -19,12 +19,14 @@ async def resolve_session(request: Request) -> AuthenticatedUser | None:
         return None
     if token.startswith("usr_"):
         rows = await d1.security_query(
-            "SELECT account_id FROM platform_session WHERE token_hash = ? AND expires_at > ?",
+            "SELECT s.account_id FROM platform_session s JOIN platform_account a ON a.id = s.account_id "
+            "WHERE s.token_hash = ? AND s.expires_at > ?",
             [token_hash(token), int(time.time())],
         )
         if rows:
             account = rows[0]["account_id"]
-            return AuthenticatedUser(username=f"user-{account[:8]}", account_id=account, is_admin=False)
+            return AuthenticatedUser(username=f"user-{account[:8]}", account_id=account,
+                                     is_admin=bool(settings.ADMIN_ACCOUNT_ID and account == settings.ADMIN_ACCOUNT_ID))
         return None
     user = verify_session_token(token)
     if user and not await d1.security_query("SELECT 1 FROM revoked_admin_session WHERE token_hash = ?", [token_hash(token)]):

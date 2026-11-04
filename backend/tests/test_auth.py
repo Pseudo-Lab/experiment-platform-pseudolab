@@ -28,11 +28,11 @@ def test_login_me_and_logout(monkeypatch):
 
     login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "secret"})
     assert login.status_code == 200
-    assert login.json() == {"authenticated": True, "user": {"username": "admin", "is_admin": True}}
+    assert login.json() == {"authenticated": True, "user": {"username": "admin", "account_id": None, "is_admin": True}}
 
     me = client.get("/api/v1/auth/me")
     assert me.status_code == 200
-    assert me.json() == {"authenticated": True, "user": {"username": "admin", "is_admin": True}}
+    assert me.json() == {"authenticated": True, "user": {"username": "admin", "account_id": None, "is_admin": True}}
 
     logout = client.post("/api/v1/auth/logout")
     assert logout.status_code == 200

@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     GOOGLE_OAUTH_CLIENT_SECRET: str | None = None
     GOOGLE_OAUTH_REDIRECT_URI: str | None = None
 
+    # Explicit local account selection; no email/first-signup administrator promotion.
+    ADMIN_ACCOUNT_ID: str | None = None
+    # Keep recovery access until the selected Google administrator is verified.
+    PASSWORD_LOGIN_ENABLED: bool = True
+
     # Admin auth
     ADMIN_USERNAME: str | None = None
     ADMIN_PASSWORD_HASH: str | None = None

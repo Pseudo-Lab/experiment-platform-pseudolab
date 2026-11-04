@@ -8,6 +8,7 @@ class LoginRequest(BaseModel):
 
 class AuthUser(BaseModel):
     username: str
+    account_id: str | None = None
     is_admin: bool = True
 
 

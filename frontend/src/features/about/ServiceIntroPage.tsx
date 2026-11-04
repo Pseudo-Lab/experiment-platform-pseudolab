@@ -18,7 +18,7 @@ const copy = {
     label: '오픈소스 A/B 테스트·실험 플랫폼', title: '더 나은 제품을 만드는', titleAccent: '실험의 시작.',
     description: '이터글로는 화면과 기능을 비교하고, 사용자 행동을 수집해 다음 결정을 돕는 오픈소스 실험 플랫폼입니다.',
     login: '로그인', manage: '관리 화면 열기', features: '제품 기능', featuresLink: '제품 기능 살펴보기', flowLink: '사용 흐름',
-    access: 'Google 로그인이 설정된 설치에서는 가입 후 자신의 프로젝트를 만들 수 있습니다. 기존 관리자 로그인도 지원합니다.', integration: '서비스에 SDK 또는 API를 연동해 실험 데이터를 수집하세요.',
+    access: 'Google 로그인이 설정된 설치에서는 가입 후 자신의 프로젝트를 만들 수 있습니다.', integration: '서비스에 SDK 또는 API를 연동해 실험 데이터를 수집하세요.',
     cycle: '실험에서 다음 결정까지', uses: '가설부터 다음 결정까지.',
     usesText: '실험을 설계하고, 기능 공개와 수집 상태를 확인하고, 판단의 근거를 남기세요.',
     scenarios: [
@@ -43,7 +43,7 @@ const copy = {
     label: 'Open-source A/B testing & experimentation platform', title: 'Better products start', titleAccent: 'with an experiment.',
     description: 'Iterglow is an open-source experimentation platform for comparing screens and features, collecting user behavior, and informing your next decision.',
     login: 'Sign in', manage: 'Open workspace', features: 'Product', featuresLink: 'Explore the product', flowLink: 'Workflow',
-    access: 'When Google sign-in is configured, create an account and your own projects. Existing administrator sign-in is also supported.', integration: 'Connect your service through the SDK or API to collect experiment data.',
+    access: 'When Google sign-in is configured, create an account and your own projects.', integration: 'Connect your service through the SDK or API to collect experiment data.',
     cycle: 'From an experiment to your next decision', uses: 'From a hypothesis to your next decision.',
     usesText: 'Design experiments, check feature rollout and collection health, and record your reasoning.',
     scenarios: [

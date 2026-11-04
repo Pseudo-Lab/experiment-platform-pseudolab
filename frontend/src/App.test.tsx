@@ -229,24 +229,15 @@ describe('App Component', () => {
     expect(screen.getByRole('complementary')).toBeInTheDocument();
   });
 
-  it('changes language at login while preserving credentials and the return route through about', async () => {
+  it('keeps Google-only login after language and introduction navigation', async () => {
     authResponse = { authenticated: false, user: null };
-    const login = vi.spyOn(authApi, 'login').mockResolvedValue({ authenticated: true, user: { username: 'admin' } });
     await act(async () => { renderApp(['/experiments']); });
-    fireEvent.change(screen.getByLabelText('아이디'), { target: { value: 'admin' } });
-    fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
-    expect(screen.getByLabelText('Username')).toHaveValue('admin');
-    expect(screen.getByLabelText('Password')).toHaveValue('secret');
-    expect(screen.queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: 'Explore Iterglow' }));
-    expect(screen.getByRole('region', { name: 'From an experiment to your next decision' })).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('link', { name: 'Sign in' })[0]);
-    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'admin' } });
-    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Sign in' })); });
-    expect(login).toHaveBeenCalledWith('admin', 'secret');
-    expect(screen.getByRole('heading', { name: 'Experiments', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
   });
 
   it('explores illustrative product states without requesting management data', async () => {

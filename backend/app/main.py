@@ -7,6 +7,7 @@ from app.api.v1.api import api_router
 from app.core.auth import auth_is_configured, get_session_user_from_request
 from app.core.config import settings
 from app.core.account_sessions import resolve_session
+from app.core.google_oidc import configured as google_is_configured
 from app.core.authorization import authorize_member
 from app.core.sdk_scope import enforce_sdk_scope
 from app.core.upload import UploadBodyLimitMiddleware
@@ -57,7 +58,7 @@ async def require_admin_session(request: Request, call_next):
         except HTTPException as exc:
             return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail}, headers={"Cache-Control": "no-store"})
     if is_api and request.method != "OPTIONS" and not public:
-        if not auth_is_configured() and not (request.state.auth_user and not request.state.auth_user.is_admin):
+        if not request.state.auth_user and not auth_is_configured() and not google_is_configured():
             return JSONResponse(status_code=503, content={"detail": "Admin authentication is not configured"},
                                 headers={"Cache-Control": "no-store"})
         if get_session_user_from_request(request) is None:

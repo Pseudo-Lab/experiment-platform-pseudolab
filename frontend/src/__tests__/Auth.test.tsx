@@ -34,19 +34,14 @@ it('restores a session and returns to the original protected route', async () =>
   expect(await screen.findByText('authenticated:admin')).toBeInTheDocument();
 });
 
-it.each(['ko', 'en'] as const)('shows login errors and supports retry in %s', async (lang) => {
-  const login = vi.spyOn(authApi, 'login').mockRejectedValueOnce(new Error('invalid_credentials')).mockRejectedValueOnce(new Error('login_failed')).mockResolvedValue(authenticated);
+it.each(['ko', 'en'] as const)('offers Google as the only login entry in %s', async (lang) => {
+  const login = vi.spyOn(authApi, 'login');
+  vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ google: true }) } as Response);
   renderLogin(lang);
-  fireEvent.change(screen.getByLabelText(lang === 'ko' ? '아이디' : 'Username'), { target: { value: 'admin' } });
-  fireEvent.change(screen.getByLabelText(lang === 'ko' ? '비밀번호' : 'Password'), { target: { value: 'secret' } });
-  const submit = screen.getByRole('button', { name: lang === 'ko' ? '로그인' : 'Sign in' });
-  fireEvent.click(submit);
-  expect(await screen.findByRole('alert')).toHaveTextContent(lang === 'ko' ? '아이디와 비밀번호를 확인해 주세요.' : 'Check your username and password.');
-  fireEvent.click(submit);
-  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(lang === 'ko' ? '현재 로그인할 수 없습니다.' : 'Sign in is unavailable.'));
-  fireEvent.click(submit);
-  expect(await screen.findByText('authenticated:admin')).toBeInTheDocument();
-  expect(login).toHaveBeenLastCalledWith('admin', 'secret');
+  await waitFor(() => expect(screen.getByRole('button', { name: lang === 'ko' ? 'Google로 계속하기' : 'Continue with Google' })).toBeEnabled());
+  expect(screen.queryByLabelText(/Username|Password|아이디|비밀번호/)).not.toBeInTheDocument();
+  expect(document.querySelector('input[type="password"]')).toBeNull();
+  expect(login).not.toHaveBeenCalled();
 });
 
 it('keeps the session on failed logout and clears it after successful logout', async () => {
@@ -168,3 +163,22 @@ it.each(['/api-key', '/bug-report', '//evil.invalid', '/\\evil.invalid', 'https:
     expect(sessionStorage.getItem('oauthReturnPath')).toBeNull();
   },
 );
+
+
+it.each([true, false])('uses the same OAuth callback UI with is_admin=%s', async (isAdmin) => {
+  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'google-user', account_id: 'synthetic-account', is_admin: isAdmin } });
+  render(<MemoryRouter initialEntries={['/login?oauth=success']}><AuthProvider><Routes>
+    <Route path="/login" element={<LoginPage lang="en" setLang={() => {}} />} />
+    <Route path="/experiments" element={<span>Admin default</span>} />
+    <Route path="/projects" element={<span>Member default</span>} />
+  </Routes></AuthProvider></MemoryRouter>);
+  expect(await screen.findByText(isAdmin ? 'Admin default' : 'Member default')).toBeInTheDocument();
+});
+
+it('keeps Google disabled on provider lookup failure without exposing password login', async () => {
+  vi.spyOn(global, 'fetch').mockRejectedValue(new Error('provider unavailable'));
+  renderLogin('en');
+  await screen.findByText('Google sign in is not configured for this installation.');
+  expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeDisabled();
+  expect(document.querySelector('input[type="password"]')).toBeNull();
+});

@@ -82,7 +82,6 @@ it.each([
   ['ko', 'introduction-guide'], ['en', 'introduction-guide'],
 ] as const)('returns to the original protected route after the %s guide via %s', async (lang, via) => {
   localStorage.setItem('lang', lang);
-  const login = vi.spyOn(authApi, 'login').mockResolvedValue({ authenticated: true, user: { username: 'admin' } });
   render(<MemoryRouter initialEntries={[{ pathname: '/experiments/review-original', search: '?tab=summary', hash: '#details', state: { review: 'keep' } }]}><App /><LocationProbe /></MemoryRouter>);
   const loginTitle = lang === 'ko' ? '로그인' : 'Sign in';
   const guideLabel = lang === 'ko' ? 'SDK 가이드' : 'SDK guide';
@@ -108,24 +107,25 @@ it.each([
   fireEvent.click(screen.getAllByRole('link', { name: loginTitle })[0]);
   await screen.findByRole('heading', { level: 1, name: loginTitle });
   expect(readLocation().state).toEqual(returnState);
-  fireEvent.change(screen.getByLabelText(lang === 'ko' ? '아이디' : 'Username'), { target: { value: 'admin' } });
-  fireEvent.change(screen.getByLabelText(lang === 'ko' ? '비밀번호' : 'Password'), { target: { value: 'test-password' } });
-  fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '로그인' : 'Sign in' }));
+  expect(screen.getByRole('button', { name: lang === 'ko' ? 'Google로 계속하기' : 'Continue with Google' })).toBeInTheDocument();
+  sessionStorage.setItem('oauthReturnPath', readLocation().state.from.pathname);
+  cleanup();
+  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'google-member', is_admin: false } });
+  render(<MemoryRouter initialEntries={['/login?oauth=success']}><App /><LocationProbe /></MemoryRouter>);
   await waitFor(() => expect(readLocation().pathname).toBe('/experiments/review-original'));
-  expect(login).toHaveBeenCalledWith('admin', 'test-password');
   expect(readLocation().search).toBe('');
   expect(readLocation().hash).toBe('');
 });
 
 it.each(['ko', 'en'] as const)('uses the existing default destination after direct guide access in %s', async (lang) => {
   localStorage.setItem('lang', lang);
-  vi.spyOn(authApi, 'login').mockResolvedValue({ authenticated: true, user: { username: 'admin' } });
   render(<MemoryRouter initialEntries={['/docs/sdk']}><App /><LocationProbe /></MemoryRouter>);
   await act(async () => {});
   fireEvent.click(screen.getByRole('link', { name: lang === 'ko' ? '로그인' : 'Sign in' }));
   expect(JSON.parse(screen.getByTestId('location').textContent!).state).toBeNull();
-  fireEvent.change(screen.getByLabelText(lang === 'ko' ? '아이디' : 'Username'), { target: { value: 'admin' } });
-  fireEvent.change(screen.getByLabelText(lang === 'ko' ? '비밀번호' : 'Password'), { target: { value: 'test-password' } });
-  fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '로그인' : 'Sign in' }));
+  cleanup();
+  sessionStorage.clear();
+  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'google-admin', is_admin: true } });
+  render(<MemoryRouter initialEntries={['/login?oauth=success']}><App /><LocationProbe /></MemoryRouter>);
   await waitFor(() => expect(JSON.parse(screen.getByTestId('location').textContent!).pathname).toBe('/experiments'));
 });

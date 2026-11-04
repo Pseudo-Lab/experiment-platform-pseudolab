@@ -55,7 +55,8 @@ def verify_password(password: str, stored_hash: str | None) -> bool:
 
 
 def auth_is_configured() -> bool:
-    return bool(settings.ADMIN_USERNAME and settings.ADMIN_PASSWORD_HASH and settings.AUTH_SESSION_SECRET)
+    return bool(settings.PASSWORD_LOGIN_ENABLED and settings.ADMIN_USERNAME
+                and settings.ADMIN_PASSWORD_HASH and settings.AUTH_SESSION_SECRET)
 
 
 def _require_auth_config() -> None:

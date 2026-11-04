@@ -583,3 +583,137 @@ def test_canonical_start_behind_tls_terminating_proxy(clients, monkeypatch, forw
     assert r.status_code == 303 and r.headers['location'].startswith(google_oidc.AUTHORIZE_URL)
     assert parse_qs(urlsplit(r.headers['location']).query)['redirect_uri'] == [origin + '/api/v1/auth/google/callback']
     assert 'Secure' in r.headers['set-cookie'] and 'Domain=' not in r.headers['set-cookie']
+
+
+def test_explicit_google_admin_scope_preserves_identity_and_owners(clients, monkeypatch, mock_d1):
+    a, b, password_admin = clients
+    project(password_admin, 'existing-unowned')
+    project(b, 'other-owned')
+    for client, key, pid in [(password_admin, 'shared-flag', 'existing-unowned'), (b, 'member-flag', 'other-owned')]:
+        assert client.post('/api/v1/feature-flags/', json={'flag_key': key, 'project_id': pid, 'enabled': True}).status_code == 201
+        assert client.post('/api/v1/experiments/', json={'id': key, 'name': key, 'project_id': pid, 'flag_key': key}).status_code == 201
+    before = [tuple(r) for r in mock_d1.execute('SELECT * FROM project_owner')]
+    monkeypatch.setattr(settings, 'ADMIN_ACCOUNT_ID', 'a')
+    me = a.get('/api/v1/auth/me').json()['user']
+    assert me['is_admin'] is True and me['account_id'] == 'a'
+    assert {p['id'] for p in a.get('/api/v1/projects/').json()} == {'existing-unowned', 'other-owned'}
+    assert a.get('/api/v1/projects/existing-unowned/api-key').status_code == 200
+    assert a.get('/api/v1/projects/existing-unowned/sdk-status').status_code == 200
+    assert a.get('/api/v1/segments/').status_code == 200
+    assert {f['flag_key'] for f in a.get('/api/v1/feature-flags/').json()} == {'shared-flag', 'member-flag'}
+    assert {e['id'] for e in a.get('/api/v1/experiments/').json()} == {'shared-flag', 'member-flag'}
+    assert {e['id'] for e in b.get('/api/v1/experiments/').json()} == {'member-flag'}
+    made = a.post('/api/v1/experiments/', json={'id': 'admin-experiment', 'name': 'Admin', 'project_id': 'existing-unowned', 'owner_id': 'forged'})
+    assert made.status_code == 201 and made.json()['owner_id'] == 'a'
+    assert b.get('/api/v1/segments/').status_code == 403
+    assert [tuple(r) for r in mock_d1.execute('SELECT * FROM project_owner')] == before
+    project(a, 'admin-created')
+    assert mock_d1.execute("SELECT account_id FROM project_owner WHERE project_id='admin-created'").fetchone()[0] == 'a'
+    assert b.get('/api/v1/projects/admin-created').status_code == 404
+    for project_id in ['existing-unowned', 'other-owned']:
+        assert a.post(f'/api/v1/projects/{project_id}/server-key').status_code == 200
+        assert a.delete(f'/api/v1/projects/{project_id}/server-key').status_code == 204
+    assert b.post('/api/v1/projects/existing-unowned/server-key').status_code == 404
+    assert b.delete('/api/v1/projects/existing-unowned').status_code == 404
+    project(password_admin, 'empty-shared')
+    assert a.delete('/api/v1/projects/empty-shared').status_code == 204
+    assert a.delete('/api/v1/projects/existing-unowned').status_code == 409
+    # Revoking the selected role affects existing sessions without erasing their identity.
+    monkeypatch.setattr(settings, 'ADMIN_ACCOUNT_ID', None)
+    assert a.get('/api/v1/auth/me').json()['user'] == {'username': 'user-a', 'account_id': 'a', 'is_admin': False}
+    assert a.get('/api/v1/projects/existing-unowned').status_code == 404
+    assert a.get('/api/v1/projects/admin-created').status_code == 200
+
+
+def test_google_admin_without_password_and_explicit_password_retirement(clients, monkeypatch):
+    a, b, old_admin = clients
+    monkeypatch.setattr(settings, 'ADMIN_ACCOUNT_ID', 'a')
+    monkeypatch.setattr(settings, 'PASSWORD_LOGIN_ENABLED', False)
+    assert old_admin.get('/api/v1/auth/me').json()['authenticated'] is False
+    assert old_admin.get('/api/v1/projects/').status_code == 401
+    assert old_admin.post('/api/v1/auth/login', json={'username': 'admin', 'password': 'synthetic'}).status_code == 503
+    monkeypatch.setattr(settings, 'ADMIN_PASSWORD_HASH', None)
+    monkeypatch.setattr(settings, 'ADMIN_USERNAME', None)
+    assert a.get('/api/v1/projects/').status_code == 200
+    assert a.get('/api/v1/segments/').status_code == 200
+    assert b.get('/api/v1/projects/').status_code == 200
+    assert b.get('/api/v1/segments/').status_code == 403
+    token = a.cookies.get(settings.AUTH_COOKIE_NAME)
+    assert a.post('/api/v1/auth/logout').status_code == 200
+    assert a.get('/api/v1/projects/', headers={'Cookie': settings.AUTH_COOKIE_NAME + '=' + token}).status_code == 401
+
+
+@pytest.mark.parametrize('selected', [None, '', 'missing-account', ' a ', 'google-a'])
+def test_no_implicit_or_claim_based_admin_selection(clients, monkeypatch, selected):
+    a, b, _ = clients
+    monkeypatch.setattr(settings, 'ADMIN_ACCOUNT_ID', selected)
+    for c in [a, b]:
+        assert c.get('/api/v1/auth/me').json()['user']['is_admin'] is False
+        assert c.get('/api/v1/segments/', headers={'X-Admin-Account-Id': 'a', 'X-Role': 'admin'}).status_code == 403
+    r = a.post('/api/v1/projects/', json={'id': 'ordinary', 'name': 'Ordinary', 'is_admin': True, 'account_id': 'a'})
+    assert r.status_code == 201
+    assert a.get('/api/v1/auth/me').json()['user']['is_admin'] is False
+
+
+def test_incomplete_google_configuration_preserves_enabled_recovery(clients, monkeypatch):
+    a, _, admin = clients
+    monkeypatch.setattr(settings, 'GOOGLE_OAUTH_CLIENT_SECRET', None)
+    assert admin.get('/api/v1/auth/providers').json() == {'google': False}
+    assert admin.post('/api/v1/auth/login', json={'username': 'admin', 'password': 'synthetic'}).status_code == 200
+    monkeypatch.setattr(settings, 'ADMIN_ACCOUNT_ID', 'a')
+    monkeypatch.setattr(settings, 'PASSWORD_LOGIN_ENABLED', False)
+    # Existing Google sessions remain usable during provider outage; fresh login fails closed.
+    assert a.get('/api/v1/segments/').status_code == 200
+    c = TestClient(app, base_url='https://testserver')
+    assert c.get('/api/v1/projects/').status_code == 503
+    assert c.get('/api/v1/auth/google/start', follow_redirects=False).status_code == 503
+
+
+def test_client_switch_reuses_sub_account_owner_and_session(clients, provider, monkeypatch, mock_d1):
+    c = TestClient(app, base_url='https://testserver')
+    state = start(c, provider)
+    assert c.get('/api/v1/auth/google/callback', params={'state': state, 'code': 'synthetic'}, follow_redirects=False).headers['location'] == '/login?oauth=success'
+    account_id = c.get('/api/v1/auth/me').json()['user']['account_id']
+    project(c, 'client-switch-project')
+    copied = c.cookies.get(settings.AUTH_COOKIE_NAME)
+    monkeypatch.setattr(settings, 'ADMIN_ACCOUNT_ID', account_id)
+    monkeypatch.setattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', 'new-synthetic-client')
+    assert c.get('/api/v1/projects/').status_code == 200
+    assert c.get('/api/v1/auth/me').json()['user']['is_admin'] is True
+    c.cookies.clear()
+    state = start(c, provider)
+    # The old audience is rejected even though the sub is the same.
+    assert c.get('/api/v1/auth/google/callback', params={'state': state, 'code': 'synthetic'}, follow_redirects=False).headers['location'] == '/login?oauth=failed'
+    provider['claims'] = {'aud': 'new-synthetic-client', 'email': 'irrelevant@example.invalid', 'role': 'member'}
+    state = start(c, provider)
+    assert c.get('/api/v1/auth/google/callback', params={'state': state, 'code': 'synthetic'}, follow_redirects=False).headers['location'] == '/login?oauth=success'
+    assert c.get('/api/v1/auth/me').json()['user']['account_id'] == account_id
+    assert mock_d1.execute("SELECT count(*) FROM platform_account WHERE google_sub='new-google-sub'").fetchone()[0] == 1
+    assert mock_d1.execute("SELECT account_id FROM project_owner WHERE project_id='client-switch-project'").fetchone()[0] == account_id
+    assert c.get('/api/v1/auth/me', headers={'Cookie': settings.AUTH_COOKIE_NAME + '=' + copied}).json()['authenticated'] is True
+
+
+def test_provider_claims_cannot_promote_google_account(clients, provider, monkeypatch):
+    monkeypatch.setattr(settings, 'ADMIN_ACCOUNT_ID', 'a')
+    provider['claims'] = {'role': 'admin', 'is_admin': True, 'account_id': 'a', 'email': 'admin@example.invalid'}
+    c = TestClient(app, base_url='https://testserver')
+    state = start(c, provider)
+    assert c.get('/api/v1/auth/google/callback', params={'state': state, 'code': 'synthetic'}, follow_redirects=False).headers['location'] == '/login?oauth=success'
+    user = c.get('/api/v1/auth/me').json()['user']
+    assert user['account_id'] != 'a' and user['is_admin'] is False
+    assert c.get('/api/v1/segments/').status_code == 403
+
+
+def test_google_admin_fails_closed_without_account_or_security_storage(clients, monkeypatch, mock_d1):
+    from fastapi import HTTPException
+    from app.db import d1
+    a, _, _ = clients
+    monkeypatch.setattr(settings, 'ADMIN_ACCOUNT_ID', 'a')
+    async def unavailable(*args, **kwargs):
+        raise HTTPException(503, 'Security storage unavailable')
+    with monkeypatch.context() as patch:
+        patch.setattr(d1, 'security_query', unavailable)
+        assert a.get('/api/v1/projects/').status_code == 503
+    mock_d1.execute("DELETE FROM platform_account WHERE id='a'")
+    mock_d1.commit()
+    assert a.get('/api/v1/projects/').status_code == 401

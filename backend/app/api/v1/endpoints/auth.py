@@ -56,7 +56,7 @@ async def me(request: Request):
     user = get_session_user_from_request(request)
     if user is None:
         return AuthStatus(authenticated=False, user=None)
-    return AuthStatus(authenticated=True, user=AuthUser(username=user.username, is_admin=user.is_admin))
+    return AuthStatus(authenticated=True, user=AuthUser(username=user.username, account_id=user.account_id, is_admin=user.is_admin))
 
 
 @router.get("/providers")

@@ -3,6 +3,7 @@ const fs=require('fs');const c=JSON.parse(fs.readFileSync('/tmp/oauth-security-s
 function check(name,ok){results.push({name,passed:!!ok});if(!ok)throw Error(name)}
 (async()=>{let browser;try{
  browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ let loginAsAdmin=false;
  const context=await browser.newContext({ignoreHTTPSErrors:true});const page=await context.newPage();page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));page.on('request',r=>{const u=new URL(r.url());if(r.isNavigationRequest())console.log('NAV',u.origin,u.pathname)});page.on('response',r=>{const u=new URL(r.url());if(u.pathname.startsWith('/api/'))console.log('AUTH',u.pathname,r.status())});
  const handleRoute=async route=>{
   const u=new URL(route.request().url());
@@ -10,7 +11,7 @@ function check(name,ok){results.push({name,passed:!!ok});if(!ok)throw Error(name
    const response=await route.fetch({maxRedirects:0});const authorize=new URL(response.headers()['location']);
    check('Google authorization uses code + PKCE S256',authorize.hostname==='accounts.google.com'&&authorize.searchParams.get('response_type')==='code'&&authorize.searchParams.get('code_challenge_method')==='S256');
    const target=new URL('https://localhost:19043/api/v1/auth/google/callback');
-   target.searchParams.set('state',authorize.searchParams.get('state'));target.searchParams.set('code',authorize.searchParams.get('nonce'));
+   target.searchParams.set('state',authorize.searchParams.get('state'));target.searchParams.set('code',(loginAsAdmin?'admin:':'')+authorize.searchParams.get('nonce'));
    const headers={...response.headers(),'content-type':'text/html'};delete headers.location;delete headers['content-length'];
    return route.fulfill({status:200,headers,body:`<meta http-equiv="refresh" content="0;url=${target.href.replaceAll('&','&amp;')}">`});
   }
@@ -93,10 +94,20 @@ function check(name,ok){results.push({name,passed:!!ok});if(!ok)throw Error(name
  await page.getByRole('button',{name:/^(로그아웃|Logout)$/}).click();await page.waitForURL('**/login');
  check('logout revokes copied session',(await req.get(base+'/projects/',{headers:{Cookie:'experiment_platform_session='+session.value}})).status()===401);
  check('public SDK key cannot manage',(await req.get(base+'/projects/',{headers:{'X-API-Key':sdkKey}})).status()===401);
- await page.locator('input[autocomplete=username]').fill(c.username);await page.locator('input[type=password]').fill(c.password);await page.locator('button[type=submit]').click();await page.waitForURL(u=>!u.pathname.includes('login'));
- check('existing administrator UI login preserved',(await (await req.get(base+'/auth/me')).json()).user.is_admin===true);
+ check('password form absent',await page.locator('input[type=password]').count()===0);
+ check('password recovery explicitly disabled in this fixture',(await req.post(base+'/auth/login',{data:{username:c.username,password:c.password}})).status()===503);
+ loginAsAdmin=true;await page.getByRole('button',{name:/Google/}).click();await page.waitForURL(u=>!u.pathname.includes('login')&&!u.pathname.includes('/auth/'));
+ const admin=(await (await req.get(base+'/auth/me')).json()).user;
+ check('explicit Google administrator uses same login',admin.is_admin===true&&admin.account_id==='local-google-admin');
+ const allProjects=await(await req.get(base+'/projects/')).json();
+ check('Google admin lists unowned legacy and member projects',allProjects.some(p=>p.id==='legacy-shared')&&allProjects.some(p=>p.id==='browser-project'));
+ check('Google admin retains shared management access',(await req.get(base+'/segments/')).status()===200);
+ check('Google admin role UI visible',await page.getByRole('button',{name:'버그 & 기능 요청'}).count()===1);
  check('admin can access member project',(await req.get(base+'/projects/browser-project')).status()===200);
  check('untrusted Origin blocked',(await req.post(base+'/admin/srm-check',{headers:{Origin:'https://evil.invalid'}})).status()===403);
+ const adminSession=(await context.cookies()).find(c=>c.name==='experiment_platform_session');
+ await page.getByRole('button',{name:/^(로그아웃|Logout)$/}).click();await page.waitForURL('**/login');
+ check('Google admin logout revokes copied session',(await req.get(base+'/projects/',{headers:{Cookie:'experiment_platform_session='+adminSession.value}})).status()===401);
  await page.screenshot({path:'/tmp/oauth-security-smoke/admin.png'});
  fs.writeFileSync('/tmp/oauth-security-smoke/browser-results.json',JSON.stringify({provider:'LOCAL MOCK; not real Google',browser:browser.version(),results},null,2));console.log(JSON.stringify({checks:results.length,passed:results.filter(r=>r.passed).length}));
  }catch(e){fs.writeFileSync('/tmp/oauth-security-smoke/browser-results.json',JSON.stringify({provider:'LOCAL MOCK; not real Google',results,failure:e.message},null,2));console.log('Browser test failed; see sanitized result');process.exitCode=1}finally{if(browser)await browser.close()}})();

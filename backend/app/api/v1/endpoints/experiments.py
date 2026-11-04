@@ -14,12 +14,12 @@ router = APIRouter()
 
 @router.get("/", response_model=List[Experiment])
 async def list_experiments(request: Request, status: Optional[ExperimentStatus] = Query(None)):
-    return await experiment_service.get_all(status=status, account_id=request.state.auth_user.account_id)
+    return await experiment_service.get_all(status=status, account_id=None if request.state.auth_user.is_admin else request.state.auth_user.account_id)
 
 
 @router.post("/", response_model=Experiment, status_code=201)
 async def create_experiment(data: ExperimentCreate, request: Request):
-    if not request.state.auth_user.is_admin:
+    if request.state.auth_user.account_id:
         data.owner_id = request.state.auth_user.account_id
     return await experiment_service.create(data)
 

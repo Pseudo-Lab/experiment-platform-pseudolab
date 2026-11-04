@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.get("/", response_model=List[Project])
 async def list_projects(request: Request):
-    return await project_service.list(account_id=request.state.auth_user.account_id)
+    return await project_service.list(account_id=None if request.state.auth_user.is_admin else request.state.auth_user.account_id)
 
 
 @router.post("/", response_model=Project, status_code=201)

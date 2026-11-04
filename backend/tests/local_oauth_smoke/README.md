@@ -26,3 +26,10 @@ callback. Only the test boot module substitutes token/JWKS responses. Production
 provider URLs remain fixed. Real Google consent/exchange and real D1 behavior
 are not established by this test. This serves the production SPA directly because
 Vite's existing development `/api` prefix proxy also matches the `/api-key` page.
+
+The Google-only fixture explicitly seeds a synthetic administrator account and
+selects its local ID through ADMIN_ACCOUNT_ID. PASSWORD_LOGIN_ENABLED is false
+only in this local test. A test-only provider code prefix chooses that fixture;
+production OAuth never derives administrator role from provider claims. The
+browser covers Google member/admin login, shared/unowned administrator access,
+SDK isolation, and revocation without a password form.
