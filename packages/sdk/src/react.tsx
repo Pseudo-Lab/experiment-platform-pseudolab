@@ -37,6 +37,8 @@ const CACHE_PREFIX = 'experibase:flag:'
 export interface ProviderProps {
   /** Fixed for this provider lifetime; remount when changing event contracts. */
   eventModel?: SDKConfig['eventModel']
+  /** Fixed for this provider lifetime, like eventModel. */
+  eventTransport?: SDKConfig['eventTransport']
   apiKey: string
   baseUrl: string
   userId?: string
@@ -53,12 +55,13 @@ export function ExperibaseProvider({
   baseUrl,
   userId,
   eventModel,
+  eventTransport,
   flagKeys = [],
   children,
 }: ProviderProps) {
   const sdkRef = useRef<ExperibaseSDK | null>(null)
   if (!sdkRef.current) {
-    sdkRef.current = new ExperibaseSDK({ apiKey, baseUrl, userId, eventModel })
+    sdkRef.current = new ExperibaseSDK({ apiKey, baseUrl, userId, eventModel, eventTransport })
   }
   const sdk = sdkRef.current
   const uid = sdk.userId

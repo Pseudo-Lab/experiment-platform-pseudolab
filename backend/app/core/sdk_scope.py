@@ -11,6 +11,15 @@ async def enforce_sdk_scope(request: Request) -> None:
     if path.startswith("/auth/") or path in {"/status", "/openapi.json"}:
         return
     api_key = request.headers.get("x-api-key")
+    user = request.state.auth_user
+    ingestion = path in {"/capture", "/ingest/events", "/events"}
+    sdk_write = ingestion or path == "/identify"
+    decision = path in {"/decide", "/feature-flags/decide", "/experiments/assignment"}
+    decision = decision or bool(re.fullmatch(r"/experiments/[^/]+/assign/[^/]+", path))
+    if api_key is not None and not api_key.strip():
+        raise HTTPException(401, "API key required")
+    if not api_key and (sdk_write or (decision and not (user and user.is_admin))):
+        raise HTTPException(401, "API key required")
     project_id = None
     owned_key = False
     if api_key:
@@ -28,7 +37,6 @@ async def enforce_sdk_scope(request: Request) -> None:
         project_id = server_project.id
         owned_key = bool(await d1.security_query("SELECT 1 FROM project_owner WHERE project_id = ?", [project_id]))
         server_key = True
-    user = request.state.auth_user
     if user and not user.is_admin:
         if not owned_key or not await d1.security_query(
             "SELECT 1 FROM project_owner WHERE project_id = ? AND account_id = ?", [project_id, user.account_id]
@@ -61,13 +69,33 @@ async def enforce_sdk_scope(request: Request) -> None:
     if flag_key:
         references.append(("feature_flag", "flag_key", flag_key))
     # Both typed and JSON-property experiment references are consumed by legacy analytics.
-    events = payload.get("events", [payload])
+    events = payload.get("events", []) if path == "/ingest/events" else [payload]
     if not isinstance(events, list):
         events = []
     for event in events:
         if not isinstance(event, dict):
             continue
-        for data in [event, event.get("properties", {}), event.get("tracking_context", {})]:
+        context = event.get("tracking_context") if path in {"/capture", "/ingest/events"} else None
+        if ingestion:
+            if "project_id" in event and event["project_id"] != project_id:
+                raise HTTPException(404, "Resource not found")
+            if isinstance(context, dict):
+                if context.get("project_id") != project_id:
+                    raise HTTPException(404, "Resource not found")
+                if not isinstance(context.get("key"), str):
+                    raise HTTPException(422, "Invalid resource reference")
+                if await resource_project("feature_flag", "flag_key", context["key"]) != project_id:
+                    raise HTTPException(404, "Resource not found")
+        # Only capture/ingest consume SDK v1 context. They overwrite these two
+        # reference fields in properties; flag_key/placement_key remain stored.
+        properties = event.get("properties", {})
+        if isinstance(context, dict) and isinstance(properties, dict):
+            properties = {**properties, "experiment_id": context.get("experiment_id"),
+                          "key": context.get("key")}
+        data_sources = [event, properties]
+        if isinstance(context, dict):
+            data_sources.append({"experiment_id": context.get("experiment_id"), "key": context.get("key")})
+        for data in data_sources:
             if not isinstance(data, dict):
                 continue
             if data.get("experiment_id"):
@@ -86,10 +114,16 @@ async def enforce_sdk_scope(request: Request) -> None:
             raise HTTPException(422, "Invalid resource reference")
         rows = await d1.security_query(f"SELECT project_id FROM {table} WHERE {key} = ?", [value])
         if not rows:
-            if owned_key and table == "experiments":
+            if (owned_key or (project_id and (ingestion or decision))) and table == "experiments":
+                raise HTTPException(404, "Resource not found")
+            if project_id and path == "/feature-flags/decide" and table == "feature_flag":
                 raise HTTPException(404, "Resource not found")
             continue
         target = rows[0]["project_id"]
+        # Legacy NULL-project resources remain shared, but no key may write into
+        # another concrete project merely because neither project has an owner.
+        if project_id and (ingestion or decision) and target is not None and target != project_id:
+            raise HTTPException(404, "Resource not found")
         target_owned = bool(await d1.security_query("SELECT 1 FROM project_owner WHERE project_id = ?", [target]))
         if (owned_key or target_owned) and (not project_id or project_id != target):
             raise HTTPException(404, "Resource not found")

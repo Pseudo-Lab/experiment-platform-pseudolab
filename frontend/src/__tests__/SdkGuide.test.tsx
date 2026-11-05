@@ -37,11 +37,11 @@ it.each(['anonymous', 'failed', 'authenticated'])('keeps the guide public with %
 it('switches KO/EN, retains the exact install version and provides focusable code and valid section links', () => {
   vi.mocked(authApi.me).mockReturnValue(new Promise(() => {}));
   open('/docs/sdk');
-  expect(screen.getByText('npm install --save-exact @pseudo-lab/experibase-sdk@0.1.5')).toBeInTheDocument();
-  expect(screen.getByText(/아직 출시되지 않았습니다/)).toBeInTheDocument();
+  expect(screen.getByText('npm install --save-exact @pseudo-lab/experibase-sdk@0.2.0')).toBeInTheDocument();
+  expect(screen.getByText(/이 제한은 아직 해결되지 않았습니다/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
   expect(screen.getByRole('heading', { level: 1, name: 'Developer SDK guide' })).toBeInTheDocument();
-  expect(screen.getByText(/not released yet/)).toBeInTheDocument();
+  expect(screen.getByText(/these limitations remain unresolved/)).toBeInTheDocument();
   expect(screen.getAllByLabelText('Code example')).toHaveLength(4);
   for (const pre of screen.getAllByLabelText('Code example')) expect(pre).toHaveAttribute('tabindex', '0');
   for (const link of screen.getAllByRole('link').filter(link => link.getAttribute('href')?.startsWith('#'))) {

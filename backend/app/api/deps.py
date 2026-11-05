@@ -6,13 +6,23 @@ from app.services.project import project_service
 
 async def get_project_from_api_key(
     x_api_key: Optional[str] = Header(default=None),
-) -> Optional[Project]:
-    if not x_api_key:
-        return None
+) -> Project:
+    if not x_api_key or not x_api_key.strip():
+        raise HTTPException(status_code=401, detail="API key required")
     project = await project_service.get_by_api_key(x_api_key)
     if not project:
         raise HTTPException(status_code=401, detail="Invalid API key")
     return project
+
+
+async def get_project_for_sdk_or_admin(
+    request: Request, x_api_key: Optional[str] = Header(default=None),
+) -> Optional[Project]:
+    """Keep authenticated installation-admin previews separate from SDK ingestion."""
+    user = getattr(request.state, "auth_user", None)
+    if x_api_key is None and user is not None and user.is_admin:
+        return None
+    return await get_project_from_api_key(x_api_key)
 
 
 async def require_project_from_bearer_token(request: Request) -> Project:

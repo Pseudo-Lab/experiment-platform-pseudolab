@@ -1,12 +1,12 @@
 {
   "name": "@pseudo-lab/experibase-sdk",
   "type": "module",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"
   },
-  "description": "Iterglow SDK — feature flag & A/B test client",
+  "description": "Iterglow SDK \u2014 feature flag & A/B test client",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -29,7 +29,10 @@
       ]
     }
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "sideEffects": false,
   "repository": {
     "type": "git",

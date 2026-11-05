@@ -26,6 +26,27 @@ export interface TrackOptions {
   eventId?: string
 }
 
+/** Event delivered to the customer's collector instead of Iterglow ingestion.
+ * Attribution is present for expose() and track(..., { tracking_context }).
+ * No API key or server credential is included.
+ */
+export interface SDKEvent {
+  event_id: string
+  timestamp: string
+  user_id: string
+  event_name: string
+  session_id?: string
+  experiment_id?: string | null
+  variant?: string
+  device?: string
+  tracking_context?: ExposureContext
+  sdk_event_type?: 'exposure' | 'click' | 'conversion'
+  properties: Record<string, unknown>
+}
+
+/** Resolve when accepted by your collector; throw/reject on failure. No SDK retry/fallback. */
+export type EventTransport = (event: SDKEvent) => void | Promise<void>
+
 export interface DecideResult {
   key: string
   type: 'flag' | 'placement'
@@ -60,6 +81,8 @@ export interface PlacementOptions {
 }
 
 export interface SDKConfig {
+  /** v1 only. Replaces all SDK event ingestion with this callback; decide still uses the API. */
+  eventTransport?: EventTransport
   /** Explicit migration boundary. Legacy preserves 0.1.5 evaluation/dual-write behavior. */
   eventModel?: 'sdk_v1' | 'legacy'
   /** Migration only: count evaluations as exposures. Default false. */

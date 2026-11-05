@@ -1,5 +1,8 @@
 # Iterglow SDK Packaging Guide
 
+> 아래 0.1.5 코드와 배포 상태는 과거 버전 참고 자료입니다. 최신 0.2.0 계약·설치·마이그레이션은 [SDK README](./README.md)를 기준으로 하세요. 0.1.5의 getAssignment()는 키를 전송하지 않아 강화된 서버에서 401 후 control로 대체됩니다. 새 버전에서는 기본 sdk_v1 계약과 명시 legacy 선택을 구별해야 합니다.
+> Historical 0.1.5 reference: use the SDK README for the 0.2.0 contract and migration.
+
 `@pseudo-lab/experibase-sdk` — Iterglow 플랫폼의 공식 클라이언트 SDK.
 Feature flag 결정, A/B 테스트 노출, 이벤트 트래킹을 위한 경량 TypeScript 라이브러리입니다.
 

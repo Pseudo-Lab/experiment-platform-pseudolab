@@ -17,7 +17,7 @@ from app.schemas.feature_flag_rule import (
 from app.schemas.project import Project
 from app.services.feature_flag import feature_flag_service
 from app.services.visual_change import visual_change_service
-from app.api.deps import get_project_from_api_key
+from app.api.deps import get_project_for_sdk_or_admin
 
 router = APIRouter()
 
@@ -27,7 +27,7 @@ async def decide(
     flag_key: str = Query(..., pattern=FLAG_KEY_PATTERN),
     user_id: str = Query(..., min_length=1),
     track: bool = Query(default=True),
-    project: Optional[Project] = Depends(get_project_from_api_key),
+    project: Optional[Project] = Depends(get_project_for_sdk_or_admin),
 ):
     project_id = project.id if project else None
     variant = await feature_flag_service.decide(flag_key, user_id, track=track, project_id=project_id)

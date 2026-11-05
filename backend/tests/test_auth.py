@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from app.core.auth import hash_password, verify_password
 from app.core.config import settings
-from app.main import app
+from app.main import app, _is_public_api_path
 
 client = TestClient(app)
 
@@ -86,8 +86,7 @@ def test_configured_auth_keeps_placement_decide_public(monkeypatch):
     )
     protected_config = client.get("/api/v1/experiments/missing-experiment/placements")
 
-    assert unified_decide.status_code == 200
-    assert unified_decide.json()["payload"]["reason"] == "not_found"
+    assert unified_decide.status_code == 401  # Unified flag decisions can write; SDK key is required.
     assert placement_only.status_code == 200
     assert placement_only.json()["reason"] == "not_found"
     assert explicit_experiment.status_code == 200
@@ -153,9 +152,10 @@ def test_sdk_contracts_without_admin_session(monkeypatch, mock_d1):
         return {'experiment_id': 'e', 'variant_name': 'control', 'user_id': 'u', 'assigned_at': '2026-10-22T00:00:00Z'}
 
     monkeypatch.setattr(experiment_service, 'assign', assign)
-    assignment = client.get('/api/v1/experiments/assignment?experiment_id=e&uid=u')
+    mock_d1.execute("INSERT INTO experiments(id,name,project_id,created_at,updated_at) VALUES ('e','fixture','p','2026-01-01','2026-01-01')")
+    assignment = client.get('/api/v1/experiments/assignment?experiment_id=e&uid=u', headers={'X-API-Key': 'sdk-test-key'})
     assert assignment.status_code == 200
-    assert client.post('/api/v1/events', json={'type': 'impression', 'key': 'missing', 'user_id': 'u'}).status_code == 202
+    assert client.post('/api/v1/events', json={'type': 'impression', 'key': 'missing', 'user_id': 'u'}, headers={'X-API-Key': 'sdk-test-key'}).status_code == 202
     assert client.post('/api/v1/ingest/events', json={'events': []}, headers={'X-API-Key': 'sdk-test-key'}).status_code == 202
     invalid_key = client.post('/api/v1/decide', json={'key': 'missing', 'user_id': 'u'}, headers={'X-API-Key': 'invalid'})
     assert invalid_key.status_code == 401
@@ -254,7 +254,7 @@ def test_missing_config_blocks_all_management_routes(monkeypatch):
         protected = [(method.upper(), path) for path, operations in app.openapi()['paths'].items()
                      for method in operations if method in {'get', 'post', 'put', 'patch', 'delete'}
                      if browser.request(method, path).status_code == 401
-                     and path != '/api/v1/access/decide']
+                     and not _is_public_api_path(path, method.upper())]
         for name in ('ADMIN_USERNAME', 'ADMIN_PASSWORD_HASH', 'AUTH_SESSION_SECRET'):
             monkeypatch.setattr(settings, name, None)
         for method, path in protected:

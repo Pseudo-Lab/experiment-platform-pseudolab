@@ -66,7 +66,8 @@ class TestPostEvents:
         assert resp.status_code == 202
         assert resp.json()["success"] is True
 
-    def test_conversion_accepted(self):
+    def test_conversion_accepted(self, mock_d1):
+        mock_d1.execute("INSERT INTO experiments(id,name,created_at,updated_at) VALUES ('exp-abc','fixture','2026-01-01','2026-01-01')")
         resp = client.post(f"{BASE}/events", json={
             "type": "conversion",
             "key": "my-flag",
@@ -77,9 +78,9 @@ class TestPostEvents:
         })
         assert resp.status_code == 202
 
-    def test_no_auth_required(self):
-        """인증 없이 호출 가능해야 한다."""
-        resp = client.post(f"{BASE}/events", json={
+    def test_no_admin_session_required_with_sdk_key(self):
+        """The SDK credential fixture authenticates events without an admin session."""
+        resp = client.post(f"{BASE}/events", headers={"Cookie": ""}, json={
             "type": "impression",
             "key": "flag-x",
             "variant": "control",

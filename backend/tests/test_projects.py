@@ -175,7 +175,7 @@ class TestDecideWithApiKey:
         )
         mock_d1.commit()
 
-    def test_decide_without_api_key_works(self, mock_d1):
+    def test_admin_preview_without_api_key_works(self, mock_d1):
         self._setup(mock_d1)
         res = client.get("/api/v1/feature-flags/decide?flag_key=test-flag&user_id=user1")
         assert res.status_code == 200
@@ -203,14 +203,14 @@ class TestCaptureWithApiKey:
     def _setup(self, mock_d1):
         _seed_project("demo-app", "Demo App", "pk_live_demo_test", mock_d1)
 
-    def test_capture_without_api_key(self, mock_d1):
+    def test_capture_with_empty_api_key_is_rejected(self, mock_d1):
         res = client.post(
             "/api/v1/capture",
             json={"user_id": "u1", "event_name": "click"},
+            headers={"X-API-Key": ""},
         )
-        assert res.status_code == 202
-        rows = mock_d1.execute("SELECT project_id FROM event_log WHERE user_id='u1'").fetchall()
-        assert rows[0]["project_id"] is None
+        assert res.status_code == 401
+        assert mock_d1.execute("SELECT count(*) FROM event_log").fetchone()[0] == 0
 
     def test_capture_with_valid_api_key_tags_project(self, mock_d1):
         self._setup(mock_d1)

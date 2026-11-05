@@ -101,8 +101,8 @@ def test_resource_payloads_sdk_and_server_keys(clients):
     sdk = TestClient(app, base_url='https://testserver')
     for key in [None, kb]:
         headers = {'X-API-Key': key} if key else {}
-        assert sdk.post('/api/v1/decide', json={'key': 'flag-a', 'user_id': 'visitor'}, headers=headers).status_code == 404
-        assert sdk.get('/api/v1/experiments/assignment?experiment_id=exp-a&uid=visitor', headers=headers).status_code == 404
+        assert sdk.post('/api/v1/decide', json={'key': 'flag-a', 'user_id': 'visitor'}, headers=headers).status_code == (401 if key is None else 404)
+        assert sdk.get('/api/v1/experiments/assignment?experiment_id=exp-a&uid=visitor', headers=headers).status_code == (401 if key is None else 404)
     assert sdk.post('/api/v1/decide', json={'key': 'flag-a', 'user_id': 'visitor'}, headers={'X-API-Key': ka}).status_code == 200
     for payload in [{'experiment_id': 'exp-b'}, {'properties': {'experiment_id': 'exp-b'}}]:
         assert sdk.post('/api/v1/capture', json={'event_name': 'click', 'user_id': 'visitor', **payload}, headers={'X-API-Key': ka}).status_code == 404
@@ -301,7 +301,8 @@ def test_owned_sdk_events_results_and_future_key_isolation(clients, mock_d1):
     assert a.get('/api/v1/experiments/exp-a/available-events').json()['total_events'] == 2
     assert mock_d1.execute('SELECT count(*) FROM experiment_event').fetchone()[0] == 0
     assert mock_d1.execute('SELECT count(*) FROM project_experiment_event').fetchone()[0] == 3
-    assert track('legacy-custom', 'conversion', {}).status_code == 202
+    legacy_key = project(admin, 'legacy-sdk')
+    assert track('legacy-custom', 'conversion', {'X-API-Key': legacy_key}).status_code == 202
     assert mock_d1.execute('SELECT count(*) FROM experiment_event').fetchone()[0] == 1
     for kind in ['quasi_experiment', 'rollout']:
         assert a.patch('/api/v1/experiments/exp-a', json={'experiment_type': kind}).status_code == 403

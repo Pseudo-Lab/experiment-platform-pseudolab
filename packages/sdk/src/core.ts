@@ -1,4 +1,6 @@
 import type {
+  EventTransport,
+  SDKEvent,
   ExposureContext,
   TrackOptions,
   AssignmentOptions,
@@ -66,12 +68,17 @@ export class ExperibaseSDK {
   readonly baseUrl: string
   private _userId: string
   private readonly _sessionId = resolveSessionId()
+  private readonly _eventTransport?: EventTransport
   private readonly _autoExpose: boolean
   private readonly _eventModel: 'sdk_v1' | 'legacy'
   private readonly _exposures = new WeakMap<DecideResult, ExposureContext>()
 
   constructor(config: SDKConfig) {
     this._eventModel = config.eventModel ?? 'sdk_v1'
+    if (config.eventTransport && (this._eventModel === 'legacy' || config.autoExpose)) {
+      throw new Error('eventTransport requires sdk_v1 with explicit expose(); legacy/autoExpose are not supported')
+    }
+    this._eventTransport = config.eventTransport
     if (this._eventModel === 'legacy' && config.autoExpose) {
       throw new Error('autoExpose is a v1 option; legacy already sends automatic impressions')
     }
@@ -161,6 +168,9 @@ export class ExperibaseSDK {
     variant: string,
     properties?: Record<string, unknown>,
   ): Promise<void> {
+    if (this._eventTransport) {
+      throw new Error('External events require expose(decision) to preserve attribution')
+    }
     const guardKey = `${EXPOSURE_PREFIX}${experimentId}`
     if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(guardKey)) return
     if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(guardKey, '1')
@@ -234,17 +244,22 @@ export class ExperibaseSDK {
     event: string, properties: Record<string, unknown>, context: ExposureContext,
     type: 'exposure' | 'click' | 'conversion', eventId: string,
   ): Promise<void> {
+    const payload: SDKEvent = {
+      user_id: context.user_id, event_name: event, event_id: eventId,
+      timestamp: type === 'exposure' ? context.exposed_at : new Date().toISOString(),
+      session_id: context.session_id, experiment_id: context.experiment_id,
+      variant: context.variant, device: resolveDevice(),
+      tracking_context: { ...context }, sdk_event_type: type,
+      properties: { ...properties, url: typeof window !== 'undefined' ? window.location.pathname : null },
+    }
+    if (this._eventTransport) {
+      await this._eventTransport(payload)
+      return
+    }
     const res = await fetch(`${this.baseUrl}/capture`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': this.apiKey },
-      body: JSON.stringify({
-        user_id: context.user_id, event_name: event, event_id: eventId,
-        timestamp: type === 'exposure' ? context.exposed_at : new Date().toISOString(),
-        session_id: context.session_id, experiment_id: context.experiment_id,
-        variant: context.variant, device: resolveDevice(),
-        tracking_context: context, sdk_event_type: type,
-        properties: { ...properties, url: typeof window !== 'undefined' ? window.location.pathname : null },
-      }),
+      body: JSON.stringify(payload),
     })
     if (!res.ok) throw new Error(`Event not saved (HTTP ${res.status})`)
   }
@@ -292,8 +307,12 @@ export class ExperibaseSDK {
 
   startAutocapture(): () => void {
     if (typeof window === 'undefined') return () => {}
-    this.track('$pageview', { url: window.location.pathname })
-    const onPopstate = () => this.track('$pageview', { url: window.location.pathname })
+    const onPopstate = () => {
+      void this.track('$pageview', { url: window.location.pathname }).catch(err => {
+        console.warn('[ExperibaseSDK] Autocapture delivery failed:', err)
+      })
+    }
+    onPopstate()
     window.addEventListener('popstate', onPopstate)
     return () => window.removeEventListener('popstate', onPopstate)
   }
@@ -325,6 +344,10 @@ export class ExperibaseSDK {
       variant:       enriched.variant as string | undefined,
       device:        enriched.device as string | undefined,
       properties:    enriched,
+    }
+    if (this._eventTransport) {
+      await this._eventTransport({ ...body, event_id: crypto.randomUUID(), timestamp: new Date().toISOString() })
+      return
     }
     try {
       const res = await fetch(`${this.baseUrl}/capture`, {

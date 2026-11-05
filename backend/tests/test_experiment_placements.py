@@ -508,6 +508,7 @@ class TestPlacementOnlyDecide:
 
 class TestExperimentPlacementCapture:
     def test_capture_accepts_project_reflection_events(self, mock_d1):
+        _insert_experiment(mock_d1)
         payload = {
             "user_id": "user-runner",
             "event_name": "project_reflection_ui_viewed",

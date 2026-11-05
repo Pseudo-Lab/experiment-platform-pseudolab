@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from typing import Optional
 from app.schemas.event import EventCapture, EventBatch, ExperimentEvent, PersonIdentify
 from app.schemas.project import Project
 from app.services.event import event_service
@@ -11,10 +10,9 @@ router = APIRouter()
 @router.post("/capture", status_code=202)
 async def capture(
     data: EventCapture,
-    project: Optional[Project] = Depends(get_project_from_api_key),
+    project: Project = Depends(get_project_from_api_key),
 ):
-    project_id = project.id if project else None
-    saved = await event_service.capture(data, project_id=project_id)
+    saved = await event_service.capture(data, project_id=project.id)
     if not saved:
         raise HTTPException(status_code=502, detail="Failed to persist event")
     return {"success": True, "message": "accepted"}
@@ -23,16 +21,16 @@ async def capture(
 @router.post("/ingest/events", status_code=202)
 async def ingest_events(
     batch: EventBatch,
-    project: Optional[Project] = Depends(get_project_from_api_key),
+    project: Project = Depends(get_project_from_api_key),
 ):
     """배치 이벤트 수집. event_id 기반 멱등 적재 — 동일 event_id는 중복 무시."""
-    project_id = project.id if project else None
-    succeeded = await event_service.capture_batch(batch, project_id=project_id)
+    succeeded = await event_service.capture_batch(batch, project_id=project.id)
     return {"success": True, "accepted": succeeded, "total": len(batch.events)}
 
 
 @router.post("/events", status_code=202)
-async def track_experiment_event(data: ExperimentEvent, request: Request):
+async def track_experiment_event(data: ExperimentEvent, request: Request,
+                                 project: Project = Depends(get_project_from_api_key)):
     """SDK가 직접 호출하는 실험 impression/conversion 이벤트 수집."""
     saved = await event_service.track_experiment_event(data, project_id=getattr(request.state, "sdk_owned_project", None))
     if not saved:
@@ -41,6 +39,6 @@ async def track_experiment_event(data: ExperimentEvent, request: Request):
 
 
 @router.post("/identify", status_code=200)
-async def identify(data: PersonIdentify):
+async def identify(data: PersonIdentify, project: Project = Depends(get_project_from_api_key)):
     await event_service.identify(data)
     return {"success": True, "message": "identified"}

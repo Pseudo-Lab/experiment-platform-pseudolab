@@ -6,7 +6,7 @@ from app.db import d1
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from app.api.deps import get_project_from_api_key
+from app.api.deps import get_project_for_sdk_or_admin
 from app.schemas.project import Project
 from app.schemas.sdk import TrackingContext, UnifiedDecideRequest, UnifiedDecideResponse
 from app.services.feature_flag import feature_flag_service
@@ -18,7 +18,7 @@ router = APIRouter()
 @router.post("/decide", response_model=UnifiedDecideResponse)
 async def unified_decide(
     body: UnifiedDecideRequest,
-    project: Optional[Project] = Depends(get_project_from_api_key),
+    project: Optional[Project] = Depends(get_project_for_sdk_or_admin),
 ):
     """Unified decide endpoint for both feature flags (A/B test) and placements (quasi-experiment).
 

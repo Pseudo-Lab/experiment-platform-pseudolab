@@ -2,7 +2,67 @@
 
 플랫폼 이름은 **Iterglow(이터글로)**입니다. 현재 npm 패키지명 `@pseudo-lab/experibase-sdk`와 `ExperibaseSDK`·`ExperibaseProvider` 등 공개 코드 이름은 유지합니다. 아래 설치·import 예제도 해당 이름을 사용합니다.
 
-SDK v1 이벤트 모델의 로컬 후보입니다. 아직 npm에 배포하지 않았습니다. 기존 배포판을 사용하는 실험은 해당 버전을 고정하고 새 실험으로 전환하세요. 이 문서의 이벤트 계약은 이전의 자동 impression/이중 저장 계약을 대체합니다.
+SDK 0.2.0은 기본적으로 v1 이벤트 모델을 사용합니다. npm에서 0.2.0 배포 여부를 확인한 뒤 `npm install --save-exact @pseudo-lab/experibase-sdk@0.2.0`으로 설치하세요. 기존 배포판을 사용하는 실험은 해당 버전을 고정하고 새 실험으로 전환하세요. 이 문서의 이벤트 계약은 이전의 자동 impression/이중 저장 계약을 대체합니다.
+
+## 기존 0.1.5 연동과 전환
+
+기본 연동 확인은 npm `@pseudo-lab/experibase-sdk@0.1.5`로 진행할 수 있습니다. [현재 배포판 빠른 연동](./SDK_PACKAGING_GUIDE.md)의 `decide()` → 실제 visibility에서 `trackExposure()` → 실제 행동에서 `track()` 흐름을 사용하세요. 0.1.5는 decide 시 자동 impression, track 시 capture/events 이중 기록을 사용하므로 실제 노출·집계 의미와 수집 대상에 대한 서비스 담당자의 확인이 필요합니다. 고객 서비스에서 수집을 활성화하기 전에 사용자 ID 정책과 전송 이벤트를 합의하고, 먼저 합의된 테스트 환경에서 확인하세요.
+
+이 단계의 완료 기준은 배정 응답과 이벤트 수신 확인입니다. 0.1.5의 모든 `track()`이 conversion으로 기록되고 현재 UI가 만드는 실험은 `legacy`이므로, 이 가이드만으로 primary metric에 한정된 클릭률이나 승자 판정이 정확하다고 보장할 수 없습니다. 성과 측정에는 검토·배포된 v1 SDK, 새 `sdk_v1` 실험, 실제 노출 시점의 `expose()`와 해당 컨텍스트를 전달하는 행동 이벤트가 함께 필요합니다.
+
+아래 외부 callback과 BigQuery 연결은 이 기본 연동의 선행조건이 아닙니다. 0.1.5에 `expose`, `tracking_context`, `eventTransport` 예시를 적용하지 마세요.
+
+## 고객 수집기로 이벤트 전달하기 (0.2.0 선택 기능)
+
+현재 npm `0.1.5`에는 아래 `eventTransport` 옵션이 없습니다. SDK 0.2.0에서 사용할 수 있습니다. 옵션을 생략하면 기존 내장 수집 동작을 유지합니다.
+
+```ts
+import { ExperibaseSDK } from '@pseudo-lab/experibase-sdk'
+
+const sdk = new ExperibaseSDK({
+  apiKey: 'YOUR_PUBLIC_SDK_KEY',
+  baseUrl: 'https://YOUR_PLATFORM/api/v1',
+  userId: 'service-user-id',
+  eventTransport: async event => {
+    // 고객 서비스가 이미 운영하는 수집 경로로 교체하세요.
+    // SDK가 이 endpoint나 저장소를 생성하지는 않습니다.
+    const response = await fetch('/your-existing-event-endpoint', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    })
+    if (!response.ok) throw new Error(`Collector rejected event: ${response.status}`)
+  },
+})
+
+const decision = await sdk.decide('checkout-cta', { experimentId: 'YOUR_V1_EXPERIMENT_ID' })
+// variant UI가 실제로 보이는 시점에만 호출합니다.
+const exposure = await sdk.expose(decision)
+const actionId = crypto.randomUUID()
+await sdk.track('purchase_completed', { category: 'book' }, {
+  tracking_context: exposure, eventId: actionId,
+})
+```
+
+- `eventTransport(event)`는 노출·행동의 내장 `/capture` 전송을 **대체**합니다. callback과 내장 전송을 함께 실행하지 않으며, 실패해도 `/capture`·`/events`로 fallback하지 않습니다. Promise 완료는 callback이 정의한 접수 완료이며 영구 저장 확인을 SDK가 대신하지 않습니다.
+- `SDKEvent`는 `event_id`, `timestamp`, `user_id`, `event_name`, session/device/properties를 포함합니다. `expose()` 및 문맥을 전달한 `track()`에는 `tracking_context`와 `sdk_event_type`도 있습니다. 프로젝트·실험·flag·variant·assignment·impression은 이 문맥을 기준으로 매핑하세요. 임의 `properties`는 attribution의 근거가 아닙니다. SDK 키와 서버 credential은 callback payload에 포함하지 않습니다.
+- 외부 모드는 v1 전용이며 `eventModel:'legacy'` 또는 `autoExpose:true`와 조합하면 생성 시 거절합니다. `trackExposure()`도 거절하므로 실제 노출에 `expose(decision)`을 사용하세요. 기존 `placement()`/`experimentPlacement()` 결과에는 v1 문맥이 없으며 이 기능이 이를 새로 만들지 않습니다.
+- 두 인자 `track(event, properties)`도 외부 callback으로만 전달되지만 **실험 귀속 문맥은 자동 추측하지 않습니다**. 실험 행동은 반환받은 exposure를 세 번째 인자로 전달하세요.
+- 명시적 `expose()`/`track()`에서 callback throw/reject는 호출자에게 전파됩니다. 자동 재시도·offline queue·전송 성공 캐시는 없습니다. 같은 decision 객체로 expose를 재호출하면 같은 ID/시각을 다시 전달하고, 새 화면 인스턴스는 새 impression ID를 사용합니다. callback이 성공했어도 반복 호출은 다시 전달되므로 고객 수집기는 `event_id`로 멱등 처리해야 합니다.
+- 행동 재호출은 같은 `eventId`를 명시하면 같은 ID를 전달하지만 timestamp는 호출 시각으로 갱신됩니다. 원래 시각까지 유지하는 delivery retry는 callback이 받은 **동일 payload**를 고객 측 큐에서 재시도하세요. 새 행동에는 새 ID를 사용합니다. 접수됐는지 모호한 실패도 중복 가능성이 있으므로 정확히 한 번 전달을 보장하지 않습니다.
+- React는 `<ExperibaseProvider eventTransport={sendToYourCollector} ...>`로 전달합니다. callback/모드는 Provider 생애 동안 고정되며 교체하려면 remount해야 합니다. Provider의 자동 pageview도 고객 callback에 전달됩니다. 자동 pageview 실패는 console warning으로 알리고 재시도/fallback하지 않습니다. cleanup은 이후 navigation 수집을 해제하며 이미 시작된 callback을 취소하지 않습니다.
+
+외부 수집 옵션은 **이벤트 수집 경로만 변경**합니다. `decide()`는 여전히 공개 키와 user_id를 Iterglow API에 전송하며 다른 assignment/placement API도 원격 호출입니다. `getAssignment()` 등 기존 배정 경로는 서버의 사용자별 배정·노출 기록을 유지할 수 있으며, `eventTransport`는 모든 서버 기록을 끄는 옵션이 아닙니다. 외부 수집에는 `sdk_v1` feature-flag `decide()` → 실제 visibility의 명시적 `expose(decision)` → 컨텍스트를 전달한 `track()` 경로를 권장합니다. 어떤 고객 ID도 서버에 보내지 않는 기능이나 로컬 평가 모드가 아닙니다. 고객 ID 정책을 먼저 정하고, 서버 비밀 키는 브라우저에 넣지 마세요.
+
+고객 수집기로만 전달한 이벤트는 Iterglow DB에 없으므로 Iterglow Live Events/결과/SDK 연결 상태가 그 이벤트로 갱신되지 않습니다. 고객 측 대시보드나 데이터 경로에서 접수·중복·귀속을 검증해야 합니다. 외부 저장소를 Iterglow 분석에 자동 연결하는 커넥터는 포함하지 않습니다.
+
+연동 전에 확인할 항목: 서비스 프레임워크와 설치 버전, 테스트 프로젝트의 공개 키 및 실행 중 v1 실험/flag, 실제 visibility 기준, 사용자/익명 ID 정책, 고객 collector의 payload 매핑·접수 실패 의미·event_id 중복 제거·재시도 방식, 테스트 수집 확인 위치. 특정 고객 서비스나 collector에서의 실제 검증은 아직 수행하지 않았습니다.
+
+## 0.2.0 출시 호환성
+
+0.1.5의 `getAssignment()`는 `x-api-key`를 보내지 않습니다. 인증이 강화된 서버에서는 401을 받고 기존 SDK가 control로 대체하므로 해당 소비자는 업데이트해야 합니다. 0.2.0은 키를 전송하지만 기본 이벤트 모델도 sdk_v1으로 바뀝니다. 기존 이벤트 기록을 유지해야 한다면 `eventModel: 'legacy'`를 명시하고 새 v1 실험으로 별도 전환하세요. 보안을 위해 키 없는 호출을 다시 허용하지 않습니다.
+
+현재 일반 UI의 실험 생성은 legacy이며, v1 결과 `/result`는 설치 관리자 권한이 필요합니다. 이 제한은 아직 미해결입니다. SDK 설치만으로 일반 UI에서 v1 성과 분석까지 완료되지 않습니다. 관리자가 새 sdk_v1 실험을 API로 준비하고 결과 접근을 확인해야 합니다.
 
 ## 새 실험 준비
 
@@ -64,7 +124,7 @@ await sdk.track('purchase_completed', { orderCategory: 'book' }, {
 | `event_id` | 한 전송 이벤트의 멱등 키. 노출은 impression ID, 행동은 별도 ID |
 | `exposed_at` | SDK가 처음 노출을 기록한 시각. 재시도에도 유지 |
 
-기본 `eventModel: "sdk_v1"`의 이벤트 호출은 `/capture → event_log`에만 저장합니다. 노출 이름은 기존 `exp_exposure`를 재사용합니다. 서버는 명시 `tracking_context`가 있을 때만 v1 계약을 적용하고, 검증된 attribution을 상위 컬럼과 properties에 저장합니다. 임의 properties로 attribution을 덮어쓸 수 없습니다. 공개 SDK 키는 방문자 신원 인증이나 부정 이벤트 방지 수단이 아닙니다. 서버 credential을 브라우저에 넣지 마세요.
+`eventTransport`를 생략한 기본 `eventModel: "sdk_v1"`의 이벤트 호출은 `/capture → event_log`에만 저장합니다. 노출 이름은 기존 `exp_exposure`를 재사용합니다. 서버는 명시 `tracking_context`가 있을 때만 v1 계약을 적용하고, 검증된 attribution을 상위 컬럼과 properties에 저장합니다. 임의 properties로 attribution을 덮어쓸 수 없습니다. 공개 SDK 키는 방문자 신원 인증이나 부정 이벤트 방지 수단이 아닙니다. 서버 credential을 브라우저에 넣지 마세요.
 
 ## 결과와 대시보드의 기준
 
@@ -86,12 +146,12 @@ Live Events의 건수·전환율은 인스턴스 단위, 결과는 고유 사용
 | 소비처 | 선택한 계약 | 저장/추론 |
 |---|---|---|
 | npm 0.1.5 | 기존 계약 고정; eventModel 옵션 없음 | 자동 impression 및 capture/events 이중 기록 |
-| 후보 SDK 기본값 | eventModel: "sdk_v1" | 명시 노출·단일 capture, v1 Live 유의성/승자 비활성 |
-| 내부 `/example` | Provider의 eventModel="legacy" | 소스 alias로 후보 SDK를 사용하면서 기존 자동 impression/행동 mirror 유지 |
+| SDK 0.2.0 기본값 | eventModel: "sdk_v1" | 명시 노출·단일 capture, v1 Live 유의성/승자 비활성 |
+| 내부 `/example` | Provider의 eventModel="legacy" | 소스 alias로 SDK 0.2.0를 사용하면서 기존 자동 impression/행동 mirror 유지 |
 
-후보 SDK의 기존 소비처는 `new ExperibaseSDK({ apiKey, baseUrl, eventModel: 'legacy' })` 또는 `<ExperibaseProvider eventModel="legacy" ...>`로 계약을 명시할 수 있습니다. 이 모드에서 decide는 기존 서버 평가/자동 impression, trackExposure는 기존 capture, 두 인자 track은 capture/events 이중 기록을 유지합니다. v1의 expose/명시 tracking_context와 autoExpose 조합은 거절합니다. Provider 모드는 생애 동안 고정되므로 바꾸려면 remount하세요. 이 호환 모드는 기존 집계 한계를 수정하거나 v1으로 이행한 상태를 의미하지 않습니다.
+SDK 0.2.0의 기존 소비처는 `new ExperibaseSDK({ apiKey, baseUrl, eventModel: 'legacy' })` 또는 `<ExperibaseProvider eventModel="legacy" ...>`로 계약을 명시할 수 있습니다. 이 모드에서 decide는 기존 서버 평가/자동 impression, trackExposure는 기존 capture, 두 인자 track은 capture/events 이중 기록을 유지합니다. v1의 expose/명시 tracking_context와 autoExpose 조합은 거절합니다. Provider 모드는 생애 동안 고정되므로 바꾸려면 remount하세요. 이 호환 모드는 기존 집계 한계를 수정하거나 v1으로 이행한 상태를 의미하지 않습니다.
 
-내부 예제는 `frontend/vite.config.ts`가 SDK 소스를 직접 alias하므로 npm 버전 고정만으로 보호되지 않습니다. ExampleApp의 명시 legacy 설정을 유지하며 새 v1 실험은 별도 이행 검증 뒤 연결합니다. 현재 npm/후보/내부 예제 검증은 각각 설치한 패키지의 mock 요청, SDK/API 테스트, 실제 Provider/bridge/hook 회귀 및 로컬 브라우저 stub으로 구분합니다. 후보 출시 버전은 아직 정하지 않았습니다.
+내부 예제는 `frontend/vite.config.ts`가 SDK 소스를 직접 alias하므로 npm 버전 고정만으로 보호되지 않습니다. ExampleApp의 명시 legacy 설정을 유지하며 새 v1 실험은 별도 이행 검증 뒤 연결합니다. npm 0.1.5/0.2.0/내부 예제 검증은 각각 설치한 패키지의 mock 요청, SDK/API 테스트, 실제 Provider/bridge/hook 회귀 및 로컬 브라우저 stub으로 구분합니다. 이 문서의 출시 버전은 0.2.0입니다.
 
 ## 기존 연동과 React
 
@@ -113,4 +173,4 @@ Browser visitors do not need platform accounts. Public SDK keys identify a
 project, not a trusted visitor, and do not grant management or server access.
 Server keys from `POST /api/v1/projects/{project_id}/server-key` are one-time
 responses for server-side `/access/decide` only; keep them off the browser.
-`DELETE` on the same key endpoint revokes the current key. Public SDK keys are never accepted as server Bearer credentials. This candidate does not rotate production credentials.
+`DELETE` on the same key endpoint revokes the current key. Public SDK keys are never accepted as server Bearer credentials. Installing the SDK does not rotate production credentials.

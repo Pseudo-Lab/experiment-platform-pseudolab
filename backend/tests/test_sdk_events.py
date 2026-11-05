@@ -57,8 +57,8 @@ def test_decide_does_not_log_and_context_is_stable(project):
     for table in ('event_log', 'experiment_event', 'feature_flag_exposure', 'experiment_assignments'):
         assert project.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] == 0
     assert decide(exp=None).status_code == 409  # no guessing between active experiments
-    assert decide(exp='b-one').status_code == 422
-    assert decide(key='public-b').status_code == 403
+    assert decide(exp='b-one').status_code == 404
+    assert decide(key='public-b').status_code == 404
     assert decide(key='invalid').status_code == 401
 
 
@@ -75,17 +75,17 @@ def test_capture_is_idempotent_and_does_not_dual_write(project):
     assert row['experiment_id'] == props['experiment_id'] == 'a-one'
     assert row['variant'] == props['variant'] == ctx['variant']
     assert props['impression_id'] == ctx['impression_id']
-    assert capture(payload, 'public-b').status_code == 403
+    assert capture(payload, 'public-b').status_code == 404
     for field, value in [('experiment_id', 'b-one'), ('user_id', 'other'), ('variant', 'other')]:
         bad = copy.deepcopy(payload)
         bad[field] = value
-        assert capture(bad).status_code == 422
+        assert capture(bad).status_code == (404 if field == 'experiment_id' else 422)
     bad = copy.deepcopy(payload)
     bad['tracking_context']['assignment_id'] = 'forged'
     assert capture(bad).status_code == 422
     bad = copy.deepcopy(payload)
     bad['tracking_context']['experiment_id'] = bad['experiment_id'] = 'b-one'
-    assert capture(bad).status_code == 403
+    assert capture(bad).status_code == 404
     assert capture({'user_id': 'u', 'event_name': 'purchase', 'properties': {'event_model': 'sdk_v1'}}).status_code == 422
 
 
@@ -111,7 +111,7 @@ def test_results_and_live_events_share_only_correlated_v1_cohort(project):
         assert capture(event(ctx, 'click', 'unrelated', 'click-'+ctx['user_id'])).status_code == 202
         # Historical capture and dual-written /events must not be added to v1.
         assert capture({'user_id': ctx['user_id'], 'event_name': 'purchase'}).status_code == 202
-        assert client.post(f'{BASE}/events', json={'user_id': ctx['user_id'], 'type': 'conversion',
+        assert client.post(f'{BASE}/events', headers={'X-API-Key': 'public-a'}, json={'user_id': ctx['user_id'], 'type': 'conversion',
             'key': 'flag-a', 'variant': ctx['variant'], 'experiment_id': 'a-one'}).status_code == 202
     treatment = users['treatment']
     for i in range(2):  # two real actions on one impression still yield one metric success
@@ -209,7 +209,7 @@ def test_explicit_context_is_required_and_batch_uses_same_validation(project):
     assert response.status_code == 202
     assert project.execute('SELECT COUNT(*) FROM event_log').fetchone()[0] == 1
     assert client.post(f'{BASE}/ingest/events', headers={'x-api-key': 'public-b'},
-                       json={'events': [event(ctx)]}).status_code == 403
+                       json={'events': [event(ctx)]}).status_code == 404
 
 
 def test_repeated_exposures_keep_user_and_instance_denominators_distinct(project):
@@ -226,9 +226,9 @@ def test_repeated_exposures_keep_user_and_instance_denominators_distinct(project
 
 def test_missing_public_key_cannot_capture_project_context(project):
     ctx = exposure_context()
-    assert client.post(f'{BASE}/capture', json=event(ctx)).status_code == 403
-    assert client.post(f'{BASE}/decide', json={'key': 'flag-a', 'user_id': 'u',
-        'event_model': 'sdk_v1', 'experiment_id': 'a-one'}).status_code == 403
+    assert client.post(f'{BASE}/capture', headers={'Cookie': '', 'X-API-Key': ''}, json=event(ctx)).status_code == 401
+    assert client.post(f'{BASE}/decide', headers={'Cookie': ''}, json={'key': 'flag-a', 'user_id': 'u',
+        'event_model': 'sdk_v1', 'experiment_id': 'a-one'}).status_code == 401
 
 
 def test_live_repeated_views_never_claim_independent_samples_or_false_srm(project):

@@ -303,13 +303,13 @@ def mock_r2(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def authenticated_management_requests(request, monkeypatch):
+def authenticated_management_requests(request, monkeypatch, mock_d1):
     """Existing business tests run through real admin auth; security tests opt out.
 
     No production auth dependency is bypassed. test_auth exercises anonymous,
     missing-config, SDK-only, and invalid-session requests independently.
     """
-    if request.node.path.name in {"test_auth.py", "test_upload_security.py", "test_key_rotation.py", "test_public_accounts.py", "test_oauth_security_integration.py"}:
+    if request.node.path.name in {"test_auth.py", "test_upload_security.py", "test_key_rotation.py", "test_public_accounts.py", "test_oauth_security_integration.py", "test_sdk_auth_guard.py"}:
         return
     from fastapi.testclient import TestClient
     from app.core.auth import create_session_token, hash_password
@@ -324,6 +324,15 @@ def authenticated_management_requests(request, monkeypatch):
     def authenticated_request(self, method, url, **kwargs):
         headers = dict(kwargs.pop("headers", None) or {})
         headers.setdefault("Cookie", f"{settings.AUTH_COOKIE_NAME}={token}")
+        # Business-event tests use an actual legacy project credential rather
+        # than relying on the former anonymous ingestion fallback. Security
+        # suites above opt out and exercise missing/invalid keys themselves.
+        from urllib.parse import urlsplit
+        path = urlsplit(str(url)).path.rstrip('/')
+        if (method.upper() == 'POST' and path in {'/api/v1/capture', '/api/v1/ingest/events', '/api/v1/events', '/api/v1/identify'}
+                and not any(name.lower() == 'x-api-key' for name in headers)):
+            mock_d1.execute("INSERT OR IGNORE INTO projects (id,name,api_key) VALUES ('test-admin-sdk','SDK fixture','synthetic-business-sdk-key')")
+            headers['X-API-Key'] = 'synthetic-business-sdk-key'
         return original(self, method, url, headers=headers, **kwargs)
 
     monkeypatch.setattr(TestClient, "request", authenticated_request)
