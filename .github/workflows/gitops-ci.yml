@@ -52,6 +52,8 @@ jobs:
           tags: |
             ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}
             ${{ env.FRONTEND_IMAGE }}:latest
+            ghcr.io/pseudo-lab/iterglow-frontend:${{ env.IMAGE_TAG }}
+            ghcr.io/pseudo-lab/iterglow-frontend:latest
 
       - name: Build and push backend image
         uses: docker/build-push-action@v6
@@ -65,6 +67,8 @@ jobs:
           tags: |
             ${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}
             ${{ env.BACKEND_IMAGE }}:latest
+            ghcr.io/pseudo-lab/iterglow-backend:${{ env.IMAGE_TAG }}
+            ghcr.io/pseudo-lab/iterglow-backend:latest
 
   update-ops-repo:
     needs: build-and-push
