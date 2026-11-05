@@ -3,8 +3,8 @@ interface Props {
   compact?: boolean;
 }
 
-export function IterglowLogo({ lang, compact = false }: Props) {
-  const alt = lang === 'ko' ? '이터글로' : 'Iterglow';
+export function IterglowLogo({ compact = false }: Props) {
+  const alt = 'Iterglow';
 
   if (compact) {
     return <img src="/brand/iterglow-symbol.svg" alt={alt} width={32} height={14} className="h-auto w-8 shrink-0" />;

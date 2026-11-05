@@ -1,4 +1,4 @@
-# Iterglow · 이터글로
+# Iterglow
 
 <div align="center">
   <a href="https://pseudo-lab.com"><img src="https://img.shields.io/badge/PseudoLab-S12-808080" alt="PseudoLab Season 12"/></a>

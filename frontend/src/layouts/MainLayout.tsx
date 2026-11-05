@@ -202,7 +202,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
                 <div className="flex items-center justify-between h-16 px-4 lg:px-6 border-b dark:border-slate-800">
                     <div className="flex flex-col gap-1">
-                        <Link to="/projects" onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false); }} aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <Link to="/projects" onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false); }} aria-label={lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home'} className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                             <IterglowLogo lang={lang} compact={!isSidebarOpen} />
                         </Link>
                     </div>

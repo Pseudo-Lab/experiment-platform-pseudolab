@@ -97,7 +97,7 @@ describe('MainLayout Component', () => {
     });
     expect(screen.getByText('Test Children')).toBeInTheDocument();
     expect(screen.queryByText('Online')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '이터글로 홈' })).toHaveAttribute('href', '/projects');
+    expect(screen.getByRole('link', { name: 'Iterglow 홈' })).toHaveAttribute('href', '/projects');
     const asideElement = screen.getByRole('complementary');
     expect(asideElement).toHaveClass('w-64'); // Sidebar should be open on desktop by default
   });

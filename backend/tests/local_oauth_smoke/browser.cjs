@@ -125,11 +125,11 @@ function check(name,ok){results.push({name,passed:!!ok});if(!ok)throw Error(name
  await page.waitForURL('**/api-key?view=keys#details');
  check('authenticated SDK guide restores exact screen',new URL(page.url()).search==='?view=keys'&&new URL(page.url()).hash==='#details');
  await page.getByRole('button',{name:'Toggle sidebar',exact:true}).click();
- await page.getByRole('link',{name:'이터글로 홈',exact:true}).click();await page.waitForURL('**/projects');
+ await page.getByRole('link',{name:'Iterglow 홈',exact:true}).click();await page.waitForURL('**/projects');
  check('collapsed logo stays in workspace',new URL(page.url()).pathname==='/projects');
  await page.setViewportSize({width:390,height:844});await page.goto('https://localhost:19043/api-key');
  await page.getByRole('button',{name:'Open sidebar menu',exact:true}).click();
- await page.getByRole('link',{name:'이터글로 홈',exact:true}).click();await page.waitForURL('**/projects');
+ await page.getByRole('link',{name:'Iterglow 홈',exact:true}).click();await page.waitForURL('**/projects');
  check('mobile logo stays in workspace and closes menu',(await page.locator('aside').getAttribute('class')).includes('-translate-x-full'));
  await page.goto('https://localhost:19043/missing-screen');await page.waitForURL('**/projects');
  check('unknown authenticated screen has a project-home fallback',await page.getByRole('heading',{name:'프로젝트 관리',exact:true,level:1}).isVisible());
