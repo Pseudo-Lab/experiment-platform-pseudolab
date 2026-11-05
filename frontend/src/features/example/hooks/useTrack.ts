@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useExperibase } from '@pseudo-lab/experibase-sdk/react'
+import { useExperibase } from '@pseudo-lab/iterglow-sdk/react'
 import { devLog } from '../lib/devLog'
 
 export function useTrack() {

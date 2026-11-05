@@ -7,8 +7,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: [
-      { find: '@pseudo-lab/experibase-sdk/react', replacement: path.resolve(__dirname, '../packages/sdk/src/react.tsx') },
-      { find: '@pseudo-lab/experibase-sdk', replacement: path.resolve(__dirname, '../packages/sdk/src/index.ts') },
+      { find: '@pseudo-lab/iterglow-sdk/react', replacement: path.resolve(__dirname, '../packages/sdk/src/react.tsx') },
+      { find: '@pseudo-lab/iterglow-sdk', replacement: path.resolve(__dirname, '../packages/sdk/src/index.ts') },
       { find: '@', replacement: path.resolve(__dirname, './src') },
     ],
   },
