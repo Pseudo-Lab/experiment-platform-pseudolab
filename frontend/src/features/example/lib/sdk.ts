@@ -9,7 +9,7 @@ export interface DecideResult {
 }
 
 // Flag-specific decide: returns visual_changes for the visual editor pipeline.
-// Use ExperibaseSDK.decide() for the unified decide endpoint instead.
+// Use IterglowSDK.decide() for the unified decide endpoint instead.
 export async function decideFlag(flagKey: string, apiKey?: string): Promise<DecideResult> {
   const uid = getUserId()
   const logId = devLog.add('decide', flagKey, { user_id: uid })

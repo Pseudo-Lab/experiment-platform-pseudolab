@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
-import { useExperibase } from '@pseudo-lab/iterglow-sdk/react'
+import { useIterglow } from '@pseudo-lab/iterglow-sdk/react'
 import { devLog } from '../lib/devLog'
 
 export function useTrack() {
-  const { sdk, variants } = useExperibase()
+  const { sdk, variants } = useIterglow()
   return useCallback(
     (eventName: string, properties?: Record<string, unknown>) => {
       const props = { ...variants, ...properties }

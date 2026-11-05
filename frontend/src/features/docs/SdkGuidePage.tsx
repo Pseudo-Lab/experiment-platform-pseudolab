@@ -13,9 +13,9 @@ interface Props {
   setTheme?: (theme: 'light' | 'dark') => void;
 }
 
-const setupCode = `import { ExperibaseSDK } from '@pseudo-lab/iterglow-sdk'
+const setupCode = `import { IterglowSDK } from '@pseudo-lab/iterglow-sdk'
 
-const sdk = new ExperibaseSDK({
+const sdk = new IterglowSDK({
   apiKey: 'pk_example_not_a_real_key',
   baseUrl: 'https://platform.example.invalid/api/v1',
   eventModel: 'sdk_v1',
@@ -37,7 +37,7 @@ const copy = {
   ko: {
     title: '개발자 SDK 가이드', intro: '서비스에 실험을 연결하고 첫 이벤트를 확인하세요.', home: '서비스 소개', login: '로그인', language: 'Switch to English', contents: '이 페이지에서', code: '코드 예시',
     sections: ['지원 버전과 이용 조건', '프로젝트와 공개 키 준비', '설치와 API 주소', '판단 → 실제 노출 → 행동', '첫 수집 확인', '오류 진단', '0.1.5에서 전환 · 외부 수집'],
-    support: "이 가이드는 SDK 0.2.1 계약 기준입니다. npm에서 해당 버전을 확인한 뒤 설치하세요. Google 계정과 프로젝트 공개 SDK 키가 필요합니다. JavaScript/TypeScript 및 React 18 이상을 지원합니다. 패키지명은 @pseudo-lab/iterglow-sdk, 클래스명은 ExperibaseSDK입니다.",
+    support: "이 가이드는 SDK 0.3.0 계약 기준입니다. Google 계정과 프로젝트 공개 SDK 키가 필요합니다. JavaScript/TypeScript 및 React 18 이상을 지원합니다. 패키지명은 @pseudo-lab/iterglow-sdk, 클래스명은 IterglowSDK입니다.",
     scope: "아래 코드는 새 sdk_v1 flag 연결 A/B 실험용입니다. 현재 일반 UI의 실험 생성은 legacy이며 /result 조회는 설치 관리자 권한이 필요합니다. 이 제한은 아직 해결되지 않았습니다. 관리자가 새 sdk_v1 실험을 API로 준비하기 전에는 아래 코드를 기존 실험에 연결하지 마세요. 일반 UI만으로 v1 성과 분석까지 완료되는 흐름은 아닙니다.",
     prepare: ['Google로 로그인하고 프로젝트를 만들거나 선택합니다.', '선택한 프로젝트의 SDK 연동 화면에서 프로젝트 공개 SDK 키를 확인합니다.', '설치 관리자가 API로 event_model=sdk_v1인 새 테스트 실험을 만들고 같은 프로젝트의 새 flag를 연결해야 합니다. 주요 지표는 예시의 signup_completed로 맞추고 실험 ID와 flag key를 적어둡니다.', '자동 생성한 flag는 비활성·공개 비율 0%로 시작합니다. 테스트 프로젝트에서 flag를 활성화하고 공개 비율을 50%로 설정합니다. 별도 규칙이나 강제 variant가 있으면 먼저 확인하세요. 실험 variant 이름은 flag 응답(control/treatment 등)과 일치시킵니다.', '실험을 실행 중으로 전환합니다. 계정 소유 프로젝트는 주요 지표와 같은 프로젝트의 활성 flag가 필요합니다. 연결된 flag의 규칙·공개 비율이 분배를 결정하며 실험의 비율 입력만 바꿔서는 분배가 바뀌지 않습니다.'],
     collection: "기본 모드는 사용자 ID를 원격 판단 API에 보내고 실제 노출·행동을 Iterglow에 수집합니다. 외부 eventTransport는 선택 사항이며 이 빠른 시작의 선행조건이 아닙니다. 고객 서비스 적용 전에 이벤트·속성·식별 방식을 정하고 테스트 환경에서 확인하세요.",
@@ -66,12 +66,12 @@ const copy = {
       ['502', '수집 저장 실패입니다. 키·개인정보를 제거한 요청 시각과 오류를 운영 담당자에게 전달하세요.'],
       ['빈 결과', '주요 지표 이름, 실제 exposure 수신, control/treatment 관측을 확인하세요. 배정만 있고 노출이 없으면 분석 분모가 없습니다.'],
     ],
-    future: "0.1.5는 자동 impression과 capture/events 이중 기록을 사용하며 expose/eventModel/eventTransport가 없습니다. 0.1.5 getAssignment()는 키를 전송하지 않아 강화된 서버에서 401 후 control로 대체됩니다. 해당 소비자는 업데이트가 필요합니다. 0.2.1은 기본 sdk_v1이며 기존 동작이 필요하면 eventModel: legacy를 명시하세요. 기존 실험·데이터는 자동 변환되지 않으며 새 sdk_v1 실험으로 전환하세요. 선택형 eventTransport는 고객 수집기로 전달할 뿐 BigQuery나 Iterglow 결과를 자동 연결하지 않습니다. 외부 이벤트만 보내면 Live Events/결과/연결 상태가 그 이벤트로 갱신되지 않습니다. 사용자 ID는 여전히 원격 decide에 전송됩니다.",
+    future: "0.1.5는 자동 impression과 capture/events 이중 기록을 사용하며 expose/eventModel/eventTransport가 없습니다. 0.1.5 getAssignment()는 키를 전송하지 않아 강화된 서버에서 401 후 control로 대체됩니다. 해당 소비자는 업데이트가 필요합니다. 0.3.0은 기본 sdk_v1이며 기존 동작이 필요하면 eventModel: legacy를 명시하세요. 기존 실험·데이터는 자동 변환되지 않으며 새 sdk_v1 실험으로 전환하세요. 선택형 eventTransport는 고객 수집기로 전달할 뿐 BigQuery나 Iterglow 결과를 자동 연결하지 않습니다. 외부 이벤트만 보내면 Live Events/결과/연결 상태가 그 이벤트로 갱신되지 않습니다. 사용자 ID는 여전히 원격 decide에 전송됩니다.",
   },
   en: {
     title: 'Developer SDK guide', intro: 'Connect your service to an experiment and verify your first events.', home: 'Introduction', login: 'Sign in', language: '한국어로 변경', contents: 'On this page', code: 'Code example',
     sections: ['Supported version and access', 'Prepare a project and public key', 'Install and set the API URL', 'Decide → actual exposure → action', 'Verify the first events', 'Troubleshooting', 'Migrate from 0.1.5 · external collection'],
-    support: "This guide targets SDK 0.2.1. Confirm that version is available on npm before installing. A Google account and project public SDK key are required. JavaScript/TypeScript and React 18+ are supported. The package is @pseudo-lab/iterglow-sdk and the class is ExperibaseSDK.",
+    support: "This guide targets SDK 0.3.0. A Google account and project public SDK key are required. JavaScript/TypeScript and React 18+ are supported. The package is @pseudo-lab/iterglow-sdk and the class is IterglowSDK.",
     scope: "These snippets require a new sdk_v1 flag-linked A/B experiment. The current UI creates legacy experiments and /result requires an installation administrator; these limitations remain unresolved. Ask an administrator to prepare a new sdk_v1 experiment through the API before using this flow. The regular UI alone does not complete v1 outcome analysis.",
     prepare: ['Sign in with Google, then create or select a project.', 'Find the project public SDK key in the selected project’s SDK Integration screen.', 'An installation administrator must create a new event_model=sdk_v1 test experiment through the API and connect a new flag in the same project. Set the primary metric to signup_completed for this example and note the experiment ID and flag key.', 'An automatically created flag starts disabled with 0% rollout. In the test project, enable it and set rollout to 50%. Check any rules or forced variant first. Match experiment variant names to the flag response (such as control/treatment).', 'Start the experiment. Account-owned projects require a primary metric and an active flag in the same project. Flag rules and rollout control allocation; changing only the experiment traffic ratios does not change it.'],
     collection: "The default mode sends the user ID to the remote decision API and collects actual exposures and actions in Iterglow. Optional eventTransport is not required for this quickstart. Agree on events, properties and identifiers before testing in a customer service.",
@@ -100,7 +100,7 @@ const copy = {
       ['502', 'Collection storage failed. Share the request time and error with the operator after removing keys and personal data.'],
       ['Empty results', 'Check the primary metric name, actual exposure receipt, and control/treatment observations. Assignment without exposure does not supply the analysis denominator.'],
     ],
-    future: "Version 0.1.5 uses automatic impressions and capture/events dual writes and has no expose/eventModel/eventTransport. Its getAssignment() omits the key, so the hardened server returns 401 and the old SDK falls back to control; those consumers must update. Version 0.2.1 defaults to sdk_v1; explicitly set eventModel: legacy when preserving the old event behavior. Existing experiments/data are not converted: use a new sdk_v1 experiment. Optional eventTransport forwards to your collector, without automatically connecting BigQuery or Iterglow results. External-only events do not update Live Events/results/connection status. Remote decide still receives the user ID.",
+    future: "Version 0.1.5 uses automatic impressions and capture/events dual writes and has no expose/eventModel/eventTransport. Its getAssignment() omits the key, so the hardened server returns 401 and the old SDK falls back to control; those consumers must update. Version 0.3.0 defaults to sdk_v1; explicitly set eventModel: legacy when preserving the old event behavior. Existing experiments/data are not converted: use a new sdk_v1 experiment. Optional eventTransport forwards to your collector, without automatically connecting BigQuery or Iterglow results. External-only events do not update Live Events/results/connection status. Remote decide still receives the user ID.",
   },
 };
 const sectionIds = ['support', 'prepare', 'install', 'flow', 'verify', 'errors', 'migration'];
@@ -116,14 +116,14 @@ export function SdkGuidePage({ lang, setLang }: Props) {
   return (
     <div className="service-entry min-h-screen bg-background text-foreground" lang={lang}>
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
-        <Link to={authenticated ? workspacePath : '/'} state={location.state} aria-label={lang === 'ko' ? '이터글로 홈' : 'Iterglow home'} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring"><IterglowLogo lang={lang} /></Link>
+        <Link to={authenticated ? workspacePath : '/'} state={location.state} aria-label={lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home'} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring"><IterglowLogo lang={lang} /></Link>
         <div className="flex items-center gap-1">
           <Button asChild variant="ghost" size="sm"><Link to={authenticated ? workspacePath : '/'} state={location.state}>{authenticated ? workspaceLabel : t.home}</Link></Button>
           <Button variant="outline" size="sm" aria-label={t.language} onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')}><Globe aria-hidden="true" />{lang === 'ko' ? 'EN' : 'KO'}</Button>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-10 md:px-6">
-        <p className="text-sm font-semibold text-primary">SDK · 0.2.1</p>
+        <p className="text-sm font-semibold text-primary">SDK · 0.3.0</p>
         <h1 className="mt-3 text-3xl font-bold tracking-tight">{t.title}</h1>
         <p className="mt-3 text-muted-foreground">{t.intro}</p>
         <div className="mt-8 grid items-start gap-8 lg:grid-cols-[14rem_minmax(0,1fr)]">
@@ -136,7 +136,7 @@ export function SdkGuidePage({ lang, setLang }: Props) {
               <h2 id={`sdk-${sectionIds[index]}`} className="text-xl font-semibold">{title}</h2>
               {index === 0 && <><p>{t.support}</p><p>{t.collection}</p><p className="text-muted-foreground">{t.scope}</p></>}
               {index === 1 && <><ol className="list-decimal space-y-2 pl-5">{t.prepare.map(step => <li key={step}>{step}</li>)}</ol><p>{t.key}</p><Button asChild variant="outline"><Link to={authenticated ? workspacePath : '/login'} state={location.state}>{authenticated ? workspaceLabel : t.login}</Link></Button></>}
-              {index === 2 && <>{code('npm install --save-exact @pseudo-lab/iterglow-sdk@0.2.1')}<p>{t.address}</p></>}
+              {index === 2 && <>{code('npm install --save-exact @pseudo-lab/iterglow-sdk@0.3.0')}<p>{t.address}</p></>}
               {index === 3 && <><p>{t.decide}</p><p>{t.identity}</p>{code(setupCode)}<p>{t.exposure}</p>{code(exposureCode)}<p className="text-muted-foreground">{t.guard}</p><p>{t.action}</p>{code(actionCode)}<Card className="shadow-none"><CardContent className="p-4">{t.limits}</CardContent></Card></>}
               {index === 4 && <><p>{t.verify}</p><dl className="space-y-4">{t.checks.map(([label, request, detail]) => <div key={label}><dt className="font-semibold">{label} <span className="block break-words font-mono text-xs text-primary">{request}</span></dt><dd className="text-muted-foreground">{detail}</dd></div>)}</dl><p>{t.firstCheck}</p><p>{t.status}</p></>}
               {index === 5 && <dl className="space-y-4">{t.errors.map(([label, detail]) => <div key={label}><dt className="font-semibold">{label}</dt><dd className="text-muted-foreground">{detail}</dd></div>)}</dl>}

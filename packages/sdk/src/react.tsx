@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { ExperibaseSDK } from './core.js'
+import { IterglowSDK } from './core.js'
 import type {
   SDKConfig,
   AssignmentOptions,
@@ -20,17 +20,17 @@ import type {
 } from './types.js'
 
 export type { DecideResult }
-export { ExperibaseSDK }
+export { IterglowSDK }
 
-export interface ExperibaseContextValue {
-  sdk: ExperibaseSDK
+export interface IterglowContextValue {
+  sdk: IterglowSDK
   variants: Record<string, string>
   isLoading: boolean
   /** 외부에서 variant 캐시를 업데이트할 수 있도록 노출 (Experiment 컴포넌트용) */
   setVariant: (flagKey: string, variant: string) => void
 }
 
-const ExperibaseContext = createContext<ExperibaseContextValue | null>(null)
+const IterglowContext = createContext<IterglowContextValue | null>(null)
 
 const CACHE_PREFIX = 'experibase:flag:'
 
@@ -50,7 +50,7 @@ export interface ProviderProps {
   children: ReactNode
 }
 
-export function ExperibaseProvider({
+export function IterglowProvider({
   apiKey,
   baseUrl,
   userId,
@@ -59,9 +59,9 @@ export function ExperibaseProvider({
   flagKeys = [],
   children,
 }: ProviderProps) {
-  const sdkRef = useRef<ExperibaseSDK | null>(null)
+  const sdkRef = useRef<IterglowSDK | null>(null)
   if (!sdkRef.current) {
-    sdkRef.current = new ExperibaseSDK({ apiKey, baseUrl, userId, eventModel, eventTransport })
+    sdkRef.current = new IterglowSDK({ apiKey, baseUrl, userId, eventModel, eventTransport })
   }
   const sdk = sdkRef.current
   const uid = sdk.userId
@@ -143,20 +143,20 @@ export function ExperibaseProvider({
   }, [setVariant])
 
   return (
-    <ExperibaseContext.Provider value={{ sdk, variants, isLoading, setVariant }}>
+    <IterglowContext.Provider value={{ sdk, variants, isLoading, setVariant }}>
       {children}
-    </ExperibaseContext.Provider>
+    </IterglowContext.Provider>
   )
 }
 
-export function useExperibase(): ExperibaseContextValue {
-  const ctx = useContext(ExperibaseContext)
-  if (!ctx) throw new Error('useExperibase must be used within ExperibaseProvider')
+export function useIterglow(): IterglowContextValue {
+  const ctx = useContext(IterglowContext)
+  if (!ctx) throw new Error('useIterglow must be used within IterglowProvider')
   return ctx
 }
 
 export function useDecide(key: string): { result: DecideResult | null; loading: boolean } {
-  const { sdk } = useExperibase()
+  const { sdk } = useIterglow()
   const [result, setResult] = useState<DecideResult | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -190,7 +190,7 @@ export function useDecide(key: string): { result: DecideResult | null; loading: 
  * @param fallback 아직 로딩 중이거나 미등록 flag일 때 반환할 기본값 (기본: 'control')
  */
 export function useFlag(flagKey: string, fallback = 'control'): string {
-  const { variants } = useExperibase()
+  const { variants } = useIterglow()
   return variants[flagKey] ?? fallback
 }
 
@@ -227,7 +227,7 @@ export function useAssignment(
   experimentId: string,
   options?: Omit<AssignmentOptions, 'signal'>,
 ): UseAssignmentResult {
-  const { sdk } = useExperibase()
+  const { sdk } = useIterglow()
   const [assignment, setAssignment] = useState<AssignmentResult | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -298,7 +298,7 @@ export interface ExperimentProps {
 }
 
 export function Experiment({ flagKey, control, treatment, loading }: ExperimentProps) {
-  const { sdk, variants, setVariant } = useExperibase()
+  const { sdk, variants, setVariant } = useIterglow()
 
   // Provider 캐시에 이미 있으면 즉시 사용
   const cached = variants[flagKey]
@@ -359,7 +359,7 @@ export interface ExperimentSwitchProps {
 }
 
 export function ExperimentSwitch({ flagKey, variants: variantMap, loading }: ExperimentSwitchProps) {
-  const { sdk, variants, setVariant } = useExperibase()
+  const { sdk, variants, setVariant } = useIterglow()
 
   const cached = variants[flagKey]
   const [variant, setVariantState] = useState<string | null>(cached ?? null)
@@ -421,7 +421,7 @@ export function usePlacement(
   placementKey: string,
   options?: Omit<PlacementOptions, 'userId'>,
 ): UsePlacementResult {
-  const { sdk } = useExperibase()
+  const { sdk } = useIterglow()
   const [result, setResult] = useState<PlacementDecideResult>({
     key: placementKey,
     show: false,
@@ -487,7 +487,7 @@ export function useExperimentPlacement(
   placementKey: string,
   options?: ExperimentPlacementOptions,
 ): UseExperimentPlacementResult {
-  const { sdk } = useExperibase()
+  const { sdk } = useIterglow()
   const [result, setResult] = useState<ExperimentPlacementDecisionResult>({
     show: false,
     completed: false,

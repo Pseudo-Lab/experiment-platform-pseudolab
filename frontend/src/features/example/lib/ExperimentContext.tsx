@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react'
-import { useExperibase } from '@pseudo-lab/iterglow-sdk/react'
+import { useIterglow } from '@pseudo-lab/iterglow-sdk/react'
 import { devLog } from './devLog'
 import { experimentRegistry } from './experimentRegistry'
 
@@ -20,10 +20,10 @@ export const ExperimentContext = createContext<ExperimentContextValue>({
 /**
  * Bridges SDK context into the demo app's ExperimentContext.
  * Adds devLog integration so DevPanel can display flag assignments.
- * Must be rendered inside ExperibaseProvider.
+ * Must be rendered inside IterglowProvider.
  */
 export function ExperimentContextBridge({ children }: { children: ReactNode }) {
-  const { sdk, variants, isLoading } = useExperibase()
+  const { sdk, variants, isLoading } = useIterglow()
   const registry = useSyncExternalStore(
     experimentRegistry.subscribe,
     experimentRegistry.getSnapshot,

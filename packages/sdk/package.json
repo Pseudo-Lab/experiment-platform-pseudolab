@@ -1,7 +1,7 @@
 {
   "name": "@pseudo-lab/iterglow-sdk",
   "type": "module",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"
@@ -63,7 +63,6 @@
   },
   "keywords": [
     "iterglow",
-    "experibase",
     "feature-flag",
     "ab-test",
     "sdk"

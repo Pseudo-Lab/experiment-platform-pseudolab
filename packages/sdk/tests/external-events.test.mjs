@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { ExperibaseSDK } from '../dist/core.js'
+import { IterglowSDK } from '../dist/core.js'
 
 const originalFetch = globalThis.fetch
 const originalWindow = globalThis.window
@@ -27,7 +27,7 @@ function setup(eventTransport, config = {}) {
       },
     }) }
   }
-  const sdk = new ExperibaseSDK({ apiKey: 'public-sdk-fixture', baseUrl: 'https://platform.invalid/api/v1',
+  const sdk = new IterglowSDK({ apiKey: 'public-sdk-fixture', baseUrl: 'https://platform.invalid/api/v1',
     userId: 'anonymous-demo', eventTransport, ...config })
   return { sdk, requests }
 }

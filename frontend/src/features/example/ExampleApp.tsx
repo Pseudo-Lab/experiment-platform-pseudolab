@@ -4,7 +4,7 @@ import { Layout } from './components/Layout'
 import { HomePage } from './pages/HomePage'
 import { StudyListPage } from './pages/StudyListPage'
 import { ExperimentShowcase } from './components/ExperimentShowcase'
-import { ExperibaseProvider } from '@pseudo-lab/iterglow-sdk/react'
+import { IterglowProvider } from '@pseudo-lab/iterglow-sdk/react'
 import { ExperimentContextBridge } from './lib/ExperimentContext'
 import { initVisualEditor } from './lib/visualEditor'
 import { getUserId } from './lib/userId'
@@ -59,7 +59,7 @@ export function ExampleApp({ lang }: Props) {
   if (!apiKey) return <div role="status">{lang === 'ko' ? '예제 설정을 불러오는 중입니다.' : 'Loading demo settings.'}</div>
 
   return (
-    <ExperibaseProvider
+    <IterglowProvider
       eventModel="legacy"
       key={apiKey}
       apiKey={apiKey}
@@ -77,6 +77,6 @@ export function ExampleApp({ lang }: Props) {
           </Routes>
         </Layout>
       </ExperimentContextBridge>
-    </ExperibaseProvider>
+    </IterglowProvider>
   )
 }

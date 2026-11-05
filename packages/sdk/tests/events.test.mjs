@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { ExperibaseSDK } from '../dist/core.js'
+import { IterglowSDK } from '../dist/core.js'
 
 const originalFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = originalFetch })
@@ -13,7 +13,7 @@ function setup(config = {}) {
     return { ok: true, json: async () => ({ key: 'flag', type: 'flag', show: false,
       variant: 'control', payload: null, tracking_context: context }) }
   }
-  return { sdk: new ExperibaseSDK({ apiKey: 'public', baseUrl: 'https://stub/api/v1', userId: 'original', ...config }), calls }
+  return { sdk: new IterglowSDK({ apiKey: 'public', baseUrl: 'https://stub/api/v1', userId: 'original', ...config }), calls }
 }
 
 test('prefetch has no exposure; rendered control and its actions share the original identity', async () => {

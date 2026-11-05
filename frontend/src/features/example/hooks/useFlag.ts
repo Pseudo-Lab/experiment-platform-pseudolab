@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useExperibase } from '@pseudo-lab/iterglow-sdk/react'
+import { useIterglow } from '@pseudo-lab/iterglow-sdk/react'
 import { isEditorMode, getEditorForcedVariant } from '../lib/visualEditor'
 
 export function useFlag(flagKey: string): string | null {
-  const { variants } = useExperibase()
+  const { variants } = useIterglow()
 
   const [forcedVariant, setForcedVariant] = useState<string | null>(() =>
     isEditorMode() ? (getEditorForcedVariant(flagKey) ?? 'control') : null,

@@ -37,7 +37,7 @@ it.each(['anonymous', 'failed', 'authenticated'])('keeps the guide public with %
 it('switches KO/EN, retains the exact install version and provides focusable code and valid section links', () => {
   vi.mocked(authApi.me).mockReturnValue(new Promise(() => {}));
   open('/docs/sdk');
-  expect(screen.getByText('npm install --save-exact @pseudo-lab/iterglow-sdk@0.2.1')).toBeInTheDocument();
+  expect(screen.getByText('npm install --save-exact @pseudo-lab/iterglow-sdk@0.3.0')).toBeInTheDocument();
   expect(screen.getByText(/이 제한은 아직 해결되지 않았습니다/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
   expect(screen.getByRole('heading', { level: 1, name: 'Developer SDK guide' })).toBeInTheDocument();
@@ -92,7 +92,7 @@ it.each([
   fireEvent.click(screen.getByRole('link', { name: guideLabel }));
   expect(readLocation().state).toEqual(returnState);
   if (via !== 'login') {
-    fireEvent.click(screen.getByRole('link', { name: via === 'brand' ? (lang === 'ko' ? '이터글로 홈' : 'Iterglow home') : lang === 'ko' ? '서비스 소개' : 'Introduction' }));
+    fireEvent.click(screen.getByRole('link', { name: via === 'brand' ? (lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home') : lang === 'ko' ? '서비스 소개' : 'Introduction' }));
     expect(readLocation().pathname).toBe('/');
     expect(readLocation().state).toEqual(returnState);
     if (via === 'introduction-guide') {

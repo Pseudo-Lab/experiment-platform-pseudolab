@@ -60,10 +60,10 @@ function resolveDevice(): string {
 }
 
 // ---------------------------------------------------------------------------
-// ExperibaseSDK
+// IterglowSDK
 // ---------------------------------------------------------------------------
 
-export class ExperibaseSDK {
+export class IterglowSDK {
   readonly apiKey: string
   readonly baseUrl: string
   private _userId: string
@@ -102,9 +102,9 @@ export class ExperibaseSDK {
         body: JSON.stringify({ type, key, variant, user_id: userId, properties,
           url: typeof window !== 'undefined' ? window.location.pathname : null }),
       })
-      if (!res.ok) console.warn(`[ExperibaseSDK] Legacy event not saved (HTTP ${res.status})`)
+      if (!res.ok) console.warn(`[IterglowSDK] Legacy event not saved (HTTP ${res.status})`)
     } catch (err) {
-      console.warn('[ExperibaseSDK] Legacy event failed:', err)
+      console.warn('[IterglowSDK] Legacy event failed:', err)
     }
   }
 
@@ -309,7 +309,7 @@ export class ExperibaseSDK {
     if (typeof window === 'undefined') return () => {}
     const onPopstate = () => {
       void this.track('$pageview', { url: window.location.pathname }).catch(err => {
-        console.warn('[ExperibaseSDK] Autocapture delivery failed:', err)
+        console.warn('[IterglowSDK] Autocapture delivery failed:', err)
       })
     }
     onPopstate()
@@ -357,7 +357,7 @@ export class ExperibaseSDK {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch (err) {
-      console.warn('[ExperibaseSDK] track failed:', err)
+      console.warn('[IterglowSDK] track failed:', err)
     }
     if (this._eventModel === 'legacy') {
       await this._sendLegacyEvent('conversion',
