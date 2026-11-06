@@ -112,7 +112,7 @@ export function SdkGuidePage({ lang, setLang }: Props) {
   const authenticated = state === 'authenticated';
   const workspacePath = safeReturnPath((location.state as { from?: unknown } | null)?.from) || '/projects';
   const workspaceLabel = lang === 'ko' ? '작업공간으로 돌아가기' : 'Back to workspace';
-  const code = (value: string) => <pre tabIndex={0} aria-label={t.code} className="max-w-full overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 text-xs leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><code>{value}</code></pre>;
+  const code = (value: string) => <pre tabIndex={0} aria-label={t.code} className="max-w-full overflow-x-auto rounded-lg border border-border bg-muted p-4 text-[13px] leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><code>{value}</code></pre>;
   return (
     <div className="service-entry min-h-screen bg-background text-foreground" lang={lang}>
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
@@ -131,7 +131,7 @@ export function SdkGuidePage({ lang, setLang }: Props) {
             <p className="mb-3 text-sm font-semibold">{t.contents}</p>
             <ol className="space-y-3 text-sm text-muted-foreground">{t.sections.map((title, index) => <li key={title}><a className="rounded hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" href={`#${sectionIds[index]}`}>{index + 1}. {title}</a></li>)}</ol>
           </nav>
-          <article className="min-w-0 space-y-8 text-sm leading-7">
+          <article className="min-w-0 max-w-[75ch] space-y-8 text-[15px] leading-7">
             {t.sections.map((title, index) => <section key={sectionIds[index]} id={sectionIds[index]} aria-labelledby={`sdk-${sectionIds[index]}`} className="min-w-0 scroll-mt-6 space-y-4 border-t border-border pt-6">
               <h2 id={`sdk-${sectionIds[index]}`} className="text-xl font-semibold">{title}</h2>
               {index === 0 && <><p>{t.support}</p><p>{t.collection}</p><p className="text-muted-foreground">{t.scope}</p></>}

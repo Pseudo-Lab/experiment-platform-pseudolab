@@ -4,64 +4,65 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    color-scheme: light;
+    --background: 210.0000 7.6923% 94.9020%;
+    --foreground: 210.0000 6.9767% 16.8627%;
+    --card: 0.0000 0.0000% 98.0392%;
+    --card-foreground: 210.0000 6.9767% 16.8627%;
+    --popover: 0.0000 0.0000% 98.0392%;
+    --popover-foreground: 210.0000 6.9767% 16.8627%;
+    --primary: 210.0000 6.9767% 16.8627%;
+    --primary-foreground: 0.0000 0.0000% 100.0000%;
+    --secondary: 210.0000 9.5238% 91.7647%;
+    --secondary-foreground: 210.0000 6.9767% 16.8627%;
+    --muted: 210.0000 9.5238% 91.7647%;
+    --muted-foreground: 214.2857 3.6269% 37.8431%;
+    --accent: 210.0000 9.5238% 91.7647%;
+    --accent-foreground: 210.0000 6.9767% 16.8627%;
+    --destructive: 4.2308 76.4706% 40.0000%;
+    --destructive-foreground: 0.0000 0.0000% 100.0000%;
+    --border: 210.0000 7.5000% 84.3137%;
+    --input: 210.0000 7.5000% 84.3137%;
+    --ring: 5.0769 65.0000% 39.2157%;
+    --radius: 0.75rem;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  ::selection {
+    background-color: #f6c8c2;
+    color: hsl(var(--foreground));
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 3px;
+  }
+
+  input, textarea {
+    caret-color: hsl(var(--foreground));
   }
 }
 
-body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-}
-
-/* Public introduction and sign-in share the approved Iterglow identity. */
+/* Public introduction, sign-in and documentation share the approved v4 accent. */
 .service-entry {
-  --primary: 245 74% 60%;
+  --primary: 5.0769 65.0000% 39.2157%;
   --primary-foreground: 0 0% 100%;
-  --ring: 245 74% 60%;
 }
-.dark .service-entry {
-  --primary: 239 84% 77%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --ring: 239 84% 77%;
+
+.google-sign-in {
+  min-height: 44px;
+  border-color: #747775;
+  background-color: #fff;
+  color: #1f1f1f;
+  font-family: Arial, sans-serif;
+  font-weight: 500;
+}
+
+.google-sign-in:hover {
+  background-color: #f2f2f2;
+  color: #1f1f1f;
 }

@@ -429,8 +429,8 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="create-experiment-title" onKeyDown={handleDialogKeyDown} className="bg-background text-foreground rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 px-6 space-y-5">
-        <div className="sticky top-0 z-10 bg-background py-5 border-b flex items-center justify-between gap-3">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="create-experiment-title" onKeyDown={handleDialogKeyDown} className="bg-card text-card-foreground rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 px-6 space-y-5">
+        <div className="sticky top-0 z-10 bg-card py-5 border-b flex items-center justify-between gap-3">
           <div>
             <h2 id="create-experiment-title" className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t.title}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t.requiredLegend}</p>

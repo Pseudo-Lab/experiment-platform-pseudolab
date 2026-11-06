@@ -55,10 +55,10 @@ const SidebarItem = ({
             "flex items-center w-full gap-3 px-3 rounded-lg group relative transition-all duration-200",
             secondary ? "py-1.5 text-xs font-medium" : "py-2.5 text-sm font-medium",
             active
-                ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400 shadow-sm"
+                ? "bg-card text-foreground shadow-sm"
                 : secondary
-                  ? "text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300"
-                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
+                  ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
     >
         <Icon size={secondary ? 17 : 20} className="shrink-0" />
@@ -68,7 +68,7 @@ const SidebarItem = ({
         )}>
             {label}
         </span>
-        {active && expanded && <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
+        {active && expanded && <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-primary" />}
     </button>
 );
 
@@ -76,13 +76,13 @@ const SectionDivider = ({ label, expanded }: { label: string; expanded: boolean 
     <div className={cn("flex items-center gap-2 px-2 pb-1", expanded ? "pt-5" : "pt-4")}>
         {expanded ? (
             <>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600 whitespace-nowrap shrink-0">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-nowrap shrink-0">
                     {label}
                 </span>
-                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                <div className="flex-1 h-px bg-border" />
             </>
         ) : (
-            <div className="w-full h-px bg-slate-200 dark:bg-slate-700" />
+            <div className="w-full h-px bg-border" />
         )}
     </div>
 );
@@ -180,21 +180,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
     return (
         <div 
-            className="flex min-h-screen bg-muted/30 text-foreground font-sans transition-colors duration-300"
+            className="flex min-h-screen bg-background text-foreground font-sans transition-colors duration-300"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
         >
             <aside
                 className={cn(
-                    "fixed inset-y-0 left-0 z-50 flex flex-col bg-background border-r border-border transition-all duration-300 ease-in-out shadow-lg lg:shadow-none",
+                    "fixed inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border transition-all duration-300 ease-in-out shadow-lg lg:shadow-none",
                     isSidebarOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full lg:w-20 lg:translate-x-0"
                 )}
             >
                 {/* Desktop Sidebar Toggle (Floating on border) */}
                 <button 
                     onClick={() => setSidebarOpen(!isSidebarOpen)} 
-                    className="hidden lg:flex absolute -right-3 top-5 z-50 items-center justify-center w-6 h-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-sm transition-all hover:scale-110"
+                    className="hidden lg:flex absolute -right-3 top-5 z-50 items-center justify-center w-6 h-6 bg-card border border-border rounded-full text-muted-foreground hover:text-foreground shadow-sm transition-all hover:scale-110"
                     aria-label="Toggle sidebar"
                 >
                     {isSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
@@ -209,7 +209,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     {/* Mobile Close Button */}
                     <button 
                         onClick={() => setSidebarOpen(false)}
-                        className="lg:hidden p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-colors"
+                        className="lg:hidden p-2 -mr-2 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
                         aria-label="Close sidebar menu"
                     >
                         <ChevronLeft size={24} />
@@ -221,8 +221,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                         {isSidebarOpen ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="service-entry h-auto w-full justify-start gap-3 bg-background p-3 text-left" aria-label={t.selectProject}>
-                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                    <Button variant="outline" className="h-auto w-full justify-start gap-3 bg-background p-3 text-left" aria-label={t.selectProject}>
+                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
                                             <FolderOpen size={18} />
                                         </span>
                                         <span className="min-w-0 flex-1">
@@ -232,7 +232,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                                         <ChevronDown size={16} className="shrink-0 text-muted-foreground" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="service-entry w-60 max-w-[calc(100vw-2rem)]">
+                                <DropdownMenuContent align="start" className="w-60 max-w-[calc(100vw-2rem)]">
                                     <DropdownMenuRadioGroup value={currentProjectId ?? '__all__'} onValueChange={value => {
                                         setCurrentProjectId(value === '__all__' ? null : value);
                                         if (activePath.startsWith('/experiments/')) handleNav('/experiments');
@@ -267,7 +267,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     {isAdmin && <SidebarItem icon={Bug} label={t.bugReport} active={activePath.startsWith('/bug-report')} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />}
                 </nav>
 
-                <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
+                <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-muted/40 space-y-1">
                     <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
                         <Link to="/docs/sdk" state={{ from: location }} aria-label={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
                             <BookOpen aria-hidden="true" className="shrink-0" />
@@ -289,18 +289,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
             <main className={cn("flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300", isSidebarOpen ? "lg:pl-64" : "lg:pl-20")}>
-                <header className="flex items-center justify-between h-16 px-4 md:px-8 border-b dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30">
+                <header className="flex items-center justify-between h-16 px-4 md:px-8 border-b dark:border-slate-800 bg-card sticky top-0 z-30">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!isSidebarOpen)} className="lg:hidden rounded-lg text-slate-500" aria-label="Open sidebar menu">
+                        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!isSidebarOpen)} className="lg:hidden rounded-lg text-muted-foreground" aria-label="Open sidebar menu">
                             <Menu size={20} />
                         </Button>
-                        <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 hidden sm:block">
+                        <h2 className="text-sm font-semibold text-muted-foreground hidden sm:block">
                             {currentSectionLabel}
                         </h2>
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-4">
-                        <Button variant="outline" size="sm" onClick={() => setLang(lang === 'en' ? 'ko' : 'en')} className="gap-1 font-bold text-slate-500 rounded-lg" aria-label="Toggle language">
+                        <Button variant="outline" size="sm" onClick={() => setLang(lang === 'en' ? 'ko' : 'en')} className="gap-1 font-bold text-muted-foreground rounded-lg" aria-label="Toggle language">
                             <Globe size={14} /> {lang.toUpperCase()}
                         </Button>
 
@@ -311,10 +311,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                                 setLogoutFailed(false);
                                 try { await onLogout?.(); } catch { setLogoutFailed(true); }
                             }}
-                            className="gap-2 text-slate-500 rounded-lg"
+                            className="gap-2 text-muted-foreground rounded-lg"
                             aria-label={t.logout}
                         >
-                            <span className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md">
+                            <span className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-white shadow-md">
                                 <User size={16} />
                             </span>
                             <span className="hidden md:inline max-w-[120px] truncate">{userLabel || t.logout}</span>

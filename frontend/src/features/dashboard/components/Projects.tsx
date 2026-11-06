@@ -127,18 +127,18 @@ export function Projects({ lang }: Props) {
   const renderSdkBadge = (id: string) => {
     const s = sdkStatuses[id];
     if (s === undefined) {
-      return <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-400 dark:bg-slate-800">{tr.sdkChecking}</span>;
+      return <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{tr.sdkChecking}</span>;
     }
     if (s === 'connected') {
-      return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400">● {tr.sdkConnected}</span>;
+      return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">● {tr.sdkConnected}</span>;
     }
-    return <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-400 dark:bg-slate-800 dark:text-slate-500">○ {tr.sdkNotConnected}</span>;
+    return <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">○ {tr.sdkNotConnected}</span>;
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{tr.title}</h1>
+        <h1 className="text-2xl font-bold text-foreground">{tr.title}</h1>
         <Button onClick={() => setShowForm(!showForm)} size="sm" className="gap-2">
           <Plus size={16} /> {tr.addProject}
         </Button>
@@ -148,7 +148,7 @@ export function Projects({ lang }: Props) {
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div>
-              <label htmlFor="new-project-name" className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1 block">{tr.name}</label>
+              <label htmlFor="new-project-name" className="text-xs font-medium text-muted-foreground mb-1 block">{tr.name}</label>
               <Input
                 id="new-project-name"
                 value={newName}
@@ -157,7 +157,7 @@ export function Projects({ lang }: Props) {
                 className="text-sm"
               />
             </div>
-            {createError && <p className="text-xs text-rose-500">{createError}</p>}
+            {createError && <p className="text-xs text-destructive">{createError}</p>}
             <div className="flex gap-2">
               <Button onClick={handleCreate} disabled={creating || !newName.trim()} size="sm">
                 {creating ? tr.creating : tr.create}
@@ -170,12 +170,12 @@ export function Projects({ lang }: Props) {
         </Card>
       )}
 
-      {deleteError && <p className="text-xs text-rose-500">{deleteError}</p>}
+      {deleteError && <p className="text-xs text-destructive">{deleteError}</p>}
 
       {loading ? (
-        <p className="text-sm text-slate-400">{tr.loading}</p>
+        <p className="text-sm text-muted-foreground">{tr.loading}</p>
       ) : projects.length === 0 ? (
-        <div className="text-center py-16 text-slate-400">
+        <div className="text-center py-16 text-muted-foreground">
           <FolderOpen size={40} className="mx-auto mb-3 opacity-40" />
           <p className="text-sm">{tr.empty}</p>
         </div>
@@ -184,7 +184,7 @@ export function Projects({ lang }: Props) {
           {projects.map((p) => (
             <Card
               key={p.id}
-              className="cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
+              className="cursor-pointer hover:shadow-md hover:border-foreground/40 transition-all"
               onClick={() => { setCurrentProjectId(p.id); navigate('/experiments'); }}
             >
               <CardHeader className="pb-2">
@@ -194,16 +194,16 @@ export function Projects({ lang }: Props) {
                       <CardTitle className="text-base">{p.name}</CardTitle>
                       {renderSdkBadge(p.id)}
                     </div>
-                    <p className="text-xs text-slate-400 font-mono mt-0.5">{p.id}</p>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">{p.id}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-muted-foreground">
                       {new Date(p.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                     </span>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 px-2 text-slate-400 hover:text-rose-600"
+                      className="h-7 px-2 text-muted-foreground hover:text-rose-600"
                       disabled={deletingId === p.id}
                       onClick={(e) => { e.stopPropagation(); handleDelete(p); }}
                       aria-label={tr.delete}
