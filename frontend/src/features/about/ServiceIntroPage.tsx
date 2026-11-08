@@ -79,7 +79,7 @@ export function ServiceIntroPage({ lang, setLang, authenticated }: Props) {
         </Link>
         <nav aria-label={t.features} className="ml-auto hidden items-center gap-6 text-sm text-muted-foreground md:flex">
           <a href="#features" className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.features}</a>
-          <Link to="/docs/sdk" state={location.state} className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.sdkGuide}</Link>
+          <Link to="/docs/sdk" state={{ ...location.state, sdkGuideOrigin: 'home' }} className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.sdkGuide}</Link>
           <a href="#how-it-works" className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.flowLink}</a>
         </nav>
         <div className="flex items-center gap-1">
@@ -133,7 +133,7 @@ export function ServiceIntroPage({ lang, setLang, authenticated }: Props) {
         </section>
       </main>
       <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-border px-4 py-6 text-xs text-muted-foreground md:px-6">
-        <span>Iterglow · {t.label}</span><Link to="/docs/sdk" state={location.state} className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.sdkGuide}</Link><a className="inline-flex items-center gap-2 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" href="https://pseudo-lab.github.io/experiment-platform-pseudolab/">{t.teamLink}<ArrowRight aria-hidden="true" className="h-3 w-3" /></a>
+        <span>Iterglow · {t.label}</span><Link to="/docs/sdk" state={{ ...location.state, sdkGuideOrigin: 'home' }} className="rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{t.sdkGuide}</Link><a className="inline-flex items-center gap-2 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" href="https://pseudo-lab.github.io/experiment-platform-pseudolab/">{t.teamLink}<ArrowRight aria-hidden="true" className="h-3 w-3" /></a>
       </footer>
     </div>
   );

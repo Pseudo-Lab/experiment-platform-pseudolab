@@ -130,7 +130,7 @@ export function LoginPage({ lang, setLang }: LoginPageProps) {
           <p className="mb-4 text-sm text-destructive" role="alert">{copy.googleFailed}</p>}
 
           <p className="mt-4 text-xs leading-loose text-muted-foreground">{copy.access}</p>
-          <Link to="/docs/sdk" state={location.state} className="mt-4 block rounded text-center text-sm text-primary underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring">{copy.sdkGuide}</Link>
+          <Link to="/docs/sdk" state={{ ...location.state, sdkGuideOrigin: 'home' }} className="mt-4 block rounded text-center text-sm text-primary underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring">{copy.sdkGuide}</Link>
           <Link to="/" state={location.state} className="mt-6 block rounded text-center text-xs text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">{copy.back}</Link>
         </section>
       </div>

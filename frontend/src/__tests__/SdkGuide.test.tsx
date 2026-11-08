@@ -38,10 +38,10 @@ it('switches KO/EN, retains the exact install version and provides focusable cod
   vi.mocked(authApi.me).mockReturnValue(new Promise(() => {}));
   open('/docs/sdk');
   expect(screen.getByText('npm install --save-exact @pseudo-lab/iterglow-sdk@0.3.0')).toBeInTheDocument();
-  expect(screen.getByText(/이 제한은 아직 해결되지 않았습니다/)).toBeInTheDocument();
+  expect(screen.getByText(/현재 이 예제는 관리자가 미리 준비한 실험/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
   expect(screen.getByRole('heading', { level: 1, name: 'Developer SDK guide' })).toBeInTheDocument();
-  expect(screen.getByText(/these limitations remain unresolved/)).toBeInTheDocument();
+  expect(screen.getByText(/This example requires an experiment prepared by an administrator/)).toBeInTheDocument();
   expect(screen.getAllByLabelText('Code example')).toHaveLength(4);
   for (const pre of screen.getAllByLabelText('Code example')) expect(pre).toHaveAttribute('tabindex', '0');
   for (const link of screen.getAllByRole('link').filter(link => link.getAttribute('href')?.startsWith('#'))) {
@@ -90,23 +90,23 @@ it.each([
   const returnState = readLocation().state;
   expect(returnState.from.pathname).toBe('/experiments/review-original');
   fireEvent.click(screen.getByRole('link', { name: guideLabel }));
-  expect(readLocation().state).toEqual(returnState);
+  expect(readLocation().state).toMatchObject(returnState);
   if (via !== 'login') {
-    fireEvent.click(screen.getByRole('link', { name: via === 'brand' ? (lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home') : lang === 'ko' ? '서비스 소개' : 'Introduction' }));
+    fireEvent.click(screen.getByRole('link', { name: via === 'brand' ? (lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home') : lang === 'ko' ? '서비스 홈' : 'Service home' }));
     expect(readLocation().pathname).toBe('/');
-    expect(readLocation().state).toEqual(returnState);
+    expect(readLocation().state).toMatchObject(returnState);
     if (via === 'introduction-guide') {
       for (const index of [0, 1]) {
         fireEvent.click(screen.getAllByRole('link', { name: guideLabel })[index]);
-        expect(readLocation().state).toEqual(returnState);
-        fireEvent.click(screen.getByRole('link', { name: lang === 'ko' ? '서비스 소개' : 'Introduction' }));
-        expect(readLocation().state).toEqual(returnState);
+        expect(readLocation().state).toMatchObject(returnState);
+        fireEvent.click(screen.getByRole('link', { name: lang === 'ko' ? '서비스 홈' : 'Service home' }));
+        expect(readLocation().state).toMatchObject(returnState);
       }
     }
   }
-  fireEvent.click(screen.getAllByRole('link', { name: loginTitle })[0]);
+  fireEvent.click(screen.getAllByRole('link', { name: via === 'login' ? (lang === 'ko' ? '시작하기' : 'Get started') : loginTitle })[0]);
   await screen.findByRole('heading', { level: 1, name: loginTitle });
-  expect(readLocation().state).toEqual(returnState);
+  expect(readLocation().state).toMatchObject(returnState);
   expect(screen.getByRole('button', { name: lang === 'ko' ? 'Google로 계속하기' : 'Continue with Google' })).toBeInTheDocument();
   sessionStorage.setItem('oauthReturnPath', readLocation().state.from.pathname + readLocation().state.from.search + readLocation().state.from.hash);
   cleanup();
@@ -121,7 +121,7 @@ it.each(['ko', 'en'] as const)('uses the existing default destination after dire
   localStorage.setItem('lang', lang);
   render(<MemoryRouter initialEntries={['/docs/sdk']}><App /><LocationProbe /></MemoryRouter>);
   await act(async () => {});
-  fireEvent.click(screen.getByRole('link', { name: lang === 'ko' ? '로그인' : 'Sign in' }));
+  fireEvent.click(screen.getAllByRole('link', { name: lang === 'ko' ? '시작하기' : 'Get started' })[0]);
   expect(JSON.parse(screen.getByTestId('location').textContent!).state).toBeNull();
   cleanup();
   sessionStorage.clear();
@@ -136,7 +136,7 @@ it('returns an authenticated guide reader to the exact workspace screen', async 
   render(<MemoryRouter initialEntries={['/api-key?view=keys#details']}><App /><LocationProbe /></MemoryRouter>);
   fireEvent.click(await screen.findByRole('link', { name: 'SDK 가이드' }));
   await screen.findByRole('heading', { name: '개발자 SDK 가이드' });
-  const links = await screen.findAllByRole('link', { name: '작업공간으로 돌아가기' });
+  const links = await screen.findAllByRole('link', { name: '플랫폼으로 돌아가기' });
   expect(links[0]).toHaveAttribute('href', '/api-key?view=keys#details');
   expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
   fireEvent.click(links[0]);
@@ -148,4 +148,25 @@ it('sends an authenticated unknown route to project management instead of a blan
   render(<MemoryRouter initialEntries={['/docs/sdk/missing']}><App /><LocationProbe /></MemoryRouter>);
   await waitFor(() => expect(JSON.parse(screen.getByTestId('location').textContent!).pathname).toBe('/projects'));
   expect(screen.getByRole('heading', { level: 1, name: '프로젝트 관리' })).toBeInTheDocument();
+});
+
+
+it('keeps home entry distinct from an authenticated pending OAuth return path', async () => {
+  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
+  const from = { pathname: '/api-key', search: '?view=keys', hash: '#details' };
+  render(<MemoryRouter initialEntries={[{ pathname: '/', state: { from } }]}><App /><LocationProbe /></MemoryRouter>);
+  fireEvent.click(await screen.findAllByRole('link', { name: 'SDK 가이드' }).then(links => links[0]));
+  expect(screen.getByRole('link', { name: '서비스 홈' })).toHaveAttribute('href', '/');
+  expect(screen.queryByRole('link', { name: '플랫폼으로 돌아가기' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('link', { name: '서비스 홈' }));
+  expect(JSON.parse(screen.getByTestId('location').textContent!).state).toEqual({ from });
+});
+
+it.each(['https://evil.example', '//evil.example', '/', '/docs/sdk', '/docs/sdk/?x=1#top'])('uses safe direct-entry actions for invalid management return %s', async (from) => {
+  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
+  render(<MemoryRouter initialEntries={[{ pathname: '/docs/sdk', state: { from } }]}><App /></MemoryRouter>);
+  await act(async () => {});
+  expect(screen.getByRole('link', { name: '서비스 홈' })).toHaveAttribute('href', '/');
+  expect(screen.getAllByRole('link', { name: '플랫폼 열기' })[0]).toHaveAttribute('href', '/projects');
+  expect(screen.queryByRole('link', { name: '플랫폼으로 돌아가기' })).not.toBeInTheDocument();
 });

@@ -36,15 +36,18 @@ const actionCode = `await sdk.track('signup_completed', {}, {
 const copy = {
   ko: {
     title: '개발자 SDK 가이드', intro: '서비스에 실험을 연결하고 첫 이벤트를 확인하세요.', home: '서비스 소개', login: '로그인', language: 'Switch to English', contents: '이 페이지에서', code: '코드 예시',
-    sections: ['지원 버전과 이용 조건', '프로젝트와 공개 키 준비', '설치와 API 주소', '판단 → 실제 노출 → 행동', '첫 수집 확인', '오류 진단', '0.1.5에서 전환 · 외부 수집'],
+    sections: ['지원 버전과 이용 조건', '프로젝트와 공개 키 준비', '설치와 API 주소', '판단 → 실제 노출 → 행동', '첫 수집 확인', '오류 진단', '외부 수집 · 기존 연동'],
     support: "이 가이드는 SDK 0.3.0 계약 기준입니다. Google 계정과 프로젝트 공개 SDK 키가 필요합니다. JavaScript/TypeScript 및 React 18 이상을 지원합니다. 패키지명은 @pseudo-lab/iterglow-sdk, 클래스명은 IterglowSDK입니다.",
-    scope: "아래 코드는 새 sdk_v1 flag 연결 A/B 실험용입니다. 현재 일반 UI의 실험 생성은 legacy이며 /result 조회는 설치 관리자 권한이 필요합니다. 이 제한은 아직 해결되지 않았습니다. 관리자가 새 sdk_v1 실험을 API로 준비하기 전에는 아래 코드를 기존 실험에 연결하지 마세요. 일반 UI만으로 v1 성과 분석까지 완료되는 흐름은 아닙니다.",
-    prepare: ['Google로 로그인하고 프로젝트를 만들거나 선택합니다.', '선택한 프로젝트의 SDK 연동 화면에서 프로젝트 공개 SDK 키를 확인합니다.', '설치 관리자가 API로 event_model=sdk_v1인 새 테스트 실험을 만들고 같은 프로젝트의 새 flag를 연결해야 합니다. 주요 지표는 예시의 signup_completed로 맞추고 실험 ID와 flag key를 적어둡니다.', '자동 생성한 flag는 비활성·공개 비율 0%로 시작합니다. 테스트 프로젝트에서 flag를 활성화하고 공개 비율을 50%로 설정합니다. 별도 규칙이나 강제 variant가 있으면 먼저 확인하세요. 실험 variant 이름은 flag 응답(control/treatment 등)과 일치시킵니다.', '실험을 실행 중으로 전환합니다. 계정 소유 프로젝트는 주요 지표와 같은 프로젝트의 활성 flag가 필요합니다. 연결된 flag의 규칙·공개 비율이 분배를 결정하며 실험의 비율 입력만 바꿔서는 분배가 바뀌지 않습니다.'],
+    scope: "현재 이 예제는 관리자가 미리 준비한 실험에 연결해야 합니다. 기존 실험에 적용하기 전 관리자에게 연동 가능 여부와 결과 확인 방법을 확인하세요.",
+    adminSummary: "관리자용 준비 사항",
+    adminDetail: "이 예제에는 같은 프로젝트의 flag와 연결된 새 sdk_v1 실험이 필요합니다. 설치 관리자가 실험 생성 API에서 event_model=sdk_v1을 지정하고, 주요 지표·variant·실행 상태를 준비해야 합니다. 일반 UI에서 생성한 실험은 legacy이므로 그대로 연결하지 마세요. /result 조회에는 설치 관리자 권한이 필요합니다.",
+    migrationLink: "기존 SDK에서 전환하는 경우 설치·운영 참고 문서를 확인하세요.",
+    prepare: ['Google로 로그인하고 프로젝트를 만들거나 선택합니다.', '선택한 프로젝트의 SDK 연동 화면에서 프로젝트 공개 SDK 키를 확인합니다.', '관리자에게 이 예제용 테스트 실험을 준비해 달라고 요청하고, 같은 프로젝트의 실험 ID와 flag key를 받습니다. 이 예시의 주요 지표는 signup_completed입니다.', '자동 생성한 flag는 비활성·공개 비율 0%로 시작합니다. 테스트 프로젝트에서 flag를 활성화하고 공개 비율을 50%로 설정합니다. 별도 규칙이나 강제 variant가 있으면 먼저 확인하세요. 실험 variant 이름은 flag 응답(control/treatment 등)과 일치시킵니다.', '실험을 실행 중으로 전환합니다. 계정 소유 프로젝트는 주요 지표와 같은 프로젝트의 활성 flag가 필요합니다. 연결된 flag의 규칙·공개 비율이 분배를 결정하며 실험의 비율 입력만 바꿔서는 분배가 바뀌지 않습니다.'],
     collection: "기본 모드는 사용자 ID를 원격 판단 API에 보내고 실제 노출·행동을 Iterglow에 수집합니다. 외부 eventTransport는 선택 사항이며 이 빠른 시작의 선행조건이 아닙니다. 고객 서비스 적용 전에 이벤트·속성·식별 방식을 정하고 테스트 환경에서 확인하세요.",
     identity: '예시는 userId를 생략하여 SDK가 브라우저 localStorage에 익명 UUID를 생성·재사용하게 합니다. 모든 방문자에게 같은 테스트 ID를 넣지 마세요. 직접 지정한다면 이메일 등 개인정보 대신 서비스의 안정적인 가명 ID를 쓰고 판단부터 노출·전환까지 같은 ID를 유지하세요. 이 예시는 SDK 인스턴스를 한 번 만들고 별도의 자동 수집은 시작하지 않습니다.',
     key: '공개 SDK 키는 x-api-key로 전송합니다. 계정 세션·서버 credential을 브라우저나 프런트엔드 환경변수에 넣지 마세요. 공개 키는 방문자의 신원을 보증하지 않습니다. 키·flag·실험 ID는 모두 같은 프로젝트의 값을 사용하세요. 다른 프로젝트 키를 섞거나 오류 해결을 위해 키를 제거하지 마세요.',
     address: 'baseUrl은 플랫폼 API 주소에 /api/v1을 붙인 값입니다. 프로젝트의 앱 도메인은 소비 서비스/Visual Editor 대상이므로 API 주소가 아닙니다. 예시의 .invalid 주소·키·ID는 가짜 값이며 테스트 프로젝트 값으로 바꿔야 합니다.',
-    decide: "1. 판단: variant로 화면을 렌더합니다. 기본 sdk_v1의 decide()는 자동 impression을 기록하지 않습니다. 응답에 tracking_context가 있어야 합니다. 실패하면 기본 화면을 표시하고 아래 노출·행동 코드를 실행하지 마세요.",
+    decide: "1. 판단: variant로 화면을 렌더합니다. decide()만으로 실제 노출이 기록되지는 않습니다. 응답에 tracking_context가 있어야 합니다. 실패하면 기본 화면을 표시하고 아래 노출·행동 코드를 실행하지 마세요.",
     exposure: '2. 실제 노출: 렌더 후 서비스가 정한 visibility 조건을 만족한 시점에만 아래 코드를 호출합니다. flag의 show:false는 control 배정일 수 있으며 control 화면도 보였다면 기록합니다.',
     guard: "expose()는 실제 노출 문맥을 반환하고 /capture에 기록합니다. 같은 decision 객체로 재시도하면 같은 노출 ID·시각을 유지합니다. 새 화면 인스턴스는 새 impressionId를 사용하세요. 자동 재시도는 없으며 실패는 호출자에게 전달됩니다.",
     action: '3. 행동: 실제 가입 완료 콜백에서만 호출합니다. 가입이 목표가 아니라면 주요 지표와 이벤트 이름을 함께 바꾸세요. 이 코드를 초기 렌더나 노출 콜백에 넣지 마세요.',
@@ -56,8 +59,8 @@ const copy = {
       ['실제 노출', 'POST /capture · 202', 'event_name=exp_exposure와 tracking_context/event_id를 확인합니다.'],
       ['행동', 'POST /capture · 202', '동일 실험/flag/variant와 signup_completed를 확인합니다.'],
     ],
-    firstCheck: "현재 일반 UI가 만드는 legacy 실험과 sdk_v1 실험을 혼용하지 마세요. v1 결과 /result는 설치 관리자 권한이 필요하며 일반 계정의 기존 analytics 집계와 같지 않습니다. 먼저 Network에서 노출·행동의 tracking_context와 event_id를 확인하고 관리자와 v1 결과를 검증하세요. 403을 키 교체로 우회하지 마세요.",
-    status: 'SDK 연동 화면의 연결 상태는 최근 30일 이벤트 또는 flag 평가 기록의 존재를 뜻합니다. connected만으로 정확한 수집·귀속을 확정하지 마세요. 기존 A/B 이벤트 집계는 소유 프로젝트별 이벤트를 사용합니다. 관리자 공용 실험과 SDK v1 실험은 집계 원본이 다르므로 서로 숫자를 합산하지 마세요. 이벤트 수신은 개선 효과의 증명이 아닙니다.',
+    firstCheck: "먼저 Network에서 노출·행동 요청의 tracking_context와 event_id를 확인하세요. 이 예제의 결과 조회는 관리자 권한이 필요하므로 관리자와 함께 결과를 확인하세요.",
+    status: "SDK 연동 화면의 연결 상태는 최근 30일 이내 이벤트 또는 flag 평가 기록이 있다는 뜻입니다. 연결됨 표시만으로 정확한 수집이나 실험 효과를 확인할 수는 없습니다.",
     errors: [
       ['401', '공개 키와 API 도메인을 확인하세요. 관리 조회라면 계정 세션도 확인합니다. 서버 비밀 키로 대체하지 마세요.'],
       ['404 / not_found', '/api/v1, flag/실험 ID와 응답 본문을 확인하세요. 계정 소유 프로젝트의 키는 같은 프로젝트의 flag만 판단하며, 알 수 없는 key나 다른 프로젝트 참조는 404일 수 있습니다. 예전 공용 경로의 placement fallback을 성공한 A/B 판단으로 취급하지 마세요.'],
@@ -66,19 +69,22 @@ const copy = {
       ['502', '수집 저장 실패입니다. 키·개인정보를 제거한 요청 시각과 오류를 운영 담당자에게 전달하세요.'],
       ['빈 결과', '주요 지표 이름, 실제 exposure 수신, control/treatment 관측을 확인하세요. 배정만 있고 노출이 없으면 분석 분모가 없습니다.'],
     ],
-    future: "0.1.5는 자동 impression과 capture/events 이중 기록을 사용하며 expose/eventModel/eventTransport가 없습니다. 0.1.5 getAssignment()는 키를 전송하지 않아 강화된 서버에서 401 후 control로 대체됩니다. 해당 소비자는 업데이트가 필요합니다. 0.3.0은 기본 sdk_v1이며 기존 동작이 필요하면 eventModel: legacy를 명시하세요. 기존 실험·데이터는 자동 변환되지 않으며 새 sdk_v1 실험으로 전환하세요. 선택형 eventTransport는 고객 수집기로 전달할 뿐 BigQuery나 Iterglow 결과를 자동 연결하지 않습니다. 외부 이벤트만 보내면 Live Events/결과/연결 상태가 그 이벤트로 갱신되지 않습니다. 사용자 ID는 여전히 원격 decide에 전송됩니다.",
+    future: "외부 수집기를 사용하는 경우 eventTransport로 이벤트를 전달할 수 있습니다. 이 경우 해당 이벤트는 Iterglow 결과 화면에 자동으로 반영되지 않습니다. 사용자 ID는 실험 배정을 위해 Iterglow API로 전송됩니다.",
   },
   en: {
     title: 'Developer SDK guide', intro: 'Connect your service to an experiment and verify your first events.', home: 'Introduction', login: 'Sign in', language: '한국어로 변경', contents: 'On this page', code: 'Code example',
-    sections: ['Supported version and access', 'Prepare a project and public key', 'Install and set the API URL', 'Decide → actual exposure → action', 'Verify the first events', 'Troubleshooting', 'Migrate from 0.1.5 · external collection'],
+    sections: ['Supported version and access', 'Prepare a project and public key', 'Install and set the API URL', 'Decide → actual exposure → action', 'Verify the first events', 'Troubleshooting', 'External collection · existing integrations'],
     support: "This guide targets SDK 0.3.0. A Google account and project public SDK key are required. JavaScript/TypeScript and React 18+ are supported. The package is @pseudo-lab/iterglow-sdk and the class is IterglowSDK.",
-    scope: "These snippets require a new sdk_v1 flag-linked A/B experiment. The current UI creates legacy experiments and /result requires an installation administrator; these limitations remain unresolved. Ask an administrator to prepare a new sdk_v1 experiment through the API before using this flow. The regular UI alone does not complete v1 outcome analysis.",
-    prepare: ['Sign in with Google, then create or select a project.', 'Find the project public SDK key in the selected project’s SDK Integration screen.', 'An installation administrator must create a new event_model=sdk_v1 test experiment through the API and connect a new flag in the same project. Set the primary metric to signup_completed for this example and note the experiment ID and flag key.', 'An automatically created flag starts disabled with 0% rollout. In the test project, enable it and set rollout to 50%. Check any rules or forced variant first. Match experiment variant names to the flag response (such as control/treatment).', 'Start the experiment. Account-owned projects require a primary metric and an active flag in the same project. Flag rules and rollout control allocation; changing only the experiment traffic ratios does not change it.'],
+    scope: "This example requires an experiment prepared by an administrator. Before applying it to an existing experiment, ask the administrator to confirm compatibility and how you will view results.",
+    adminSummary: "Administrator setup details",
+    adminDetail: "This example requires a new sdk_v1 experiment linked to a flag in the same project. An installation administrator must set event_model=sdk_v1 through the experiment creation API and configure the primary metric, variants and running state. Experiments created in the regular UI use legacy and must not be connected unchanged. The /result endpoint requires installation administrator access.",
+    migrationLink: "For an existing SDK integration, see the installation and operations reference.",
+    prepare: ['Sign in with Google, then create or select a project.', 'Find the project public SDK key in the selected project’s SDK Integration screen.', 'Ask an administrator to prepare a test experiment for this example and provide its experiment ID and flag key from the same project. This example uses signup_completed as the primary metric.', 'An automatically created flag starts disabled with 0% rollout. In the test project, enable it and set rollout to 50%. Check any rules or forced variant first. Match experiment variant names to the flag response (such as control/treatment).', 'Start the experiment. Account-owned projects require a primary metric and an active flag in the same project. Flag rules and rollout control allocation; changing only the experiment traffic ratios does not change it.'],
     collection: "The default mode sends the user ID to the remote decision API and collects actual exposures and actions in Iterglow. Optional eventTransport is not required for this quickstart. Agree on events, properties and identifiers before testing in a customer service.",
     identity: 'The example omits userId so the SDK creates and reuses an anonymous UUID in browser localStorage. Do not assign the same test ID to every visitor. If supplying an ID, use a stable pseudonymous service ID rather than personal data such as email, and keep it consistent through decision, exposure and conversion. Create the SDK instance once; this example does not start additional autocapture.',
     key: 'The public SDK key is sent as x-api-key. Never put account sessions or server credentials in a browser or frontend environment variables. A public key does not authenticate visitors. Use a key, flag and experiment ID from the same project. Do not mix project keys or remove the key to work around an error.',
     address: 'baseUrl is the platform API address plus /api/v1. The project app domain points to the consuming service/Visual Editor target, not the API. The .invalid address, key and ID are fake placeholders; replace them with your test project values.',
-    decide: "1. Decide: render using variant. In default sdk_v1 mode, decide() does not record automatic impressions. Require tracking_context in the response. On failure, show the default UI and skip the exposure/action snippets.",
+    decide: "1. Decide: render using variant. Calling decide() alone does not record an actual exposure. Require tracking_context in the response. On failure, show the default UI and skip the exposure/action snippets.",
     exposure: '2. Actual exposure: call the code below only after rendering and satisfying your service’s visibility rule. A flag with show:false can represent the control assignment; record exposure when the control UI is seen too.',
     guard: "expose() returns exposure context and writes to /capture. Retrying the same decision object preserves the exposure ID and time. Use a new impressionId for a new visible instance. Failures propagate; there is no automatic retry.",
     action: '3. Action: call this only from an actual signup completion callback. If signup is not your goal, change both the primary metric and event name. Do not run it on initial render or in the exposure callback.',
@@ -90,8 +96,8 @@ const copy = {
       ['Actual exposure', 'POST /capture · 202', 'Check event_name=exp_exposure and tracking_context/event_id.'],
       ['Action', 'POST /capture · 202', 'Check the same experiment/flag/variant and signup_completed.'],
     ],
-    firstCheck: "Do not mix UI-created legacy experiments with sdk_v1 experiments. The v1 /result endpoint requires an installation administrator and is distinct from member-facing legacy analytics. First check tracking_context and event_id in Network, then verify v1 results with the administrator. Do not bypass 403 by changing keys.",
-    status: 'SDK Integration connection status means an event or flag evaluation exists in the last 30 days. Connected does not prove correct collection or attribution. Legacy A/B aggregates use project-scoped events for owned projects. Administrator shared experiments and SDK v1 experiments use different sources; do not sum their counts. Receiving events does not prove an improvement.',
+    firstCheck: "First check tracking_context and event_id in the exposure and action requests in Network. Viewing results for this example requires administrator access, so verify the results with an administrator.",
+    status: "The SDK Integration connection status means an event or flag evaluation was recorded in the last 30 days. A connected status alone does not confirm correct collection or an experiment’s effect.",
     errors: [
       ['401', 'Check the public key and API domain. For admin queries, also check the admin session. Do not substitute a server secret.'],
       ['404 / not_found', 'Check /api/v1, flag/experiment IDs and the response body. An account-owned project key evaluates flags in that project only; unknown keys or other-project references can return 404. Do not treat a legacy shared-path placement fallback as a successful A/B decision.'],
@@ -100,7 +106,7 @@ const copy = {
       ['502', 'Collection storage failed. Share the request time and error with the operator after removing keys and personal data.'],
       ['Empty results', 'Check the primary metric name, actual exposure receipt, and control/treatment observations. Assignment without exposure does not supply the analysis denominator.'],
     ],
-    future: "Version 0.1.5 uses automatic impressions and capture/events dual writes and has no expose/eventModel/eventTransport. Its getAssignment() omits the key, so the hardened server returns 401 and the old SDK falls back to control; those consumers must update. Version 0.3.0 defaults to sdk_v1; explicitly set eventModel: legacy when preserving the old event behavior. Existing experiments/data are not converted: use a new sdk_v1 experiment. Optional eventTransport forwards to your collector, without automatically connecting BigQuery or Iterglow results. External-only events do not update Live Events/results/connection status. Remote decide still receives the user ID.",
+    future: "Use optional eventTransport to send events to your own collector. Those events do not automatically appear in Iterglow results. The user ID is still sent to the Iterglow API for experiment assignment.",
   },
 };
 const sectionIds = ['support', 'prepare', 'install', 'flow', 'verify', 'errors', 'migration'];
@@ -110,15 +116,23 @@ export function SdkGuidePage({ lang, setLang }: Props) {
   const location = useLocation();
   const { state } = useAuth();
   const authenticated = state === 'authenticated';
-  const workspacePath = safeReturnPath((location.state as { from?: unknown } | null)?.from) || '/projects';
-  const workspaceLabel = lang === 'ko' ? '작업공간으로 돌아가기' : 'Back to workspace';
+  const { sdkGuideOrigin, ...returnState } = (location.state || {}) as { sdkGuideOrigin?: string; from?: unknown };
+  const exitState = Object.keys(returnState).length ? returnState : null;
+  const requestedPath = safeReturnPath(returnState.from);
+  const managementPath = requestedPath && /^\/(?:projects|experiments|api-key|feature-flags|placements|metrics|bug-report|example)(?:[/?#]|$)/.test(requestedPath) ? requestedPath : null;
+  const workspacePath = managementPath || '/projects';
+  const fromWorkspace = authenticated && sdkGuideOrigin !== 'home' && Boolean(managementPath);
+  const backPath = fromWorkspace ? workspacePath : '/';
+  const backLabel = fromWorkspace ? (lang === 'ko' ? '플랫폼으로 돌아가기' : 'Back to platform') : (lang === 'ko' ? '서비스 홈' : 'Service home');
+  const workspaceLabel = lang === 'ko' ? '플랫폼 열기' : 'Open platform';
   const code = (value: string) => <pre tabIndex={0} aria-label={t.code} className="max-w-full overflow-x-auto rounded-lg border border-border bg-muted p-4 text-[13px] leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><code>{value}</code></pre>;
   return (
     <div className="service-entry min-h-screen bg-background text-foreground" lang={lang}>
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
-        <Link to={authenticated ? workspacePath : '/'} state={location.state} aria-label={lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home'} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring"><IterglowLogo lang={lang} /></Link>
+        <Link to={backPath} state={exitState} aria-label={lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home'} className="rounded font-bold focus-visible:ring-2 focus-visible:ring-ring"><IterglowLogo lang={lang} /></Link>
         <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="sm"><Link to={authenticated ? workspacePath : '/'} state={location.state}>{authenticated ? workspaceLabel : t.home}</Link></Button>
+          <Button asChild variant="ghost" size="sm"><Link to={backPath} state={exitState}>{backLabel}</Link></Button>
+          {!fromWorkspace && <Button asChild size="sm"><Link to={authenticated ? workspacePath : '/login'} state={exitState}>{authenticated ? workspaceLabel : (lang === 'ko' ? '시작하기' : 'Get started')}</Link></Button>}
           <Button variant="outline" size="sm" aria-label={t.language} onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')}><Globe aria-hidden="true" />{lang === 'ko' ? 'EN' : 'KO'}</Button>
         </div>
       </header>
@@ -134,13 +148,13 @@ export function SdkGuidePage({ lang, setLang }: Props) {
           <article className="min-w-0 max-w-[75ch] space-y-8 text-[15px] leading-7">
             {t.sections.map((title, index) => <section key={sectionIds[index]} id={sectionIds[index]} aria-labelledby={`sdk-${sectionIds[index]}`} className="min-w-0 scroll-mt-6 space-y-4 border-t border-border pt-6">
               <h2 id={`sdk-${sectionIds[index]}`} className="text-xl font-semibold">{title}</h2>
-              {index === 0 && <><p>{t.support}</p><p>{t.collection}</p><p className="text-muted-foreground">{t.scope}</p></>}
-              {index === 1 && <><ol className="list-decimal space-y-2 pl-5">{t.prepare.map(step => <li key={step}>{step}</li>)}</ol><p>{t.key}</p><Button asChild variant="outline"><Link to={authenticated ? workspacePath : '/login'} state={location.state}>{authenticated ? workspaceLabel : t.login}</Link></Button></>}
+              {index === 0 && <><p>{t.support}</p><p>{t.collection}</p><p className="text-muted-foreground">{t.scope}</p><details className="rounded-lg border border-border p-4"><summary className="cursor-pointer font-medium">{t.adminSummary}</summary><p className="mt-3 text-sm text-muted-foreground">{t.adminDetail}</p></details></>}
+              {index === 1 && <><ol className="list-decimal space-y-2 pl-5">{t.prepare.map(step => <li key={step}>{step}</li>)}</ol><p>{t.key}</p><Button asChild variant="outline"><Link to={authenticated ? workspacePath : '/login'} state={exitState}>{authenticated ? workspaceLabel : (lang === 'ko' ? '시작하기' : 'Get started')}</Link></Button></>}
               {index === 2 && <>{code('npm install --save-exact @pseudo-lab/iterglow-sdk@0.3.0')}<p>{t.address}</p></>}
               {index === 3 && <><p>{t.decide}</p><p>{t.identity}</p>{code(setupCode)}<p>{t.exposure}</p>{code(exposureCode)}<p className="text-muted-foreground">{t.guard}</p><p>{t.action}</p>{code(actionCode)}<Card className="shadow-none"><CardContent className="p-4">{t.limits}</CardContent></Card></>}
               {index === 4 && <><p>{t.verify}</p><dl className="space-y-4">{t.checks.map(([label, request, detail]) => <div key={label}><dt className="font-semibold">{label} <span className="block break-words font-mono text-xs text-primary">{request}</span></dt><dd className="text-muted-foreground">{detail}</dd></div>)}</dl><p>{t.firstCheck}</p><p>{t.status}</p></>}
               {index === 5 && <dl className="space-y-4">{t.errors.map(([label, detail]) => <div key={label}><dt className="font-semibold">{label}</dt><dd className="text-muted-foreground">{detail}</dd></div>)}</dl>}
-              {index === 6 && <p>{t.future}</p>}
+              {index === 6 && <><p>{t.future}</p><a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/blob/main/packages/sdk/README.md#이전-버전에서-전환" className="text-primary underline underline-offset-4">{t.migrationLink}</a></>}
             </section>)}
           </article>
         </div>
