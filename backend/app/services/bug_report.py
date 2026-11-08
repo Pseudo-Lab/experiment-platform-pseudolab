@@ -8,6 +8,8 @@ from app.schemas.bug_report import (
 )
 from app.db import d1
 from app.db import r2
+from fastapi import HTTPException
+from app.core.config import settings
 
 
 def _now() -> str:
@@ -32,13 +34,14 @@ class BugReportService:
                 name=a["name"], 
                 key=a["key"], 
                 type=a["type"], 
-                url=r2.presigned_url(a["key"]) if with_urls else None
+                url=(f"{settings.API_V1_STR}/bug-reports/attachments/{a['key'].split('/')[-1]}"
+                     if row.get("shared") else f"{settings.API_V1_STR}/bug-reports/{row['id']}/legacy-attachments/{index}") if with_urls else None
             )
-            for a in raw
+            for index, a in enumerate(raw)
         ]
         comments = []
         if with_comments:
-            rows = await d1.query(
+            rows = await d1.security_query(
                 "SELECT * FROM bug_report_comments WHERE report_id = ? ORDER BY created_at ASC",
                 [row["id"]]
             )
@@ -47,7 +50,7 @@ class BugReportService:
         return BugReport(
             id=row["id"],
             title=row["title"],
-            category=row["category"],
+            category="feature_request" if row.get("feedback_kind") == "suggestion" else row["category"],
             severity=row.get("severity", "minor"),
             description=row.get("description"),
             status=row["status"],
@@ -57,34 +60,46 @@ class BugReportService:
             updated_at=row["updated_at"],
         )
 
-    async def get_all(self, status: Optional[BugStatus] = None) -> List[BugReport]:
+    async def get_all(self, status: Optional[BugStatus] = None, include_private: bool = True) -> List[BugReport]:
+        filters = [] if include_private else ["shared = 1"]
+        params = []
         if status:
-            rows = await d1.query(
-                "SELECT * FROM bug_reports WHERE status = ? ORDER BY created_at DESC", [status]
-            )
-        else:
-            rows = await d1.query("SELECT * FROM bug_reports ORDER BY created_at DESC")
-        # 리스트 조회 시에는 URL 생성을 제외하여 성능 최적화
-        return [await self._to_bug_report(r, with_urls=False) for r in rows]
+            filters.append("status = ?")
+            params.append(status)
+        where = " WHERE " + " AND ".join(filters) if filters else ""
+        rows = await d1.security_query("SELECT * FROM bug_reports" + where + " ORDER BY created_at DESC", params)
+        return [await self._to_bug_report(r) for r in rows]
 
-    async def get(self, report_id: str) -> Optional[BugReport]:
-        rows = await d1.query("SELECT * FROM bug_reports WHERE id = ?", [report_id])
+    async def get(self, report_id: str, include_private: bool = True) -> Optional[BugReport]:
+        rows = await d1.security_query("SELECT * FROM bug_reports WHERE id = ?" + ("" if include_private else " AND shared = 1"), [report_id])
         if not rows:
             return None
-        # 상세 조회 시에만 URL과 댓글 포함
         return await self._to_bug_report(rows[0], with_comments=True, with_urls=True)
 
-    async def create(self, data: BugReportCreate) -> BugReport:
-        report_id = str(uuid.uuid4())
-        now = _now()
-        attachments_json = json.dumps([
-            {"name": a.name, "key": a.key, "type": a.type} for a in data.attachment_keys
-        ])
-        await d1.execute(
+    async def create(self, data: BugReportCreate, owner_id: str) -> BugReport:
+        report_id, now = str(uuid.uuid4()), _now()
+        attachments = []
+        keys = [a.key for a in data.attachment_keys]
+        if len(set(keys)) != len(keys):
+            raise HTTPException(422, "Duplicate attachment")
+        for key in keys:
+            rows = await d1.security_query(
+                "SELECT * FROM bug_report_uploads WHERE key = ? AND owner_id = ? AND report_id IS NULL",
+                [key, owner_id],
+            )
+            if not rows:
+                raise HTTPException(422, "Invalid feedback attachment")
+            upload = rows[0]
+            attachments.append({"key": key, "name": upload['name'], "type": upload['content_type']})
+        # The trigger checks and claims uploads atomically with this insertion.
+        await d1.security_execute(
             """INSERT INTO bug_reports
-               (id, title, category, severity, description, status, attachments, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, 'reported', ?, ?, ?)""",
-            [report_id, data.title, data.category, data.severity, data.description, attachments_json, now, now]
+               (id, title, category, severity, description, status, attachments, created_at, updated_at,
+                shared, author_account_id, feedback_kind)
+               VALUES (?, ?, ?, ?, ?, 'reported', ?, ?, ?, 1, ?, ?)""",
+            [report_id, data.title, "other" if data.category == "feature_request" else data.category,
+             data.severity, data.description, json.dumps(attachments), now, now, owner_id,
+             "suggestion" if data.category == "feature_request" else "bug"],
         )
         return await self.get(report_id)
 
@@ -95,7 +110,7 @@ class BugReportService:
         patch["updated_at"] = _now()
         set_clause = ", ".join(f"{k} = ?" for k in patch)
         values = list(patch.values()) + [report_id]
-        await d1.execute(f"UPDATE bug_reports SET {set_clause} WHERE id = ?", values)
+        await d1.security_execute(f"UPDATE bug_reports SET {set_clause} WHERE id = ?", values)
         return await self.get(report_id)
 
     async def delete(self, report_id: str) -> bool:
@@ -108,15 +123,15 @@ class BugReportService:
             r2.delete(attachment.key)
             
         # 2. DB에서 리포트 삭제 (댓글은 CASCADE DELETE로 자동 삭제됨)
-        await d1.execute("DELETE FROM bug_reports WHERE id = ?", [report_id])
+        await d1.security_execute("DELETE FROM bug_reports WHERE id = ?", [report_id])
         return True
 
     async def add_comment(self, report_id: str, data: CommentCreate) -> Optional[BugReport]:
-        rows = await d1.query("SELECT id FROM bug_reports WHERE id = ?", [report_id])
+        rows = await d1.security_query("SELECT id FROM bug_reports WHERE id = ?", [report_id])
         if not rows:
             return None
         comment_id = str(uuid.uuid4())
-        await d1.execute(
+        await d1.security_execute(
             "INSERT INTO bug_report_comments (id, report_id, author, content, created_at) VALUES (?, ?, ?, ?, ?)",
             [comment_id, report_id, data.author, data.content, _now()]
         )

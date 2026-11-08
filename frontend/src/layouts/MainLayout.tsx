@@ -126,8 +126,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & Requests", featureFlags: "Feature Flags", projects: "Project management", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project", logout: "Logout" },
-        ko: { experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그 & 기능 요청", featureFlags: "Feature Flags", projects: "프로젝트 관리", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트", logout: "로그아웃" }
+        en: { experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & suggestions", featureFlags: "Feature Flags", projects: "Project management", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project", logout: "Logout" },
+        ko: { experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그·건의", featureFlags: "Feature Flags", projects: "프로젝트 관리", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트", logout: "로그아웃" }
     };
 
     const t = translations[lang];
@@ -264,10 +264,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath.startsWith('/experiments')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
                     <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
                     <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
-                    {isAdmin && <SidebarItem icon={Bug} label={t.bugReport} active={activePath.startsWith('/bug-report')} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />}
                 </nav>
 
                 <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-muted/40 space-y-1">
+                    <SidebarItem icon={Bug} label={t.bugReport} active={activePath.startsWith('/bug-report')} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />
                     <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
                         <Link to="/docs/sdk" state={{ from: location }} aria-label={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
                             <BookOpen aria-hidden="true" className="shrink-0" />

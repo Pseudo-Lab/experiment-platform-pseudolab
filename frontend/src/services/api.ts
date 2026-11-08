@@ -674,11 +674,11 @@ export const bugReportApi = {
     return response.json();
   },
 
-  addComment: async (id: string, content: string, author?: string): Promise<BugReport> => {
+  addComment: async (id: string, content: string): Promise<BugReport> => {
     const response = await apiFetch(`${API_BASE_URL}/bug-reports/${id}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, author }),
+      body: JSON.stringify({ content }),
     });
     if (!response.ok) throw new Error('Failed to add comment');
     return response.json();

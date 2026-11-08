@@ -1,5 +1,7 @@
 """Synthetic uploads only: fail closed before receive and never touch real R2."""
 import asyncio
+import base64
+PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jS1cAAAAASUVORK5CYII=")
 from unittest.mock import Mock
 
 import pytest
@@ -65,14 +67,15 @@ def test_anonymous_rejected_before_receive_or_form(monkeypatch, storage, configu
 
 
 def test_valid_upload_preserves_contract(admin, storage):
-    response = admin.post(PATH, files={'file': ('test.png', b'test image', 'image/png')})
+    response = admin.post(PATH, files={'file': ('test.png', PNG, 'image/png')})
     assert response.status_code == 200
     data = response.json()
     assert data['name'] == 'test.png'
     assert data['type'] == 'image/png'
-    assert data['url'] == 'https://storage.test/attachment'
+    assert data['url'].startswith('/api/v1/bug-reports/attachments/')
+    storage[1].assert_not_called()
     assert data['key'].startswith('bug-reports/') and data['key'].endswith('.png')
-    storage[0].assert_called_once_with(data['key'], b'test image', 'image/png')
+    storage[0].assert_called_once_with(data['key'], PNG, 'image/png')
     assert response.headers['cache-control'] == 'no-store'
 
 
@@ -115,14 +118,14 @@ def test_chunked_body_cannot_bypass_limit_and_is_not_parsed(admin, monkeypatch, 
 
 def test_body_limit_includes_multipart_overhead(admin, storage):
     import httpx
-    empty = httpx.Request('POST', 'http://testserver' + PATH, files={'file': ('t.txt', b'', 'text/plain')}).read()
-    payload = b'x' * (MAX_UPLOAD_BODY_BYTES - len(empty))
-    response = admin.post(PATH, files={'file': ('t.txt', payload, 'text/plain')})
+    empty = httpx.Request('POST', 'http://testserver' + PATH, files={'file': ('t.png', b'', 'image/png')}).read()
+    payload = PNG + b'x' * (MAX_UPLOAD_BODY_BYTES - len(empty) - len(PNG))
+    response = admin.post(PATH, files={'file': ('t.png', payload, 'image/png')})
     assert response.status_code == 200
     assert len(storage[0].call_args.args[1]) == len(payload)
     storage[0].reset_mock()
     storage[1].reset_mock()
-    response = admin.post(PATH, files={'file': ('t.txt', payload + b'x', 'text/plain')})
+    response = admin.post(PATH, files={'file': ('t.png', payload + b'x', 'image/png')})
     assert response.status_code == 413
     for call in storage:
         call.assert_not_called()
@@ -130,8 +133,8 @@ def test_body_limit_includes_multipart_overhead(admin, storage):
 
 def test_storage_failure_preserves_error_and_does_not_presign(admin, storage):
     storage[0].return_value = False
-    response = admin.post(PATH, files={'file': ('t.txt', b'ok', 'text/plain')})
-    assert response.status_code == 500
+    response = admin.post(PATH, files={'file': ('t.png', PNG, 'image/png')})
+    assert response.status_code == 503
     storage[1].assert_not_called()
 
 

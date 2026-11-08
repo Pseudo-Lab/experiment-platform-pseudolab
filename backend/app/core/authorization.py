@@ -26,6 +26,13 @@ async def authorize_member(request: Request) -> None:
     method = request.method
     if path == "/projects" and method in {"GET", "POST"}:
         return
+    # Feedback is installation-wide by design; handlers hide legacy private reports.
+    if (path == "/bug-reports" and method in {"GET", "POST"}
+            or path == "/bug-reports/upload" and method == "POST"
+            or re.fullmatch(r"/bug-reports/attachments/[0-9a-f-]+\.(png|jpg)", path) and method == "GET"
+            or re.fullmatch(r"/bug-reports/[^/]+", path) and method == "GET"
+            or re.fullmatch(r"/bug-reports/[^/]+/comments", path) and method == "POST"):
+        return
     match = re.fullmatch(r"/projects/([^/]+)(?:/(api-key|sdk-status|server-key))?", path)
     if match:
         await require_owned_project(user.account_id, match[1])

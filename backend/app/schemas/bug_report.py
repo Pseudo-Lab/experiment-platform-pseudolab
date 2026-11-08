@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Annotated
 from enum import Enum
 
 
@@ -31,34 +31,35 @@ class Attachment(BaseModel):
     url: Optional[str] = None
 
 
+NonemptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
 class CommentCreate(BaseModel):
-    # TODO: OAuth 연동 시 author 필드 제거 — 토큰에서 사용자 정보 추출
     author: Optional[str] = None
-    content: str
+    content: NonemptyText = Field(max_length=5000)
 
 
 class Comment(BaseModel):
     id: str
     report_id: str
-    # TODO: OAuth 연동 시 author 필드 제거 — 토큰에서 사용자 정보 추출
     author: Optional[str] = None
     content: str
     created_at: datetime
 
 
 class BugReportCreate(BaseModel):
-    title: str
+    title: NonemptyText = Field(max_length=160)
     category: BugCategory
     severity: BugSeverity = BugSeverity.MINOR
-    description: Optional[str] = None
-    attachment_keys: List[Attachment] = []
+    description: Optional[str] = Field(default=None, max_length=10000)
+    attachment_keys: List[Attachment] = Field(default_factory=list, max_length=3)
 
 
 class BugReportUpdate(BaseModel):
-    title: Optional[str] = None
+    title: Optional[NonemptyText] = Field(default=None, max_length=160)
     status: Optional[BugStatus] = None
     severity: Optional[BugSeverity] = None
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=10000)
 
 
 class BugReport(BaseModel):

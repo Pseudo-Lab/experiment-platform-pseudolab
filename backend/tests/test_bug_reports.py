@@ -1,4 +1,6 @@
 import pytest
+import base64
+PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jS1cAAAAASUVORK5CYII=")
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -215,7 +217,7 @@ class TestComments:
         comments = resp.json()["comments"]
         assert len(comments) == 1
         assert comments[0]["content"] == "확인했습니다."
-        assert comments[0]["author"] == "홍길동"
+        assert comments[0]["author"] == "Administrator"
 
     def test_add_comment_without_author(self, created_report):
         resp = client.post(
@@ -224,7 +226,7 @@ class TestComments:
         )
         assert resp.status_code == 200
         comment = resp.json()["comments"][-1]
-        assert comment["author"] is None
+        assert comment["author"] == "Administrator"
 
     def test_multiple_comments_ordered(self, created_report):
         report_id = created_report["id"]
@@ -272,7 +274,7 @@ class TestAttachmentsAndOptimization:
     def test_upload_returns_url(self):
         """파일 업로드 시 즉시 미리보기를 위한 url을 반환해야 한다."""
         import io
-        file_content = b"fake image content"
+        file_content = PNG
         file = io.BytesIO(file_content)
         resp = client.post(
             f"{BASE}/upload",
@@ -288,7 +290,7 @@ class TestAttachmentsAndOptimization:
         """성능 최적화를 위해 목록 조회 시에는 attachment의 url이 None이어야 한다."""
         # 1. 파일 업로드
         import io
-        file = io.BytesIO(b"content")
+        file = io.BytesIO(PNG)
         upload_resp = client.post(f"{BASE}/upload", files={"file": ("test.png", file, "image/png")})
         attachment = upload_resp.json()
 

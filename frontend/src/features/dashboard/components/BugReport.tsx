@@ -1,378 +1,134 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, ChevronRight, Paperclip, X, Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, X } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Card, CardContent } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
-import { Card } from '../../../components/ui/card';
-import { bugReportApi, type BugReport as BugReportType, type BugCategory, type BugSeverity, type BugStatus, type Attachment } from '../../../services/api';
+import { bugReportApi, type BugReport as Report, type BugStatus, type Attachment } from '../../../services/api';
 
-interface BugReportProps {
-    lang: 'en' | 'ko';
-}
+const words = {
+  ko: { heading: '버그·건의', intro: '오류와 개선 아이디어를 공유하고 처리 상황을 확인하세요.', new: '등록하기',
+    title: '제목', type: '유형', bug: '버그', suggestion: '건의', content: '내용', images: '스크린샷 (선택)',
+    hint: 'PNG/JPEG, 파일당 900 KiB 이하, 최대 3개. 비밀번호·SDK 비밀 키·개인정보는 올리지 마세요. 등록 내용은 로그인한 사용자에게 공유됩니다. 제출하지 않은 첨부는 업로드 24시간 후부터 운영자가 수동 정리할 수 있습니다. 오래 열린 작성창에서는 다시 첨부해야 할 수 있습니다.',
+    submit: '등록', cancel: '취소', loading: '불러오는 중…', sending: '등록 중…', uploading: '이미지 업로드 중…',
+    error: '처리하지 못했습니다. 다시 시도해 주세요.', retry: '다시 시도', empty: '등록된 버그·건의가 없습니다.',
+    reported: '접수', in_progress: '확인 중', resolved: '완료', all: '전체', status: '상태', date: '등록일',
+    remove: '첨부 제거', fileError: 'PNG/JPEG 파일당 900 KiB 이하로 최대 3개까지 첨부할 수 있습니다.' },
+  en: { heading: 'Bugs & suggestions', intro: 'Share issues and ideas, and follow their progress.', new: 'New feedback',
+    title: 'Title', type: 'Type', bug: 'Bug', suggestion: 'Suggestion', content: 'Details', images: 'Screenshots (optional)',
+    hint: 'PNG/JPEG, up to 900 KiB each, 3 files maximum. Do not include passwords, secret SDK keys or personal information. Feedback is shared with signed-in users. Unsubmitted attachments may be manually removed by the operator once they are 24 hours old. You may need to reattach files in a long-open form.',
+    submit: 'Submit', cancel: 'Cancel', loading: 'Loading…', sending: 'Submitting…', uploading: 'Uploading images…',
+    error: 'Could not complete the request. Please try again.', retry: 'Retry', empty: 'No feedback yet.',
+    reported: 'Received', in_progress: 'In review', resolved: 'Done', all: 'All', status: 'Status', date: 'Created',
+    remove: 'Remove attachment', fileError: 'Attach up to 3 PNG/JPEG files, no more than 900 KiB each.' },
+};
 
-const translations = {
-    en: {
-        issueList: "Bugs & Requests", newIssue: "New Report", issueId: "ID", issueTitle: "Issue Title",
-        issueDate: "Date", issueStatus: "Status", issueSeverity: "Severity",
-        statusReported: "Open", statusInProgress: "In Progress", statusResolved: "Resolved",
-        sevMinor: "Minor", sevMajor: "Major", sevCritical: "Critical",
-        title: "Title", category: "Category", severity: "Severity", description: "Description", submit: "Submit",
-        placeholderTitle: "Short description", placeholderDesc: "What happened?",
-        catUI: "UI/UX", catFunc: "Functional", catPerf: "Performance", catFeature: "Feature Request", catOther: "Other",
-        pasteImage: "Paste, drag & drop, or click to upload", attachments: "Attachments",
-        loading: "Loading...", error: "Failed to load reports.", submitting: "Submitting...",
-        uploadingFile: "Uploading...", noReports: "No reports yet.",
-    },
-    ko: {
-        issueList: "버그 & 기능 요청", newIssue: "제보/요청하기", issueId: "번호", issueTitle: "이슈 제목",
-        issueDate: "등록일", issueStatus: "상태", issueSeverity: "심각도",
-        statusReported: "Open", statusInProgress: "In Progress", statusResolved: "Resolved",
-        sevMinor: "Minor", sevMajor: "Major", sevCritical: "Critical",
-        title: "제목", category: "유형", severity: "심각도", description: "상세 내용", submit: "제출하기",
-        placeholderTitle: "문제에 대한 짧은 설명", placeholderDesc: "발생한 상황에 대해 자세히 알려주세요...",
-        catUI: "UI/UX 디자인", catFunc: "기능 오류", catPerf: "성능 이슈", catFeature: "기능 요청", catOther: "기타",
-        pasteImage: "붙여넣기 · 드래그 앤 드롭 · 클릭하여 업로드", attachments: "첨부 파일",
-        loading: "불러오는 중...", error: "목록을 불러오지 못했습니다.", submitting: "제출 중...",
-        uploadingFile: "업로드 중...", noReports: "등록된 이슈가 없습니다.",
+export const BugReport: React.FC<{ lang: 'ko' | 'en' }> = ({ lang }) => {
+  const t = words[lang];
+  const navigate = useNavigate();
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState(false);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [kind, setKind] = useState('bug');
+  const [filter, setFilter] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const load = async () => {
+    setLoading(true); setError('');
+    try { setReports(await bugReportApi.list()); }
+    catch { setError(t.error); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void load(); }, []);
+
+  const upload = async (files: FileList | null) => {
+    if (!files) return;
+    const selected = Array.from(files);
+    if (attachments.length + selected.length > 3 || selected.some(file =>
+      !['image/png', 'image/jpeg'].includes(file.type) || !file.size || file.size > 900 * 1024)) {
+      setError(t.fileError); return;
     }
-};
+    setUploading(true); setError('');
+    try {
+      for (const file of selected) {
+        const attachment = await bugReportApi.uploadAttachment(file);
+        setAttachments(previous => [...previous, attachment]);
+      }
+    } catch { setError(t.error); }
+    finally { setUploading(false); }
+  };
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (busy || uploading || !title.trim() || !content.trim()) return;
+    setBusy(true); setError('');
+    try {
+      const report = await bugReportApi.create({ title: title.trim(), description: content.trim(),
+        category: kind === 'suggestion' ? 'feature_request' : 'functional', severity: 'minor', attachment_keys: attachments });
+      navigate(`/bug-report/${report.id}`);
+    } catch { setError(t.error); }
+    finally { setBusy(false); }
+  };
+  const visible = reports.filter(report => (status === 'all' || report.status === status)
+    && (filter === 'all' || (report.category === 'feature_request' ? 'suggestion' : 'bug') === filter));
+  const selectClass = 'h-10 rounded-md border border-input bg-background px-3 text-sm';
 
-const STATUS_BADGE: Record<BugStatus, 'destructive' | 'secondary' | 'outline'> = {
-    reported: 'destructive',
-    in_progress: 'secondary',
-    resolved: 'outline',
-};
-
-const SEVERITY_COLOR: Record<BugSeverity, string> = {
-    minor: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-    major: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-};
-
-export const BugReport: React.FC<BugReportProps> = ({ lang }) => {
-    const [view, setView] = useState<'list' | 'form'>('list');
-    const [reports, setReports] = useState<BugReportType[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-
-    const navigate = useNavigate();
-
-    // form state
-    const [formTitle, setFormTitle] = useState('');
-    const [formCategory, setFormCategory] = useState<BugCategory>('ui');
-    const [formSeverity, setFormSeverity] = useState<BugSeverity>('minor');
-    const [formDesc, setFormDesc] = useState('');
-    const [uploadedAttachments, setUploadedAttachments] = useState<Attachment[]>([]);
-    const [uploadingFile, setUploadingFile] = useState(false);
-
-    const t = translations[lang];
-
-    const fetchReports = async () => {
-        setLoading(true);
-        setError(false);
-        try {
-            const data = await bugReportApi.list();
-            setReports(data);
-        } catch {
-            setError(true);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => { fetchReports(); }, []);
-
-    const handleFileUpload = async (files: FileList | null) => {
-        if (!files) return;
-        setUploadingFile(true);
-        try {
-            const fileArray = Array.from(files);
-            for (const file of fileArray) {
-                const attachment = await bugReportApi.uploadAttachment(file);
-                setUploadedAttachments(prev => [
-                    ...prev, 
-                    { ...attachment, name: `Image ${prev.length + 1}` }
-                ]);
-            }
-        } finally {
-            setUploadingFile(false);
-        }
-    };
-
-    const handlePaste = async (e: React.ClipboardEvent) => {
-        const items = e.clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.startsWith('image/')) {
-                e.preventDefault();
-                const blob = items[i].getAsFile();
-                if (blob) {
-                    const file = new File([blob], `pasted-image-${Date.now()}.png`, { type: blob.type });
-                    await handleFileUpload([file] as unknown as FileList);
-                }
-            }
-        }
-    };
-
-    const [isDragging, setIsDragging] = useState(false);
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(true);
-    };
-
-    const handleDragLeave = () => setIsDragging(false);
-
-    const handleDrop = async (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        await handleFileUpload(e.dataTransfer.files);
-    };
-
-    const handleDelete = async (e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
-        if (!window.confirm(lang === 'ko' ? '삭제하시겠습니까?' : 'Delete this report?')) return;
-        try {
-            await bugReportApi.delete(id);
-            await fetchReports();
-        } catch {
-            alert(lang === 'ko' ? '삭제 실패' : 'Delete failed');
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!formTitle.trim()) return;
-        setSubmitting(true);
-        try {
-            await bugReportApi.create({
-                title: formTitle,
-                category: formCategory,
-                severity: formSeverity,
-                description: formDesc || undefined,
-                attachment_keys: uploadedAttachments,
-            });
-            setFormTitle('');
-            setFormCategory('ui');
-            setFormSeverity('minor');
-            setFormDesc('');
-            setUploadedAttachments([]);
-            await fetchReports();
-            setView('list');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const statusLabel = (status: BugStatus) => ({
-        reported: t.statusReported,
-        in_progress: t.statusInProgress,
-        resolved: t.statusResolved,
-    }[status]);
-
-    const shortId = (id: string) => `#${id.slice(0, 6).toUpperCase()}`;
-
-    return (
-        <div className="max-w-5xl mx-auto space-y-8" onPaste={handlePaste}>
-            {view === 'list' ? (
-                <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight dark:text-slate-100">{t.issueList}</h1>
-                        </div>
-                        <Button onClick={() => setView('form')} className="gap-2 rounded-xl" size="lg">
-                            <Plus size={18} /> {t.newIssue}
-                        </Button>
-                    </div>
-
-                    {loading ? (
-                        <p className="text-slate-500">{t.loading}</p>
-                    ) : error ? (
-                        <p className="text-red-500">{t.error}</p>
-                    ) : reports.length === 0 ? (
-                        <p className="text-slate-400">{t.noReports}</p>
-                    ) : (
-                        <>
-                        {/* 데스크탑 테이블 */}
-                        <Card className="hidden md:block rounded-2xl overflow-hidden shadow-sm">
-                            <Table>
-                                        <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
-                                            <TableRow>
-                                                <TableHead className="w-[100px] text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueId}</TableHead>
-                                                <TableHead className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueTitle}</TableHead>
-                                                <TableHead className="w-[110px] text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueSeverity}</TableHead>
-                                                <TableHead className="w-[130px] text-xs font-bold text-slate-400 uppercase tracking-widest">{t.issueStatus}</TableHead>
-                                                <TableHead className="w-[120px] text-xs font-bold text-slate-400 uppercase tracking-widest text-right">{t.issueDate}</TableHead>
-                                                <TableHead className="w-[50px]"></TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {reports.map((report) => (
-                                                <TableRow key={report.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer group" onClick={() => navigate(`/bug-report/${report.id}`)}>
-                                                    <TableCell className="font-mono text-sm text-slate-400">{shortId(report.id)}</TableCell>
-                                                    <TableCell className="font-bold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">{report.title}</TableCell>
-                                                    <TableCell>
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${SEVERITY_COLOR[report.severity]}`}>
-                                                            {report.severity}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={STATUS_BADGE[report.status]} className="uppercase text-[10px] px-2">
-                                                            {statusLabel(report.status)}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-sm font-medium text-slate-500 dark:text-slate-400 text-right">
-                                                        {report.created_at.slice(0, 10)}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <button onClick={(e) => handleDelete(e, report.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </Card>
-
-                                {/* 모바일 카드 리스트 */}
-                                <div className="md:hidden space-y-3">
-                                    {reports.map((report) => (
-                                        <div key={report.id} onClick={() => navigate(`/bug-report/${report.id}`)}
-                                            className="bg-white dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-4 shadow-sm cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors relative group">
-                                            <div className="flex items-start justify-between gap-2 mb-2">
-                                                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm flex-1">{report.title}</span>
-                                                <button onClick={(e) => handleDelete(e, report.id)} className="text-slate-300 hover:text-red-500">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${SEVERITY_COLOR[report.severity]}`}>
-                                            {report.severity}
-                                        </span>
-                                        <Badge variant={STATUS_BADGE[report.status]} className="uppercase text-[10px] px-2">
-                                            {statusLabel(report.status)}
-                                        </Badge>
-                                        <span className="text-xs text-slate-400 ml-auto">{report.created_at.slice(0, 10)}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        </>
-                    )}
-                </div>
-            ) : (
-                <div className="max-w-3xl mx-auto space-y-8">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" onClick={() => setView('list')} className="rounded-lg text-slate-500">
-                            <ChevronRight className="rotate-180" size={24} />
-                        </Button>
-                        <h1 className="text-3xl font-extrabold tracking-tight dark:text-slate-100">{t.newIssue}</h1>
-                    </div>
-                    <Card className="p-8 rounded-3xl shadow-xl border dark:border-slate-800 bg-white dark:bg-slate-900">
-                        <form className="space-y-6" onSubmit={handleSubmit}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.title}</label>
-                                    <Input
-                                        className="h-12 rounded-xl bg-slate-50 dark:bg-slate-950"
-                                        placeholder={t.placeholderTitle}
-                                        value={formTitle}
-                                        onChange={e => setFormTitle(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.category}</label>
-                                    <Select value={formCategory} onValueChange={v => setFormCategory(v as BugCategory)}>
-                                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 dark:bg-slate-950">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="ui">{t.catUI}</SelectItem>
-                                            <SelectItem value="functional">{t.catFunc}</SelectItem>
-                                            <SelectItem value="performance">{t.catPerf}</SelectItem>
-                                            <SelectItem value="feature_request">{t.catFeature}</SelectItem>
-                                            <SelectItem value="other">{t.catOther}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.severity}</label>
-                                <Select value={formSeverity} onValueChange={v => setFormSeverity(v as BugSeverity)}>
-                                    <SelectTrigger className="h-12 rounded-xl bg-slate-50 dark:bg-slate-950">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="minor">{t.sevMinor}</SelectItem>
-                                        <SelectItem value="major">{t.sevMajor}</SelectItem>
-                                        <SelectItem value="critical">{t.sevCritical}</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.description}</label>
-                                <Textarea
-                                    className="min-h-[160px] rounded-xl bg-slate-50 dark:bg-slate-950"
-                                    placeholder={t.placeholderDesc}
-                                    value={formDesc}
-                                    onChange={e => setFormDesc(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-3">
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.attachments}</label>
-                                <label
-                                    htmlFor="file-upload"
-                                    className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-2 cursor-pointer block w-full text-center transition-colors ${isDragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-500/50'}`}
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                >
-                                    <Paperclip className={`mx-auto ${isDragging ? 'text-indigo-500' : 'text-slate-400'}`} size={24} />
-                                    <p className="text-sm font-bold text-slate-500">
-                                        {uploadingFile ? t.uploadingFile : t.pasteImage}
-                                    </p>
-                                    <input id="file-upload" type="file" multiple accept="image/*,*/*" className="hidden" onChange={e => handleFileUpload(e.target.files)} />
-                                </label>
-                                {uploadedAttachments.length > 0 && (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
-                                        {uploadedAttachments.map((a, i) => (
-                                            <div key={i} className="relative group aspect-video rounded-xl overflow-hidden border dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-                                                {a.type.startsWith('image/') && a.url ? (
-                                                    <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-1 p-2 text-center">
-                                                        <Paperclip size={20} className="text-slate-400" />
-                                                        <span className="text-[10px] text-slate-500 truncate w-full px-2">{a.name}</span>
-                                                    </div>
-                                                )}
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => setUploadedAttachments(prev => prev.filter((_, j) => j !== i))}
-                                                    className="absolute top-1 right-1 bg-black/50 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                                <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[10px] px-2 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {a.name}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                            <Button className="w-full h-12 rounded-xl font-bold text-md" size="lg" disabled={submitting || uploadingFile}>
-                                {submitting ? t.submitting : t.submit}
-                            </Button>
-                        </form>
-                    </Card>
-                </div>
-            )}
+  return <section className="max-w-5xl mx-auto space-y-6">
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div><h1 className="text-2xl font-bold">{t.heading}</h1><p className="text-sm text-muted-foreground mt-2">{t.intro}</p></div>
+      {!form && <Button onClick={() => { setForm(true); setError(''); }}><Plus size={16} className="mr-2" />{t.new}</Button>}
+    </div>
+    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {form ? <Card><CardContent className="pt-6">
+      <form onSubmit={submit} className="space-y-5">
+        <div><label htmlFor="feedback-title" className="text-sm font-medium">{t.title}</label>
+          <Input id="feedback-title" value={title} onChange={e => setTitle(e.target.value)} maxLength={160} required /></div>
+        <div><label htmlFor="feedback-kind" className="text-sm font-medium mr-3">{t.type}</label>
+          <select id="feedback-kind" value={kind} onChange={e => setKind(e.target.value)} className={selectClass}>
+            <option value="bug">{t.bug}</option><option value="suggestion">{t.suggestion}</option>
+          </select></div>
+        <div><label htmlFor="feedback-content" className="text-sm font-medium">{t.content}</label>
+          <Textarea id="feedback-content" value={content} onChange={e => setContent(e.target.value)} maxLength={10000} required className="min-h-40" /></div>
+        <div className="space-y-3"><label htmlFor="feedback-images" className="text-sm font-medium">{t.images}</label>
+          <Input id="feedback-images" type="file" accept="image/png,image/jpeg" multiple disabled={uploading || busy || attachments.length >= 3}
+            onChange={e => { void upload(e.target.files); e.target.value = ''; }} aria-describedby="feedback-hint" />
+          <p id="feedback-hint" className="text-xs text-muted-foreground">{t.hint}</p>
+          {uploading && <p role="status" className="text-sm">{t.uploading}</p>}
+          <div className="flex flex-wrap gap-3">{attachments.map(attachment => <div key={attachment.key} className="w-36 space-y-1">
+            <img src={attachment.url} alt={attachment.name} className="h-24 w-36 object-contain rounded border" />
+            <Button type="button" variant="outline" size="sm" disabled={busy || uploading} aria-label={`${t.remove}: ${attachment.name}`}
+              onClick={() => setAttachments(old => old.filter(item => item.key !== attachment.key))}><X size={14} />{t.remove}</Button>
+          </div>)}</div>
         </div>
-    );
+        <div className="flex gap-3"><Button type="submit" disabled={busy || uploading || !title.trim() || !content.trim()}>{busy ? t.sending : t.submit}</Button>
+          <Button type="button" variant="outline" disabled={busy || uploading} onClick={() => { setForm(false); setError(''); }}>{t.cancel}</Button></div>
+      </form>
+    </CardContent></Card> : <>
+      <div className="flex flex-wrap gap-4">
+        <label className="text-sm">{t.type} <select aria-label={t.type} className={selectClass} value={filter} onChange={e => setFilter(e.target.value)}>
+          <option value="all">{t.all}</option><option value="bug">{t.bug}</option><option value="suggestion">{t.suggestion}</option>
+        </select></label>
+        <label className="text-sm">{t.status} <select aria-label={t.status} className={selectClass} value={status} onChange={e => setStatus(e.target.value)}>
+          <option value="all">{t.all}</option>{(['reported','in_progress','resolved'] as BugStatus[]).map(value => <option key={value} value={value}>{t[value]}</option>)}
+        </select></label>
+      </div>
+      {loading ? <p role="status">{t.loading}</p> : error ? <Button variant="outline" onClick={() => void load()}>{t.retry}</Button>
+        : visible.length === 0 ? <Card><CardContent className="py-12 text-center text-muted-foreground">{t.empty}</CardContent></Card>
+        : <ul className="space-y-3">{visible.map(report => <li key={report.id}>
+          <Link to={`/bug-report/${report.id}`} className="block rounded-lg border bg-card p-5 hover:bg-muted/40 focus-visible:outline focus-visible:outline-2">
+            <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold break-all">{report.title}</h2>
+              <Badge variant="outline">{t[report.status]}</Badge></div>
+            <div className="mt-3 flex gap-4 text-xs text-muted-foreground"><span>{report.category === 'feature_request' ? t.suggestion : t.bug}</span>
+              <span>{t.date}: {report.created_at.slice(0,10)}</span></div>
+          </Link>
+        </li>)}</ul>}
+    </>}
+  </section>;
 };

@@ -53,3 +53,17 @@ def delete(key: str) -> bool:
         return True
     except Exception:
         return False
+
+
+def download(key: str, max_bytes: int) -> bytes | None:
+    """Read a bounded private object without issuing a bearer/presigned URL."""
+    try:
+        obj = _get_client().get_object(Bucket=_bucket(), Key=key)
+        stream = obj['Body']
+        try:
+            data = stream.read(max_bytes + 1)
+            return data if len(data) <= max_bytes else None
+        finally:
+            stream.close()
+    except Exception:
+        return None
