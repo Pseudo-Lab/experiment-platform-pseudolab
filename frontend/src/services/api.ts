@@ -764,7 +764,7 @@ export const featureFlagApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('Failed to create flag');
+    if (!res.ok) throw Object.assign(new Error('Failed to create flag'), { status: res.status });
     return res.json();
   },
   update: async (flagKey: string, data: FeatureFlagUpdate): Promise<FeatureFlag> => {

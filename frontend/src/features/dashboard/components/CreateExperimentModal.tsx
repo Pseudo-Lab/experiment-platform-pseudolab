@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { X, Plus, Trash2 } from 'lucide-react';
 import { experimentApi, experimentPlacementApi, featureFlagApi, projectApi, type FeatureFlag, type Project, type Experiment } from '../../../services/api';
 import { useProject } from '../../../contexts/ProjectContext';
+import { flagCreateError } from '../../../lib/flagCreateError';
 
 interface VariantInput {
   name: string;
@@ -373,10 +374,11 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
           description: `${name.trim()}`,
           rollout_pct: 0,
           enabled: false,
+          project_id: projectId || undefined,
         });
         resolvedFlagKey = newFlag.flag_key;
-      } catch {
-        setError(t.flagAutoCreateFailed);
+      } catch (error) {
+        setError(flagCreateError(error, lang, t.flagAutoCreateFailed));
         setSubmitting(false);
         return;
       }

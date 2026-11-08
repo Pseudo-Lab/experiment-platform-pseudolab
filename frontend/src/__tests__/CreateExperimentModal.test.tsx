@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { CreateExperimentModal } from '@/features/dashboard/components/CreateExperimentModal';
 import { useProject } from '@/contexts/ProjectContext';
-import { experimentApi, experimentPlacementApi } from '@/services/api';
+import { experimentApi, experimentPlacementApi, featureFlagApi } from '@/services/api';
 
 vi.mock('@/contexts/ProjectContext', () => ({ useProject: vi.fn() }));
 
@@ -14,6 +14,7 @@ vi.mock('@/services/api', () => ({
   },
   featureFlagApi: {
     list: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({ flag_key: 'project-experiment' }),
   },
   projectApi: {
     list: vi.fn().mockResolvedValue([]),
@@ -146,6 +147,32 @@ describe('CreateExperimentModal', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. Button Color Test'), { target: { value: 'Project experiment' } });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create' })); });
     expect(experimentApi.create).toHaveBeenCalledWith(expect.objectContaining({ project_id: 'selected', experiment_type: 'ab_test', variants: [{ name: 'control', traffic_ratio: 0.5 }, { name: 'treatment', traffic_ratio: 0.5 }] }));
+  });
+
+  it('creates the automatic flag in the same owned project as the experiment', async () => {
+    vi.mocked(useProject).mockReturnValue({ currentProject: { id: 'selected', project_type: 'ab_test' } } as any);
+    render(<CreateExperimentModal lang="en" isAdmin={false} onClose={vi.fn()} onCreated={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText('e.g. Button Color Test'), { target: { value: 'Project experiment' } });
+    fireEvent.click(screen.getByText('Measurement and delivery settings (optional)'));
+    fireEvent.click(screen.getByRole('button', { name: 'Auto-generate' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create' })); });
+    expect(featureFlagApi.create).toHaveBeenCalledWith(expect.objectContaining({ flag_key: 'project', project_id: 'selected', enabled: false, rollout_pct: 0 }));
+    expect(experimentApi.create).toHaveBeenCalledWith(expect.objectContaining({ flag_key: 'project-experiment', project_id: 'selected' }));
+  });
+
+  it.each([
+    ['ko', 409, '이미 사용 중인 Flag Key입니다. 다른 키를 입력하세요.'],
+    ['en', 404, 'The selected project is unavailable. Select a project you own and try again.'],
+  ] as const)('explains automatic flag failure in %s and stops experiment creation', async (lang, status, message) => {
+    vi.mocked(useProject).mockReturnValue({ currentProject: { id: 'selected', project_type: 'ab_test' } } as any);
+    vi.mocked(featureFlagApi.create).mockRejectedValueOnce(Object.assign(new Error('Failed to create flag'), { status }));
+    render(<CreateExperimentModal lang={lang} isAdmin={false} onClose={vi.fn()} onCreated={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText(lang === 'ko' ? '예: 버튼 색상 테스트' : 'e.g. Button Color Test'), { target: { value: 'Project experiment' } });
+    fireEvent.click(screen.getByText(lang === 'ko' ? '수집·노출 세부 설정 (선택)' : 'Measurement and delivery settings (optional)'));
+    fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '자동 생성' : 'Auto-generate' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '생성' : 'Create' })); });
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+    expect(experimentApi.create).not.toHaveBeenCalled();
   });
 
 });

@@ -7,6 +7,7 @@ import { Archive, RotateCcw, ToggleLeft, ToggleRight, Plus, RefreshCcw, X, Info,
 import { featureFlagApi, type FeatureFlag, type FeatureFlagCreate, type FeatureFlagExposureSummary, type FeatureFlagRule } from '../../../services/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { useProject } from '../../../contexts/ProjectContext';
+import { flagCreateError } from '../../../lib/flagCreateError';
 
 interface Props { lang: 'en' | 'ko'; isAdmin?: boolean; }
 
@@ -184,8 +185,8 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
         },
       }));
       setNewKey(''); setNewDesc(''); setNewProjectId(''); setNewRollout(0); setShowForm(false);
-    } catch {
-      setError(tr.errorCreate);
+    } catch (error) {
+      setError(flagCreateError(error, lang, tr.errorCreate));
     } finally {
       setCreating(false);
     }
@@ -381,7 +382,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
               <input type="range" min={0} max={100} value={newRollout} onChange={e => setNewRollout(Number(e.target.value))} className="flex-1 accent-indigo-500" />
               <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-10 text-right">{newRollout}%</span>
             </div>
-            {error && <p className="text-xs text-rose-500">{error}</p>}
+            {error && <p role="alert" className="text-xs text-rose-500">{error}</p>}
             <Button size="sm" className="rounded-xl" onClick={handleCreate} disabled={creating || !newKey.trim()}>
               {creating ? tr.creating : tr.create}
             </Button>

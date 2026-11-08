@@ -46,6 +46,28 @@ describe('FeatureFlags', () => {
 
   afterEach(cleanup);
 
+  it.each([
+    ['ko', 409, '이미 사용 중인 Flag Key입니다. 다른 키를 입력하세요.'],
+    ['en', 422, 'Check your inputs. Flag keys must be 3–64 characters'],
+  ] as const)('explains direct creation failure in %s', async (lang, status, message) => {
+    vi.mocked(featureFlagApi.create).mockRejectedValueOnce(Object.assign(new Error('Failed to create flag'), { status }));
+    await act(async () => { render(<FeatureFlags lang={lang} />); });
+    fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '플래그 추가' : 'Add Flag' }));
+    fireEvent.change(screen.getByPlaceholderText('flag-key'), { target: { value: 'test' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '생성' : 'Create' })); });
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+  });
+
+  it.each([404, 409, 422, 502])('preserves HTTP %s from the real create client', async (status) => {
+    const actual = await vi.importActual<typeof import('@/services/api')>('@/services/api');
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('{}', { status }));
+    try {
+      await expect(actual.featureFlagApi.create({ flag_key: 'test', project_id: 'selected' })).rejects.toMatchObject({ status });
+    } finally {
+      fetch.mockRestore();
+    }
+  });
+
   it('renders exposure summary in Korean', async () => {
     await act(async () => {
       render(<FeatureFlags lang="ko" />);
