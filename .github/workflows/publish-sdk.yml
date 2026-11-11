@@ -1,6 +1,7 @@
 name: Stage SDK on npm
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'sdk-v*'
@@ -21,8 +22,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@pseudo-lab'
 
       - name: Install npm with staged publishing support
         run: npm install --global npm@11.21.2
@@ -54,4 +53,4 @@ jobs:
 
       # Public release requires a maintainer's separate approval on npmjs.com.
       - name: Stage package for npm approval
-        run: npm stage publish --access public --provenance
+        run: npm stage publish --access public --provenance --loglevel=verbose
