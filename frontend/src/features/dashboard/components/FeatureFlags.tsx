@@ -96,7 +96,7 @@ const t = {
 
 export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
   const tr = t[lang];
-  const { currentProjectId, projects: availableProjects } = useProject();
+  const { currentProjectId, currentProject, projects: availableProjects } = useProject();
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -349,7 +349,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
             <RefreshCcw className={`h-4 w-4 ${exposureLoading ? 'animate-spin' : ''}`} />
             {exposureLoading ? tr.refreshingExposure : tr.refreshExposure}
           </Button>
-          <Button className="gap-2 rounded-xl" onClick={() => setShowForm(v => !v)}>
+          <Button className="gap-2 rounded-xl" disabled={currentProject?.access_role === 'viewer'} onClick={() => setShowForm(v => !v)}>
             {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             {tr.addFlag}
           </Button>
@@ -371,7 +371,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
-                  {availableProjects.map((p) => (
+                  {availableProjects.filter(p => p.access_role !== 'viewer').map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -426,6 +426,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
                   const isArchiving = archivingKey === flag.flag_key;
                   const isRestoring = restoringKey === flag.flag_key;
                   const isArchived = Boolean(flag.archived_at);
+                  const readOnly = availableProjects.find(p => p.id === flag.project_id)?.access_role === 'viewer';
 
                   return (
                   <TableRow key={flag.flag_key} className={isArchived ? 'bg-slate-50/70 opacity-75 dark:bg-slate-900/40' : undefined}>
@@ -435,7 +436,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
                       <div className="flex items-center gap-2">
                         <input type="range" min={0} max={100} value={draftRollout}
                           onChange={e => setRolloutDrafts(prev => ({ ...prev, [flag.flag_key]: Number(e.target.value) }))}
-                          disabled={isArchived}
+                          disabled={readOnly || isArchived}
                           className="w-24 accent-indigo-500 disabled:opacity-50" />
                         <span className="text-xs font-bold text-slate-500 w-8">{draftRollout}%</span>
                         <Button
@@ -443,7 +444,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
                           variant="outline"
                           className="h-7 rounded-lg px-2 text-xs"
                           onClick={() => handleRolloutSave(flag)}
-                          disabled={!rolloutChanged || isSavingRollout || isArchived}
+                          disabled={readOnly || !rolloutChanged || isSavingRollout || isArchived}
                         >
                           {isSavingRollout ? tr.saving : tr.save}
                         </Button>
@@ -487,7 +488,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleToggle(flag)}
-                          disabled={isUpdating || isArchiving || isRestoring || isArchived}
+                          disabled={readOnly || isUpdating || isArchiving || isRestoring || isArchived}
                           className="text-slate-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
                           aria-label={flag.enabled ? tr.disabled : tr.enabled}
                         >
@@ -499,7 +500,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
                             variant="outline"
                             className="h-7 rounded-lg px-2 text-xs text-slate-500 hover:text-indigo-600"
                             onClick={() => handleRestore(flag)}
-                            disabled={isRestoring || isUpdating || isArchiving}
+                            disabled={readOnly || isRestoring || isUpdating || isArchiving}
                           >
                             <RotateCcw className="h-3.5 w-3.5 mr-1" />
                             {isRestoring ? tr.restoring : tr.restore}
@@ -510,7 +511,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
                             variant="outline"
                             className="h-7 rounded-lg px-2 text-xs text-slate-500 hover:text-rose-600"
                             onClick={() => handleArchive(flag)}
-                            disabled={isArchiving || isUpdating}
+                            disabled={readOnly || isArchiving || isUpdating}
                           >
                             <Archive className="h-3.5 w-3.5 mr-1" />
                             {isArchiving ? tr.archiving : tr.archive}

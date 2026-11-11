@@ -6,6 +6,7 @@ export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed' | 'a
 // Projects
 // ────────────────────────────────────────────────────────────
 export interface Project {
+  access_role?: 'owner' | 'editor' | 'viewer';
   id: string;
   name: string;
   base_url?: string | null;
@@ -962,4 +963,28 @@ export const availableEventsApi = {
     if (!res.ok) throw new Error('Failed to fetch available events');
     return res.json();
   },
+};
+
+
+export type ProjectRole = 'viewer' | 'editor';
+export interface ProjectMember { account_id: string; role: ProjectRole | 'owner'; }
+export interface ProjectInvitation { id: string; project_id: string; role: ProjectRole; expires_at: number; revoked_at: number | null; accepted_by: string | null; }
+
+async function sharingRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  const res = await apiFetch(`${API_BASE_URL}/projects/${path}`, {
+    method, headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(String(res.status));
+  return res.status === 204 ? undefined as T : res.json();
+}
+export const projectSharingApi = {
+  members: (id: string) => sharingRequest<ProjectMember[]>(`${encodeURIComponent(id)}/members`),
+  invitations: (id: string) => sharingRequest<ProjectInvitation[]>(`${encodeURIComponent(id)}/invitations`),
+  invite: (id: string, role: ProjectRole) => sharingRequest<ProjectInvitation & { token: string }>(`${encodeURIComponent(id)}/invitations`, 'POST', { role }),
+  revoke: (id: string, inviteId: string) => sharingRequest<void>(`${encodeURIComponent(id)}/invitations/${encodeURIComponent(inviteId)}`, 'DELETE'),
+  update: (id: string, accountId: string, role: ProjectRole) => sharingRequest<void>(`${encodeURIComponent(id)}/members/${encodeURIComponent(accountId)}`, 'PATCH', { role }),
+  remove: (id: string, accountId: string) => sharingRequest<void>(`${encodeURIComponent(id)}/members/${encodeURIComponent(accountId)}`, 'DELETE'),
+  accept: (token: string) => sharingRequest<Project>('invitations/accept', 'POST', { token }),
+  preview: (token: string) => sharingRequest<{ name: string; role: ProjectRole; expires_at: number }>('invitations/preview', 'POST', { token }),
 };

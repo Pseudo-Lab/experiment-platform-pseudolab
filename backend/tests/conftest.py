@@ -267,6 +267,7 @@ def mock_d1(monkeypatch):
     conn.executescript((Path(__file__).parents[1] / "migrations/035_project_experiment_events.sql").read_text())
     conn.executescript((Path(__file__).parents[1] / "migrations/037_atomic_owned_projects_and_credentials.sql").read_text())
     conn.executescript((Path(__file__).parents[1] / "migrations/039_shared_feedback.sql").read_text())
+    conn.executescript((Path(__file__).parents[1] / "migrations/040_project_sharing.sql").read_text())
     conn.commit()
 
     async def _query(sql: str, params=None, database_id=None, **kwargs):
@@ -310,7 +311,7 @@ def authenticated_management_requests(request, monkeypatch, mock_d1):
     No production auth dependency is bypassed. test_auth exercises anonymous,
     missing-config, SDK-only, and invalid-session requests independently.
     """
-    if request.node.path.name in {"test_auth.py", "test_upload_security.py", "test_key_rotation.py", "test_public_accounts.py", "test_oauth_security_integration.py", "test_sdk_auth_guard.py", "test_shared_feedback.py"}:
+    if request.node.path.name in {"test_auth.py", "test_upload_security.py", "test_key_rotation.py", "test_public_accounts.py", "test_project_sharing.py", "test_oauth_security_integration.py", "test_sdk_auth_guard.py", "test_shared_feedback.py"}:
         return
     from fastapi.testclient import TestClient
     from app.core.auth import create_session_token, hash_password

@@ -62,3 +62,11 @@ it('clears the previous key immediately and ignores a late response after projec
   view.rerender(page());
   await waitFor(() => expect(screen.queryByText('test-key-second')).not.toBeInTheDocument());
 });
+
+
+it.each(['ko', 'en'] as const)('does not fetch SDK keys for a viewer in %s', lang => {
+  vi.mocked(useProject).mockReturnValue({ currentProject: { ...project('shared'), access_role: 'viewer' }, reloadProjects: vi.fn() } as any);
+  render(page(lang));
+  expect(screen.getByText(lang === 'ko' ? '조회자는 SDK 키를 볼 수 없습니다. 소유자에게 편집 권한을 요청하세요.' : 'Viewers cannot access SDK keys. Ask the owner for editor access.')).toBeInTheDocument();
+  expect(projectApi.getApiKey).not.toHaveBeenCalled();
+});

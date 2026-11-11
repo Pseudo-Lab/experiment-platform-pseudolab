@@ -5,11 +5,14 @@ from app.db import d1
 from app.core.config import settings
 
 
-async def require_owned_project(account_id: str, project_id: str | None) -> None:
-    if not project_id or not await d1.security_query(
-        "SELECT 1 FROM project_owner WHERE project_id = ? AND account_id = ?", [project_id, account_id]
-    ):
+async def require_project_access(account_id: str, project_id: str | None, *, write: bool = False, owner: bool = False) -> None:
+    rows = await d1.security_query(
+        "SELECT role FROM project_access WHERE project_id = ? AND account_id = ?", [project_id, account_id]
+    ) if project_id else []
+    if not rows:
         raise HTTPException(404, "Resource not found")
+    if (owner and rows[0]["role"] != "owner") or (write and rows[0]["role"] == "viewer"):
+        raise HTTPException(403, "Insufficient project permissions")
 
 
 async def resource_project(table: str, key: str, value: str) -> str | None:
@@ -33,9 +36,16 @@ async def authorize_member(request: Request) -> None:
             or re.fullmatch(r"/bug-reports/[^/]+", path) and method == "GET"
             or re.fullmatch(r"/bug-reports/[^/]+/comments", path) and method == "POST"):
         return
+    if path in {"/projects/invitations/accept", "/projects/invitations/preview"} and method == "POST":
+        return
+    sharing = re.fullmatch(r"/projects/([^/]+)/(members|invitations)(?:/([^/]+))?", path)
+    if sharing:
+        await require_project_access(user.account_id, sharing[1], owner=True)
+        return
     match = re.fullmatch(r"/projects/([^/]+)(?:/(api-key|sdk-status|server-key))?", path)
     if match:
-        await require_owned_project(user.account_id, match[1])
+        await require_project_access(user.account_id, match[1],
+                                    owner=method != "GET", write=match[2] == "api-key")
         if (match[2] is None and method in {"GET", "PATCH", "DELETE"}
                 or match[2] in {"api-key", "sdk-status"} and method == "GET"
                 or match[2] == "server-key" and method in {"POST", "DELETE"}):
@@ -71,7 +81,7 @@ async def authorize_member(request: Request) -> None:
             raise HTTPException(403, "This resource requires the installation administrator")
         if "project_id" in body and body["project_id"] != project_id:
             raise HTTPException(403, "Project reassignment is not allowed")
-    await require_owned_project(user.account_id, project_id)
+    await require_project_access(user.account_id, project_id, write=method != "GET")
     if table == "experiments" and body.get("experiment_type") in {"quasi_experiment", "rollout"}:
         raise HTTPException(403, "Public accounts support A/B flag experiments only")
     if body.get("flag_key") and table == "experiments":

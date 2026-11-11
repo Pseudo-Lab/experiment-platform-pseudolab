@@ -140,13 +140,13 @@ export function ApiKeyPage({ lang }: Props) {
     let cancelled = false;
     setRevealed(false);
     setKeyResult(null);
-    if (projectId) {
+    if (projectId && currentProject?.access_role !== 'viewer') {
       projectApi.getApiKey(projectId)
         .then(({ api_key }) => { if (!cancelled) setKeyResult({ projectId, key: api_key }); })
         .catch(() => { if (!cancelled) setKeyResult({ projectId, failed: true }); });
     }
     return () => { cancelled = true; };
-  }, [projectId, keyAttempt]);
+  }, [projectId, currentProject?.access_role, keyAttempt]);
   const [sdkStatus, setSdkStatus] = useState<'checking' | 'connected' | 'not_connected'>('checking');
   const [editingBaseUrl, setEditingBaseUrl] = useState(false);
   const [baseUrlInput, setBaseUrlInput] = useState('');
@@ -210,6 +210,8 @@ export function ApiKeyPage({ lang }: Props) {
       </div>
     );
   }
+
+  if (currentProject.access_role === 'viewer') return <div className="space-y-4"><h1 className="text-2xl font-bold">{t.title}</h1><p>{lang === 'ko' ? '조회자는 SDK 키를 볼 수 없습니다. 소유자에게 편집 권한을 요청하세요.' : 'Viewers cannot access SDK keys. Ask the owner for editor access.'}</p><Button variant="outline" onClick={() => navigate('/projects')}>{t.goProjects}</Button></div>;
 
   const maskedKey = '••••••••••••••••••••';
 
@@ -339,7 +341,7 @@ export function ApiKeyPage({ lang }: Props) {
               variant="outline"
               size="sm"
               className="shrink-0 gap-2 rounded-xl border-rose-300 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-              disabled={deleting}
+              disabled={deleting || currentProject.access_role === 'editor'}
               onClick={handleDelete}
             >
               <Trash2 size={14} />

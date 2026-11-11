@@ -486,7 +486,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
               </SelectTrigger>
               <SelectContent className="z-[10000]">
                 <SelectItem value="__none__">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
-                {availableProjects.map((p) => (
+                {availableProjects.filter(p => p.access_role !== 'viewer').map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name} ({p.id})</SelectItem>
                 ))}
               </SelectContent>

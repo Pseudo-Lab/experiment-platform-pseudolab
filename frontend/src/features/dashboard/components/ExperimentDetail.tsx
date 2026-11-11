@@ -415,6 +415,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
   const [editExperimentType, setEditExperimentType] = useState<ExperimentType>('ab_test');
   const [editProjectId, setEditProjectId] = useState('');
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
+  const readOnly = availableProjects.find(p => p.id === experiment?.project_id)?.access_role === 'viewer';
   const [editCohortId, setEditCohortId] = useState('');
   const [editStartAt, setEditStartAt] = useState('');
   const [editEndAt, setEditEndAt] = useState('');
@@ -883,12 +884,12 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
         </Button>
         <div className="flex gap-2">
           {!editing && (
-            <Button variant="outline" className="gap-2 rounded-xl" onClick={startEdit}>
+            <Button variant="outline" className="gap-2 rounded-xl" disabled={readOnly} onClick={startEdit}>
               <Pencil className="h-4 w-4" />
               {t.edit}
             </Button>
           )}
-          <Button variant="outline" className="gap-2 rounded-xl text-rose-600 hover:text-rose-600 border-rose-200" onClick={handleDelete}>
+          <Button variant="outline" className="gap-2 rounded-xl text-rose-600 hover:text-rose-600 border-rose-200" disabled={readOnly} onClick={handleDelete}>
             <Trash2 className="h-4 w-4" />
             {t.delete}
           </Button>
@@ -1039,7 +1040,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                     size="sm"
                     variant={btn.variant}
                     className="gap-1.5 rounded-xl h-7 text-xs"
-                    disabled={transitioning}
+                    disabled={readOnly || transitioning}
                     onClick={() => handleStatusChange(btn.to)}
                   >
                     {btn.icon}
@@ -1093,7 +1094,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                         <button
                           key={v.name}
                           type="button"
-                          onClick={() => setAdoptWinnerVariant(v.name)}
+                          disabled={readOnly} onClick={() => setAdoptWinnerVariant(v.name)}
                           className={`rounded-full px-2.5 py-0.5 font-medium transition ${
                             adoptWinnerVariant === v.name
                               ? 'bg-amber-500 text-white'
@@ -1112,7 +1113,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                     <Button
                       size="sm"
                       className="h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white gap-1.5"
-                      disabled={adoptWinnerLoading}
+                      disabled={readOnly || adoptWinnerLoading}
                       onClick={handleAdoptWinner}
                     >
                       <Trophy className="h-3.5 w-3.5" />
@@ -1153,7 +1154,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
             <div className={experiment.flag_key && !flagEditing ? 'w-full' : undefined}>
               <div className="flex items-center gap-1.5 mb-2">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.labelFlagKey}</p>
-                {!editing && !flagEditing && (
+                {!readOnly && !editing && !flagEditing && (
                   <button
                     type="button"
                     onClick={startFlagEdit}
@@ -1170,7 +1171,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                   <Select
                     value={experiment.flag_key || '__none__'}
                     onValueChange={handleFlagSave}
-                    disabled={flagSaving}
+                    disabled={readOnly || flagSaving}
                   >
                     <SelectTrigger className="rounded-xl h-8 text-sm w-56" aria-label={t.flagEditTitle}>
                       <SelectValue />
@@ -1185,7 +1186,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                   <button
                     type="button"
                     onClick={() => setFlagEditing(false)}
-                    disabled={flagSaving}
+                    disabled={readOnly || flagSaving}
                     className="text-slate-400 hover:text-slate-600 transition-colors"
                     aria-label={t.cancel}
                   >
@@ -1211,7 +1212,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                     {linkedFlag && (
                       <button
                         onClick={handleFlagToggle}
-                        disabled={flagToggling}
+                        disabled={readOnly || flagToggling}
                         className="flex items-center gap-1 disabled:opacity-50 transition-opacity"
                         aria-label={linkedFlag.enabled ? t.flagDisabled : t.flagEnabled}
                       >
@@ -1234,6 +1235,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                         min={0}
                         max={100}
                         value={flagRolloutDraft}
+                        disabled={readOnly}
                         onChange={e => setFlagRolloutDraft(Number(e.target.value))}
                         className="w-32 accent-indigo-500"
                       />
@@ -1243,7 +1245,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                         variant="outline"
                         className="h-7 rounded-lg px-2 text-xs"
                         onClick={handleFlagRolloutSave}
-                        disabled={flagRolloutDraft === linkedFlag.rollout_pct || flagRolloutSaving}
+                        disabled={readOnly || flagRolloutDraft === linkedFlag.rollout_pct || flagRolloutSaving}
                       >
                         {flagRolloutSaving ? t.saving : t.save}
                       </Button>
