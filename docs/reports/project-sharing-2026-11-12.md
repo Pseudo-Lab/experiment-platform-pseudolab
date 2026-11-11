@@ -43,3 +43,12 @@ Existing owners and event models are retained. Owner transfer is not part of thi
 4. On application rollback, retain additive migration 040. Old application versions ignore shared membership and return to owner-only access; do not drop live membership/invitation records as rollback cleanup.
 
 Implementation is prepared for review. Production migration and deployment are not performed by this implementation task.
+
+
+## Invitation history extension
+
+The owner/installation-admin sharing panel now displays pending, accepted, expired and revoked invitations, with a status filter and refresh action. It includes granted role, original issue/expiry time, recipient account ID and acceptance time, and revocation time when present. Tokens and token hashes remain excluded. History shows accepted invitations even after their links expire; revocation outranks expiry for unaccepted invitations. Retrying a revocation preserves its first timestamp.
+
+No additional migration is required. Migration 040 already stores acceptance and revocation metadata. Issue time is recovered as `expires_at - 604800`: all invitations issued by this application have the fixed, non-editable seven-day TTL. The issuer and history query share `INVITATION_TTL_SECONDS`; introducing configurable expiration would require separately persisting issue time. No production member data is backfilled or changed.
+
+Verification adds KO/EN all-state/filter/refresh coverage, API metadata/secret-exclusion/access-scope/terminal-state precedence and idempotent-revocation checks, plus Chromium desktop/mobile tests with the real local API and synthetic DB. Production deployment follows the existing main CI/GitOps path; no new SDK release or DB write is needed for this extension.

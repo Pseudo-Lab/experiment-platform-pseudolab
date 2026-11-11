@@ -968,7 +968,7 @@ export const availableEventsApi = {
 
 export type ProjectRole = 'viewer' | 'editor';
 export interface ProjectMember { account_id: string; role: ProjectRole | 'owner'; }
-export interface ProjectInvitation { id: string; project_id: string; role: ProjectRole; expires_at: number; revoked_at: number | null; accepted_by: string | null; }
+export interface ProjectInvitation { status: 'pending' | 'accepted' | 'expired' | 'revoked'; created_at: number; accepted_at: number | null; id: string; project_id: string; role: ProjectRole; expires_at: number; revoked_at: number | null; accepted_by: string | null; }
 
 async function sharingRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const res = await apiFetch(`${API_BASE_URL}/projects/${path}`, {

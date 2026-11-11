@@ -36,8 +36,19 @@ const copy = {
     members: "멤버",
     remove: "멤버 제거",
     removeConfirm: "이 멤버의 프로젝트 접근 권한을 제거할까요?",
-    pending: "대기 중인 초대",
-    none: "대기 중인 초대가 없습니다.",
+    history: "초대 이력",
+    pending: "대기",
+    accepted: "수락",
+    expired: "만료",
+    revoked: "회수",
+    filter: "초대 상태",
+    allStatus: "모든 상태",
+    refresh: "새로고침",
+    created: "발급 시각",
+    acceptedAt: "수락 시각",
+    acceptedBy: "수락한 계정",
+    revokedAt: "회수 시각",
+    none: "조건에 맞는 초대 이력이 없습니다.",
     revoke: "초대 회수",
     expires: "만료",
     acceptTitle: "프로젝트 초대",
@@ -69,8 +80,19 @@ const copy = {
     members: "Members",
     remove: "Remove member",
     removeConfirm: "Remove this member’s project access?",
-    pending: "Pending invitations",
-    none: "No pending invitations.",
+    history: "Invitation history",
+    pending: "Pending",
+    accepted: "Accepted",
+    expired: "Expired",
+    revoked: "Revoked",
+    filter: "Invitation status",
+    allStatus: "All statuses",
+    refresh: "Refresh",
+    created: "Created",
+    acceptedAt: "Accepted at",
+    acceptedBy: "Accepted by",
+    revokedAt: "Revoked at",
+    none: "No invitations match this filter.",
     revoke: "Revoke invitation",
     expires: "Expires",
     acceptTitle: "Project invitation",
@@ -94,6 +116,14 @@ export function ProjectSharing({
   const t = copy[lang];
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [invites, setInvites] = useState<ProjectInvitation[]>([]);
+  const [statusFilter, setStatusFilter] = useState<
+    ProjectInvitation["status"] | "all"
+  >("all");
+  const visibleInvites = invites.filter(
+    (i) => statusFilter === "all" || i.status === statusFilter,
+  );
+  const formatTime = (seconds: number) =>
+    new Date(seconds * 1000).toLocaleString(lang === "ko" ? "ko-KR" : "en-US");
   const [role, setRole] = useState<ProjectRole>("viewer");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -274,47 +304,107 @@ export function ProjectSharing({
                 ))}
               </ul>
             </section>
-            <section className="space-y-3">
-              <h3 className="font-semibold">{t.pending}</h3>
-              {!invites.some(
-                (i) =>
-                  !i.revoked_at &&
-                  !i.accepted_by &&
-                  i.expires_at * 1000 > Date.now(),
-              ) && <p className="text-sm text-muted-foreground">{t.none}</p>}
+            <section className="space-y-3" aria-label={t.history}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="font-semibold">{t.history}</h3>
+                <Button
+                  variant="outline"
+                  disabled={busy || loading}
+                  onClick={load}
+                >
+                  {t.refresh}
+                </Button>
+              </div>
+              <label htmlFor="invitation-status" className="block text-sm">
+                {t.filter}
+              </label>
+              <select
+                id="invitation-status"
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as typeof statusFilter)
+                }
+              >
+                <option value="all">{t.allStatus}</option>
+                {(["pending", "accepted", "expired", "revoked"] as const).map(
+                  (status) => (
+                    <option key={status} value={status}>
+                      {t[status]}
+                    </option>
+                  ),
+                )}
+              </select>
+              {visibleInvites.length === 0 && (
+                <p className="text-sm text-muted-foreground">{t.none}</p>
+              )}
               <ul className="divide-y divide-border">
-                {invites
-                  .filter(
-                    (i) =>
-                      !i.revoked_at &&
-                      !i.accepted_by &&
-                      i.expires_at * 1000 > Date.now(),
-                  )
-                  .map((i) => (
-                    <li
-                      key={i.id}
-                      className="flex flex-wrap items-center justify-between gap-3 py-3"
-                    >
-                      <span className="text-sm">
-                        {t[i.role]} · {t.expires}{" "}
-                        {new Date(i.expires_at * 1000).toLocaleDateString(
-                          lang === "ko" ? "ko-KR" : "en-US",
-                        )}
+                {visibleInvites.map((i) => (
+                  <li key={i.id} className="space-y-3 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-sm font-medium">
+                        {t[i.role]} ·{" "}
+                        <span className="rounded bg-muted px-2 py-1 text-foreground">
+                          {t[i.status]}
+                        </span>
                       </span>
-                      <Button
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() =>
-                          void change(async () => {
-                            await api.revoke(project.id, i.id);
-                            if (i.id === linkId) setLink("");
-                          })
-                        }
-                      >
-                        {t.revoke}
-                      </Button>
-                    </li>
-                  ))}
+                      {i.status === "pending" && (
+                        <Button
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() =>
+                            void change(async () => {
+                              await api.revoke(project.id, i.id);
+                              if (i.id === linkId) setLink("");
+                            })
+                          }
+                        >
+                          {t.revoke}
+                        </Button>
+                      )}
+                    </div>
+                    <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="text-muted-foreground">{t.created}</dt>
+                        <dd>{formatTime(i.created_at)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t.expires}</dt>
+                        <dd>{formatTime(i.expires_at)}</dd>
+                      </div>
+                      {i.accepted_by && (
+                        <>
+                          <div className="min-w-0">
+                            <dt className="text-muted-foreground">
+                              {t.acceptedBy}
+                            </dt>
+                            <dd className="break-all font-mono text-xs">
+                              {i.accepted_by}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">
+                              {t.acceptedAt}
+                            </dt>
+                            <dd>
+                              {i.accepted_at == null
+                                ? "—"
+                                : formatTime(i.accepted_at)}
+                            </dd>
+                          </div>
+                        </>
+                      )}
+                      {i.revoked_at != null && (
+                        <div>
+                          <dt className="text-muted-foreground">
+                            {t.revokedAt}
+                          </dt>
+                          <dd>{formatTime(i.revoked_at)}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </li>
+                ))}
               </ul>
             </section>
           </>

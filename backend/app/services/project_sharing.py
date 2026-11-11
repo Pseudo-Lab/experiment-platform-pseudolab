@@ -6,6 +6,8 @@ from uuid import uuid4
 from fastapi import HTTPException
 from app.db import d1
 
+INVITATION_TTL_SECONDS = 7 * 86400
+
 
 async def members(project_id: str):
     return await d1.security_query("SELECT account_id, role FROM project_access WHERE project_id=? ORDER BY role, account_id", [project_id])
@@ -24,12 +26,19 @@ async def change_member(project_id: str, account_id: str, role: str | None):
 
 async def invitations(project_id: str):
     return await d1.security_query(
-        "SELECT id, project_id, role, expires_at, revoked_at, accepted_by FROM project_invitation WHERE project_id=? ORDER BY expires_at DESC", [project_id])
+        "SELECT id, project_id, role, expires_at, revoked_at, accepted_by, accepted_at, "
+        # All invitations use a fixed seven-day TTL; recover the original issue time without a schema change.
+        f"expires_at - {INVITATION_TTL_SECONDS} AS created_at, "
+        "CASE WHEN accepted_by IS NOT NULL THEN 'accepted' WHEN revoked_at IS NOT NULL THEN 'revoked' "
+        "WHEN expires_at <= unixepoch() THEN 'expired' ELSE 'pending' END AS status "
+        "FROM project_invitation WHERE project_id=? ORDER BY expires_at DESC, id DESC", [project_id])
 
 
 async def create_invitation(project_id: str, role: str):
     token = secrets.token_urlsafe(32)
-    data = {"id": str(uuid4()), "project_id": project_id, "role": role, "expires_at": int(time.time()) + 7 * 86400}
+    created_at = int(time.time())
+    data = {"id": str(uuid4()), "project_id": project_id, "role": role,
+            "created_at": created_at, "expires_at": created_at + INVITATION_TTL_SECONDS, "status": "pending"}
     rows = await d1.security_query(
         "INSERT INTO project_invitation (id, project_id, token_hash, role, expires_at) VALUES (?, ?, ?, ?, ?) RETURNING id",
         [data['id'], project_id, hashlib.sha256(token.encode()).hexdigest(), role, data['expires_at']])
@@ -39,7 +48,7 @@ async def create_invitation(project_id: str, role: str):
 
 
 async def revoke_invitation(project_id: str, invitation_id: str):
-    rows = await d1.security_query("UPDATE project_invitation SET revoked_at=unixepoch() WHERE id=? AND project_id=? RETURNING id", [invitation_id, project_id])
+    rows = await d1.security_query("UPDATE project_invitation SET revoked_at=COALESCE(revoked_at, unixepoch()) WHERE id=? AND project_id=? RETURNING id", [invitation_id, project_id])
     if not rows:
         raise HTTPException(404, "Invitation not found")
 
