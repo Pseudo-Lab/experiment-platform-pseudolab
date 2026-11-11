@@ -1,4 +1,4 @@
-name: Publish SDK to npm
+name: Stage SDK on npm
 
 on:
   push:
@@ -20,9 +20,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
           scope: '@pseudo-lab'
+
+      - name: Install npm with staged publishing support
+        run: npm install --global npm@11.21.2
 
       - name: Check tag matches package version
         if: github.ref_type == 'tag'
@@ -40,16 +43,15 @@ jobs:
       - name: Typecheck SDK
         run: npm run typecheck
 
-      - name: Build SDK
-        run: npm run build
+      - name: Build and test SDK
+        run: npm test
 
       - name: Verify package contents
         run: npm pack --dry-run
 
-      - name: Dry-run npm publish
-        run: npm publish --dry-run --access public
+      - name: Dry-run npm stage
+        run: npm stage publish --dry-run --access public
 
-      - name: Publish to npm
-        run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Public release requires a maintainer's separate approval on npmjs.com.
+      - name: Stage package for npm approval
+        run: npm stage publish --access public --provenance
