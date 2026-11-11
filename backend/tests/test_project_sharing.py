@@ -130,3 +130,42 @@ def test_membership_storage_failure_fails_closed(clients, monkeypatch):
     monkeypatch.setattr(d1,'security_query',unavailable)
     assert member.get(BASE+'/shared').status_code==503
     assert member.get(BASE+'/').status_code==503
+
+
+def test_invitation_history_status_metadata_and_scope(clients, mock_d1):
+    owner, member, admin = clients
+    project(owner, 'history');project(member, 'private-history')
+    links = {name: invite(owner, 'editor' if name=='accepted' else 'viewer', 'history') for name in ['pending','accepted','expired','revoked']}
+    assert accept(member, links['accepted']).status_code == 200
+    # Accepted remains an accepted historical fact after its link expires.
+    mock_d1.execute('UPDATE project_invitation SET expires_at=? WHERE id IN (?,?)', [int(time.time())-1, links['expired']['id'],links['accepted']['id']])
+    assert owner.delete(f"{BASE}/history/invitations/{links['revoked']['id']}").status_code==204
+    r=owner.get(BASE+'/history/invitations')
+    assert r.status_code==200
+    rows=r.json();by_id={row['id']:row for row in rows}
+    for status,link in links.items():
+        row=by_id[link['id']]
+        assert row['status']==status
+        if status == 'pending':
+            assert row['created_at'] == link['created_at']
+        assert row['created_at']==row['expires_at']-7*86400
+        assert 'token' not in row and 'token_hash' not in row
+    accepted=by_id[links['accepted']['id']]
+    assert accepted['accepted_by']=='b' and isinstance(accepted['accepted_at'],int)
+    assert by_id[links['revoked']['id']]['revoked_at'] is not None
+    assert [(r['expires_at'],r['id']) for r in rows]==sorted([(r['expires_at'],r['id']) for r in rows],reverse=True)
+    assert member.get(BASE+'/history/invitations').status_code==403
+    assert admin.get(BASE+'/history/invitations').status_code==200
+    assert owner.get(BASE+'/private-history/invitations').status_code==404
+    assert owner.get(BASE+'/history/invitations').headers['cache-control']=='no-store'
+
+
+def test_revocation_time_is_not_rewritten_on_retry(clients,mock_d1):
+    owner,_,_=clients
+    project(owner,'history');link=invite(owner,pid='history')
+    mock_d1.execute('UPDATE project_invitation SET revoked_at=123 WHERE id=?',[link['id']])
+    assert owner.delete(f"{BASE}/history/invitations/{link['id']}").status_code==204
+    row=owner.get(BASE+'/history/invitations').json()[0]
+    assert row['status']=='revoked' and row['revoked_at']==123
+    mock_d1.execute('UPDATE project_invitation SET expires_at=0 WHERE id=?',[link['id']])
+    assert owner.get(BASE+'/history/invitations').json()[0]['status']=='revoked'

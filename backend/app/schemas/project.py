@@ -52,6 +52,9 @@ class ProjectInvitationCreate(ProjectMemberUpdate):
 
 
 class ProjectInvitation(BaseModel):
+    status: Literal["pending", "accepted", "expired", "revoked"]
+    created_at: int
+    accepted_at: Optional[int] = None
     id: str
     project_id: str
     role: Literal["editor", "viewer"]
