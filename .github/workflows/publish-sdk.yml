@@ -1,29 +1,39 @@
-name: Stage SDK on npm
+name: Validate and publish SDK to npm
 
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - 'sdk-v*'
+    paths:
+      - 'packages/sdk/**'
+      - '.github/workflows/publish-sdk.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'packages/sdk/**'
+      - '.github/workflows/publish-sdk.yml'
+
+permissions:
+  contents: read
 
 jobs:
-  publish:
+  validate:
     runs-on: ubuntu-latest
-    environment: npm-publish
-    concurrency: sdk-npm-publish
-    permissions:
-      contents: read
-      id-token: write
     defaults:
       run:
         working-directory: packages/sdk
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24'
+          package-manager-cache: false
 
-      - name: Install npm with staged publishing support
+      - name: Install npm with trusted publishing support
         run: npm install --global npm@11.21.2
 
       - name: Check tag matches package version
@@ -45,12 +55,58 @@ jobs:
       - name: Build and test SDK
         run: npm test
 
-      - name: Verify package contents
-        run: npm pack --dry-run
+      - name: Pack SDK
+        run: npm pack
 
-      - name: Dry-run npm stage
-        run: npm stage publish --dry-run --access public
+      - name: Verify packed SDK installation and exports
+        run: |
+          npm install --prefix "$RUNNER_TEMP/sdk-install-check" --ignore-scripts --no-audit --no-fund "$PWD/"*.tgz
+          node --input-type=module <<'JS'
+          import { existsSync } from 'node:fs';
+          import { pathToFileURL } from 'node:url';
+          const root = `${process.env.RUNNER_TEMP}/sdk-install-check/node_modules/@pseudo-lab/iterglow-sdk`;
+          for (const file of ['dist/index.js', 'dist/index.d.ts', 'dist/core.js', 'dist/core.d.ts', 'dist/react.js', 'dist/react.d.ts', 'dist/types.js', 'dist/types.d.ts']) {
+            if (!existsSync(`${root}/${file}`)) throw new Error(`Missing package file: ${file}`);
+          }
+          const { IterglowSDK } = await import(pathToFileURL(`${root}/dist/index.js`).href);
+          if (typeof IterglowSDK !== 'function') throw new Error('Missing IterglowSDK export');
+          JS
 
-      # Public release requires a maintainer's separate approval on npmjs.com.
-      - name: Stage package for npm approval
-        run: npm stage publish --access public --provenance --loglevel=verbose
+      - name: Dry-run npm publish
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sdk-v')
+        run: npm publish ./*.tgz --dry-run --access public
+
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: verified-sdk
+          path: packages/sdk/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: validate
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sdk-v')
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    concurrency: sdk-npm-publish
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install npm with trusted publishing support
+        run: npm install --global npm@11.21.2
+
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: verified-sdk
+          path: ${{ runner.temp }}/sdk-release
+
+      # Publish the exact archive that passed validation, without rebuilding it.
+      - name: Publish verified SDK to npm
+        run: npm publish "$RUNNER_TEMP/sdk-release/"*.tgz --access public --provenance
