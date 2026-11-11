@@ -55,7 +55,7 @@ function YourService() {
 
 ## 새 실험 준비
 
-관리자 인증으로 `POST /api/v1/experiments/`에 다음 필드를 포함합니다. 프로젝트와 flag는 먼저 만들어져 있어야 하며, 실행 전 기존 실험 시작 조건을 충족해야 합니다.
+화면에서 새 A/B 실험을 만들고 같은 프로젝트의 flag를 연결하되 Placement 생성을 끄면 `sdk_v1`으로 생성됩니다. API를 사용한다면 자기 프로젝트 접근 권한이 있는 회원 또는 관리자 인증으로 `POST /api/v1/experiments/`에 다음 필드를 포함합니다. 프로젝트와 flag는 먼저 만들어져 있어야 하며, 실행 전 기존 실험 시작 조건을 충족해야 합니다.
 
 ```json
 {
@@ -68,7 +68,7 @@ function YourService() {
 }
 ```
 
-`event_model`은 생성 후 변경할 수 없습니다. 생략하면 `legacy`입니다. 기존 UI에서 만든 실험도 `legacy`이며, 기존 실험의 과거 이벤트는 변환하거나 합산하지 않습니다. 설치한 Iterglow 서버가 `sdk_v1` 이벤트 모델을 지원해야 합니다.
+`event_model`은 생성 후 변경할 수 없습니다. 생략하면 `legacy`입니다. 이전 UI에서 만든 실험과 flag 없는 초안·준실험·점진 배포·Placement 생성 경로는 기존 이벤트 모델을 유지합니다. 기존 실험의 과거 이벤트는 변환하거나 합산하지 않습니다. 설치한 Iterglow 서버가 `sdk_v1` 이벤트 모델을 지원해야 합니다.
 
 
 - `decide()`는 판단만 합니다. 서버의 평가 exposure 로깅도 끕니다. 한 flag에 여러 실행 중 v1 실험이 연결됐으면 `experimentId`를 명시해야 합니다. 명시한 실험이 실행 중이 아니거나 flag/project가 다르면 실패합니다.

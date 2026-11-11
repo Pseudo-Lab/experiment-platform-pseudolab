@@ -333,6 +333,7 @@ export interface Experiment {
 }
 
 export interface ExperimentCreate {
+  event_model?: 'legacy' | 'sdk_v1';
   id?: string;
   name: string;
   hypothesis?: string;
