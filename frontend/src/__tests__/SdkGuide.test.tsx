@@ -38,10 +38,14 @@ it('switches KO/EN, retains the exact install version and provides focusable cod
   vi.mocked(authApi.me).mockReturnValue(new Promise(() => {}));
   open('/docs/sdk');
   expect(screen.getByText('npm install --save-exact @pseudo-lab/iterglow-sdk@0.3.0')).toBeInTheDocument();
-  expect(screen.getByText(/현재 이 예제는 관리자가 미리 준비한 실험/)).toBeInTheDocument();
+  expect(screen.getByText(/새 A\/B 실험에 flag를 연결하고 Placement를 생성하지 않으면/)).toBeInTheDocument();
+  expect(screen.getByText(/flag 없는 초안·준실험·점진 배포·Placement 생성 경로와 기존 실험은 기존 이벤트 모델을 유지/)).toHaveTextContent('/result 조회에는 설치 관리자 권한이 필요합니다.');
+  expect(screen.getByText(/노출·전환 집계는 자기 실험 상세에서/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
   expect(screen.getByRole('heading', { level: 1, name: 'Developer SDK guide' })).toBeInTheDocument();
-  expect(screen.getByText(/This example requires an experiment prepared by an administrator/)).toBeInTheDocument();
+  expect(screen.getByText(/Create a new A\/B experiment with a linked flag and without creating a placement/)).toBeInTheDocument();
+  expect(screen.getByText(/Drafts without flags, quasi experiments, rollouts, placement creation and existing experiments keep their current event model/)).toHaveTextContent('/result access still requires an installation administrator.');
+  expect(screen.getByText(/View exposure and conversion aggregates in your experiment details/)).toBeInTheDocument();
   expect(screen.getAllByLabelText('Code example')).toHaveLength(4);
   for (const pre of screen.getAllByLabelText('Code example')) expect(pre).toHaveAttribute('tabindex', '0');
   for (const link of screen.getAllByRole('link').filter(link => link.getAttribute('href')?.startsWith('#'))) {

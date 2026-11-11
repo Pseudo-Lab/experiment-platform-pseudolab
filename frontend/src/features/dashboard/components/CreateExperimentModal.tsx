@@ -65,6 +65,7 @@ const translations = {
     labelFlagKey: 'Linked feature flag',
     flagKeyNone: '(none — use legacy SHA256 assignment)',
     flagKeyHelp: 'When linked, decide() writes both flag exposure and experiment assignment. Variant names must match flag rule variants.',
+    sdkFlagKeyHelp: 'New flag A/B experiments use SDK v1. Call decide(), then expose() when the UI is shown and track() with that exposure context for actions. Existing experiments are unchanged.',
     variantsAutoFilled: 'Variants auto-filled from the flag rules. Traffic ratios are ignored when linked — the flag rollout drives bucketing.',
     launchChecklist: 'To start (running) this experiment later, the following are required:',
     checklistMetric: 'Set Primary Metric',
@@ -155,6 +156,7 @@ const translations = {
     labelFlagKey: '연결할 Feature Flag',
     flagKeyNone: '(연결 안 함 — 기존 SHA256 배정 사용)',
     flagKeyHelp: '연결하면 decide() 한 번으로 노출 기록과 실험 배정이 동시에 일어납니다. variant 이름이 Flag rule과 일치해야 합니다.',
+    sdkFlagKeyHelp: '새 플래그 A/B 실험은 SDK v1을 사용합니다. decide() 후 화면을 실제로 보여줄 때 expose()를 호출하고, 행동은 그 노출 컨텍스트로 track()하세요. 기존 실험은 유지됩니다.',
     variantsAutoFilled: 'Flag rule에서 variants를 자동으로 가져왔습니다. 연결 시 traffic_ratio는 무시되고 Flag rollout이 분배를 결정합니다.',
     launchChecklist: '나중에 running으로 전환하려면 다음이 필요합니다:',
     checklistMetric: 'Primary Metric 설정',
@@ -394,6 +396,9 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
         experiment_type: experimentType,
         cohort_id: cohortId.trim() || undefined,
         flag_key: resolvedFlagKey,
+        ...(experimentType === 'ab_test' && resolvedFlagKey && !configurePlacement
+          ? { event_model: 'sdk_v1' as const }
+          : {}),
         project_id: projectId || undefined,
         product: projectId || undefined,
         start_at: toApiDatetime(startAt),
@@ -561,7 +566,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagKeyHelp}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{experimentType === 'ab_test' && !configurePlacement ? t.sdkFlagKeyHelp : t.flagKeyHelp}</p>
               </>
             )}
             {flagMode === 'auto' && (
@@ -577,7 +582,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
                   />
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagAutoKeyHelp}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t.flagKeyHelp}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{experimentType === 'ab_test' && !configurePlacement ? t.sdkFlagKeyHelp : t.flagKeyHelp}</p>
               </>
             )}
           </div>
