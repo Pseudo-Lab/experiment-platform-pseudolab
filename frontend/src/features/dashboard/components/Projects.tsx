@@ -1,3 +1,4 @@
+import { ProjectSharing, AcceptProjectInvitation } from './ProjectSharing';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -35,7 +36,7 @@ const t = {
     sdkConnected: '연결됨',
     sdkNotConnected: 'SDK 미설치',
     sdkChecking: '확인 중...',
-    openVisualEditor: 'Visual Editor 열기',
+    openVisualEditor: 'Visual Editor 열기', share: '공유·멤버 관리', owner: '소유자', viewer: '조회자', editor: '편집자',
   },
   en: {
     title: 'Project management',
@@ -56,12 +57,13 @@ const t = {
     sdkConnected: 'Connected',
     sdkNotConnected: 'SDK not installed',
     sdkChecking: 'Checking...',
-    openVisualEditor: 'Open Visual Editor',
+    openVisualEditor: 'Open Visual Editor', share: 'Sharing and members', owner: 'Owner', viewer: 'Viewer', editor: 'Editor',
   },
 };
 
 export function Projects({ lang }: Props) {
   const tr = t[lang];
+  const [sharing, setSharing] = useState<Project | null>(null);
   const navigate = useNavigate();
   const { projects, loading, reloadProjects, setCurrentProjectId } = useProject();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -137,6 +139,8 @@ export function Projects({ lang }: Props) {
 
   return (
     <div className="space-y-6">
+      <AcceptProjectInvitation lang={lang} />
+      {sharing && <ProjectSharing key={sharing.id} project={sharing} lang={lang} onClose={() => setSharing(null)} />}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{tr.title}</h1>
         <Button onClick={() => setShowForm(!showForm)} size="sm" className="gap-2">
@@ -188,11 +192,12 @@ export function Projects({ lang }: Props) {
               onClick={() => { setCurrentProjectId(p.id); navigate('/experiments'); }}
             >
               <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <CardTitle className="text-base">{p.name}</CardTitle>
                       {renderSdkBadge(p.id)}
+                      <span className="text-xs text-muted-foreground">{tr[p.access_role || 'owner']}</span>
                     </div>
                     <p className="text-xs text-muted-foreground font-mono mt-0.5">{p.id}</p>
                   </div>
@@ -200,7 +205,8 @@ export function Projects({ lang }: Props) {
                     <span className="text-xs text-muted-foreground">
                       {new Date(p.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
                     </span>
-                    <Button
+                    {(p.access_role || 'owner') === 'owner' && <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); setSharing(p); }}>{tr.share}</Button>}
+                    {(p.access_role || 'owner') === 'owner' && <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2 text-muted-foreground hover:text-rose-600"
@@ -209,7 +215,7 @@ export function Projects({ lang }: Props) {
                       aria-label={tr.delete}
                     >
                       <Trash2 size={14} />
-                    </Button>
+                    </Button>}
                   </div>
                 </div>
               </CardHeader>

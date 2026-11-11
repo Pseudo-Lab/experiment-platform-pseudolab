@@ -13,6 +13,7 @@ class ProjectCreate(BaseModel):
 
 
 class Project(BaseModel):
+    access_role: Literal["owner", "editor", "viewer"] = "owner"
     id: str
     name: str
     base_url: Optional[str] = None
@@ -35,3 +36,33 @@ class ProjectSdkStatus(BaseModel):
 
 class ProjectApiKey(BaseModel):
     api_key: str
+
+
+class ProjectMember(BaseModel):
+    account_id: str
+    role: Literal["owner", "editor", "viewer"]
+
+
+class ProjectMemberUpdate(BaseModel):
+    role: Literal["editor", "viewer"]
+
+
+class ProjectInvitationCreate(ProjectMemberUpdate):
+    pass
+
+
+class ProjectInvitation(BaseModel):
+    id: str
+    project_id: str
+    role: Literal["editor", "viewer"]
+    expires_at: int
+    revoked_at: Optional[int] = None
+    accepted_by: Optional[str] = None
+
+
+class ProjectInvitationCreated(ProjectInvitation):
+    token: str
+
+
+class ProjectInvitationAccept(BaseModel):
+    token: str = Field(min_length=43, max_length=100, pattern=r"^[A-Za-z0-9_-]+$")

@@ -96,7 +96,7 @@ const statusConfig = {
 export const Experiments: React.FC<ExperimentsProps> = ({ lang, isAdmin = true }) => {
   const navigate = useNavigate();
   const t = translations[lang];
-  const { currentProjectId, currentProject } = useProject();
+  const { currentProjectId, currentProject, projects = [] } = useProject();
 
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,7 +149,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang, isAdmin = true }
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">{t.title}</h1>
           <p className="text-muted-foreground mt-1">{t.description}</p>
         </div>
-        <Button className="gap-2 rounded-xl shadow-lg" size="lg" onClick={() => setShowCreateModal(true)}>
+        <Button className="gap-2 rounded-xl shadow-lg" size="lg" disabled={currentProject?.access_role === 'viewer'} onClick={() => setShowCreateModal(true)}>
           <Plus size={18} />
           {t.newExperiment}
         </Button>
@@ -201,7 +201,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang, isAdmin = true }
       ) : filteredExperiments.length === 0 ? (
         <Card className="p-10 text-center space-y-3">
           <h2 className="font-semibold">{scopedExperiments.length ? t.filteredEmpty : t.empty}</h2>
-          {scopedExperiments.length ? <Button variant="outline" onClick={() => { setSearch(''); setStatusFilter('all'); }}>{t.clear}</Button> : <><p className="text-sm text-muted-foreground">{t.emptyHint}</p><Button onClick={() => setShowCreateModal(true)}>{t.newExperiment}</Button></>}
+          {scopedExperiments.length ? <Button variant="outline" onClick={() => { setSearch(''); setStatusFilter('all'); }}>{t.clear}</Button> : <><p className="text-sm text-muted-foreground">{t.emptyHint}</p><Button disabled={currentProject?.access_role === 'viewer'} onClick={() => setShowCreateModal(true)}>{t.newExperiment}</Button></>}
         </Card>
       ) : (
         <>
@@ -260,7 +260,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang, isAdmin = true }
                             <Eye className="h-4 w-4 text-slate-400" />
                             <span className="font-medium">{t.actionView}</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => handleDelete(exp.id)}>
+                          <DropdownMenuItem disabled={projects.find(p => p.id === exp.project_id)?.access_role === 'viewer'} className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => handleDelete(exp.id)}>
                             <Trash2 className="h-4 w-4" />
                             <span className="font-medium">{t.actionDelete}</span>
                           </DropdownMenuItem>

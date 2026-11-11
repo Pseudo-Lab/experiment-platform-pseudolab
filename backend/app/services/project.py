@@ -11,8 +11,8 @@ from app.db import d1
 class ProjectService:
 
     async def list(self, account_id: str | None = None) -> List[ProjectWithKey]:
-        rows = await d1.security_query("SELECT * FROM projects WHERE id IN (SELECT project_id FROM project_owner WHERE account_id = ?) ORDER BY created_at DESC", [account_id]) if account_id else await d1.query("SELECT * FROM projects ORDER BY created_at DESC")
-        return [ProjectWithKey(**row) for row in rows]
+        rows = await d1.security_query("SELECT p.*, a.role AS access_role FROM projects p JOIN project_access a ON a.project_id=p.id WHERE a.account_id = ? ORDER BY p.created_at DESC", [account_id]) if account_id else await d1.query("SELECT * FROM projects ORDER BY created_at DESC")
+        return [ProjectWithKey(**({**row, "access_role": "owner"} if account_id is None else row)) for row in rows]
 
     async def get(self, project_id: str) -> Optional[ProjectWithKey]:
         rows = await d1.query("SELECT * FROM projects WHERE id = ?", [project_id])

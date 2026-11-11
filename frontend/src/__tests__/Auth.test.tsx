@@ -193,3 +193,15 @@ it('restores query and hash from the protected screen before Google redirection'
   </Routes></AuthProvider></MemoryRouter>);
   expect(await screen.findByText('/experiments?view=results#conversions')).toBeInTheDocument();
 });
+
+
+it('restores an invitation fragment after Google sign-in without automatically accepting it', async () => {
+  sessionStorage.setItem('oauthReturnPath', '/projects#invite=synthetic-link-token');
+  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
+  function InvitationDestination() { const location = useLocation(); return <output>{location.pathname + location.hash}</output>; }
+  render(<MemoryRouter initialEntries={['/login?oauth=success']}><AuthProvider><Routes>
+    <Route path="/login" element={<LoginPage lang="en" setLang={() => {}} />} />
+    <Route path="/projects" element={<InvitationDestination />} />
+  </Routes></AuthProvider></MemoryRouter>);
+  expect(await screen.findByText('/projects#invite=synthetic-link-token')).toBeInTheDocument();
+});

@@ -41,7 +41,7 @@ class ExperimentService:
 
     async def get_all(self, status: str | None = None, account_id: str | None = None) -> List[Experiment]:
         if account_id:
-            sql = "SELECT * FROM experiments WHERE project_id IN (SELECT project_id FROM project_owner WHERE account_id = ?)"
+            sql = "SELECT * FROM experiments WHERE project_id IN (SELECT project_id FROM project_access WHERE account_id = ?)"
             params = [account_id]
             if status:
                 sql += " AND status = ?"
