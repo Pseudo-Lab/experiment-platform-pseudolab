@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowUpRight, ArrowRight, Github, Menu, X, Code2, BookOpen, Compass, Sun, Moon } from 'lucide-react';
+import { ArrowUpRight, ArrowRight, Github, Menu, X, Code2, BookOpen, Compass, Sun, Moon, Boxes, Database, FlaskConical, Cable, NotebookPen } from 'lucide-react';
 import { Button } from './components/ui/button';
 import './style.css';
 
@@ -55,6 +55,8 @@ const members = [
     }
   }
 ];
+
+const activityIcons = [Boxes, Database, FlaskConical, Cable, NotebookPen];
 
 const copy = {
   "ko": {
@@ -361,9 +363,13 @@ function App() {
       </section>
       <section id="activities" tabIndex={-1} className="section activities-section"><div className="wrap">
         <h2>{t.activitiesTitle}</h2><p className="section-lead">{t.activitiesIntro}</p>
-        <div className="activity-cards" role="region" aria-label={t.activitiesTitle} tabIndex={0}>{t.activities.map(([title, body]) => <article className="activity-card" key={title}>
-          <h3>{title}</h3><p className="activity-card-body">{body}</p>
-        </article>)}</div>
+        <div className="activity-cards" role="region" aria-label={t.activitiesTitle} tabIndex={0}>{t.activities.map(([title, body], i) => {
+          const Icon = activityIcons[i];
+          return <article className="activity-card" key={title}>
+            <div className="activity-icon" aria-hidden="true"><Icon size={25} strokeWidth={1.7}/></div>
+            <h3>{title}</h3><p className="activity-card-body">{body}</p>
+          </article>;
+        })}</div>
         <div className="initiative-vision"><h3>{t.visionTitle}</h3><p>{t.visionText}</p></div>
       </div></section>
       <section id="team" tabIndex={-1} className="section wrap people-section">

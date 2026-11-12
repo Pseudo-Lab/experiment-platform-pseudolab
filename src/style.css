@@ -240,3 +240,17 @@ html[data-theme="dark"],
   .activity-card h3 { font-size: 18px; }
   .activity-card-body { font-size: 15px; }
 }
+
+/* Distinguish the work areas with quiet, semantic symbols. */
+.activity-card { --activity-ink: var(--purple); --activity-surface: hsl(var(--accent)); padding-block: 24px; }
+.activity-icon { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; margin-bottom: 22px; border-radius: 12px; color: var(--activity-ink); background: var(--activity-surface); }
+.activity-card h3 { min-height: 3.1em; }
+.activity-card:nth-child(2) { --activity-ink: #26796b; --activity-surface: #eaf5f1; }
+.activity-card:nth-child(3) { --activity-ink: #9b631d; --activity-surface: #fbf2e3; }
+.activity-card:nth-child(4) { --activity-ink: #3869a6; --activity-surface: #edf2fa; }
+.activity-card:nth-child(5) { --activity-ink: #985170; --activity-surface: #f7edf2; }
+[data-theme="dark"] .activity-card:nth-child(2) { --activity-ink: #8dd1bf; --activity-surface: #203c36; }
+[data-theme="dark"] .activity-card:nth-child(3) { --activity-ink: #e1bc7d; --activity-surface: #3b3022; }
+[data-theme="dark"] .activity-card:nth-child(4) { --activity-ink: #a5c6f0; --activity-surface: #25364f; }
+[data-theme="dark"] .activity-card:nth-child(5) { --activity-ink: #dfa9c3; --activity-surface: #3d2936; }
+@media (min-width: 1001px) { [lang="en"] .activity-card h3 { min-height: 4.65em; } }
