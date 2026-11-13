@@ -3,6 +3,8 @@ Last-Validated: 2026-11-14
 
 # 중지·종료 후 전환 집계 정책 결정
 
+> 최신 상태: 2026-11-14 운영 반영·런타임 확인 완료([PR #39](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pull/39)). 아래의 미커밋·운영 미반영 표현은 해당 단계 당시 기록이다. 실제 Google 계정 선택·동의 및 지정 이메일 초대 수락은 아직 확인하지 않았다. 상세 근거는 [운영 반영 기록](handoffs/2026-11-13-experiment-status-history.md#운영-반영-완료--2026-11-14)을 따른다.
+
 ## 결정 범위와 현재 상태
 
 사용자는 ‘다른 실험 플랫폼들이 어떻게 하는지 Gemini와 협업해서 리서치하고 결정’하도록 요청했다. 아래는 Codex가 공식 문서와 Gemini Argon High의 독립 조사를 대조해 채택한 제품 정책이다. 정책 결정과 구현·운영 반영을 구분한다.

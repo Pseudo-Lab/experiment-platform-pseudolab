@@ -3,6 +3,8 @@ Last-Validated: 2026-11-13
 
 # Experiment API input validation — local fix
 
+> 최신 상태: 2026-11-14 운영 반영·런타임 확인 완료([PR #39](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pull/39)). 아래의 미커밋·운영 미반영 표현은 해당 단계 당시 기록이다. 실제 Google 계정 선택·동의 및 지정 이메일 초대 수락은 아직 확인하지 않았다. 상세 근거는 [운영 반영 기록](2026-11-13-experiment-status-history.md#운영-반영-완료--2026-11-14)을 따른다.
+
 ## Task Metadata
 - Task ID: experiment-api-validation-20261113
 - Date: 2026-11-13
