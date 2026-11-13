@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from uuid import uuid4
+from app.schemas.auth import EmailAddress
 
 PROJECT_ID_PATTERN = r"^[a-z0-9][a-z0-9-]{1,39}$"
 
@@ -41,6 +42,8 @@ class ProjectApiKey(BaseModel):
 class ProjectMember(BaseModel):
     account_id: str
     role: Literal["owner", "editor", "viewer"]
+    display_name: Optional[str] = None
+    email: Optional[str] = None
 
 
 class ProjectMemberUpdate(BaseModel):
@@ -48,7 +51,7 @@ class ProjectMemberUpdate(BaseModel):
 
 
 class ProjectInvitationCreate(ProjectMemberUpdate):
-    pass
+    email: Optional[EmailAddress] = None
 
 
 class ProjectInvitation(BaseModel):
@@ -61,6 +64,9 @@ class ProjectInvitation(BaseModel):
     expires_at: int
     revoked_at: Optional[int] = None
     accepted_by: Optional[str] = None
+    recipient_email: Optional[str] = None
+    accepted_display_name: Optional[str] = None
+    accepted_email: Optional[str] = None
 
 
 class ProjectInvitationCreated(ProjectInvitation):

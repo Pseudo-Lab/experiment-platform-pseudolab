@@ -21,6 +21,8 @@ class AuthenticatedUser:
     username: str
     account_id: str | None = None
     is_admin: bool = True
+    display_name: str | None = None
+    email: str | None = None
 
 
 def _b64encode(raw: bytes) -> str:

@@ -19,14 +19,16 @@ async def resolve_session(request: Request) -> AuthenticatedUser | None:
         return None
     if token.startswith("usr_"):
         rows = await d1.security_query(
-            "SELECT s.account_id FROM platform_session s JOIN platform_account a ON a.id = s.account_id "
+            "SELECT s.account_id, p.display_name, p.email FROM platform_session s JOIN platform_account a ON a.id = s.account_id "
+            "LEFT JOIN platform_account_profile p ON p.account_id=a.id "
             "WHERE s.token_hash = ? AND s.expires_at > ?",
             [token_hash(token), int(time.time())],
         )
         if rows:
             account = rows[0]["account_id"]
             return AuthenticatedUser(username=f"user-{account[:8]}", account_id=account,
-                                     is_admin=bool(settings.ADMIN_ACCOUNT_ID and account == settings.ADMIN_ACCOUNT_ID))
+                                     is_admin=bool(settings.ADMIN_ACCOUNT_ID and account == settings.ADMIN_ACCOUNT_ID),
+                                     display_name=rows[0]["display_name"], email=rows[0]["email"])
         return None
     user = verify_session_token(token)
     if user and not await d1.security_query("SELECT 1 FROM revoked_admin_session WHERE token_hash = ?", [token_hash(token)]):

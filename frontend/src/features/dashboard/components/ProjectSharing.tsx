@@ -19,6 +19,10 @@ const copy = {
     viewer: "조회자",
     editor: "편집자",
     role: "초대 권한",
+    email: "초대할 Google 계정 이메일",
+    invalidEmail: "올바른 이메일 주소를 입력해 주세요.",
+    recipient: "초대받는 이메일",
+    wrongAccount: "초대받은 이메일의 Google 계정으로 로그인해 주세요. 이메일 소유권의 추가 확인이 필요한 계정은 소유자에게 문의해 주세요.",
     create: "초대 링크 만들기",
     busy: "처리 중...",
     close: "닫기",
@@ -26,7 +30,7 @@ const copy = {
     retry: "다시 시도",
     error:
       "요청을 완료하지 못했습니다. 권한과 연결을 확인한 뒤 다시 시도하세요.",
-    hint: "링크를 가진 한 계정이 수락할 수 있으며 7일 후 만료됩니다. 원하는 사람에게만 전달하세요.",
+    hint: "지정한 이메일의 Google 계정만 수락할 수 있습니다. Gmail 또는 Google Workspace 주소를 사용해 주세요. 링크는 7일 후 만료되며, 복사해서 직접 전달해야 합니다.",
     permission:
       "조회자는 실험·결과를 보고, 편집자는 실험·플래그와 공개 SDK 키를 관리합니다. 초대·멤버·프로젝트 설정은 소유자만 관리합니다.",
     link: "초대 링크",
@@ -63,6 +67,10 @@ const copy = {
     viewer: "Viewer",
     editor: "Editor",
     role: "Invitation role",
+    email: "Google account email to invite",
+    invalidEmail: "Enter a valid email address.",
+    recipient: "Invited email",
+    wrongAccount: "Sign in with the invited Google email account. If additional email ownership verification is required, contact the owner.",
     create: "Create invitation link",
     busy: "Working...",
     close: "Close",
@@ -70,7 +78,7 @@ const copy = {
     retry: "Retry",
     error:
       "Could not complete the request. Check your access and connection, then retry.",
-    hint: "One account can accept this link. It expires in 7 days. Share it only with the intended person.",
+    hint: "Only the Google account with this email can accept. Use a Gmail or Google Workspace address. The link expires in 7 days; copy and share it directly.",
     permission:
       "Viewers read experiments and results. Editors manage experiments, flags and the public SDK key. Only owners manage invitations, members and project settings.",
     link: "Invitation link",
@@ -125,6 +133,8 @@ export function ProjectSharing({
   const formatTime = (seconds: number) =>
     new Date(seconds * 1000).toLocaleString(lang === "ko" ? "ko-KR" : "en-US");
   const [role, setRole] = useState<ProjectRole>("viewer");
+  const [email, setEmail] = useState("");
+  const [invalidEmail, setInvalidEmail] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -164,14 +174,21 @@ export function ProjectSharing({
       setBusy(false);
     }
   };
-  const create = () =>
-    change(async () => {
-      const invitation = await api.invite(project.id, role);
+  const create = () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@<>\x00-\x1f\x7f]+@[^\s@<>\x00-\x1f\x7f]+\.[^\s@<>\x00-\x1f\x7f]+$/.test(normalizedEmail)) {
+      setInvalidEmail(true);
+      return;
+    }
+    setInvalidEmail(false);
+    void change(async () => {
+      const invitation = await api.invite(project.id, role, normalizedEmail);
       // Fragment is not sent to the web server or in Referer headers.
       setLink(`${window.location.origin}/projects#invite=${invitation.token}`);
       setLinkId(invitation.id);
       setCopyState("idle");
     });
+  };
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-4">
@@ -202,6 +219,12 @@ export function ProjectSharing({
         ) : (
           <>
             <div className="space-y-3">
+              <label className="block text-sm" htmlFor="invitation-email">{t.email}</label>
+              <Input id="invitation-email" type="email" autoComplete="off" maxLength={254}
+                value={email} disabled={busy} aria-invalid={invalidEmail}
+                aria-describedby={invalidEmail ? "invitation-email-error" : undefined}
+                onChange={e => { setEmail(e.target.value); setInvalidEmail(false); }} />
+              {invalidEmail && <p id="invitation-email-error" role="alert" className="text-sm text-destructive">{t.invalidEmail}</p>}
               <label className="block text-sm" htmlFor="invitation-role">
                 {t.role}
               </label>
@@ -261,15 +284,16 @@ export function ProjectSharing({
                     key={m.account_id}
                     className="flex flex-wrap items-center justify-between gap-3 py-3"
                   >
-                    <span className="min-w-0 break-all font-mono text-xs">
-                      {m.account_id}
-                    </span>
+                    <div className="min-w-0 flex-1 basis-48 break-all">
+                      <p className="text-sm font-medium">{m.display_name || m.email || m.account_id}</p>
+                      {m.display_name && m.email && m.email !== m.display_name && <p className="mt-1 text-sm text-muted-foreground">{m.email}</p>}
+                    </div>
                     {m.role === "owner" ? (
                       <span className="text-sm">{t.owner}</span>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         <select
-                          aria-label={`${t.role}: ${m.account_id}`}
+                          aria-label={`${t.role}: ${m.display_name || m.email || m.account_id}`}
                           className="rounded-md border border-input bg-background px-2 py-1 text-sm"
                           value={m.role}
                           disabled={busy}
@@ -364,6 +388,7 @@ export function ProjectSharing({
                       )}
                     </div>
                     <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+                      {i.recipient_email && <div className="min-w-0"><dt className="text-muted-foreground">{t.recipient}</dt><dd className="break-all">{i.recipient_email}</dd></div>}
                       <div>
                         <dt className="text-muted-foreground">{t.created}</dt>
                         <dd>{formatTime(i.created_at)}</dd>
@@ -378,8 +403,9 @@ export function ProjectSharing({
                             <dt className="text-muted-foreground">
                               {t.acceptedBy}
                             </dt>
-                            <dd className="break-all font-mono text-xs">
-                              {i.accepted_by}
+                            <dd className="break-all">
+                              {i.accepted_display_name || i.accepted_email || i.accepted_by}
+                              {i.accepted_display_name && i.accepted_email && i.accepted_email !== i.accepted_display_name && <p className="mt-1 text-muted-foreground">{i.accepted_email}</p>}
                             </dd>
                           </div>
                           <div>
@@ -484,11 +510,8 @@ export function AcceptProjectInvitation({ lang }: { lang: "ko" | "en" }) {
                     setCurrentProjectId(project.id);
                     navigate("/experiments", { replace: true });
                   } catch (e) {
-                    setError(
-                      e instanceof Error && e.message === "410"
-                        ? t.invalid
-                        : t.error,
-                    );
+                    setError(e instanceof Error && e.message === "410" ? t.invalid
+                      : e instanceof Error && e.message === "403" ? t.wrongAccount : t.error);
                   } finally {
                     setBusy(false);
                   }

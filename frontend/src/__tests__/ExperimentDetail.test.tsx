@@ -309,4 +309,38 @@ describe('ExperimentDetail placements', () => {
     } finally { confirm.mockRestore(); }
   });
 
+  it.each(['ko', 'en'] as const)('clears a draft window explicitly in %s', async lang => {
+    const bounded = { ...experiment, experiment_type: 'ab_test', event_model: 'sdk_v1', status: 'draft', flag_key: 'test-flag',
+      readout_policy_version: 'bounded_v1', conversion_window_seconds: 3600, one_time_intervention: true,
+      ingestion_grace_seconds: 86400, measurement_locked: false };
+    vi.mocked(experimentApi.get).mockResolvedValue(bounded as any);
+    vi.mocked(experimentApi.update).mockResolvedValue({ ...bounded, conversion_window_seconds: null, one_time_intervention: false } as any);
+    await renderDetail(lang);
+    fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '수정' : 'Edit' }));
+    fireEvent.change(screen.getByLabelText(lang === 'ko' ? '전환 인정 기간 (시간)' : 'Conversion window (hours)'), { target: { value: '' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '저장' : 'Save' })); });
+    expect(experimentApi.update).toHaveBeenCalledWith(experiment.id, expect.objectContaining({ conversion_window_seconds: null, one_time_intervention: false }));
+  });
+
+  it.each(['ko', 'en'] as const)('locks measurement controls after launch but keeps the name editable in %s', async lang => {
+    vi.mocked(experimentApi.get).mockResolvedValue({ ...experiment, experiment_type: 'ab_test', event_model: 'sdk_v1',
+      readout_policy_version: 'bounded_v1', conversion_window_seconds: 3600, one_time_intervention: true,
+      ingestion_grace_seconds: 86400, measurement_locked: true } as any);
+    await renderDetail(lang);
+    fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '수정' : 'Edit' }));
+    expect(screen.getByLabelText(lang === 'ko' ? '전환 인정 기간 (시간)' : 'Conversion window (hours)')).toBeDisabled();
+    expect(screen.getByLabelText('Primary metric')).toBeDisabled();
+    expect(screen.getByLabelText(lang === 'ko' ? '완료 이벤트' : 'Completion event')).toBeDisabled();
+    expect(screen.getByLabelText(lang === 'ko' ? '실험 이름' : 'Name')).not.toBeDisabled();
+  });
+
+  it.each(['ko', 'en'] as const)('displays a one-second window exactly and hides SDK linkage editing in %s', async lang => {
+    vi.mocked(experimentApi.get).mockResolvedValue({ ...experiment, event_model: 'sdk_v1', experiment_type: 'ab_test',
+      readout_policy_version: 'bounded_v1', conversion_window_seconds: 1, measurement_locked: true,
+      flag_key: 'test-flag' } as any);
+    await renderDetail(lang);
+    expect(screen.getByText(lang === 'ko' ? '첫 적격 노출부터 1초' : '1 second from the first eligible exposure')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: lang === 'ko' ? 'Feature Flag 연결' : 'Link feature flag' })).not.toBeInTheDocument();
+  });
+
 });

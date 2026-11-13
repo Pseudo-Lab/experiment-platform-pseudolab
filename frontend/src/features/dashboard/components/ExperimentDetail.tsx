@@ -30,6 +30,14 @@ const translations = {
     labelExpectedEffect: 'Expected effect',
     labelPrimaryMetric: 'Primary metric',
     labelCompletionEvent: 'Completion event',
+    conversionWindow: 'Conversion window (hours)',
+    conversionWindowHelp: 'Leave empty for active-period actions only. Otherwise, count actions from each user’s first eligible exposure for this duration.',
+    oneTimeIntervention: 'This experiment measures the effect of a one-time exposure',
+    windowError: 'Enter a duration from 1 second to 30 days and confirm that this is a one-time exposure experiment.',
+    activePeriodOnly: 'Actions during active periods only',
+    firstExposureWindow: '{duration} from the first eligible exposure',
+    ingestionHelp: 'Late events are accepted for up to {hours} hours after they occur.',
+    measurementLocked: 'Measurement settings are locked after the first launch.',
     labelExperimentType: 'Experiment type',
     labelProject: 'Project',
     projectNone: '(none)',
@@ -162,6 +170,14 @@ const translations = {
     labelExpectedEffect: '기대 효과',
     labelPrimaryMetric: 'Primary metric',
     labelCompletionEvent: '완료 이벤트',
+    conversionWindow: '전환 인정 기간 (시간)',
+    conversionWindowHelp: '비워 두면 실행 중 발생한 행동만 집계합니다. 입력하면 사용자의 첫 적격 노출부터 이 기간 동안 후속 행동을 관찰합니다.',
+    oneTimeIntervention: '일회성 노출 효과를 관찰하는 실험입니다',
+    windowError: '1초 이상 30일 이하의 기간을 입력하고 일회성 노출 실험인지 확인해 주세요.',
+    activePeriodOnly: '실행 중 발생한 행동만 집계',
+    firstExposureWindow: '첫 적격 노출부터 {duration}',
+    ingestionHelp: '늦게 도착한 이벤트는 발생 후 {hours}시간까지 반영합니다.',
+    measurementLocked: '최초 시작 후에는 측정 기준을 변경할 수 없습니다.',
     labelFlagKey: '연결된 Feature Flag',
     labelExperimentType: '실험 유형',
     labelProject: '프로젝트',
@@ -411,11 +427,19 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
   const [editHypothesis, setEditHypothesis] = useState('');
   const [editExpectedEffect, setEditExpectedEffect] = useState('');
   const [editPrimaryMetric, setEditPrimaryMetric] = useState('');
+  const [editWindowHours, setEditWindowHours] = useState('');
+  const [editOneTime, setEditOneTime] = useState(false);
   const [editCompletionEvent, setEditCompletionEvent] = useState('');
   const [editExperimentType, setEditExperimentType] = useState<ExperimentType>('ab_test');
   const [editProjectId, setEditProjectId] = useState('');
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const readOnly = availableProjects.find(p => p.id === experiment?.project_id)?.access_role === 'viewer';
+  const readoutSeconds = experiment?.conversion_window_seconds;
+  const windowUnit = readoutSeconds != null && readoutSeconds % 3600 === 0 ? 'hour'
+    : readoutSeconds != null && readoutSeconds % 60 === 0 ? 'minute' : 'second';
+  const windowDuration = readoutSeconds == null ? '' : new Intl.NumberFormat(lang === 'ko' ? 'ko-KR' : 'en-US', {
+    style: 'unit', unitDisplay: 'long', unit: windowUnit,
+  }).format(readoutSeconds / (windowUnit === 'hour' ? 3600 : windowUnit === 'minute' ? 60 : 1));
   const [editCohortId, setEditCohortId] = useState('');
   const [editStartAt, setEditStartAt] = useState('');
   const [editEndAt, setEditEndAt] = useState('');
@@ -594,6 +618,8 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
     setEditHypothesis(experiment.hypothesis || '');
     setEditExpectedEffect(experiment.expected_effect || '');
     setEditPrimaryMetric(experiment.primary_metric || '');
+    setEditWindowHours(experiment.conversion_window_seconds == null ? '' : String(experiment.conversion_window_seconds / 3600));
+    setEditOneTime(experiment.one_time_intervention ?? false);
     setEditCompletionEvent(experiment.completion_event || '');
     setEditExperimentType((experiment.experiment_type || 'ab_test') as ExperimentType);
     setEditProjectId(experiment.project_id || '');
@@ -605,6 +631,11 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
 
   const handleSave = async () => {
     if (!experiment) return;
+    const windowSeconds = editWindowHours.trim() ? Math.round(Number(editWindowHours) * 3600) : null;
+    if (experiment.readout_policy_version === 'bounded_v1' && !experiment.measurement_locked && windowSeconds !== null &&
+        (!Number.isFinite(windowSeconds) || windowSeconds < 1 || windowSeconds > 2592000 || !editOneTime)) {
+      setSaveError(t.windowError); return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
@@ -613,6 +644,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
         hypothesis: editHypothesis.trim() || undefined,
         expected_effect: editExpectedEffect.trim() || undefined,
         primary_metric: editPrimaryMetric.trim() || undefined,
+        ...(experiment.readout_policy_version === 'bounded_v1' && !experiment.measurement_locked ? {
+          conversion_window_seconds: windowSeconds,
+          one_time_intervention: windowSeconds !== null && editOneTime,
+        } : {}),
         completion_event: editCompletionEvent.trim() || undefined,
         experiment_type: editExperimentType,
         project_id: editProjectId || undefined,
@@ -931,7 +966,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelExperimentType}</label>
-                  <Select value={editExperimentType} onValueChange={(value) => setEditExperimentType(value as ExperimentType)}>
+                  <Select disabled={experiment.measurement_locked} value={editExperimentType} onValueChange={(value) => setEditExperimentType(value as ExperimentType)}>
                     <SelectTrigger className="rounded-xl" aria-label={t.labelExperimentType}>
                       <SelectValue />
                     </SelectTrigger>
@@ -948,7 +983,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
 
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProject}</label>
-                <Select disabled={!isAdmin} value={editProjectId || '__none__'} onValueChange={(value) => setEditProjectId(value === '__none__' ? '' : value)}>
+                <Select disabled={!isAdmin || experiment.measurement_locked} value={editProjectId || '__none__'} onValueChange={(value) => setEditProjectId(value === '__none__' ? '' : value)}>
                   <SelectTrigger className="rounded-xl" aria-label={t.labelProject}>
                     <SelectValue />
                   </SelectTrigger>
@@ -973,17 +1008,29 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelPrimaryMetric}</label>
-                  <Input aria-label={t.labelPrimaryMetric} value={editPrimaryMetric} onChange={(e) => setEditPrimaryMetric(e.target.value)} className="rounded-xl" />
+                  <Input disabled={experiment.measurement_locked} aria-label={t.labelPrimaryMetric} value={editPrimaryMetric} onChange={(e) => setEditPrimaryMetric(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCompletionEvent}</label>
-                  <Input aria-label={t.labelCompletionEvent} value={editCompletionEvent} onChange={(e) => setEditCompletionEvent(e.target.value)} className="rounded-xl" />
+                  <Input disabled={experiment.measurement_locked} aria-label={t.labelCompletionEvent} value={editCompletionEvent} onChange={(e) => setEditCompletionEvent(e.target.value)} className="rounded-xl" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelCohortId}</label>
                   <Input aria-label={t.labelCohortId} value={editCohortId} onChange={(e) => setEditCohortId(e.target.value)} className="rounded-xl" />
                 </div>
               </div>
+
+              {experiment.readout_policy_version === 'bounded_v1' && <div className="space-y-3 border-t border-border pt-4">
+                <label className="block text-sm font-semibold" htmlFor="edit-conversion-window">{t.conversionWindow}</label>
+                <Input id="edit-conversion-window" type="number" min={1 / 3600} max={720} step="any" value={editWindowHours}
+                  disabled={experiment.measurement_locked}
+                  onChange={e => { setEditWindowHours(e.target.value); if (!e.target.value.trim()) setEditOneTime(false); }}
+                  aria-describedby="edit-window-help" />
+                <p id="edit-window-help" className="max-w-prose text-sm text-muted-foreground">{t.conversionWindowHelp}</p>
+                {editWindowHours.trim() && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 h-4 w-4 shrink-0"
+                  checked={editOneTime} disabled={experiment.measurement_locked} onChange={e => setEditOneTime(e.target.checked)} />{t.oneTimeIntervention}</label>}
+                {experiment.measurement_locked && <p className="text-sm text-muted-foreground">{t.measurementLocked}</p>}
+              </div>}
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
@@ -1147,6 +1194,13 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelCompletionEvent}</p>
               <p className="text-sm text-slate-700 dark:text-slate-300">{experiment.completion_event || t.none}</p>
             </div>
+            {!editing && experiment.readout_policy_version === 'bounded_v1' && <section className="space-y-2 sm:col-span-2" aria-label={t.conversionWindow}>
+              <p className="text-sm font-semibold">{t.conversionWindow}</p>
+              <p className="text-sm">{experiment.conversion_window_seconds == null ? t.activePeriodOnly
+                : t.firstExposureWindow.replace('{duration}', windowDuration)}</p>
+              {experiment.ingestion_grace_seconds != null && <p className="text-sm text-muted-foreground">{t.ingestionHelp.replace('{hours}', String(experiment.ingestion_grace_seconds / 3600))}</p>}
+              {experiment.measurement_locked && <p className="text-sm text-muted-foreground">{t.measurementLocked}</p>}
+            </section>}
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t.labelCohortId}</p>
               <p className="text-sm text-slate-700 dark:text-slate-300">{experiment.cohort_id || t.none}</p>
@@ -1154,7 +1208,7 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
             <div className={experiment.flag_key && !flagEditing ? 'w-full' : undefined}>
               <div className="flex items-center gap-1.5 mb-2">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.labelFlagKey}</p>
-                {!readOnly && !editing && !flagEditing && (
+                {!readOnly && experiment.event_model !== 'sdk_v1' && !editing && !flagEditing && (
                   <button
                     type="button"
                     onClick={startFlagEdit}

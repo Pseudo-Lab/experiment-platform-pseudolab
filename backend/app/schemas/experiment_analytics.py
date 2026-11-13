@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Literal
+from datetime import datetime
 
 
 class ImpressionTimeSeries(BaseModel):
@@ -42,6 +43,8 @@ class AnomalyWarning(BaseModel):
 
 
 class ExperimentAnalyticsResponse(BaseModel):
+    readout_state: Optional[Literal["collecting", "observing", "finalized"]] = None
+    finalizes_at: Optional[datetime] = None
     impressions: ImpressionData
     conversions: ConversionData
     statistical_significance: StatisticalSignificance

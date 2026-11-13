@@ -1,10 +1,16 @@
 """Canonical SDK v1 rows shared by result and live analytics; legacy stores stay separate."""
 from app.db import d1
+from app.services.sdk_readout import read_bounded_input
 
 
 async def read_sdk_events(experiment_id: str, project_id: str | None) -> list[dict]:
+    bounded = await read_bounded_input(experiment_id, project_id)
+    if bounded is not None:
+        return bounded["events"]
     # Actions are attributable only to an earlier exposure of the same visible instance.
     # Keep raw rejected/unmatched actions in event_log for diagnostics, not the readout.
+    # Policy-less cohorts keep historical interpretation; policy cohorts require
+    # affirmative collector proof, including on their correlated exposure rows.
     return await d1.query(
         """SELECT e.user_id, e.variant, e.event_name, e.event_time,
                   json_extract(e.properties, '$.impression_id') AS impression_id,
@@ -19,11 +25,20 @@ async def read_sdk_events(experiment_id: str, project_id: str | None) -> list[di
                         AND x.session_id = e.session_id AND x.event_time <= e.event_time
                         AND json_extract(x.properties, '$.event_model') = 'sdk_v1'
                         AND json_extract(x.properties, '$.sdk_event_type') = 'exposure'
+                        AND json_extract(x.properties, '$.sdk_exposure_eligible') IS NOT 0
+                        AND (json_extract(x.properties, '$.sdk_active_period_eligible') = 1
+                             OR NOT EXISTS (SELECT 1 FROM experiment_readout_policy p
+                                            WHERE p.experiment_id = x.experiment_id))
                         AND json_extract(x.properties, '$.impression_id') = json_extract(e.properties, '$.impression_id')
                         AND json_extract(x.properties, '$.assignment_id') = json_extract(e.properties, '$.assignment_id')
                     ) THEN 1 ELSE 0 END AS attributed
              FROM event_log e
              WHERE e.experiment_id = ? AND e.project_id IS ?
-               AND json_extract(e.properties, '$.event_model') = 'sdk_v1'""",
+               AND json_extract(e.properties, '$.event_model') = 'sdk_v1'
+               AND (json_extract(e.properties, '$.sdk_active_period_eligible') = 1
+                    OR NOT EXISTS (SELECT 1 FROM experiment_readout_policy p
+                                   WHERE p.experiment_id = e.experiment_id))
+               AND (json_extract(e.properties, '$.sdk_event_type') <> 'exposure'
+                    OR json_extract(e.properties, '$.sdk_exposure_eligible') IS NOT 0)""",
         [experiment_id, project_id],
     )

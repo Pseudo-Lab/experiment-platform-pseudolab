@@ -145,7 +145,7 @@ def start(client, provider):
     assert r.headers['cache-control'] == 'no-store'
     assert 'HttpOnly' in r.headers['set-cookie'] and 'Secure' in r.headers['set-cookie']
     query = parse_qs(urlsplit(r.headers['location']).query)
-    assert query['code_challenge_method'] == ['S256'] and query['scope'] == ['openid']
+    assert query['code_challenge_method'] == ['S256'] and query['scope'] == ['openid profile email']
     provider['nonce'] = query['nonce'][0]
     provider['challenge'] = query['code_challenge'][0]
     return query['state'][0]
@@ -378,7 +378,8 @@ def test_sdk_owner_storage_failure_does_not_fall_back_to_legacy(clients, monkeyp
 
 def test_email_and_role_claims_never_link_or_promote(clients, provider, mock_d1):
     for subject in ['separate-a', 'separate-b', 'separate-a']:
-        provider['claims'] = {'sub': subject, 'email': 'same@example.invalid', 'is_admin': True, 'role': 'admin'}
+        provider['claims'] = {'sub': subject, 'email': 'same@example.invalid', 'email_verified': True,
+                              'name': 'Same Name', 'is_admin': True, 'role': 'admin'}
         c = TestClient(app, base_url='https://testserver')
         state = start(c, provider)
         response = c.get(f'/api/v1/auth/google/callback?state={state}&code=synthetic', follow_redirects=False)
@@ -386,6 +387,7 @@ def test_email_and_role_claims_never_link_or_promote(clients, provider, mock_d1)
         assert c.get('/api/v1/auth/me').json()['user']['is_admin'] is False
         assert c.get('/api/v1/segments/').status_code == 403
     assert mock_d1.execute("SELECT count(*) FROM platform_account WHERE google_sub LIKE 'separate-%'").fetchone()[0] == 2
+    assert mock_d1.execute("SELECT count(*) FROM platform_account_profile WHERE email='same@example.invalid'").fetchone()[0] == 2
 
 
 @pytest.mark.parametrize('field,value', [
@@ -515,6 +517,30 @@ def test_member_starts_flag_experiment_without_shared_placements(clients, mock_d
     assert a.patch('/api/v1/experiments/launch-exp', json={'status': 'running'}).status_code == 200
 
 
+@pytest.mark.parametrize("invalid", [
+    {"status": "running", "primary_metric": " \t "},
+    {"status": "running", "end_at": "2026-05-26T15:00:00Z"},
+])
+def test_owned_sdk_launch_rejects_invalid_input_without_writes(clients, invalid):
+    a, b, _ = clients
+    project(a, "validation-project")
+    assert a.post("/api/v1/feature-flags/", json={
+        "flag_key": "validation-flag", "project_id": "validation-project",
+        "enabled": True, "rollout_pct": 50,
+    }).status_code == 201
+    created = a.post("/api/v1/experiments/", json={
+        "id": "validation-exp", "name": "Validation", "event_model": "sdk_v1",
+        "project_id": "validation-project", "flag_key": "validation-flag",
+        "primary_metric": "purchase", "start_at": "2026-05-27T15:00:00Z",
+        "end_at": "2026-05-28T15:00:00Z",
+    })
+    assert created.status_code == 201
+    path = "/api/v1/experiments/validation-exp"
+    assert b.patch(path, json=invalid).status_code == 404
+    assert a.patch(path, json=invalid).status_code == 422
+    assert a.get(path).json() == created.json()
+
+
 def test_owned_launch_requires_active_same_project_flag(clients, mock_d1):
     a, b, admin = clients
     project(a, 'project-a')
@@ -637,7 +663,9 @@ def test_explicit_google_admin_scope_preserves_identity_and_owners(clients, monk
     assert a.delete('/api/v1/projects/existing-unowned').status_code == 409
     # Revoking the selected role affects existing sessions without erasing their identity.
     monkeypatch.setattr(settings, 'ADMIN_ACCOUNT_ID', None)
-    assert a.get('/api/v1/auth/me').json()['user'] == {'username': 'user-a', 'account_id': 'a', 'is_admin': False}
+    assert a.get('/api/v1/auth/me').json()['user'] == {
+        'username': 'user-a', 'account_id': 'a', 'is_admin': False, 'display_name': None, 'email': None,
+    }
     assert a.get('/api/v1/projects/existing-unowned').status_code == 404
     assert a.get('/api/v1/projects/admin-created').status_code == 200
 

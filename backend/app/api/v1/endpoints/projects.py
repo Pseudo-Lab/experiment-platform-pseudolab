@@ -97,7 +97,7 @@ async def list_invitations(project_id: str):
 async def create_invitation(project_id: str, data: ProjectInvitationCreate):
     if not await project_service.get(project_id):
         raise HTTPException(404, "Project not found")
-    return await project_sharing.create_invitation(project_id, data.role)
+    return await project_sharing.create_invitation(project_id, data.role, data.email)
 
 
 @router.delete("/{project_id}/invitations/{invitation_id}", status_code=204)

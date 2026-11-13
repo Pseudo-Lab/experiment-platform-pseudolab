@@ -66,7 +66,7 @@ class SRMMonitor:
         - 등분산(all equal) 귀무가설 하에 검정
         - p < 0.001 → SRM 감지
         """
-        experiments = await d1.query("SELECT event_model, project_id FROM experiments WHERE id = ?", [experiment_id])
+        experiments = await d1.security_query("SELECT event_model, project_id FROM experiments WHERE id = ?", [experiment_id])
         if experiments and experiments[0]["event_model"] == "sdk_v1":
             events = await read_sdk_events(experiment_id, experiments[0]["project_id"])
             users: dict[str, set[str]] = {}

@@ -19,8 +19,9 @@ afterEach(cleanup);
 it.each(['ko', 'en'] as const)('creates a viewer link without exposing a token in the request URL in %s', async lang => {
   vi.mocked(api.invite).mockResolvedValue({ id: 'invite', token: 'synthetic-token' } as any);
   render(<ProjectSharing project={project} lang={lang} onClose={vi.fn()} />);
+  fireEvent.change(await screen.findByLabelText(lang === 'ko' ? '초대할 Google 계정 이메일' : 'Google account email to invite'), { target: { value: 'Member@Gmail.com' } });
   fireEvent.click(await screen.findByRole('button', { name: lang === 'ko' ? '초대 링크 만들기' : 'Create invitation link' }));
-  await waitFor(() => expect(api.invite).toHaveBeenCalledWith('shared', 'viewer'));
+  await waitFor(() => expect(api.invite).toHaveBeenCalledWith('shared', 'viewer', 'member@gmail.com'));
   const input = await screen.findByLabelText(lang === 'ko' ? '초대 링크' : 'Invitation link');
   expect((input as HTMLInputElement).value).toBe(`${window.location.origin}/projects#invite=synthetic-token`);
 });
@@ -40,6 +41,7 @@ it('preserves the invitation link after a clipboard failure', async () => {
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockRejectedValue(new Error()) } });
   vi.mocked(api.invite).mockResolvedValue({ id: 'invite', token: 'synthetic-token' } as any);
   render(<ProjectSharing project={project} lang="en" onClose={vi.fn()} />);
+  fireEvent.change(await screen.findByLabelText('Google account email to invite'), { target: { value: 'member@gmail.com' } });
   fireEvent.click(await screen.findByRole('button', { name: 'Create invitation link' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Create invitation link' })).toBeEnabled());
   fireEvent.click(await screen.findByRole('button', { name: 'Copy link' }));
@@ -107,4 +109,50 @@ it('refreshes history and keeps the selected state filter', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(await screen.findByText('recipient')).toBeVisible();
   expect(screen.getByLabelText('Invitation status')).toHaveValue('accepted');
+});
+
+it.each(['ko', 'en'] as const)('shows Google names, emails and invitation recipients in %s', async lang => {
+  vi.mocked(api.members).mockResolvedValue([
+    { account_id: 'owner', role: 'owner', display_name: '프로젝트 소유자', email: 'owner@gmail.com' },
+    { account_id: 'member', role: 'viewer', display_name: '동명이인', email: 'member@gmail.com' },
+  ]);
+  vi.mocked(api.invitations).mockResolvedValue([{
+    id: 'accepted', project_id: 'shared', role: 'viewer', status: 'accepted', created_at: 100, expires_at: 604900,
+    accepted_at: 200, accepted_by: 'removed-member', revoked_at: null, recipient_email: 'former@gmail.com',
+    accepted_display_name: '이전 멤버', accepted_email: 'former@gmail.com',
+  }]);
+  render(<ProjectSharing project={project} lang={lang} onClose={vi.fn()} />);
+  expect(await screen.findByText('동명이인')).toBeVisible();
+  expect(screen.getByText('member@gmail.com')).toBeVisible();
+  fireEvent.change(screen.getByLabelText(`${lang === 'ko' ? '초대 권한' : 'Invitation role'}: 동명이인`), { target: { value: 'editor' } });
+  await waitFor(() => expect(api.update).toHaveBeenCalledWith('shared', 'member', 'editor'));
+  const history = screen.getByRole('region', { name: lang === 'ko' ? '초대 이력' : 'Invitation history' });
+  expect(within(history).getByText('이전 멤버')).toBeVisible();
+  expect(within(history).getAllByText('former@gmail.com')).toHaveLength(2);
+  expect(within(history).queryByText('removed-member')).not.toBeInTheDocument();
+});
+
+it('uses email once when a Google display name is missing', async () => {
+  vi.mocked(api.members).mockResolvedValue([{ account_id: 'member', role: 'viewer', display_name: null, email: 'member@gmail.com' }]);
+  render(<ProjectSharing project={project} lang="en" onClose={vi.fn()} />);
+  expect(await screen.findByText('member@gmail.com')).toBeVisible();
+  expect(screen.getAllByText('member@gmail.com')).toHaveLength(1);
+  expect(screen.getByLabelText('Invitation role: member@gmail.com')).toBeVisible();
+});
+
+it('validates the recipient before creating an invitation', async () => {
+  render(<ProjectSharing project={project} lang="en" onClose={vi.fn()} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Create invitation link' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid email address.');
+  expect(api.invite).not.toHaveBeenCalled();
+});
+
+it.each(['ko', 'en'] as const)('explains a recipient-account mismatch in %s', async lang => {
+  vi.mocked(api.preview).mockResolvedValue({ name: 'Hub', role: 'viewer', expires_at: 123 });
+  vi.mocked(api.accept).mockRejectedValue(new Error('403'));
+  render(<MemoryRouter initialEntries={['/projects#invite=synthetic-token']}><AcceptProjectInvitation lang={lang} /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button', { name: lang === 'ko' ? '초대 수락' : 'Accept invitation' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(lang === 'ko' ? '초대받은 이메일의 Google 계정' : 'invited Google email account');
+  expect(reload).not.toHaveBeenCalled();
+  expect(select).not.toHaveBeenCalled();
 });

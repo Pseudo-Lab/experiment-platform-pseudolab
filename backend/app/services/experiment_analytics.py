@@ -1,4 +1,5 @@
 import math
+import json
 from collections import defaultdict
 from app.db import d1
 from app.services.sdk_events import read_sdk_events
@@ -99,7 +100,7 @@ class ExperimentAnalyticsService:
                 anomalies=self._detect_anomalies(imp, conv), srm_warning=_srm_check(impressions.by_variant),
             )
         # resolve experiment key (flag_key) for events that lack experiment_id
-        exp_rows = await d1.query(
+        exp_rows = await d1.security_query(
             "SELECT flag_key, experiment_type, primary_metric, project_id, event_model FROM experiments WHERE id = ?",
             [experiment_id],
         )
@@ -109,6 +110,18 @@ class ExperimentAnalyticsService:
 
         sdk_v1 = bool(exp_rows and exp_rows[0]["event_model"] == "sdk_v1")
         sdk_rows = await read_sdk_events(experiment_id, exp_rows[0].get("project_id")) if sdk_v1 else []
+        readout_metadata = {}
+        if sdk_v1 and await d1.security_query(
+            "SELECT 1 FROM experiment_readout_contract WHERE experiment_id=?", [experiment_id]
+        ):
+            # /analytics authorization is unchanged; do not expose the user-level result.
+            from app.services.experiment import experiment_service
+            result = await experiment_service.get_result(experiment_id)
+            primary_metric = result.primary_metric
+            readout_metadata = {"readout_state": result.readout_state, "finalizes_at": result.finalizes_at}
+            if result.readout_state == "finalized":
+                # A finalizer may have won after the first canonical read.
+                sdk_rows = await read_sdk_events(experiment_id, exp_rows[0].get("project_id"))
         if sdk_v1:
             imp_rows = [r for r in sdk_rows if r["sdk_event_type"] == "exposure"]
             # One primary-metric success per visible instance, even for repeated actions.
@@ -148,6 +161,7 @@ class ExperimentAnalyticsService:
         anomalies = self._detect_anomalies(imp_rows, conv_rows)
 
         return ExperimentAnalyticsResponse(
+            **readout_metadata,
             impressions=impressions,
             conversions=conversions,
             statistical_significance=significance,
@@ -363,7 +377,7 @@ class ExperimentAnalyticsService:
             return AvailableEventsResponse(event_types=types, has_impressions="impression" in types,
                 has_conversions="conversion" in types, conversion_events=[t for t in types if t == "conversion"],
                 total_events=len(owned))
-        exp_rows = await d1.query(
+        exp_rows = await d1.security_query(
             "SELECT flag_key, experiment_type, primary_metric, project_id, event_model FROM experiments WHERE id = ?",
             [experiment_id],
         )
@@ -374,6 +388,12 @@ class ExperimentAnalyticsService:
         sdk_v1 = bool(exp_rows and exp_rows[0]["event_model"] == "sdk_v1")
         sdk_rows = await read_sdk_events(experiment_id, exp_rows[0].get("project_id")) if sdk_v1 else []
         if sdk_v1:
+            contract = await d1.security_query(
+                "SELECT COALESCE(s.contract_json,c.locked_json) AS contract_json "
+                "FROM experiment_readout_contract c LEFT JOIN experiment_readout_snapshot s "
+                "ON s.experiment_id=c.experiment_id WHERE c.experiment_id=?", [experiment_id])
+            if contract and contract[0]["contract_json"]:
+                primary_metric = json.loads(contract[0]["contract_json"])["primary_metric"]
             event_types = sorted({r["event_name"] for r in sdk_rows})
             conversion_events = [name for name in event_types if name == primary_metric and name != "exp_exposure"]
             return AvailableEventsResponse(

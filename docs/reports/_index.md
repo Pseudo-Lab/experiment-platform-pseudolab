@@ -13,6 +13,7 @@ Last-Validated: 2026-10-31
 4. 에이전트/병렬 작업은 `docs/guides/agent_collaboration.md`
 
 ## 1) Current Active Reports
+- [중지·종료 후 전환 집계 정책](experiment-stop-policy-2026-11-14.md) — 제품 결정 및 새 SDK 실험의 활성 구간·선택형 전환 창·수신 유예·불변 결과 확정과 KO/EN UI 로컬 구현·검증. migration 044의 로컬 D1 호환성·2MB 회귀 보완 포함. 원격 D1 검증·운영 반영은 미완료.
 - `docs/reports/project-sharing-2026-11-12.md` — 프로젝트 초대·권한·검증 및 migration 040 선행 배포 절차
 - [12기 일회성 회고 신규 제출 종료](handoffs/2026-10-31-reflection-retirement.md) — 로컬 구현·검증, 기존 데이터 보존 및 운영 상태 미확인 사항
 - [Iterglow 서비스 PRD와 구현 대조](experibase-service-prd.md) — 서비스 정의·이용 흐름·소개 배치·구현 차이의 검토 진입점. 요구사항/우선순위 제안은 미확정이며 운영 완료 선언이 아님.
@@ -67,3 +68,7 @@ Last-Validated: 2026-10-31
 1. `AGENTS.md`와 `docs/reports/decision-log.md`를 먼저 확인한다.
 2. 작업 영역에 맞는 Active Report 또는 Guide만 추가로 확인한다.
 3. 본문 전체 탐색은 예외 상황(충돌/감사/회귀 추적)에서만 수행한다.
+
+- [2026-11-13-account-menu-logout](handoffs/2026-11-13-account-menu-logout.md) — 로컬 통합 검증 포함·운영 미반영.
+
+- [2026-11-13-experiment-input-validation](handoffs/2026-11-13-experiment-input-validation.md) — 로컬 통합 검증 포함·운영 미반영.

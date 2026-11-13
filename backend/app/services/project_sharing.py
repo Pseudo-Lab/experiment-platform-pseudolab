@@ -10,7 +10,10 @@ INVITATION_TTL_SECONDS = 7 * 86400
 
 
 async def members(project_id: str):
-    return await d1.security_query("SELECT account_id, role FROM project_access WHERE project_id=? ORDER BY role, account_id", [project_id])
+    return await d1.security_query(
+        "SELECT a.account_id, a.role, p.display_name, p.email FROM project_access a "
+        "LEFT JOIN platform_account_profile p ON p.account_id=a.account_id "
+        "WHERE a.project_id=? ORDER BY a.role, a.account_id", [project_id])
 
 
 async def change_member(project_id: str, account_id: str, role: str | None):
@@ -26,22 +29,26 @@ async def change_member(project_id: str, account_id: str, role: str | None):
 
 async def invitations(project_id: str):
     return await d1.security_query(
-        "SELECT id, project_id, role, expires_at, revoked_at, accepted_by, accepted_at, "
+        "SELECT i.id, i.project_id, i.role, i.expires_at, i.revoked_at, i.accepted_by, i.accepted_at, "
+        "r.email AS recipient_email, p.display_name AS accepted_display_name, p.email AS accepted_email, "
         # All invitations use a fixed seven-day TTL; recover the original issue time without a schema change.
-        f"expires_at - {INVITATION_TTL_SECONDS} AS created_at, "
-        "CASE WHEN accepted_by IS NOT NULL THEN 'accepted' WHEN revoked_at IS NOT NULL THEN 'revoked' "
-        "WHEN expires_at <= unixepoch() THEN 'expired' ELSE 'pending' END AS status "
-        "FROM project_invitation WHERE project_id=? ORDER BY expires_at DESC, id DESC", [project_id])
+        f"i.expires_at - {INVITATION_TTL_SECONDS} AS created_at, "
+        "CASE WHEN i.accepted_by IS NOT NULL THEN 'accepted' WHEN i.revoked_at IS NOT NULL THEN 'revoked' "
+        "WHEN i.expires_at <= unixepoch() THEN 'expired' ELSE 'pending' END AS status "
+        "FROM project_invitation i LEFT JOIN project_invitation_recipient r ON r.invitation_id=i.id "
+        "LEFT JOIN platform_account_profile p ON p.account_id=i.accepted_by "
+        "WHERE i.project_id=? ORDER BY i.expires_at DESC, i.id DESC", [project_id])
 
 
-async def create_invitation(project_id: str, role: str):
+async def create_invitation(project_id: str, role: str, email: str | None = None):
     token = secrets.token_urlsafe(32)
     created_at = int(time.time())
     data = {"id": str(uuid4()), "project_id": project_id, "role": role,
-            "created_at": created_at, "expires_at": created_at + INVITATION_TTL_SECONDS, "status": "pending"}
+            "created_at": created_at, "expires_at": created_at + INVITATION_TTL_SECONDS, "status": "pending",
+            "recipient_email": email}
     rows = await d1.security_query(
-        "INSERT INTO project_invitation (id, project_id, token_hash, role, expires_at) VALUES (?, ?, ?, ?, ?) RETURNING id",
-        [data['id'], project_id, hashlib.sha256(token.encode()).hexdigest(), role, data['expires_at']])
+        "INSERT INTO project_invitation_creation (id, project_id, token_hash, role, expires_at, email) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+        [data['id'], project_id, hashlib.sha256(token.encode()).hexdigest(), role, data['expires_at'], email])
     if not rows:
         raise HTTPException(503, "Invitation storage unavailable")
     return {**data, "token": token}
@@ -65,6 +72,14 @@ async def accept_invitation(token: str, account_id: str):
                 "SELECT 1 FROM project_access WHERE project_id=? AND account_id=?", [invitation['project_id'], account_id]):
             raise HTTPException(410, "Invitation already used")
     else:
+        recipients = await d1.security_query(
+            "SELECT email FROM project_invitation_recipient WHERE invitation_id=?", [invitation['id']])
+        if recipients:
+            profiles = await d1.security_query(
+                "SELECT 1 FROM platform_account_profile WHERE account_id=? AND email_authoritative=1 AND lower(email)=lower(?)",
+                [account_id, recipients[0]['email']])
+            if not profiles:
+                raise HTTPException(403, "Sign in with the invited Google email account; email ownership verification may be required")
         await d1.security_query("INSERT INTO project_invitation_acceptance (token_hash, account_id) VALUES (?, ?)", [digest, account_id])
     access = await d1.security_query(
         "SELECT p.*, a.role AS access_role FROM projects p JOIN project_access a ON a.project_id=p.id WHERE p.id=? AND a.account_id=?", [invitation['project_id'], account_id])

@@ -209,4 +209,48 @@ describe('CreateExperimentModal', () => {
     expect(experimentApi.create).not.toHaveBeenCalled();
   });
 
+  it.each(['ko', 'en'] as const)('requires explicit one-time intent before sending a window in %s', async lang => {
+    vi.mocked(useProject).mockReturnValue({ currentProject: { id: 'selected', project_type: 'ab_test' } } as any);
+    render(<CreateExperimentModal lang={lang} isAdmin={false} onClose={vi.fn()} onCreated={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText(lang === 'ko' ? '예: 버튼 색상 테스트' : 'e.g. Button Color Test'), { target: { value: 'Bounded experiment' } });
+    fireEvent.click(screen.getByText(lang === 'ko' ? '수집·노출 세부 설정 (선택)' : 'Measurement and delivery settings (optional)'));
+    fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '자동 생성' : 'Auto-generate' }));
+    fireEvent.change(screen.getByLabelText(lang === 'ko' ? '전환 인정 기간 (시간)' : 'Conversion window (hours)'), { target: { value: '1.5' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '생성' : 'Create' })); });
+    expect(screen.getByRole('alert')).toHaveTextContent(lang === 'ko' ? '일회성 노출' : 'one-time exposure');
+    expect(featureFlagApi.create).not.toHaveBeenCalled();
+    expect(experimentApi.create).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('checkbox', { name: lang === 'ko' ? '일회성 노출 효과를 관찰하는 실험입니다' : 'This experiment measures the effect of a one-time exposure' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '생성' : 'Create' })); });
+    expect(experimentApi.create).toHaveBeenCalledWith(expect.objectContaining({ event_model: 'sdk_v1', conversion_window_seconds: 5400, one_time_intervention: true }));
+  });
+
+  it.each(['0', '-1', '721'])('rejects an invalid window of %s hours before creating any resources', async hours => {
+    vi.mocked(useProject).mockReturnValue({ currentProject: { id: 'selected', project_type: 'ab_test' } } as any);
+    render(<CreateExperimentModal lang="en" isAdmin={false} onClose={vi.fn()} onCreated={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText('e.g. Button Color Test'), { target: { value: 'Bounded experiment' } });
+    fireEvent.click(screen.getByText('Measurement and delivery settings (optional)'));
+    fireEvent.click(screen.getByRole('button', { name: 'Auto-generate' }));
+    fireEvent.change(screen.getByLabelText('Conversion window (hours)'), { target: { value: hours } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'This experiment measures the effect of a one-time exposure' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create' })); });
+    expect(screen.getByRole('alert')).toHaveTextContent('1 second to 30 days');
+    expect(featureFlagApi.create).not.toHaveBeenCalled();
+  });
+
+  it.each(['existing', 'auto'] as const)('does not silently discard a declared window when the %s flag is missing', async mode => {
+    vi.mocked(useProject).mockReturnValue({ currentProject: { id: 'selected', project_type: 'ab_test' } } as any);
+    render(<CreateExperimentModal lang="en" isAdmin={false} onClose={vi.fn()} onCreated={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText('e.g. Button Color Test'), { target: { value: 'Window experiment' } });
+    fireEvent.click(screen.getByText('Measurement and delivery settings (optional)'));
+    fireEvent.click(screen.getByRole('button', { name: mode === 'existing' ? 'Select existing' : 'Auto-generate' }));
+    if (mode === 'auto') fireEvent.change(screen.getByLabelText('Auto-generated Flag Key'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Conversion window (hours)'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'This experiment measures the effect of a one-time exposure' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Create' })); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Select a feature flag or enter a flag key');
+    expect(experimentApi.create).not.toHaveBeenCalled();
+    expect(featureFlagApi.create).not.toHaveBeenCalled();
+  });
+
 });
