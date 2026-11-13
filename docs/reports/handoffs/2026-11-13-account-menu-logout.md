@@ -3,6 +3,8 @@ Last-Validated: 2026-11-14
 
 # 계정 식별·이메일 지정 초대·로그아웃 — 로컬 구현 인계
 
+> 최신 상태: 2026-11-14 운영 반영·런타임 확인 완료([PR #39](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pull/39)). 아래의 미커밋·운영 미반영 표현은 해당 단계 당시 기록이다. 실제 Google 계정 선택·동의 및 지정 이메일 초대 수락은 아직 확인하지 않았다. 상세 근거는 [운영 반영 기록](2026-11-13-experiment-status-history.md#운영-반영-완료--2026-11-14)을 따른다.
+
 ## Scope / Workspace
 - Owner: experiment-lead-v3. 사용자가 11월 14일 Google 이름·이메일 표시와 이메일 기반 초대를 승인했다. 이전의 별칭/Google 정보 선택 대기는 해소됐다.
 - Worktree: `/home/ubuntu/.openclaw/workspace-experiment-account-identity-20261113`, branch `fix/account-identity-20261113`, base `6c7ae1de3c2ebf0203124f07d5aa23852c285fb8`.

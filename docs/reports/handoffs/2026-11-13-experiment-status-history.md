@@ -3,6 +3,8 @@ Last-Validated: 2026-11-14
 
 # SDK v1 상태 이력·전환 기간·불변 결과 확정 — 로컬 구현 인계
 
+> 최신 상태: 2026-11-14 운영 반영·런타임 확인 완료([PR #39](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pull/39)). 아래의 미커밋·운영 미반영 표현은 해당 단계 당시 기록이다. 실제 Google 계정 선택·동의 및 지정 이메일 초대 수락은 아직 확인하지 않았다. 상세 근거는 [운영 반영 기록](2026-11-13-experiment-status-history.md#운영-반영-완료--2026-11-14)을 따른다.
+
 ## Task Metadata
 - Task ID: iterglow-event-history-20261113
 - Date: 2026-11-13
@@ -145,3 +147,16 @@ Last-Validated: 2026-11-14
 - 최종 릴리스 worktree는 release/identity-readout-20261114다. 백엔드 726개, 깨끗한 npm ci 후 프런트엔드 243개/빌드와 SDK 빌드를 통과했다. 독립 검토에서 발견한 시작 후 새 variant 유입은 잠근 variant_names를 canonical eligible 단계에 적용해 보완했다. 최초 선언된 custom arm의 전환은 유지하고 이후 추가된 arm은 raw202로 보존하되 실시간/확정에서 제외하는 2사례 회귀를 추가했다.
 - 운영 D1 백업의 개인 파일(0600)과 TimeTravel bookmark를 보존하고 복원·무결성·FK·모든 기존 행 보존 및 31개 complete-statement 리허설을 확인했다. DB에는 아직 DDL을 실행하지 않은 준비 단계다.
 - 기존 GitOps의 새 이미지가 준비될 때까지 기존 앱을 유지한다. 대상 Application의 자동 동기화 정책을 정확히 보존해 일시 중단하고, DB 적용 직전 backend의 기존 pod 종료/요청 drain을 확인한다. 그 뒤 fresh backup/bookmark·migration 체크포인트 검증을 마치고 원래 자동 동기화를 복원해 정상 이미지/replica가 배포되게 한다. 수동 sync·중복 이미지 갱신은 하지 않는다. 세부 영수증은 서버의 iterglow-release-20261114 검증 폴더에 보관한다.
+
+
+## 운영 반영 완료 — 2026-11-14
+
+- [PR #39](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pull/39)를 main `eb271229c81851a3764e53199a05a92b55ca8795`에 반영했다. [main CI](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/43499536569)·[GitOps](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/43499814927) 성공, Ops `614cf7d734fa3b8d0e9f72c39d93ed017677a144`에서 두 이미지 태그가 자동 갱신됐다. main은 배포 시작이며, 아래 런타임 확인까지 수행했다.
+- 포함: Google 프로필·이메일 지정 초대·계정/로그아웃 메뉴, API 입력 검증 2건, SDK 상태 이력·중지 노출 guard·신규 측정 계약/전환 창/불변 확정 및 KO/EN UI. 홈페이지·SDK/npm 게시·Hub 변경·메일 발송·개인정보 문서 작성은 제외했다.
+- 검증: 최종 백엔드 **726개**, 프런트엔드 **243개**·production build, SDK build. 독립 Codex B(GPT-6-Astra medium) 리뷰가 발견한 변형 집합 누락을 수정했다. launch 시 고정된 `variant_names`를 live/frozen 공통 eligible CTE에서 first_exposure·귀속 전에 적용하며, 시작 후 추가한 변형의 raw 202와 집계 제외 및 선언된 custom arm의 노출·전환·확정 보존을 회귀로 확인했다. 이번 릴리스 검토에는 Gemini를 실행하지 않았다.
+- AppProject의 이 앱만 대상으로 하는 임시 deny SyncWindow가 실제 Sync Denied로 평가됨을 확인한 후 main을 반영했다. Application은 상위 services 앱이 관리하므로 자동화 정책 자체를 변경하지 않았다. 기존 backend pod 삭제와 Deployment desired/actual/ready/updated 0을 확인하고 35초 유휴 후 마지막 백업을 받았다. 최초 cutover 백업 실행은 원격 transport 비정상 종료로 실패했지만 DDL·백업 파일 생성 전이었고, 읽기 전용 백업 재실행은 성공했다.
+- 운영 D1 `pseudolab-exp`의 fresh SQL export 1,614,960bytes와 복구 bookmark는 0600 개인 저장소에 보존했다. export를 로컬에 복원해 integrity/FK·기존 모든 행/컬럼 보존·migration 리허설을 검증했다. 운영에는 041~044를 trigger를 나누지 않는 **31개 완전한 SQL 문장**으로 적용했고, 매 문장 후 전체 schema와 FK를 대조했다. 2026-11-14 05:21:36 KST 완료: 기존 테이블 행 수 보존, FK 위반 0, 신규 7개 테이블 0건. 기존 실험의 소급 편입·프로필 추정·운영 restore는 하지 않았다. 개별 SQL checkpoint 방식이며 네 migration 전체의 전역 원자성을 주장하지 않는다.
+- 마이그레이션 검증 후 해당 임시 window만 제거했다. 기존 자동 prune/selfHeal·CreateNamespace 정책은 그대로이며 수동 sync·이미지 태그 수정 없이 GitOps가 배포했다. frontend/backend 모두 위 main SHA, replicas/ready/updated 1, Argo **Synced / Healthy**를 확인했다. 임시 migration Pod 삭제와 추가 window 부재도 확인했다.
+- 운영 [로그인](https://iterglow.pseudolab-devfactory.com/login)에서 새 JS `index-CcfBo5iT.js`·CSS `index-BkMaH9aN.css`, Google provider 활성, 익명 auth/me false, 프로젝트/실험 API 401·no-store를 확인했다. KO/1280px·EN/390px에서 소개·로그인·SDK 가이드와 익명 실험 화면의 로그인 이동을 실제 Chromium으로 확인(8개 검사, page error 0, 가로 넘침 없음)했다. 합성 계정의 공유/편집/제거/로그아웃은 앞서 TS에서 직접 검증했다.
+- 남은 범위: 사용자의 실제 Google 재로그인/동의 후 프로필 저장과 Gmail/Workspace 지정 초대의 실제 계정 수락. 새 profile 테이블이 0건이므로 기존 세션만으로는 이름·이메일이 채워지지 않으며 한 번 재로그인이 필요하다. 서명 합성 토큰·TS 검증을 실제 OAuth 통과로 표현하지 않는다. 운영에서 실제 SDK 실험의 전환 축적·확정도 아직 실행하지 않았다.
+- 로컬 근거: `/home/ubuntu/.codex/reviews/iterglow-release-20261114/`의 `cutover-backup-metadata.json`, `migration-checkpoints.jsonl`, `migration-result.json`, `runtime-latest.json`, `cleanup-verification.json`, `public-http.json`, `public-browser-results.json` 및 화면 이미지. 원본 3개 작업 worktree와 사용자 TS 미리보기 데이터/서비스는 보존했다.
