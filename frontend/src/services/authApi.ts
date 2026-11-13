@@ -4,6 +4,8 @@ export interface AuthUser {
   username: string;
   account_id?: string | null;
   is_admin?: boolean;
+  display_name?: string | null;
+  email?: string | null;
 }
 
 export interface AuthStatus {

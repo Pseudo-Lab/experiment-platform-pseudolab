@@ -12,6 +12,7 @@ import {
     Menu,
     Globe,
     User,
+    LogOut,
     ToggleLeft,
     Code2,
     FolderOpen,
@@ -23,7 +24,7 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Button } from '../components/ui/button';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuItem } from '../components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuLabel } from '../components/ui/dropdown-menu';
 import { useProject } from '../contexts/ProjectContext';
 
 function cn(...inputs: ClassValue[]) {
@@ -95,6 +96,8 @@ interface MainLayoutProps {
     setTheme?: (theme: 'light' | 'dark') => void;
     backendStatus: string;
     userLabel?: string;
+    userEmail?: string | null;
+    accountId?: string | null;
     isAdmin?: boolean;
     onLogout?: () => void | Promise<void>;
 }
@@ -104,10 +107,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     lang,
     setLang,
     userLabel,
+    userEmail,
+    accountId,
     isAdmin = true,
     onLogout
 }) => {
     const [logoutFailed, setLogoutFailed] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
     const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -131,6 +137,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const t = translations[lang];
+    const accountCopy = lang === 'ko'
+        ? { menu: '계정 메뉴', account: '계정', signedIn: '로그인 계정', id: '계정 ID', pending: '로그아웃 중...', failed: '로그아웃하지 못했습니다. 다시 시도해 주세요.' }
+        : { menu: 'Account menu', account: 'Account', signedIn: 'Signed in as', id: 'Account ID', pending: 'Signing out...', failed: 'Sign out failed. Please try again.' };
 
     const minSwipeDistance = 50;
     const edgeSwipeZone = 48;
@@ -304,22 +313,40 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             <Globe size={14} /> {lang.toUpperCase()}
                         </Button>
 
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                                setLogoutFailed(false);
-                                try { await onLogout?.(); } catch { setLogoutFailed(true); }
-                            }}
-                            className="gap-2 text-muted-foreground rounded-lg"
-                            aria-label={t.logout}
-                        >
-                            <span className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-white shadow-md">
-                                <User size={16} />
-                            </span>
-                            <span className="hidden md:inline max-w-[120px] truncate">{userLabel || t.logout}</span>
-                        </Button>
-                        {logoutFailed && <span role="alert" className="text-sm text-destructive">{lang === 'ko' ? '로그아웃하지 못했습니다. 다시 시도해 주세요.' : 'Sign out failed. Please try again.'}</span>}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="min-h-11 gap-2 rounded-lg text-muted-foreground" aria-label={accountCopy.menu}>
+                                    <User size={18} aria-hidden="true" />
+                                    <span className="md:hidden">{accountCopy.account}</span>
+                                    <span className="hidden max-w-[160px] truncate md:inline">{userLabel || accountCopy.account}</span>
+                                    <ChevronDown size={14} aria-hidden="true" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-72 max-w-[calc(100vw-2rem)]">
+                                <DropdownMenuLabel className="font-normal">
+                                    <p className="text-xs text-muted-foreground">{accountCopy.signedIn}</p>
+                                    <p className="mt-1 break-all text-sm font-medium">{userLabel || accountCopy.account}</p>
+                                    {userEmail && userEmail !== userLabel && <p className="mt-1 break-all text-sm text-muted-foreground">{userEmail}</p>}
+                                    {!userEmail && accountId && <p className="mt-2 break-all text-xs text-muted-foreground">{accountCopy.id}: {accountId}</p>}
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    className="min-h-11 gap-2"
+                                    disabled={loggingOut || !onLogout}
+                                    onSelect={async (event) => {
+                                        event.preventDefault();
+                                        setLogoutFailed(false);
+                                        setLoggingOut(true);
+                                        try { await onLogout?.(); } catch { setLogoutFailed(true); }
+                                        finally { setLoggingOut(false); }
+                                    }}
+                                >
+                                    <LogOut size={16} aria-hidden="true" />
+                                    {loggingOut ? accountCopy.pending : t.logout}
+                                </DropdownMenuItem>
+                                {logoutFailed && <p role="alert" className="px-2 py-2 text-sm text-destructive">{accountCopy.failed}</p>}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </header>
                 <div className="flex-1 p-4 md:p-8 overflow-auto">

@@ -12,10 +12,12 @@ import httpx
 import jwt
 from fastapi import HTTPException, Request
 from fastapi.responses import RedirectResponse
+from pydantic import TypeAdapter, ValidationError
 
 from app.core.account_sessions import create_account_session, token_hash
 from app.core.config import settings
 from app.db import d1
+from app.schemas.auth import EmailAddress
 
 AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -67,7 +69,7 @@ async def begin(request: Request) -> RedirectResponse:
     response = RedirectResponse(AUTHORIZE_URL + "?" + urlencode({
         "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
         "redirect_uri": settings.GOOGLE_OAUTH_REDIRECT_URI,
-        "response_type": "code", "scope": "openid", "state": state,
+        "response_type": "code", "scope": "openid profile email", "state": state,
         "nonce": nonce, "code_challenge": challenge, "code_challenge_method": "S256",
     }), status_code=303)
     response.set_cookie(ATTEMPT_COOKIE, browser, max_age=600, secure=True,
@@ -129,7 +131,7 @@ async def finish(request: Request) -> RedirectResponse:
             })
             result.raise_for_status()
             claims = await verify_id_token(result.json()["id_token"], rows[0]["nonce"], client)
-        # No email/profile storage, no account linking, no admin role from provider claims.
+        # Identity and roles still use sub/internal account ID, never name or email.
         account_id = str(uuid.uuid4())
         ok = await d1.security_execute(
             "INSERT INTO platform_account (id, google_sub, created_at) VALUES (?, ?, ?) ON CONFLICT(google_sub) DO NOTHING",
@@ -139,6 +141,26 @@ async def finish(request: Request) -> RedirectResponse:
             return response
         accounts = await d1.security_query("SELECT id FROM platform_account WHERE google_sub = ?", [claims["sub"]])
         if not accounts:
+            return response
+        display_name = claims.get("name")
+        display_name = display_name.strip()[:200] or None if isinstance(display_name, str) else None
+        email = None
+        if claims.get("email_verified") is True:
+            try:
+                email = TypeAdapter(EmailAddress).validate_python(claims.get("email"))
+            except ValidationError:
+                pass
+        # Google does not guarantee current ownership of third-party email addresses.
+        hosted_domain = claims.get("hd")
+        authoritative = bool(email and (email.endswith("@gmail.com")
+                             or isinstance(hosted_domain, str) and hosted_domain.strip()))
+        if not await d1.security_execute(
+            """INSERT INTO platform_account_profile (account_id, display_name, email, email_authoritative)
+               VALUES (?, ?, ?, ?) ON CONFLICT(account_id) DO UPDATE SET
+               display_name=excluded.display_name, email=excluded.email,
+               email_authoritative=excluded.email_authoritative""",
+            [accounts[0]["id"], display_name, email, int(authoritative)],
+        ):
             return response
         token = await create_account_session(accounts[0]["id"])
     except (httpx.HTTPError, jwt.PyJWTError, ValueError, KeyError, TypeError, HTTPException):

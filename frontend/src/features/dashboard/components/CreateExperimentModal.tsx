@@ -45,6 +45,13 @@ const translations = {
     labelPrimaryMetric: '* Primary Metric',
     placeholderPrimaryMetric: 'e.g. weekly_session_attended',
     primaryMetricHint: 'Required to transition the experiment to running.',
+    conversionWindow: 'Conversion window (hours)',
+    conversionWindowHelp: 'Leave empty to count actions during active periods only. Otherwise, observe actions from each user’s first eligible exposure for this duration.',
+    oneTimeIntervention: 'This experiment measures the effect of a one-time exposure',
+    oneTimeHelp: 'Use this only when the exposure can have an effect after delivery stops.',
+    windowError: 'Enter a duration from 1 second to 30 days and confirm that this is a one-time exposure experiment.',
+    windowNeedsFlag: 'Select a feature flag or enter a flag key before saving a conversion window.',
+    ingestionHelp: 'Late events are accepted for analysis for up to 24 hours after they occur. Measurement settings lock at the first launch.',
     labelCompletionEvent: 'Completion event',
     placeholderCompletionEvent: 'e.g. project_reflection_submitted',
     completionEventHelp: 'Event used to return completed=true from placement decide.',
@@ -136,6 +143,13 @@ const translations = {
     labelPrimaryMetric: '* Primary Metric',
     placeholderPrimaryMetric: '예: weekly_session_attended',
     primaryMetricHint: '실험을 running으로 전환하려면 필수입니다.',
+    conversionWindow: '전환 인정 기간 (시간)',
+    conversionWindowHelp: '비워 두면 실행 중 발생한 행동만 집계합니다. 입력하면 사용자의 첫 적격 노출부터 이 기간 동안 후속 행동을 관찰합니다.',
+    oneTimeIntervention: '일회성 노출 효과를 관찰하는 실험입니다',
+    oneTimeHelp: '노출 제공이 끝난 뒤에도 효과가 남는 실험에서만 사용하세요.',
+    windowError: '1초 이상 30일 이하의 기간을 입력하고 일회성 노출 실험인지 확인해 주세요.',
+    windowNeedsFlag: '전환 인정 기간을 저장하려면 플래그를 선택하거나 생성할 키를 입력해 주세요.',
+    ingestionHelp: '늦게 도착한 이벤트는 발생 후 24시간까지 집계에 반영합니다. 측정 기준은 최초 시작 시 고정됩니다.',
     labelCompletionEvent: '완료 이벤트',
     placeholderCompletionEvent: '예: project_reflection_submitted',
     completionEventHelp: 'placement decide에서 completed=true를 판단할 이벤트입니다.',
@@ -249,6 +263,8 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   const [experimentType, setExperimentType] = useState<ExperimentType>(isAdmin ? (currentProject?.project_type ?? 'quasi_experiment') : 'ab_test');
   const [hypothesis, setHypothesis] = useState('');
   const [primaryMetric, setPrimaryMetric] = useState('');
+  const [windowHours, setWindowHours] = useState('');
+  const [oneTime, setOneTime] = useState(false);
   const [completionEvent, setCompletionEvent] = useState('');
   const [cohortId, setCohortId] = useState('');
   const [startAt, setStartAt] = useState('');
@@ -364,6 +380,15 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     if (!name.trim()) { setError(t.nameRequired); return; }
     if (experimentType !== 'quasi_experiment' && variants.length > 0 && !ratioValid) { setError(t.ratioWarning.replace('{sum}', ratioSum.toFixed(2))); return; }
     if (configurePlacement && !placementValid) { setError(t.placementRequired); return; }
+    const sdkExperiment = experimentType === 'ab_test' && flagMode !== 'none' && !configurePlacement;
+    const windowSeconds = windowHours.trim() ? Math.round(Number(windowHours) * 3600) : null;
+    if (sdkExperiment && windowSeconds !== null && (!Number.isFinite(windowSeconds) || windowSeconds < 1 || windowSeconds > 2592000 || !oneTime)) {
+      setError(t.windowError); return;
+    }
+    if (sdkExperiment && windowSeconds !== null &&
+        ((flagMode === 'existing' && !flagKey.trim()) || (flagMode === 'auto' && !autoFlagKey.trim()))) {
+      setError(t.windowNeedsFlag); return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -397,7 +422,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
         cohort_id: cohortId.trim() || undefined,
         flag_key: resolvedFlagKey,
         ...(experimentType === 'ab_test' && resolvedFlagKey && !configurePlacement
-          ? { event_model: 'sdk_v1' as const }
+          ? { event_model: 'sdk_v1' as const, conversion_window_seconds: windowSeconds, one_time_intervention: windowSeconds !== null && oneTime }
           : {}),
         project_id: projectId || undefined,
         product: projectId || undefined,
@@ -532,6 +557,21 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             <p className="text-xs text-slate-500 dark:text-slate-400">{t.primaryMetricHint}</p>
           </div>
 
+          {experimentType === 'ab_test' && flagMode !== 'none' && !configurePlacement && (
+            <div className="space-y-3 border-t border-border pt-4">
+              <label className="block text-sm font-semibold" htmlFor="new-conversion-window">{t.conversionWindow}</label>
+              <Input id="new-conversion-window" type="number" min={1 / 3600} max={720} step="any" value={windowHours}
+                onChange={e => { setWindowHours(e.target.value); if (!e.target.value.trim()) setOneTime(false); }}
+                aria-describedby="new-window-help" />
+              <p id="new-window-help" className="max-w-prose text-sm text-muted-foreground">{t.conversionWindowHelp}</p>
+              {windowHours.trim() && <div className="space-y-1">
+                <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={oneTime} onChange={e => setOneTime(e.target.checked)} />{t.oneTimeIntervention}</label>
+                <p className="text-sm text-muted-foreground">{t.oneTimeHelp}</p>
+              </div>}
+              <p className="text-sm text-muted-foreground">{t.ingestionHelp}</p>
+            </div>
+          )}
+
           {experimentType !== 'quasi_experiment' && (
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelFlagKey}</label>
@@ -572,8 +612,9 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
             {flagMode === 'auto' && (
               <>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.flagAutoKeyLabel}</label>
+                  <label htmlFor="new-auto-flag-key" className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.flagAutoKeyLabel}</label>
                   <input
+                    id="new-auto-flag-key"
                     type="text"
                     value={autoFlagKey}
                     onChange={(e) => setAutoFlagKey(e.target.value)}

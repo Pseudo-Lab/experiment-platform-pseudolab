@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act, cleanup, within } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup, within, waitFor } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
 import { useProject } from '@/contexts/ProjectContext';
@@ -267,5 +267,62 @@ it.each([375, 1024])('leaves the previous experiment detail when switching proje
   expect(setCurrentProjectId).toHaveBeenLastCalledWith('beta');
   expect(mockedUseNavigate).toHaveBeenLastCalledWith('/experiments');
   if (width < 1024) expect(screen.getByRole('complementary')).toHaveClass('-translate-x-full');
+  cleanup();
+});
+
+it.each([
+  ['ko', 390], ['ko', 1280], ['en', 390], ['en', 1280],
+] as const)('opens account details without signing out in %s at %spx', async (lang, width) => {
+  window.innerWidth = width;
+  vi.mocked(useProject).mockReturnValue({ projects: [], loading: false, currentProjectId: null, currentProject: null, setCurrentProjectId: vi.fn(), reloadProjects: vi.fn() });
+  const logout = vi.fn();
+  const accountId = '11111111-2222-4333-a444-555555555555';
+  render(<MemoryRouter><MainLayout lang={lang} setLang={() => {}} backendStatus="Online" userLabel="user-11111111" accountId={accountId} onLogout={logout}>Workspace</MainLayout></MemoryRouter>);
+  const trigger = screen.getByRole('button', { name: lang === 'ko' ? '계정 메뉴' : 'Account menu' });
+  fireEvent.keyDown(trigger, { key: 'Enter' });
+  expect(await screen.findByText(`${lang === 'ko' ? '계정 ID' : 'Account ID'}: ${accountId}`)).toBeVisible();
+  expect(logout).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('menuitem', { name: lang === 'ko' ? '로그아웃' : 'Logout' }));
+  await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
+  cleanup();
+});
+
+it('keeps an unsuccessful logout recoverable from the account menu', async () => {
+  vi.mocked(useProject).mockReturnValue({ projects: [], loading: false, currentProjectId: null, currentProject: null, setCurrentProjectId: vi.fn(), reloadProjects: vi.fn() });
+  const logout = vi.fn().mockRejectedValueOnce(new Error('network')).mockResolvedValue(undefined);
+  render(<MemoryRouter><MainLayout lang="en" setLang={() => {}} backendStatus="Online" userLabel="user-a" onLogout={logout}>Workspace</MainLayout></MemoryRouter>);
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Account menu' }), { key: 'Enter' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Logout' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Sign out failed. Please try again.');
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Logout' }));
+  await waitFor(() => expect(logout).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  cleanup();
+});
+
+it('disables sign out while revocation is pending', async () => {
+  vi.mocked(useProject).mockReturnValue({ projects: [], loading: false, currentProjectId: null, currentProject: null, setCurrentProjectId: vi.fn(), reloadProjects: vi.fn() });
+  let resolveLogout!: () => void;
+  const logout = vi.fn(() => new Promise<void>(resolve => { resolveLogout = resolve; }));
+  render(<MemoryRouter><MainLayout lang="en" setLang={() => {}} backendStatus="Online" onLogout={logout}>Workspace</MainLayout></MemoryRouter>);
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Account menu' }), { key: 'Enter' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Logout' }));
+  const pending = await screen.findByRole('menuitem', { name: 'Signing out...' });
+  expect(pending).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(pending);
+  expect(logout).toHaveBeenCalledTimes(1);
+  await act(async () => resolveLogout());
+  expect(await screen.findByRole('menuitem', { name: 'Logout' })).not.toHaveAttribute('aria-disabled', 'true');
+  cleanup();
+});
+
+it.each(['ko', 'en'] as const)('shows the Google profile name and email without replacing internal identity in %s', async lang => {
+  vi.mocked(useProject).mockReturnValue({ projects: [], loading: false, currentProjectId: null, currentProject: null, setCurrentProjectId: vi.fn(), reloadProjects: vi.fn() });
+  render(<MemoryRouter><MainLayout lang={lang} setLang={() => {}} backendStatus="Online" userLabel="긴 한글 이름을 가진 테스트 사용자" userEmail="member@gmail.com" accountId="internal-account-id">Workspace</MainLayout></MemoryRouter>);
+  fireEvent.keyDown(screen.getByRole('button', { name: lang === 'ko' ? '계정 메뉴' : 'Account menu' }), { key: 'Enter' });
+  const menu = await screen.findByRole('menu');
+  expect(within(menu).getByText('긴 한글 이름을 가진 테스트 사용자')).toBeVisible();
+  expect(within(menu).getByText('member@gmail.com')).toBeVisible();
+  expect(within(menu).queryByText('internal-account-id')).not.toBeInTheDocument();
   cleanup();
 });

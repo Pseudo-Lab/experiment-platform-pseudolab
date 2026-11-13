@@ -148,6 +148,8 @@ export interface GuardrailMetricResult {
 export type JudgmentType = 'ship' | 'hold' | 'rollback' | 'need_more_data';
 
 export interface ExperimentResult {
+  readout_state?: 'collecting' | 'observing' | 'finalized' | null;
+  finalizes_at?: string | null;
   experiment_id: string;
   primary_metric: string | null;
   treatment: VariantResult | null;
@@ -310,6 +312,12 @@ export interface Variant {
 }
 
 export interface Experiment {
+  event_model?: 'legacy' | 'sdk_v1';
+  readout_policy_version?: string | null;
+  conversion_window_seconds?: number | null;
+  one_time_intervention?: boolean;
+  ingestion_grace_seconds?: number | null;
+  measurement_locked?: boolean;
   id: string;
   name: string;
   hypothesis?: string;
@@ -334,6 +342,8 @@ export interface Experiment {
 }
 
 export interface ExperimentCreate {
+  conversion_window_seconds?: number | null;
+  one_time_intervention?: boolean;
   event_model?: 'legacy' | 'sdk_v1';
   id?: string;
   name: string;
@@ -353,6 +363,8 @@ export interface ExperimentCreate {
 }
 
 export interface ExperimentUpdate {
+  conversion_window_seconds?: number | null;
+  one_time_intervention?: boolean;
   name?: string;
   hypothesis?: string;
   expected_effect?: string;
@@ -930,6 +942,8 @@ export interface ExperimentAnalyticsAnomaly {
 }
 
 export interface ExperimentAnalyticsResponse {
+  readout_state?: 'collecting' | 'observing' | 'finalized' | null;
+  finalizes_at?: string | null;
   impressions: ExperimentAnalyticsImpressions;
   conversions: ExperimentAnalyticsConversions;
   statistical_significance: ExperimentAnalyticsSignificance;
@@ -967,8 +981,8 @@ export const availableEventsApi = {
 
 
 export type ProjectRole = 'viewer' | 'editor';
-export interface ProjectMember { account_id: string; role: ProjectRole | 'owner'; }
-export interface ProjectInvitation { status: 'pending' | 'accepted' | 'expired' | 'revoked'; created_at: number; accepted_at: number | null; id: string; project_id: string; role: ProjectRole; expires_at: number; revoked_at: number | null; accepted_by: string | null; }
+export interface ProjectMember { account_id: string; role: ProjectRole | 'owner'; display_name?: string | null; email?: string | null; }
+export interface ProjectInvitation { status: 'pending' | 'accepted' | 'expired' | 'revoked'; created_at: number; accepted_at: number | null; id: string; project_id: string; role: ProjectRole; expires_at: number; revoked_at: number | null; accepted_by: string | null; recipient_email?: string | null; accepted_display_name?: string | null; accepted_email?: string | null; }
 
 async function sharingRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const res = await apiFetch(`${API_BASE_URL}/projects/${path}`, {
@@ -981,7 +995,7 @@ async function sharingRequest<T>(path: string, method = 'GET', body?: unknown): 
 export const projectSharingApi = {
   members: (id: string) => sharingRequest<ProjectMember[]>(`${encodeURIComponent(id)}/members`),
   invitations: (id: string) => sharingRequest<ProjectInvitation[]>(`${encodeURIComponent(id)}/invitations`),
-  invite: (id: string, role: ProjectRole) => sharingRequest<ProjectInvitation & { token: string }>(`${encodeURIComponent(id)}/invitations`, 'POST', { role }),
+  invite: (id: string, role: ProjectRole, email?: string) => sharingRequest<ProjectInvitation & { token: string }>(`${encodeURIComponent(id)}/invitations`, 'POST', { role, ...(email ? { email } : {}) }),
   revoke: (id: string, inviteId: string) => sharingRequest<void>(`${encodeURIComponent(id)}/invitations/${encodeURIComponent(inviteId)}`, 'DELETE'),
   update: (id: string, accountId: string, role: ProjectRole) => sharingRequest<void>(`${encodeURIComponent(id)}/members/${encodeURIComponent(accountId)}`, 'PATCH', { role }),
   remove: (id: string, accountId: string) => sharingRequest<void>(`${encodeURIComponent(id)}/members/${encodeURIComponent(accountId)}`, 'DELETE'),

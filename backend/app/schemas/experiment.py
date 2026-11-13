@@ -52,6 +52,8 @@ class Variant(BaseModel):
 
 # Experiment schemas
 class ExperimentCreate(BaseModel):
+    conversion_window_seconds: Optional[int] = Field(default=None, strict=True, gt=0, le=2592000)
+    one_time_intervention: bool = False
     event_model: Literal["legacy", "sdk_v1"] = "legacy"
     id: Optional[str] = None
     name: str
@@ -84,6 +86,8 @@ class ExperimentCreate(BaseModel):
 
     @model_validator(mode="after")
     def check_create_contract(self):
+        if self.conversion_window_seconds is not None and (not self.one_time_intervention or self.event_model != "sdk_v1"):
+            raise ValueError("Conversion window requires an SDK one-time intervention")
         if self.event_model == "sdk_v1" and (self.experiment_type != ExperimentType.AB_TEST or not self.flag_key):
             raise ValueError("sdk_v1 requires an ab_test with flag_key")
         if self.variants:
@@ -96,6 +100,9 @@ class ExperimentCreate(BaseModel):
 
 
 class ExperimentUpdate(BaseModel):
+    conversion_window_seconds: Optional[int] = Field(default=None, strict=True, gt=0, le=2592000)
+    one_time_intervention: Optional[bool] = None
+
     @model_validator(mode="before")
     @classmethod
     def immutable_event_model(cls, value):
@@ -133,6 +140,11 @@ class AdoptWinnerRequest(BaseModel):
 
 
 class Experiment(BaseModel):
+    readout_policy_version: Optional[str] = None
+    conversion_window_seconds: Optional[int] = None
+    one_time_intervention: bool = False
+    ingestion_grace_seconds: Optional[int] = None
+    measurement_locked: bool = False
     event_model: Literal["legacy", "sdk_v1"] = "legacy"
     id: str
     name: str
@@ -198,6 +210,8 @@ JudgmentType = str  # "ship" | "hold" | "rollback" | "need_more_data"
 
 
 class ExperimentResult(BaseModel):
+    readout_state: Optional[Literal["collecting", "observing", "finalized"]] = None
+    finalizes_at: Optional[datetime] = None
     experiment_id: str
     primary_metric: Optional[str]
     treatment: Optional[VariantResult] = None

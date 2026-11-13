@@ -21,6 +21,10 @@ def project(mock_d1):
                                guardrail_metrics, created_at, updated_at, event_model) VALUES (?, ?, ?, ?, 'running',
                                'purchase', '["retained"]', '2026-01-01', '2026-01-01', 'sdk_v1')""",
                             (f'{project_id}-{suffix}', suffix, project_id, f'flag-{project_id}'))
+    # These cases exercise pre-policy SDK experiments and their historical readouts.
+    # New active-period cohorts have a separate deterministic-clock regression suite.
+    mock_d1.execute('DELETE FROM experiment_readout_contract')
+    mock_d1.execute('DELETE FROM experiment_readout_policy')
     mock_d1.commit()
     return mock_d1
 
@@ -271,3 +275,175 @@ def test_live_srm_excludes_multivariant_users_like_result_and_batch(project):
     assert live['impressions']['total'] == 101  # retained diagnostic views
     assert live['srm_warning'] is False
     assert asyncio.run(srm_monitor._check_srm('a-one')) is False
+
+
+@pytest.mark.parametrize('status', ['paused', 'completed', 'archived'])
+@pytest.mark.parametrize('kind', ['click', 'conversion'])
+def test_stopped_experiment_keeps_prior_exposure_but_excludes_new_ones(project, status, kind):
+    prior = exposure_context('prior')
+    cached = exposure_context('cached')
+    assert capture(event(prior)).status_code == 202
+    assert client.patch(f'{BASE}/experiments/a-one', json={'status': status}).status_code == 200
+    assert decide('new').status_code == 422
+
+    # A backdated client timestamp and forged marker cannot enroll a new view.
+    new_view = event(cached)
+    new_view['properties']['sdk_exposure_eligible'] = True
+    assert capture(new_view).status_code == 202  # raw receipt, not readout inclusion
+    assert capture(event(cached, kind, 'purchase', 'unqualified-action')).status_code == 202
+    assert capture(event(prior, kind, 'purchase', 'qualified-action')).status_code == 202
+    assert project.execute('SELECT COUNT(*) FROM event_log').fetchone()[0] == 4
+    stored = project.execute("SELECT properties FROM event_log WHERE user_id='cached' AND event_name='exp_exposure'").fetchone()[0]
+    assert json.loads(stored)['sdk_exposure_eligible'] == 0
+    assert client.get(f'{BASE}/experiments/a-one/result').json()['sample_size'] == 1
+    live = client.get(f'{BASE}/experiments/a-one/analytics').json()
+    assert live['impressions']['total'] == live['conversions']['total'] == 1
+
+
+def test_running_exposure_overwrites_client_marker_and_retry_preserves_eligibility(project):
+    ctx = exposure_context()
+    payload = event(ctx)
+    payload['properties']['sdk_exposure_eligible'] = False
+    assert capture(payload).status_code == 202
+    original = dict(project.execute('SELECT * FROM event_log').fetchone())
+    assert json.loads(original['properties'])['sdk_exposure_eligible'] == 1
+    assert client.patch(f'{BASE}/experiments/a-one', json={'status': 'paused'}).status_code == 200
+    assert capture(payload).status_code == 202
+    assert dict(project.execute('SELECT * FROM event_log').fetchone()) == original
+    action = event(ctx, 'conversion', 'purchase', 'post-stop-action')
+    action['properties']['sdk_exposure_eligible'] = False
+    assert capture(action).status_code == 202
+    stored_action = project.execute("SELECT properties FROM event_log WHERE event_name='purchase'").fetchone()[0]
+    assert 'sdk_exposure_eligible' not in json.loads(stored_action)
+    assert client.get(f'{BASE}/experiments/a-one/analytics').json()['impressions']['total'] == 1
+    assert client.get(f'{BASE}/experiments/a-one/analytics').json()['conversions']['total'] == 1
+
+
+def test_resume_does_not_rehabilitate_previously_excluded_exposure(project):
+    ctx = exposure_context()
+    assert client.patch(f'{BASE}/experiments/a-one', json={'status': 'paused'}).status_code == 200
+    assert capture(event(ctx)).status_code == 202
+    assert client.patch(f'{BASE}/experiments/a-one', json={'status': 'running'}).status_code == 200
+    assert capture(event(ctx)).status_code == 202  # same ID remains excluded
+    assert capture(event(ctx, 'conversion', 'purchase', 'old-view-action')).status_code == 202
+    assert client.get(f'{BASE}/experiments/a-one/analytics').json()['impressions']['total'] == 0
+    assert client.get(f'{BASE}/experiments/a-one/analytics').json()['conversions']['total'] == 0
+
+    fresh = {**ctx, 'impression_id': 'new-running-view'}
+    assert capture(event(fresh)).status_code == 202
+    assert capture(event(fresh, 'conversion', 'purchase', 'fresh-action')).status_code == 202
+    live = client.get(f'{BASE}/experiments/a-one/analytics').json()
+    assert live['impressions']['total'] == live['conversions']['total'] == 1
+
+
+def test_action_arriving_before_first_exposure_cannot_enroll_after_stop(project):
+    ctx = exposure_context()
+    assert capture(event(ctx, 'conversion', 'purchase', 'early-arrival', '2026-10-01T10:01:00Z')).status_code == 202
+    assert client.patch(f'{BASE}/experiments/a-one', json={'status': 'completed'}).status_code == 200
+    assert capture(event(ctx)).status_code == 202
+    live = client.get(f'{BASE}/experiments/a-one/analytics').json()
+    assert live['impressions']['total'] == live['conversions']['total'] == 0
+    assert client.get(f'{BASE}/experiments/a-one/result').json()['sample_size'] == 0
+    available = client.get(f'{BASE}/experiments/a-one/available-events').json()
+    assert available['has_impressions'] is False
+    assert available['has_conversions'] is False
+
+
+def test_batch_preserves_duplicate_and_prior_action_but_excludes_stopped_new_view(project):
+    prior = exposure_context('prior')
+    cached = exposure_context('cached')
+    assert capture(event(prior)).status_code == 202
+    assert client.patch(f'{BASE}/experiments/a-one', json={'status': 'paused'}).status_code == 200
+    response = client.post(f'{BASE}/ingest/events', headers={'x-api-key': 'public-a'}, json={
+        'events': [event(prior), event(cached), event(prior, 'conversion', 'purchase', 'late-action')],
+    })
+    assert response.status_code == 202
+    assert response.json() == {'success': True, 'accepted': 3, 'total': 3}
+    assert project.execute('SELECT COUNT(*) FROM event_log').fetchone()[0] == 3
+    live = client.get(f'{BASE}/experiments/a-one/analytics').json()
+    assert live['impressions']['total'] == live['conversions']['total'] == 1
+
+
+def test_exposure_eligibility_is_observed_in_insert_not_earlier_validation(project, monkeypatch):
+    from app.db import d1
+    ctx = exposure_context()
+    execute = d1.execute
+
+    async def stop_before_insert(sql, params=None, database_id=None):
+        if 'INSERT OR IGNORE INTO event_log' in sql:
+            project.execute("UPDATE experiments SET status='paused' WHERE id='a-one'")
+            project.commit()
+        return await execute(sql, params, database_id)
+
+    monkeypatch.setattr(d1, 'execute', stop_before_insert)
+    assert capture(event(ctx)).status_code == 202
+    assert project.execute('SELECT COUNT(*) FROM event_log').fetchone()[0] == 1
+    assert client.get(f'{BASE}/experiments/a-one/analytics').json()['impressions']['total'] == 0
+
+
+def test_historical_unmarked_exposure_keeps_existing_readout(project):
+    ctx = exposure_context()
+    assert capture(event(ctx)).status_code == 202
+    # A row written by the prior collector has no eligibility marker.
+    project.execute("UPDATE event_log SET properties=json_remove(properties, '$.sdk_exposure_eligible')")
+    project.commit()
+    assert client.patch(f'{BASE}/experiments/a-one', json={'status': 'completed'}).status_code == 200
+    assert capture(event(ctx, 'conversion', 'purchase', 'late-action')).status_code == 202
+    live = client.get(f'{BASE}/experiments/a-one/analytics').json()
+    assert live['impressions']['total'] == live['conversions']['total'] == 1
+
+
+def test_lifecycle_filter_is_shared_by_result_live_and_srm(project):
+    import asyncio
+    from app.services.srm_monitor import srm_monitor
+    groups = {}
+    for i in range(100):
+        ctx = exposure_context(f'group-{i}')
+        groups.setdefault(ctx['variant'], ctx)
+        if len(groups) == 2:
+            break
+    assert set(groups) == {'control', 'treatment'}
+    for ctx in groups.values():
+        assert capture(event(ctx)).status_code == 202
+    cached = []
+    for i in range(100):
+        ctx = exposure_context(f'cached-{i}')
+        if ctx['variant'] == 'control':
+            cached.append(ctx)
+    assert client.patch(f'{BASE}/experiments/a-one', json={'status': 'paused'}).status_code == 200
+    for ctx in cached:
+        assert capture(event(ctx)).status_code == 202
+        assert capture(event(ctx, 'conversion', 'purchase', 'bad-'+ctx['user_id'])).status_code == 202
+        assert capture(event(ctx, 'conversion', 'retained', 'bad-guardrail-'+ctx['user_id'])).status_code == 202
+    assert capture(event(groups['treatment'], 'conversion', 'purchase', 'good')).status_code == 202
+    assert capture(event(groups['treatment'], 'conversion', 'retained', 'good-guardrail')).status_code == 202
+    result = client.get(f'{BASE}/experiments/a-one/result').json()
+    assert result['sample_size'] == 2
+    assert result['control']['conversions'] == 0
+    assert result['treatment']['conversions'] == 1
+    assert result['guardrail_results'][0]['control_rate'] == 0
+    assert result['guardrail_results'][0]['treatment_rate'] == 1
+    live = client.get(f'{BASE}/experiments/a-one/analytics').json()
+    assert live['impressions']['total'] == 2
+    assert live['conversions']['total'] == 1
+    assert live['srm_warning'] is False
+    assert asyncio.run(srm_monitor._check_srm('a-one')) is False
+
+
+def test_draft_exposure_is_excluded_and_flag_only_and_legacy_paths_stay_independent(project):
+    ctx = exposure_context()
+    # Synthetic draft attribution is rejected even if its deterministic ID is known.
+    project.execute("UPDATE experiments SET status='draft' WHERE project_id='a'")
+    project.commit()
+    assert capture(event(ctx)).status_code == 202
+    assert client.get(f'{BASE}/experiments/a-one/analytics').json()['impressions']['total'] == 0
+
+    flag_only = decide(exp=None)
+    assert flag_only.status_code == 200
+    flag_ctx = dict(flag_only.json()['tracking_context'], session_id='tab', impression_id='flag-view')
+    assert flag_ctx['experiment_id'] is None
+    assert capture(event(flag_ctx)).status_code == 202
+    assert capture({'user_id': 'legacy', 'event_name': 'legacy-action', 'event_id': 'legacy-id'}).status_code == 202
+    rows = project.execute("SELECT properties FROM event_log WHERE experiment_id IS NULL").fetchall()
+    assert len(rows) == 2
+    assert all('sdk_exposure_eligible' not in json.loads(row[0] or '{}') for row in rows)

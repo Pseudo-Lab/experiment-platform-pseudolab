@@ -188,3 +188,39 @@ it('shows member project event results without calling administrator result or d
   expect(experimentResultApi.getResult).not.toHaveBeenCalled();
   expect(decisionApi.list).not.toHaveBeenCalled();
 });
+
+it.each(['ko', 'en'] as const)('shows pending and finalized states for empty results in %s', async lang => {
+  vi.mocked(experimentResultApi.getResult).mockResolvedValue({ sample_size: 0, readout_state: 'observing', finalizes_at: '2026-11-20T12:00:00Z' } as any);
+  const first = setup('results', lang);
+  await screen.findByText(lang === 'ko' ? '관찰 중' : 'Observing');
+  expect(screen.getByRole('status')).toHaveTextContent(lang === 'ko' ? '관찰 중' : 'Observing');
+  expect(screen.getByRole('status')).toHaveTextContent(lang === 'ko' ? '확정 가능 시각' : 'Finalization available after');
+  first.unmount();
+  vi.mocked(experimentResultApi.getResult).mockResolvedValue({ sample_size: 0, readout_state: 'finalized', finalizes_at: '2026-11-20T12:00:00Z' } as any);
+  setup('results', lang);
+  await screen.findByText(lang === 'ko' ? '결과 확정' : 'Results finalized');
+  expect(screen.getByRole('status')).toHaveTextContent(lang === 'ko' ? '결과 확정' : 'Results finalized');
+  expect(screen.getByRole('status')).toHaveTextContent(lang === 'ko' ? '이후 도착한 이벤트를 합산하지 않습니다' : 'Events arriving later are excluded');
+  expect(screen.queryByText(/Finalization available after|확정 가능 시각/)).not.toBeInTheDocument();
+});
+
+it('uses scoped analytics metadata for member readout status and preserves the administrator API boundary', async () => {
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({ ...emptyAnalytics, readout_state: 'observing', finalizes_at: '2026-11-20T12:00:00Z' } as any);
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang="en" view="results" isAdmin={false} /></MemoryRouter>);
+  await screen.findByText('Observing');
+  expect(screen.getByRole('status')).toHaveTextContent('Observing');
+  expect(experimentResultApi.getResult).not.toHaveBeenCalled();
+  expect(decisionApi.list).not.toHaveBeenCalled();
+});
+
+it('lets members retry a failed finalization or analytics request without showing a false finalized state', async () => {
+  vi.mocked(experimentAnalyticsApi.get).mockRejectedValueOnce(new Error('503'));
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang="en" view="results" isAdmin={false} /></MemoryRouter>);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Collection status is unknown');
+  expect(screen.queryByText('Results finalized')).not.toBeInTheDocument();
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({ ...emptyAnalytics, readout_state: 'finalized' } as any);
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  await screen.findByText('Results finalized');
+  expect(screen.getByRole('status')).toHaveTextContent('Results finalized');
+  expect(experimentResultApi.getResult).not.toHaveBeenCalled();
+});

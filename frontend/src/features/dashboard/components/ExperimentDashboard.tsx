@@ -284,6 +284,7 @@ export const ExperimentDashboard: React.FC<Props> = ({
       })) ?? []);
   const series = variants.length ? variants : [t.total];
   const locale = lang === 'ko' ? 'ko-KR' : 'en-US';
+  const readout = isAdmin ? result : analytics;
   const percentage = (value: number | null | undefined) =>
     value == null ? '—' : `${(value * 100).toFixed(2)}%`;
 
@@ -429,7 +430,18 @@ export const ExperimentDashboard: React.FC<Props> = ({
                   {experiment.primary_metric || t.unspecified}
                 </code>
               </p>
-              {!isAdmin ? (
+              {readout?.readout_state && <div role="status" className="space-y-1 text-sm">
+                <p className="font-medium">{lang === 'ko'
+                  ? ({ collecting: '집계 중', observing: '관찰 중', finalized: '결과 확정' } as const)[readout.readout_state]
+                  : ({ collecting: 'Collecting', observing: 'Observing', finalized: 'Results finalized' } as const)[readout.readout_state]}</p>
+                <p className="max-w-prose text-muted-foreground">{readout.readout_state === 'finalized'
+                  ? (lang === 'ko' ? '확정 당시의 입력과 결과를 보존하며, 이후 도착한 이벤트를 합산하지 않습니다.' : 'The finalized inputs and results are preserved. Events arriving later are excluded.')
+                  : (lang === 'ko' ? '관찰과 지연 전송 반영이 끝나기 전까지 결과가 바뀔 수 있습니다.' : 'Results can change until observation and late-event processing finish.')}</p>
+                {readout.finalizes_at && readout.readout_state !== 'finalized' && <p className="text-muted-foreground">
+                  {lang === 'ko' ? '확정 가능 시각' : 'Finalization available after'}: {new Date(readout.finalizes_at).toLocaleString(locale)}
+                </p>}
+              </div>}
+              {!isAdmin && errors.includes('analytics') ? retry(t.error) : !isAdmin ? (
                 <Card className="p-5 space-y-2">
                   <p>{lang === 'ko' ? '프로젝트 SDK 이벤트 집계 (고유 방문자 수 아님)' : 'Project SDK event counts (not unique visitors)'}</p>
                   <p>{lang === 'ko' ? '노출' : 'Impressions'}: {analytics?.impressions.total ?? '—'} · {lang === 'ko' ? '전환' : 'Conversions'}: {analytics?.conversions.total ?? '—'}</p>
@@ -555,7 +567,7 @@ export const ExperimentDashboard: React.FC<Props> = ({
                 </>
               )}
               {errors.includes('analytics')
-                ? retry(t.resultError)
+                ? (isAdmin ? retry(t.resultError) : null)
                 : analytics && (
                     <details className="rounded-xl border p-5">
                       <summary className="cursor-pointer font-medium text-sm">

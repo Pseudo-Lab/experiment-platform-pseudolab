@@ -96,7 +96,9 @@ function AppShell() {
         lang={lang}
         setLang={setLang}
         backendStatus={backendStatus}
-        userLabel={user?.username}
+        userLabel={user?.display_name || user?.email || user?.username}
+        userEmail={user?.email}
+        accountId={user?.account_id}
         isAdmin={user?.is_admin !== false}
         onLogout={logout}
       >

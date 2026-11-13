@@ -17,6 +17,7 @@ from app.schemas.experiment import (
 )
 from app.db import d1
 from app.services.sdk_events import read_sdk_events
+from app.services.sdk_readout import read_bounded_input
 
 
 def _now() -> str:
@@ -85,8 +86,9 @@ class ExperimentService:
             """INSERT INTO experiments
                (id, name, hypothesis, expected_effect, primary_metric, completion_event,
                 experiment_type, cohort_id, flag_key, variant_names_json, product, project_id,
-                status, owner_id, start_at, end_at, guardrail_metrics, created_at, updated_at, event_model)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?)""",
+                status, owner_id, start_at, end_at, guardrail_metrics, created_at, updated_at, event_model,
+                conversion_window_seconds, one_time_intervention)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
                 exp_id,
                 data.name,
@@ -104,7 +106,7 @@ class ExperimentService:
                 _serialize_datetime(data.start_at),
                 _serialize_datetime(data.end_at),
                 guardrail_metrics_json,
-                now, now, data.event_model,
+                now, now, data.event_model, data.conversion_window_seconds, int(data.one_time_intervention),
             ]
         )
         if not ok:
@@ -113,13 +115,41 @@ class ExperimentService:
 
     async def update(self, experiment_id: str, data: ExperimentUpdate) -> Optional[Experiment]:
         patch = {k: v for k, v in data.model_dump().items() if v is not None}
+        if "conversion_window_seconds" in data.model_fields_set:
+            patch["conversion_window_seconds"] = data.conversion_window_seconds
         current = await self.get(experiment_id)
+        if current:
+            measurement = {"conversion_window_seconds", "one_time_intervention", "primary_metric",
+                           "completion_event", "guardrail_metrics", "project_id", "flag_key", "experiment_type"}
+            if current.measurement_locked and any(k in patch and patch[k] != getattr(current, k) for k in measurement):
+                raise HTTPException(422, "Measurement contract is locked")
+            window = patch.get("conversion_window_seconds", current.conversion_window_seconds)
+            intervention = patch.get("one_time_intervention", current.one_time_intervention)
+            if window is not None and (not intervention or current.readout_policy_version != "bounded_v1"):
+                raise HTTPException(422, "Conversion window requires a prospective SDK one-time intervention")
+            if "one_time_intervention" in patch:
+                patch["one_time_intervention"] = int(patch["one_time_intervention"])
         if current and current.event_model == "sdk_v1":
             if any(key in patch and patch[key] != getattr(current, key)
                    for key in ("project_id", "flag_key", "experiment_type")):
                 raise HTTPException(status_code=422, detail="SDK v1 attribution identity is immutable")
         if not patch:
             return await self.get(experiment_id)
+
+        if current and (
+            "start_at" in patch or "end_at" in patch
+            or patch.get("status") == ExperimentStatus.RUNNING
+        ):
+            start_at = patch.get("start_at", current.start_at)
+            end_at = patch.get("end_at", current.end_at)
+            if start_at and end_at:
+                # Match placement windows: timezone-less values represent UTC.
+                start_at = start_at.replace(tzinfo=start_at.tzinfo or timezone.utc)
+                end_at = end_at.replace(tzinfo=end_at.tzinfo or timezone.utc)
+                if start_at >= end_at:
+                    raise HTTPException(
+                        status_code=422, detail="end_at은 start_at보다 이후여야 합니다"
+                    )
 
         if "status" in patch:
             current = await self.get(experiment_id)
@@ -151,10 +181,15 @@ class ExperimentService:
 
         set_clause = ", ".join(f"{k} = ?" for k in patch)
         values = list(patch.values()) + [experiment_id]
-        await d1.execute(
-            f"UPDATE experiments SET {set_clause} WHERE id = ?",
-            values
-        )
+        if current and current.readout_policy_version == "bounded_v1":
+            changed = await d1.security_query(
+                f"UPDATE experiments SET {set_clause} WHERE id = ? AND status = ? RETURNING id",
+                values + [current.status.value],
+            )
+            if not changed:
+                raise HTTPException(409, "Experiment changed; reload before editing")
+        else:
+            await d1.execute(f"UPDATE experiments SET {set_clause} WHERE id = ?", values)
         return await self.get(experiment_id)
 
     async def delete(self, experiment_id: str) -> bool:
@@ -269,10 +304,40 @@ class ExperimentService:
         )
 
     async def get_result(self, experiment_id: str) -> ExperimentResult:
-        exp = await self.get(experiment_id)
-        if not exp:
-            raise HTTPException(status_code=404, detail="Experiment not found")
+        rows = await d1.security_query("SELECT * FROM experiments WHERE id=?", [experiment_id])
+        if not rows:
+            raise HTTPException(404, "Experiment not found")
+        exp = await self._to_experiment(rows[0])
+        bounded = await read_bounded_input(experiment_id, exp.project_id) if exp.event_model == "sdk_v1" else None
+        if bounded is None:
+            return await self._compute_result(exp)
+        if bounded["result_json"] is not None:
+            return ExperimentResult.model_validate_json(bounded["result_json"])
+        contract = bounded["contract"]
+        if contract:
+            exp = exp.model_copy(update={k: contract[k] for k in
+                ("primary_metric", "completion_event", "guardrail_metrics", "project_id")})
+        result = await self._compute_result(exp, bounded["events"], deterministic=True)
+        if contract:
+            result.readout_state = "observing" if bounded["finalizes_at"] or exp.status == ExperimentStatus.PAUSED else "collecting"
+            result.finalizes_at = datetime.fromisoformat(bounded["finalizes_at"]) if bounded["finalizes_at"] else None
+        if bounded["frozen"]:
+            result.readout_state = "finalized"
+            await d1.security_query(
+                "UPDATE experiment_readout_snapshot SET result_json=? WHERE experiment_id=? AND result_json IS NULL",
+                [result.model_dump_json(), experiment_id],
+            )
+            winner = await d1.security_query(
+                "SELECT s.result_json FROM experiment_readout_snapshot s JOIN experiments e ON e.id=s.experiment_id "
+                "WHERE e.id=? AND e.project_id IS ?", [experiment_id, exp.project_id])
+            if not winner or winner[0]["result_json"] is None:
+                raise HTTPException(503, "Readout storage unavailable")
+            return ExperimentResult.model_validate_json(winner[0]["result_json"])
+        return result
 
+    async def _compute_result(self, exp: Experiment, sdk_rows: list[dict] | None = None,
+                              deterministic: bool = False) -> ExperimentResult:
+        experiment_id = exp.id
         if not exp.primary_metric:
             return ExperimentResult(
                 experiment_id=experiment_id,
@@ -286,7 +351,8 @@ class ExperimentService:
             return await self._get_quasi_result(exp, experiment_id)
 
         sdk_v1 = exp.event_model == "sdk_v1"
-        sdk_rows = await read_sdk_events(experiment_id, exp.project_id) if sdk_v1 else []
+        if sdk_rows is None:
+            sdk_rows = await read_sdk_events(experiment_id, exp.project_id) if sdk_v1 else []
         if sdk_v1:
             # A v1 cohort never mixes with uncorrelated historical dual writes.
             exposure_rows = [r for r in sdk_rows if r["sdk_event_type"] == "exposure"]
@@ -380,8 +446,10 @@ class ExperimentService:
             )
 
         # ── Bayesian 확률 (Beta-Binomial) ──
-        t_samples = np.random.beta(t_success + 1, (t_total - t_success) + 1, 10_000)
-        c_samples = np.random.beta(c_success + 1, (c_total - c_success) + 1, 10_000)
+        # bounded_v1 pins both generator and seed; historical randomness is unchanged.
+        rng = np.random.Generator(np.random.PCG64(0)) if deterministic else np.random
+        t_samples = rng.beta(t_success + 1, (t_total - t_success) + 1, 10_000)
+        c_samples = rng.beta(c_success + 1, (c_total - c_success) + 1, 10_000)
         prob = float((t_samples > c_samples).mean())
 
         # ── SRM 검정: χ² goodness-of-fit (기대 50:50) — 임계값 p < 0.001 ──
@@ -580,7 +648,16 @@ class ExperimentService:
         except (json.JSONDecodeError, TypeError):
             guardrail_metrics = None
 
+        policy_rows = await d1.security_query(
+            "SELECT version, ingestion_grace_seconds, locked_json FROM experiment_readout_contract WHERE experiment_id=?",
+            [exp_id])
+        policy = policy_rows[0] if policy_rows else {}
         return Experiment(
+            readout_policy_version=policy.get("version"),
+            conversion_window_seconds=row.get("conversion_window_seconds"),
+            one_time_intervention=bool(row.get("one_time_intervention", False)),
+            ingestion_grace_seconds=policy.get("ingestion_grace_seconds"),
+            measurement_locked=policy.get("locked_json") is not None,
             event_model=row["event_model"],
             id=row["id"],
             name=row["name"],
@@ -625,7 +702,7 @@ class ExperimentService:
             return
 
         next_primary_metric = patch.get("primary_metric", current.primary_metric)
-        if not next_primary_metric:
+        if not next_primary_metric or not next_primary_metric.strip():
             raise HTTPException(
                 status_code=422,
                 detail="실험을 running으로 전환하려면 primary_metric을 먼저 설정해야 합니다.",

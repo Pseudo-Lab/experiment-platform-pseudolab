@@ -263,6 +263,27 @@ class TestStatusTransition:
 class TestRunningPreconditions:
     """running 전환 시 primary_metric / flag_key 사전 조건 검증."""
 
+    @pytest.mark.parametrize("metric", ["", " ", "\t\n", "\u3000"])
+    @pytest.mark.parametrize("saved", [False, True])
+    def test_running_rejects_blank_metric_without_changing_experiment(
+        self, created_experiment, metric, saved
+    ):
+        exp_id = created_experiment["id"]
+        if saved:
+            assert client.patch(
+                f"{BASE}/{exp_id}", json={"primary_metric": metric}
+            ).status_code == 200
+        before = client.get(f"{BASE}/{exp_id}").json()
+        patch = {"status": "running", "name": "Must not be saved"}
+        if not saved:
+            patch["primary_metric"] = metric
+
+        response = client.patch(f"{BASE}/{exp_id}", json=patch)
+
+        assert response.status_code == 422
+        assert "primary_metric" in response.json()["detail"]
+        assert client.get(f"{BASE}/{exp_id}").json() == before
+
     def test_running_blocked_without_primary_metric(self):
         # primary_metric 없이 quasi_experiment 생성
         payload = {
@@ -318,6 +339,127 @@ class TestRunningPreconditions:
             assert resp.json()["status"] == "running"
         finally:
             client.delete(f"{BASE}/{exp_id}")
+
+
+class TestExposureWindowUpdates:
+    @pytest.mark.parametrize("patch", [
+        {"end_at": "2026-05-27T15:00:00Z"},
+        {"end_at": "2026-05-26T15:00:00Z"},
+        {"start_at": "2026-06-09T15:00:00Z"},
+        {"start_at": "2026-06-10T15:00:00Z"},
+        {"end_at": "2026-05-28T00:00:00+09:00"},
+        {"end_at": "2026-05-26T15:00:00"},
+        {"end_at": "2026-05-27T15:00:00"},
+        {"end_at": None, "start_at": "2026-06-09T15:00:00Z"},
+    ])
+    @pytest.mark.parametrize("running", [False, True])
+    def test_partial_invalid_window_is_rejected_without_writes(
+        self, created_experiment, patch, running
+    ):
+        exp_id = created_experiment["id"]
+        assert client.patch(f"{BASE}/{exp_id}", json={
+            "start_at": "2026-05-27T15:00:00Z",
+            "end_at": "2026-06-09T15:00:00Z",
+        }).status_code == 200
+        if running:
+            assert client.patch(
+                f"{BASE}/{exp_id}", json={"status": "running"}
+            ).status_code == 200
+        before = client.get(f"{BASE}/{exp_id}").json()
+
+        response = client.patch(
+            f"{BASE}/{exp_id}", json={**patch, "name": "Must not be saved"}
+        )
+
+        assert response.status_code == 422
+        assert "end_at" in response.json()["detail"]
+        assert client.get(f"{BASE}/{exp_id}").json() == before
+
+    @pytest.mark.parametrize("patch", [
+        {"start_at": "2026-05-27T14:00:00Z"},
+        {"end_at": "2026-06-10T15:00:00Z"},
+        {"start_at": "2026-05-27T23:00:00+09:00"},
+        {"end_at": "2026-05-27T16:00:00"},
+    ])
+    def test_valid_partial_window_still_saves(self, created_experiment, patch):
+        exp_id = created_experiment["id"]
+        assert client.patch(f"{BASE}/{exp_id}", json={
+            "start_at": "2026-05-27T15:00:00Z",
+            "end_at": "2026-06-09T15:00:00Z",
+        }).status_code == 200
+
+        response = client.patch(f"{BASE}/{exp_id}", json=patch)
+
+        assert response.status_code == 200
+        for field, value in patch.items():
+            assert response.json()[field] == value
+        assert client.get(f"{BASE}/{exp_id}").json() == response.json()
+
+    @pytest.mark.parametrize("end_at, expected", [
+        ("2026-05-27T15:00:00Z", 422),
+        ("2026-05-27T16:00:00Z", 200),
+    ])
+    def test_stored_naive_window_uses_utc(
+        self, created_experiment, mock_d1, end_at, expected
+    ):
+        exp_id = created_experiment["id"]
+        mock_d1.execute(
+            "UPDATE experiments SET start_at=?, end_at=? WHERE id=?",
+            ["2026-05-27T15:00:00", "2026-05-28T15:00:00", exp_id],
+        )
+        mock_d1.commit()
+        response = client.patch(f"{BASE}/{exp_id}", json={"end_at": end_at})
+        assert response.status_code == expected
+
+    @pytest.mark.parametrize("field", ["start_at", "end_at"])
+    def test_one_sided_window_remains_supported(self, created_experiment, field):
+        response = client.patch(
+            f"{BASE}/{created_experiment['id']}",
+            json={field: "2026-05-27T15:00:00Z"},
+        )
+        assert response.status_code == 200
+        assert response.json()[field] == "2026-05-27T15:00:00Z"
+
+    @pytest.mark.parametrize("status", ["draft", "paused"])
+    def test_invalid_stored_window_cannot_start_but_can_be_repaired(
+        self, created_experiment, mock_d1, status
+    ):
+        exp_id = created_experiment["id"]
+        mock_d1.execute(
+            "UPDATE experiments SET status=?, start_at=?, end_at=? WHERE id=?",
+            [status, "2026-05-27T15:00:00Z", "2026-05-26T15:00:00Z", exp_id],
+        )
+        mock_d1.commit()
+        before = client.get(f"{BASE}/{exp_id}").json()
+
+        response = client.patch(f"{BASE}/{exp_id}", json={"status": "running"})
+
+        assert response.status_code == 422
+        assert client.get(f"{BASE}/{exp_id}").json() == before
+        repaired = client.patch(f"{BASE}/{exp_id}", json={
+            "end_at": "2026-05-28T15:00:00Z", "status": "running",
+        })
+        assert repaired.status_code == 200
+        assert repaired.json()["status"] == "running"
+
+    def test_invalid_stored_window_can_still_be_completed(
+        self, created_experiment, mock_d1
+    ):
+        exp_id = created_experiment["id"]
+        mock_d1.execute(
+            "UPDATE experiments SET status='paused', start_at=?, end_at=? WHERE id=?",
+            ["2026-05-27T15:00:00Z", "2026-05-26T15:00:00Z", exp_id],
+        )
+        mock_d1.commit()
+        response = client.patch(f"{BASE}/{exp_id}", json={"status": "completed"})
+        assert response.status_code == 200
+        assert response.json()["status"] == "completed"
+
+    def test_date_update_of_missing_experiment_remains_404(self):
+        response = client.patch(
+            f"{BASE}/missing-window", json={"end_at": "2026-05-27T15:00:00Z"}
+        )
+        assert response.status_code == 404
 
 
 class TestRunningPlacementPreconditions:
