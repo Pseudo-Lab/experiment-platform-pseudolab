@@ -96,6 +96,46 @@ describe('ProjectSettings + ProjectProvider + MainLayout integration', () => {
     vi.restoreAllMocks();
   });
 
+  it.each(['ko', 'en'] as const)('keeps save confirmation during and after the settings refresh in %s', async lang => {
+    const alpha = makeProject();
+    const beta = makeProject({ id: 'beta', name: 'Beta App' });
+    const updated = { ...alpha, base_url: 'https://saved.example.invalid' };
+    const refresh = deferred<Project[]>();
+    localStorage.setItem(STORAGE_KEY, 'alpha');
+    vi.mocked(projectApi.list).mockResolvedValueOnce([alpha, beta]).mockReturnValueOnce(refresh.promise);
+    vi.mocked(projectApi.patch).mockResolvedValueOnce(updated);
+    const { getCtx } = renderIntegration(lang);
+
+    const input = await screen.findByLabelText(lang === 'ko' ? '고객 앱 URL' : 'Customer app URL');
+    fireEvent.change(input, { target: { value: updated.base_url } });
+    fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '저장' : 'Save' }));
+    await waitFor(() => expect(getCtx().loading).toBe(true));
+    const confirmation = lang === 'ko' ? '앱 도메인을 저장했습니다.' : 'App domain saved.';
+    expect(screen.getByText(confirmation, { exact: true })).toBeVisible();
+    expect(input).toBeInTheDocument();
+
+    await act(async () => { refresh.resolve([updated, beta]); });
+    expect(getCtx().loading).toBe(false);
+    expect(screen.getByText(confirmation, { exact: true })).toBeVisible();
+    expect(input).toHaveValue(updated.base_url);
+    fireEvent.click(screen.getByRole('button', { name: 'Beta App' }));
+    expect(screen.queryByText(confirmation, { exact: true })).not.toBeInTheDocument();
+  });
+
+  it('still blocks settings if a refresh fails after a successful save', async () => {
+    const alpha = makeProject();
+    const refresh = deferred<Project[]>();
+    localStorage.setItem(STORAGE_KEY, 'alpha');
+    vi.mocked(projectApi.list).mockResolvedValueOnce([alpha]).mockReturnValueOnce(refresh.promise);
+    vi.mocked(projectApi.patch).mockResolvedValueOnce(alpha);
+    renderIntegration();
+    fireEvent.click(await screen.findByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(projectApi.list).toHaveBeenCalledTimes(2));
+    await act(async () => { refresh.reject(new Error('List unavailable')); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load projects.');
+    expect(screen.queryByLabelText('Customer app URL')).not.toBeInTheDocument();
+  });
+
   it.each(['ko', 'en'] as const)(
     'clears selection and navigates to /projects when projectApi.list rejects after DELETE succeeds, and retry recovers without resurrecting selection in %s',
     async (lang) => {

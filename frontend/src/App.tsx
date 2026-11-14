@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useLayoutEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { SdkGuidePage } from './features/docs/SdkGuidePage';
 import { MainLayout } from './layouts/MainLayout';
@@ -6,18 +6,38 @@ import { AuthProvider, useAuth } from './features/auth/AuthContext';
 import { ServiceIntroPage } from './features/about/ServiceIntroPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { BugReport } from './features/dashboard/components/BugReport';
-import { BugReportDetail } from './features/dashboard/components/BugReportDetail';
 import { Experiments } from './features/dashboard/components/Experiments';
-import { ExperimentDetail } from './features/dashboard/components/ExperimentDetail';
-import { GitHubDashboard } from './features/dashboard/components/GitHubDashboard';
-import { DiscordDashboard } from './features/dashboard/components/DiscordDashboard';
-import { FeatureFlags } from './features/dashboard/components/FeatureFlags';
 import { Projects } from './features/dashboard/components/Projects';
-import { ApiKeyPage } from './features/dashboard/components/ApiKeyPage';
-import { Placements } from './features/dashboard/components/Placements';
-import { ExampleApp } from './features/example/ExampleApp';
-import { ProjectSettings } from './features/dashboard/components/ProjectSettings';
 import { ProjectProvider } from './contexts/ProjectContext';
+import { Button } from './components/ui/button';
+
+const ExperimentDetail = lazy(() => import('./features/dashboard/components/ExperimentDetail').then(module => ({ default: module.ExperimentDetail })));
+const GitHubDashboard = lazy(() => import('./features/dashboard/components/GitHubDashboard').then(module => ({ default: module.GitHubDashboard })));
+const DiscordDashboard = lazy(() => import('./features/dashboard/components/DiscordDashboard').then(module => ({ default: module.DiscordDashboard })));
+const FeatureFlags = lazy(() => import('./features/dashboard/components/FeatureFlags').then(module => ({ default: module.FeatureFlags })));
+const ExampleApp = lazy(() => import('./features/example/ExampleApp').then(module => ({ default: module.ExampleApp })));
+const ProjectSettings = lazy(() => import('./features/dashboard/components/ProjectSettings').then(module => ({ default: module.ProjectSettings })));
+const ApiKeyPage = lazy(() => import('./features/dashboard/components/ApiKeyPage').then(module => ({ default: module.ApiKeyPage })));
+const Placements = lazy(() => import('./features/dashboard/components/Placements').then(module => ({ default: module.Placements })));
+const BugReportDetail = lazy(() => import('./features/dashboard/components/BugReportDetail').then(module => ({ default: module.BugReportDetail })));
+
+class RouteErrorBoundary extends React.Component<{ lang: 'ko' | 'en'; children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) {
+      return <div role="alert" className="space-y-3">
+        <p>{this.props.lang === 'ko' ? '화면을 불러오지 못했습니다. 새로고침 후 다시 시도하세요.' : 'Could not load this page. Refresh to try again.'}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>{this.props.lang === 'ko' ? '새로고침' : 'Refresh'}</Button>
+      </div>;
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   return (
@@ -103,6 +123,8 @@ function AppShell() {
         isAdmin={user?.is_admin !== false}
         onLogout={logout}
       >
+        <RouteErrorBoundary key={location.pathname} lang={lang}>
+        <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">{lang === 'ko' ? '화면을 불러오는 중...' : 'Loading page...'}</p>}>
         <Routes>
           <Route path="/login" element={<Navigate to="/experiments" replace />} />
           <Route path="/dashboard" element={<Navigate to="/experiments" replace />} />
@@ -122,6 +144,8 @@ function AppShell() {
           <Route path="/example/*" element={user?.is_admin !== false ? <ExampleApp lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="*" element={<Navigate to="/projects" replace />} />
         </Routes>
+        </Suspense>
+        </RouteErrorBoundary>
       </MainLayout>
     </ProjectProvider>
   );

@@ -397,7 +397,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 </header>
                 <div className="flex-1 p-4 md:p-8 overflow-auto">
                     {accountId && <ProjectInvitationInbox key={accountId} lang={lang} />}
-                    {isWorkspace && loading ? (
+                    {isWorkspace && loading && !(activePath === '/project-settings' && currentProject) ? (
                         <p role="status" className="text-sm text-muted-foreground">{lang === 'ko' ? '프로젝트를 불러오는 중...' : 'Loading projects...'}</p>
                     ) : isWorkspace && error ? (
                         <div role="alert" className="space-y-3">
