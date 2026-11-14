@@ -3,7 +3,7 @@ Last-Validated: 2026-11-15
 
 # 공개 기술 문서 인덱스
 
-설치·연동·기여의 시작점은 [문서 안내](../README.md)입니다. 과거 보고·인계·개인 작업 기록은 팀 Notion에 원문 보관 후 공개 문서에서 분리했습니다. 현재 기능의 설명은 아래 가이드와 코드에서 확인합니다.
+설치·연동·기여의 시작점은 [문서 안내](../README.md)입니다. 기능별 가이드와 구현 근거는 아래 문서에서 확인합니다.
 
 | 주제 | 공개 문서 |
 | --- | --- |
@@ -14,7 +14,7 @@ Last-Validated: 2026-11-15
 | 서버 접근 정책 | [서버 간 접근 판정](../guides/access-decision.md) |
 | 실험 상태·집계 확정 | [실험 수명주기](../guides/experiment-lifecycle.md) |
 | UI·브랜드 | [디자인 시스템](../guides/design_system.md), [브랜드 자산](../guides/iterglow-brand.md) |
-| 개발·검증 | [기여·에이전트 협업](../guides/agent_collaboration.md), [AGENTS.md](../../AGENTS.md) |
+| 개발·검증 | [기여 가이드](../guides/agent_collaboration.md), [AGENTS.md](../../AGENTS.md) |
 | 제품·개발 결정 | [공개 결정 로그](decision-log.md) |
 
-특정 운영 설치의 배포·데이터 상태나 과거 테스트 실행 결과는 공개 API 계약과 구분합니다. 과거 기록의 TODO·미반영 표기는 현재 작업 지시로 사용하지 않습니다.
+지원 범위와 요청·응답 계약은 해당 기능 가이드와 현재 코드를 함께 확인합니다.
