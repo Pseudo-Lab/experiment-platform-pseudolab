@@ -1,42 +1,56 @@
 Status: active
-Last-Validated: 2026-05-18
+Last-Validated: 2026-11-15
 
-# 🗄️ 데이터 인프라 접근 및 연동 가이드 (Data Access Guide)
+# 데이터 저장소 설정과 접근
 
-본 프로젝트는 가짜연구소의 커뮤니티 활동 데이터(디스코드/깃허브)를 활용합니다.
-이 문서는 각 파트(특히 Data Engineer, Analyst)가 핵심 데이터 저장소에 접근하고 활용하기 위한 가이드라인입니다.
+Iterglow는 설치 운영자가 준비한 Cloudflare D1·R2를 사용합니다. 특정 조직의 DB·사용자 데이터·팀 계정은 설치 전제가 아닙니다. 이 가이드는 현재 구현의 연결 설정과 접근 경계를 설명합니다.
 
-> **참고**: Supabase(성장 시스템 운영 raw DB)는 실험 플랫폼과 feature flag 분석에서 직접 활용하지 않습니다.
-> 성장 시스템 데이터가 필요한 경우 별도 ETL, export, 또는 제한된 동기화 파이프라인을 통해 D1 기준 데이터로 사용합니다.
+## 저장소 역할
 
-## 1. Cloudflare D1 / Workers (Discord & GitHub 데이터)
+| 설정 | 역할 | 필요 범위 |
+| --- | --- | --- |
+| `D1_DATABASE_ID` | 프로젝트·실험·설정·수집 이벤트 저장 | 실험 플랫폼 기능 |
+| `D1_MAIN_DATABASE_ID` | 기존 allowlisted query segment·조직 대시보드의 별도 소스 | 해당 기능 사용 시 |
+| `R2_BUCKET_NAME` | 첨부파일 객체 저장 | 첨부파일 기능 사용 시 |
 
-커뮤니티 내 유저 활동량, 메시지 발행, 커밋 기록 등은 Cloudflare 생태계(Worker 봇, D1 등)를 통해 수집/적재되고 있습니다.
+DB·bucket 이름은 자신의 설치에 맞게 선택합니다. 설정값은 ID와 bucket 이름이며 예전 팀 운영 리소스를 사용할 필요가 없습니다. R2 bucket 이름은 명시적으로 설정해 코드의 과거 기본값에 의존하지 않습니다.
 
-### 🔑 접근 방법
-- **Dashboard URL**: [Cloudflare Dashboard](https://dash.cloudflare.com/)
-- **계정**: Cloudflare 권한이 부여된 이메일
-- **Wrangler (CLI)**
-  ```bash
-  # Cloudflare CLI 설치 및 로그인
-  npm install -g wrangler
-  wrangler login
-  ```
+현재 query segment 템플릿은 특정 외부 소스 테이블을 전제로 합니다. `D1_MAIN_DATABASE_ID`에 임의 DB를 연결하는 것만으로 모든 서비스의 사용자 속성을 지원하지 않습니다. manual segment와 구분하고 사용할 template의 스키마를 확인해야 합니다. 사용자 속성 기반의 범용 세그먼트별 결과 분석은 [#23](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues/23)의 후속 범위입니다.
 
-### 📊 목적 및 활용 정책
-- **실시간 스트리밍**: 디스코드봇 등을 통해 수집되는 이벤트를 Cloudflare Workers를 사용해 D1에 적재합니다.
-- **DB 구성**: `pseudolab-main` (Discord/GitHub 원천), `pseudolab-exp` (실험 플랫폼 메타데이터)
-- **Feature flag segment**: query-backed segment refresh는 `pseudolab-main`을 `D1_MAIN_DATABASE_ID`로 참조하며, 서버에 등록된 allowlisted query template만 실행합니다.
+## 자신의 Cloudflare 리소스 준비
 
----
+1. [Cloudflare D1 시작 가이드](https://developers.cloudflare.com/d1/get-started/)에 따라 자신의 계정에 개발용 D1 생성 및 database ID 확인.
+2. 자신의 Cloudflare account ID와 D1 읽기·쓰기 API token 준비. 앱은 Workers binding이 아닌 [D1 HTTP API](https://developers.cloudflare.com/api/resources/d1/)를 사용하므로 backend 환경에 세 값 설정.
+3. [마이그레이션](../../backend/migrations/)의 스키마·seed·선행 조건 검토. 빈 DB 초기화의 현재 제약은 [설치 가이드](setup_guide.md#새-db-초기화의-현재-제한) 참고.
+4. 첨부파일 사용 시 자신의 R2 bucket 생성 후 해당 bucket의 Object Read & Write S3 자격증명 발급. [R2 인증 가이드](https://developers.cloudflare.com/r2/api/tokens/) 참고.
 
-## 2. 로컬 환경에서의 데이터 연동 테스트
+```dotenv
+CLOUDFLARE_ACCOUNT_ID=your-account-id
+CLOUDFLARE_API_TOKEN=your-d1-api-token
+D1_DATABASE_ID=your-experiment-database-id
+R2_ACCESS_KEY_ID=your-r2-access-key-id
+R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+R2_BUCKET_NAME=your-attachment-bucket
+```
 
-개발 및 로컬 데스크탑 환경에서는 **절대 프로덕션 데이터베이스에 직접 쓰기 로직을 테스트하지 마세요.**
-안전한 개발을 위해 아래 원칙을 준수합니다.
+D1 API token과 R2 S3 access key는 서로 다른 자격증명입니다. 값은 자신의 `backend/.env`나 배포 환경의 secret 저장소에 보관하고 저장소에 커밋하지 않습니다. API token은 필요한 계정·권한 범위로 제한하며 R2 키도 대상 bucket으로 제한합니다.
 
-1. **권한 제어**: API 서버는 D1 REST API를 통해 읽기 전용으로 대시보드 데이터를 조회합니다.
-2. **Mocking**: 데이터 파이프라인이 준비되지 않았을 때는 `backend/app/services/experiment.py`와 같이 Mock 데이터를 임시 활용합니다.
+## 서비스 연동과 접근 권한
 
----
-*추가 접근 권한이 필요할 경우 soo(Head)에게 요청해주세요.*
+- 연동 서비스에서 사용자 식별자·수집 이벤트·목표 지표 정의. 수집에 필요한 최소 정보만 전달.
+- 공개 SDK 키: 해당 프로젝트의 SDK 호출용. 관리자 계정·서버 자격증명과 별도 관리.
+- 일반 계정: 자신의 프로젝트와 공유받은 역할 범위의 기능 사용. 설치 전체 분석·세그먼트·placement 등 관리자 전용 기능과 구분.
+- 분석: 권한이 적용된 결과·집계 API 우선 사용. DB 직접 접근이나 export가 필요하면 설치 운영자가 대상·범위·보관 기준 결정.
+- 외부 서비스의 원천 DB: Iterglow가 범용적으로 직접 연결·조회하는 기능은 아님. 서비스별 수집 계약·제한 API·명시적 동기화 경로로 필요한 데이터 제공.
+
+백엔드는 실험 설정·사용자 행동 수집 등에서 D1에 **읽기와 쓰기**를 수행합니다. 읽기 전용 분석 계정과 앱 런타임 자격증명을 혼용하지 않습니다.
+
+## 개발·검증 기준
+
+- 운영과 분리된 자신의 개발 DB·bucket 및 합성 데이터 사용.
+- 테스트는 backend의 기존 fixture 사용. D1 설정 누락을 자동 mock 동작이나 수집 성공으로 간주 금지.
+- query segment refresh에 `D1_MAIN_DATABASE_ID`가 없으면 실패 처리. 빈 세그먼트 생성 성공과 구분.
+- migration·데이터 정리 전 대상과 보존·복구 기준 확인. 개발 테스트를 실제 운영 DB에 쓰는 방식으로 실행 금지.
+- 원문 사용자 데이터·키·토큰을 로그·이슈·문서에 게시 금지.
+
+추가 접근 권한은 자신의 설치 운영자에게 요청합니다. 특정 팀원의 개인 계정이나 기존 조직의 접근 권한을 요구하지 않습니다.

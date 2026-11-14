@@ -14,7 +14,7 @@
 
 > **오픈소스 A/B 테스트·실험 플랫폼**
 >
-> 가짜연구소의 실제 서비스를 개선하며, A/B 테스트를 운영할 수 있는 오픈소스 실험 플랫폼을 개발합니다.
+> 모든 서비스에서 연동·사용할 수 있는 실험 플랫폼입니다. 가짜연구소 서비스는 초기 적용·검증 사례입니다.
 
 [서비스 홈페이지](https://iterglow.pseudolab-devfactory.com) · [팀 소개 및 활동](https://pseudo-lab.github.io/experiment-platform-pseudolab/)
 
@@ -112,32 +112,23 @@ Iterglow는 사용자 그룹에 서로 다른 기능 버전을 제공하고, 이
 
 ## 🖥️ Local Deployment
 
-Docker와 Docker Compose가 필요합니다. 실행 전에 [환경 변수 템플릿](./backend/.env.sample)을 참고해 `backend/.env`를 작성하고 필요한 설정을 채워주세요. 실제 키나 토큰은 저장소에 커밋하지 않습니다.
+자신의 Cloudflare 리소스와 인증 설정을 준비하는 절차는 [설치 및 개발 환경](./docs/guides/setup_guide.md)을 참고합니다. SDK를 기존 설치에 연결하려면 [SDK 가이드](./packages/sdk/README.md)를 사용합니다.
 
-```bash
-# Bring up the Vite DEV Frontend and FastAPI Backend
-docker compose -f docker-compose.dev.yml up -d --build
-```
+현재 빈 DB bootstrap과 전체 Docker Compose 실행에는 문서화된 제한이 있습니다. 설치 가이드에서 백엔드·프런트엔드 실행 경로와 DB 초기화 조건을 확인합니다.
 
-- **Frontend App**: [localhost:8081](http://localhost:8081)
-- **Backend API**: [localhost:8000/docs](http://localhost:8000/docs)
+## 📚 Documentation
 
-위 명령은 [개발용 Compose 설정](./docker-compose.dev.yml)을 기준으로 합니다. 로컬 실행과 실제 서비스 대상 실험 운영은 구분하며, 운영 데이터·권한은 별도로 준비해야 합니다.
+[문서 시작점](./docs/README.md)에서 사용 목적에 맞는 경로를 선택할 수 있습니다.
 
-## 📚 Archive & Documentation
+| 목적 | 문서 |
+| --- | --- |
+| 플랫폼 이해 | [핵심 개념](./docs/guides/experiment_platform_concepts.md) |
+| 내 서비스에 연결 | [SDK 설치·사용](./packages/sdk/README.md) |
+| 직접 설치·운영 | [설치 가이드](./docs/guides/setup_guide.md), [데이터 저장소](./docs/guides/data_access.md) |
+| 코드·문서 기여 | [기여·에이전트 협업](./docs/guides/agent_collaboration.md) |
+| UI·브랜드 수정 | [디자인 시스템](./docs/guides/design_system.md), [브랜드 자산](./docs/guides/iterglow-brand.md) |
 
-12기의 개발을 이어가는 저장소이며, 13기 결과는 공개 가능한 범위를 확인해 정리합니다.
-
-| 자료 | 링크 |
-|---|---|
-| 소스 코드·변경 이력 | [GitHub Repository](https://github.com/Pseudo-Lab/experiment-platform-pseudolab) |
-| 실험 플랫폼·Feature Flag 개념 | [실험 플랫폼 개념 가이드](./docs/guides/experiment_platform_concepts.md) |
-| 서비스 연동 | [SDK 설치·사용 안내](./packages/sdk/README.md) |
-| 데이터 접근 기준 | [데이터 접근 가이드](./docs/guides/data_access.md) |
-| 로고·색상·파비콘 사용 | [Iterglow CI 사용 가이드](./docs/guides/iterglow-brand.md) |
-| 문서 구조·관리 규칙 | [Docs Guide](./docs/README.md) |
-
-문서는 `active / superseded / archive` 상태로 관리하며, `docs/guides`, `docs/reports`, `docs/archive`, `docs/superseded`로 구분합니다.
+공개 문서는 설치·연동·기여에 필요한 내용을 우선합니다. 팀 회의·과거 계획·내부 운영 기록은 Notion에서 관리합니다.
 
 ## 🌱 참여 및 기여 안내 (How to Engage)
 
