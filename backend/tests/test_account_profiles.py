@@ -132,7 +132,7 @@ def test_invitation_and_recipient_creation_roll_back_together(clients, mock_d1):
     project(owner, 'shared')
     mock_d1.executescript("CREATE TRIGGER reject_recipient BEFORE INSERT ON project_invitation_recipient BEGIN SELECT RAISE(ABORT, 'Synthetic failure'); END;")
     with pytest.raises(sqlite3.IntegrityError):
-        mock_d1.execute('INSERT INTO project_invitation_creation VALUES (?,?,?,?,?,?)', ['id', 'shared', 'digest', 'viewer', 9999999999, 'member@gmail.com'])
+        mock_d1.execute('INSERT INTO project_invitation_creation (id, project_id, token_hash, role, expires_at, email) VALUES (?,?,?,?,?,?)', ['id', 'shared', 'digest', 'viewer', 9999999999, 'member@gmail.com'])
     assert mock_d1.execute('SELECT count(*) FROM project_invitation').fetchone()[0] == 0
 
 

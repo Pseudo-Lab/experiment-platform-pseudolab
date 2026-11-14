@@ -38,6 +38,9 @@ async def authorize_member(request: Request) -> None:
         return
     if path in {"/projects/invitations/accept", "/projects/invitations/preview"} and method == "POST":
         return
+    if (path == "/projects/invitations/pending" and method == "GET"
+            or re.fullmatch(r"/projects/invitations/[^/]+/(accept|decline)", path) and method == "POST"):
+        return
     sharing = re.fullmatch(r"/projects/([^/]+)/(members|invitations)(?:/([^/]+))?", path)
     if sharing:
         await require_project_access(user.account_id, sharing[1], owner=True)

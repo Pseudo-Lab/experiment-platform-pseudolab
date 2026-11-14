@@ -3,6 +3,8 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
 import { useProject } from '@/contexts/ProjectContext';
 
+vi.mock('@/features/dashboard/components/ProjectInvitationInbox', () => ({ ProjectInvitationInbox: () => <div data-testid="invitation-inbox" /> }));
+
 vi.mock('@/contexts/ProjectContext', () => ({
   useProject: vi.fn(),
 }));

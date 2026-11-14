@@ -5,12 +5,37 @@ from app.services.project import project_service
 from app.core.auth import require_authenticated_user
 
 from app.schemas.project import (ProjectMember, ProjectMemberUpdate, ProjectInvitationCreate,
-                                 ProjectInvitation, ProjectInvitationCreated, ProjectInvitationAccept)
+                                 ProjectInvitation, ProjectInvitationCreated, ProjectInvitationAccept,
+                                 PendingProjectInvitation)
 from app.services import project_sharing
 from app.db import d1
 from app.core.account_sessions import token_hash
 
 router = APIRouter()
+
+
+@router.get("/invitations/pending", response_model=List[PendingProjectInvitation])
+async def list_pending_invitations(request: Request):
+    account_id = request.state.auth_user.account_id
+    if not account_id:
+        raise HTTPException(403, "A Google account is required to view invitations")
+    return await project_sharing.pending_invitations(account_id)
+
+
+@router.post("/invitations/{invitation_id}/accept", response_model=Project)
+async def accept_email_invitation(invitation_id: str, request: Request):
+    account_id = request.state.auth_user.account_id
+    if not account_id:
+        raise HTTPException(403, "A Google account is required to accept invitations")
+    return await project_sharing.accept_email_invitation(invitation_id, account_id)
+
+
+@router.post("/invitations/{invitation_id}/decline", status_code=204)
+async def decline_email_invitation(invitation_id: str, request: Request):
+    account_id = request.state.auth_user.account_id
+    if not account_id:
+        raise HTTPException(403, "A Google account is required to decline invitations")
+    await project_sharing.decline_email_invitation(invitation_id, account_id)
 
 
 @router.get("/", response_model=List[Project])
@@ -94,10 +119,11 @@ async def list_invitations(project_id: str):
 
 
 @router.post("/{project_id}/invitations", response_model=ProjectInvitationCreated, status_code=201)
-async def create_invitation(project_id: str, data: ProjectInvitationCreate):
+async def create_invitation(project_id: str, data: ProjectInvitationCreate, request: Request):
     if not await project_service.get(project_id):
         raise HTTPException(404, "Project not found")
-    return await project_sharing.create_invitation(project_id, data.role, data.email)
+    return await project_sharing.create_invitation(project_id, data.role, data.email,
+                                                   request.state.auth_user.account_id)
 
 
 @router.delete("/{project_id}/invitations/{invitation_id}", status_code=204)
@@ -116,7 +142,8 @@ async def accept_invitation(data: ProjectInvitationAccept, request: Request):
 async def preview_invitation(data: ProjectInvitationAccept):
     rows = await d1.security_query(
         "SELECT p.name, i.role, i.expires_at FROM project_invitation i JOIN projects p ON p.id=i.project_id "
-        "WHERE i.token_hash=? AND i.revoked_at IS NULL AND i.accepted_by IS NULL AND i.expires_at>unixepoch()", [token_hash(data.token)])
+        "WHERE i.token_hash=? AND i.revoked_at IS NULL AND i.declined_at IS NULL "
+        "AND i.accepted_by IS NULL AND i.expires_at>unixepoch()", [token_hash(data.token)])
     if not rows:
         raise HTTPException(410, "Invitation expired or unavailable")
     return rows[0]

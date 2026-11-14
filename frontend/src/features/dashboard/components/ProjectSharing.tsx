@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   projectSharingApi as api,
@@ -23,21 +25,20 @@ const copy = {
     invalidEmail: "올바른 이메일 주소를 입력해 주세요.",
     recipient: "초대받는 이메일",
     wrongAccount: "초대받은 이메일의 Google 계정으로 로그인해 주세요. 이메일 소유권의 추가 확인이 필요한 계정은 소유자에게 문의해 주세요.",
-    create: "초대 링크 만들기",
+    create: "이메일로 초대",
+    createdNotice: "초대를 등록했습니다. 상대가 해당 이메일로 로그인하면 확인할 수 있습니다.",
     busy: "처리 중...",
     close: "닫기",
     load: "불러오는 중...",
     retry: "다시 시도",
     error:
       "요청을 완료하지 못했습니다. 권한과 연결을 확인한 뒤 다시 시도하세요.",
-    hint: "지정한 이메일의 Google 계정만 수락할 수 있습니다. Gmail 또는 Google Workspace 주소를 사용해 주세요. 링크는 7일 후 만료되며, 복사해서 직접 전달해야 합니다.",
+    hint: "상대가 가입하거나 로그인하면 받은 초대가 표시됩니다. Gmail 또는 Google Workspace 주소를 사용해 주세요. 초대는 7일 후 만료되며 이메일은 별도로 발송하지 않습니다.",
     permission:
       "조회자는 실험·결과를 보고, 편집자는 실험·플래그와 공개 SDK 키를 관리합니다. 초대·멤버·프로젝트 설정은 소유자만 관리합니다.",
-    link: "초대 링크",
-    copy: "링크 복사",
-    copied: "복사됨",
-    copyError: "복사하지 못했습니다. 링크를 선택해 직접 복사하세요.",
     members: "멤버",
+    changeRole: "권한 변경",
+    processedAt: "처리 시각", actions: "관리", previous: "이전", next: "다음", historyTable: "초대 이력 표 — 가로로 스크롤할 수 있습니다.",
     remove: "멤버 제거",
     removeConfirm: "이 멤버의 프로젝트 접근 권한을 제거할까요?",
     history: "초대 이력",
@@ -45,6 +46,8 @@ const copy = {
     accepted: "수락",
     expired: "만료",
     revoked: "회수",
+    declined: "거절",
+    declinedAt: "거절 시각",
     filter: "초대 상태",
     allStatus: "모든 상태",
     refresh: "새로고침",
@@ -54,11 +57,11 @@ const copy = {
     revokedAt: "회수 시각",
     none: "조건에 맞는 초대 이력이 없습니다.",
     revoke: "초대 회수",
-    expires: "만료",
+    expires: "초대 만료 시각",
     acceptTitle: "프로젝트 초대",
     accept: "초대 수락",
-    decline: "나중에",
-    invalid: "만료·회수·사용된 초대입니다. 소유자에게 새 링크를 요청하세요.",
+    later: "나중에",
+    invalid: "만료·회수·사용된 초대입니다. 소유자에게 다시 초대해 달라고 요청하세요.",
     joined: "프로젝트에 참여했습니다.",
   },
   en: {
@@ -71,21 +74,20 @@ const copy = {
     invalidEmail: "Enter a valid email address.",
     recipient: "Invited email",
     wrongAccount: "Sign in with the invited Google email account. If additional email ownership verification is required, contact the owner.",
-    create: "Create invitation link",
+    create: "Invite by email",
+    createdNotice: "Invitation created. They can find it after signing in with this email.",
     busy: "Working...",
     close: "Close",
     load: "Loading...",
     retry: "Retry",
     error:
       "Could not complete the request. Check your access and connection, then retry.",
-    hint: "Only the Google account with this email can accept. Use a Gmail or Google Workspace address. The link expires in 7 days; copy and share it directly.",
+    hint: "They will see the invitation after signing up or signing in. Use a Gmail or Google Workspace address. Invitations expire in 7 days; no email is sent.",
     permission:
       "Viewers read experiments and results. Editors manage experiments, flags and the public SDK key. Only owners manage invitations, members and project settings.",
-    link: "Invitation link",
-    copy: "Copy link",
-    copied: "Copied",
-    copyError: "Could not copy. Select the link and copy it manually.",
     members: "Members",
+    changeRole: "Change role",
+    processedAt: "Processed at", actions: "Actions", previous: "Previous", next: "Next", historyTable: "Invitation history table — scroll horizontally for more columns.",
     remove: "Remove member",
     removeConfirm: "Remove this member’s project access?",
     history: "Invitation history",
@@ -93,6 +95,8 @@ const copy = {
     accepted: "Accepted",
     expired: "Expired",
     revoked: "Revoked",
+    declined: "Declined",
+    declinedAt: "Declined at",
     filter: "Invitation status",
     allStatus: "All statuses",
     refresh: "Refresh",
@@ -102,12 +106,12 @@ const copy = {
     revokedAt: "Revoked at",
     none: "No invitations match this filter.",
     revoke: "Revoke invitation",
-    expires: "Expires",
+    expires: "Invitation expires at",
     acceptTitle: "Project invitation",
     accept: "Accept invitation",
-    decline: "Later",
+    later: "Later",
     invalid:
-      "This invitation has expired, been revoked or been used. Ask the owner for a new link.",
+      "This invitation has expired, been revoked or been used. Ask the owner to invite you again.",
     joined: "You joined the project.",
   },
 };
@@ -127,9 +131,13 @@ export function ProjectSharing({
   const [statusFilter, setStatusFilter] = useState<
     ProjectInvitation["status"] | "all"
   >("all");
+  const [page, setPage] = useState(1);
   const visibleInvites = invites.filter(
     (i) => statusFilter === "all" || i.status === statusFilter,
   );
+  const pageCount = Math.max(1, Math.ceil(visibleInvites.length / 10));
+  const currentPage = Math.min(page, pageCount);
+  const pageInvites = visibleInvites.slice((currentPage - 1) * 10, currentPage * 10);
   const formatTime = (seconds: number) =>
     new Date(seconds * 1000).toLocaleString(lang === "ko" ? "ko-KR" : "en-US");
   const [role, setRole] = useState<ProjectRole>("viewer");
@@ -138,11 +146,7 @@ export function ProjectSharing({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
-  const [link, setLink] = useState("");
-  const [linkId, setLinkId] = useState("");
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
-    "idle",
-  );
+  const [created, setCreated] = useState(false);
   const load = async () => {
     setLoading(true);
     setError(false);
@@ -153,6 +157,7 @@ export function ProjectSharing({
       ]);
       setMembers(m);
       setInvites(i);
+      setPage(1);
     } catch {
       setError(true);
     } finally {
@@ -182,15 +187,15 @@ export function ProjectSharing({
     }
     setInvalidEmail(false);
     void change(async () => {
-      const invitation = await api.invite(project.id, role, normalizedEmail);
-      // Fragment is not sent to the web server or in Referer headers.
-      setLink(`${window.location.origin}/projects#invite=${invitation.token}`);
-      setLinkId(invitation.id);
-      setCopyState("idle");
+      setCreated(false);
+      await api.invite(project.id, role, normalizedEmail);
+      setCreated(true);
+      setEmail("");
     });
   };
   return (
-    <Card>
+    <>
+    <Card role="region" aria-label={t.title}>
       <CardHeader className="flex-row items-start justify-between gap-4">
         <div className="min-w-0">
           <CardTitle className="text-lg">{t.title}</CardTitle>
@@ -206,6 +211,7 @@ export function ProjectSharing({
         <p className="max-w-prose text-sm text-muted-foreground">
           {t.permission}
         </p>
+        {created && <p role="status" className="max-w-prose text-sm text-muted-foreground">{t.createdNotice}</p>}
         {error && (
           <div role="alert" className="space-y-2">
             <p className="text-sm text-destructive">{t.error}</p>
@@ -223,7 +229,7 @@ export function ProjectSharing({
               <Input id="invitation-email" type="email" autoComplete="off" maxLength={254}
                 value={email} disabled={busy} aria-invalid={invalidEmail}
                 aria-describedby={invalidEmail ? "invitation-email-error" : undefined}
-                onChange={e => { setEmail(e.target.value); setInvalidEmail(false); }} />
+                onChange={e => { setEmail(e.target.value); setInvalidEmail(false); setCreated(false); }} />
               {invalidEmail && <p id="invitation-email-error" role="alert" className="text-sm text-destructive">{t.invalidEmail}</p>}
               <label className="block text-sm" htmlFor="invitation-role">
                 {t.role}
@@ -247,35 +253,6 @@ export function ProjectSharing({
                 {t.hint}
               </p>
             </div>
-            {link && (
-              <div className="space-y-2">
-                <label htmlFor="invitation-link" className="text-sm">
-                  {t.link}
-                </label>
-                <Input
-                  id="invitation-link"
-                  value={link}
-                  readOnly
-                  onFocus={(e) => e.target.select()}
-                />
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(link);
-                      setCopyState("copied");
-                    } catch {
-                      setCopyState("failed");
-                    }
-                  }}
-                >
-                  {copyState === "copied" ? t.copied : t.copy}
-                </Button>
-                <p role="status" className="text-sm text-muted-foreground">
-                  {copyState === "failed" ? t.copyError : ""}
-                </p>
-              </div>
-            )}
             <section className="space-y-3">
               <h3 className="font-semibold">{t.members}</h3>
               <ul className="divide-y divide-border">
@@ -285,31 +262,30 @@ export function ProjectSharing({
                     className="flex flex-wrap items-center justify-between gap-3 py-3"
                   >
                     <div className="min-w-0 flex-1 basis-48 break-all">
-                      <p className="text-sm font-medium">{m.display_name || m.email || m.account_id}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium">{m.display_name || m.email || m.account_id}</p>
+                        <Badge variant="secondary" className="shrink-0">{t[m.role]}</Badge>
+                      </div>
                       {m.display_name && m.email && m.email !== m.display_name && <p className="mt-1 text-sm text-muted-foreground">{m.email}</p>}
                     </div>
-                    {m.role === "owner" ? (
-                      <span className="text-sm">{t.owner}</span>
-                    ) : (
+                    {m.role !== "owner" && (
                       <div className="flex flex-wrap gap-2">
-                        <select
-                          aria-label={`${t.role}: ${m.display_name || m.email || m.account_id}`}
-                          className="rounded-md border border-input bg-background px-2 py-1 text-sm"
-                          value={m.role}
-                          disabled={busy}
-                          onChange={(e) =>
-                            void change(() =>
-                              api.update(
-                                project.id,
-                                m.account_id,
-                                e.target.value as ProjectRole,
-                              ),
-                            )
-                          }
-                        >
-                          <option value="viewer">{t.viewer}</option>
-                          <option value="editor">{t.editor}</option>
-                        </select>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" disabled={busy}
+                              aria-label={`${t.changeRole}: ${m.display_name || m.email || m.account_id}`}>
+                              {t.changeRole}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuRadioGroup value={m.role} onValueChange={value => {
+                              if (value !== m.role) void change(() => api.update(project.id, m.account_id, value as ProjectRole));
+                            }}>
+                              <DropdownMenuRadioItem value="viewer" disabled={busy}>{t.viewer}</DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="editor" disabled={busy}>{t.editor}</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button
                           variant="outline"
                           disabled={busy}
@@ -328,115 +304,65 @@ export function ProjectSharing({
                 ))}
               </ul>
             </section>
-            <section className="space-y-3" aria-label={t.history}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="font-semibold">{t.history}</h3>
-                <Button
-                  variant="outline"
-                  disabled={busy || loading}
-                  onClick={load}
-                >
-                  {t.refresh}
-                </Button>
-              </div>
-              <label htmlFor="invitation-status" className="block text-sm">
-                {t.filter}
-              </label>
-              <select
-                id="invitation-status"
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as typeof statusFilter)
-                }
-              >
-                <option value="all">{t.allStatus}</option>
-                {(["pending", "accepted", "expired", "revoked"] as const).map(
-                  (status) => (
-                    <option key={status} value={status}>
-                      {t[status]}
-                    </option>
-                  ),
-                )}
-              </select>
-              {visibleInvites.length === 0 && (
-                <p className="text-sm text-muted-foreground">{t.none}</p>
-              )}
-              <ul className="divide-y divide-border">
-                {visibleInvites.map((i) => (
-                  <li key={i.id} className="space-y-3 py-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-sm font-medium">
-                        {t[i.role]} ·{" "}
-                        <span className="rounded bg-muted px-2 py-1 text-foreground">
-                          {t[i.status]}
-                        </span>
-                      </span>
-                      {i.status === "pending" && (
-                        <Button
-                          variant="outline"
-                          disabled={busy}
-                          onClick={() =>
-                            void change(async () => {
-                              await api.revoke(project.id, i.id);
-                              if (i.id === linkId) setLink("");
-                            })
-                          }
-                        >
-                          {t.revoke}
-                        </Button>
-                      )}
-                    </div>
-                    <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-                      {i.recipient_email && <div className="min-w-0"><dt className="text-muted-foreground">{t.recipient}</dt><dd className="break-all">{i.recipient_email}</dd></div>}
-                      <div>
-                        <dt className="text-muted-foreground">{t.created}</dt>
-                        <dd>{formatTime(i.created_at)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted-foreground">{t.expires}</dt>
-                        <dd>{formatTime(i.expires_at)}</dd>
-                      </div>
-                      {i.accepted_by && (
-                        <>
-                          <div className="min-w-0">
-                            <dt className="text-muted-foreground">
-                              {t.acceptedBy}
-                            </dt>
-                            <dd className="break-all">
-                              {i.accepted_display_name || i.accepted_email || i.accepted_by}
-                              {i.accepted_display_name && i.accepted_email && i.accepted_email !== i.accepted_display_name && <p className="mt-1 text-muted-foreground">{i.accepted_email}</p>}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-muted-foreground">
-                              {t.acceptedAt}
-                            </dt>
-                            <dd>
-                              {i.accepted_at == null
-                                ? "—"
-                                : formatTime(i.accepted_at)}
-                            </dd>
-                          </div>
-                        </>
-                      )}
-                      {i.revoked_at != null && (
-                        <div>
-                          <dt className="text-muted-foreground">
-                            {t.revokedAt}
-                          </dt>
-                          <dd>{formatTime(i.revoked_at)}</dd>
-                        </div>
-                      )}
-                    </dl>
-                  </li>
-                ))}
-              </ul>
-            </section>
           </>
         )}
       </CardContent>
     </Card>
+    <Card role="region" aria-label={t.history}>
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
+        <h3 className="text-lg font-semibold">{t.history}</h3>
+        <Button variant="outline" disabled={busy || loading} onClick={load}>{t.refresh}</Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div role="group" aria-label={t.filter} className="flex flex-wrap gap-2">
+          {(["all", "pending", "accepted", "declined", "expired", "revoked"] as const).map(status => (
+            <Button key={status} size="sm" className="rounded-full"
+              variant={statusFilter === status ? "default" : "outline"}
+              aria-pressed={statusFilter === status} disabled={busy || loading}
+              onClick={() => { setStatusFilter(status); setPage(1); }}>
+              {status === "all" ? t.allStatus : t[status]}
+            </Button>
+          ))}
+        </div>
+        {loading ? <p role="status">{t.load}</p> : <>
+          <div className="max-w-full overflow-x-auto rounded-md border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" tabIndex={0} role="region" aria-label={t.historyTable}>
+            <table className="w-full whitespace-nowrap text-left text-sm">
+              <thead className="border-b border-border bg-muted/40 text-muted-foreground">
+                <tr>
+                  {[t.recipient, t.role, t.filter, t.created, t.expires, t.acceptedBy, t.processedAt, t.actions].map(label =>
+                    <th key={label} scope="col" className="px-4 py-3 font-medium">{label}</th>)}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {pageInvites.map(i => {
+                  const processedAt = i.accepted_at ?? i.declined_at ?? i.revoked_at;
+                  return <tr key={i.id} className="hover:bg-muted/30">
+                    <td className="px-4 py-3">{i.recipient_email || "—"}</td>
+                    <td className="px-4 py-3">{t[i.role]}</td>
+                    <td className="px-4 py-3"><Badge variant="secondary">{t[i.status]}</Badge></td>
+                    <td className="px-4 py-3 tabular-nums">{formatTime(i.created_at)}</td>
+                    <td className="px-4 py-3 tabular-nums">{formatTime(i.expires_at)}</td>
+                    <td className="px-4 py-3" title={i.accepted_email || undefined}>{i.accepted_display_name || i.accepted_email || i.accepted_by || "—"}</td>
+                    <td className="px-4 py-3 tabular-nums">{processedAt == null ? "—" : formatTime(processedAt)}</td>
+                    <td className="px-4 py-3">{i.status === "pending" ? <Button size="sm" variant="outline" disabled={busy}
+                      onClick={() => void change(() => api.revoke(project.id, i.id))}>{t.revoke}</Button> : "—"}</td>
+                  </tr>;
+                })}
+                {visibleInvites.length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-muted-foreground">{t.none}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          {visibleInvites.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <p role="status" className="tabular-nums text-muted-foreground">{(currentPage - 1) * 10 + 1}–{Math.min(currentPage * 10, visibleInvites.length)} / {visibleInvites.length}</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={busy || currentPage === 1} onClick={() => setPage(currentPage - 1)}>{t.previous}</Button>
+              <Button size="sm" variant="outline" disabled={busy || currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>{t.next}</Button>
+            </div>
+          </div>}
+        </>}
+      </CardContent>
+    </Card>
+    </>
   );
 }
 
@@ -524,7 +450,7 @@ export function AcceptProjectInvitation({ lang }: { lang: "ko" | "en" }) {
                 disabled={busy}
                 onClick={() => navigate("/projects", { replace: true })}
               >
-                {t.decline}
+                {t.later}
               </Button>
             </div>
           </>
