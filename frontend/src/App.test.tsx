@@ -105,7 +105,7 @@ describe('App Component', () => {
     authResponse = { authenticated, user: authenticated ? { username: 'admin' } : null };
     await act(async () => { renderApp(['/']); });
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
-    expect(screen.getAllByRole('link', { name: authenticated ? '내 프로젝트로' : '로그인' })[0])
+    expect(screen.getAllByRole('link', { name: authenticated ? '플랫폼 바로가기' : '로그인' })[0])
       .toHaveAttribute('href', authenticated ? '/experiments' : '/login');
     expect(projectApi.list).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/status/'));
@@ -204,7 +204,7 @@ describe('App Component', () => {
 
   it('offers a workspace link to signed-in visitors and keeps the root public on expiry', async () => {
     await act(async () => { renderApp(['/']); });
-    expect(screen.getAllByRole('link', { name: '내 프로젝트로' })[0]).toHaveAttribute('href', '/experiments');
+    expect(screen.getAllByRole('link', { name: '플랫폼 바로가기' })[0]).toHaveAttribute('href', '/experiments');
     expect(projectApi.list).not.toHaveBeenCalled();
     await act(async () => { window.dispatchEvent(new Event('auth:unauthorized')); });
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
@@ -229,7 +229,7 @@ describe('App Component', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     fireEvent.click(link);
     expect(screen.getByRole('complementary')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '내 프로젝트로' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '플랫폼 바로가기' })).not.toBeInTheDocument();
   });
 
   it('keeps Google-only login after language and introduction navigation', async () => {
