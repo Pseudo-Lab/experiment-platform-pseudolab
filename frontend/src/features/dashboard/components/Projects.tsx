@@ -140,7 +140,7 @@ export function Projects({ lang }: Props) {
   return (
     <div className="space-y-6">
       <AcceptProjectInvitation lang={lang} />
-      {sharing && <ProjectSharing key={sharing.id} project={sharing} lang={lang} onClose={() => setSharing(null)} />}
+      {sharing && !showForm && <ProjectSharing key={sharing.id} project={sharing} lang={lang} onClose={() => setSharing(null)} />}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{tr.title}</h1>
         <Button onClick={() => setShowForm(!showForm)} size="sm" className="gap-2">
@@ -155,6 +155,7 @@ export function Projects({ lang }: Props) {
               <label htmlFor="new-project-name" className="text-xs font-medium text-muted-foreground mb-1 block">{tr.name}</label>
               <Input
                 id="new-project-name"
+                autoFocus
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder={tr.namePlaceholder}

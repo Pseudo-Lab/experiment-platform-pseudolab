@@ -55,7 +55,7 @@ class ProjectInvitationCreate(ProjectMemberUpdate):
 
 
 class ProjectInvitation(BaseModel):
-    status: Literal["pending", "accepted", "expired", "revoked"]
+    status: Literal["pending", "accepted", "expired", "revoked", "declined"]
     created_at: int
     accepted_at: Optional[int] = None
     id: str
@@ -67,6 +67,17 @@ class ProjectInvitation(BaseModel):
     recipient_email: Optional[str] = None
     accepted_display_name: Optional[str] = None
     accepted_email: Optional[str] = None
+    declined_at: Optional[int] = None
+
+
+class PendingProjectInvitation(BaseModel):
+    id: str
+    project_id: str
+    project_name: str
+    role: Literal["viewer", "editor"]
+    created_at: int
+    expires_at: int
+    inviter_name: Optional[str] = None
 
 
 class ProjectInvitationCreated(ProjectInvitation):

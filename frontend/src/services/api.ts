@@ -982,7 +982,17 @@ export const availableEventsApi = {
 
 export type ProjectRole = 'viewer' | 'editor';
 export interface ProjectMember { account_id: string; role: ProjectRole | 'owner'; display_name?: string | null; email?: string | null; }
-export interface ProjectInvitation { status: 'pending' | 'accepted' | 'expired' | 'revoked'; created_at: number; accepted_at: number | null; id: string; project_id: string; role: ProjectRole; expires_at: number; revoked_at: number | null; accepted_by: string | null; recipient_email?: string | null; accepted_display_name?: string | null; accepted_email?: string | null; }
+export interface ProjectInvitation { status: 'pending' | 'accepted' | 'expired' | 'revoked' | 'declined'; created_at: number; accepted_at: number | null; id: string; project_id: string; role: ProjectRole; expires_at: number; revoked_at: number | null; accepted_by: string | null; recipient_email?: string | null; accepted_display_name?: string | null; accepted_email?: string | null; declined_at?: number | null; }
+
+export interface PendingProjectInvitation {
+  id: string;
+  project_id: string;
+  project_name: string;
+  role: ProjectRole;
+  created_at: number;
+  expires_at: number;
+  inviter_name: string | null;
+}
 
 async function sharingRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const res = await apiFetch(`${API_BASE_URL}/projects/${path}`, {
@@ -993,6 +1003,9 @@ async function sharingRequest<T>(path: string, method = 'GET', body?: unknown): 
   return res.status === 204 ? undefined as T : res.json();
 }
 export const projectSharingApi = {
+  pending: () => sharingRequest<PendingProjectInvitation[]>('invitations/pending'),
+  acceptPending: (id: string) => sharingRequest<Project>(`invitations/${encodeURIComponent(id)}/accept`, 'POST'),
+  decline: (id: string) => sharingRequest<void>(`invitations/${encodeURIComponent(id)}/decline`, 'POST'),
   members: (id: string) => sharingRequest<ProjectMember[]>(`${encodeURIComponent(id)}/members`),
   invitations: (id: string) => sharingRequest<ProjectInvitation[]>(`${encodeURIComponent(id)}/invitations`),
   invite: (id: string, role: ProjectRole, email?: string) => sharingRequest<ProjectInvitation & { token: string }>(`${encodeURIComponent(id)}/invitations`, 'POST', { role, ...(email ? { email } : {}) }),

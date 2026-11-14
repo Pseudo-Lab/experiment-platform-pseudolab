@@ -17,6 +17,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it('opens the existing create form directly and removes only its query on cancel', () => {
   show('/projects?create=1&keep=yes');
   expect(screen.getByLabelText('프로젝트 이름')).toBeInTheDocument();
+  expect(screen.getByLabelText('프로젝트 이름')).toHaveFocus();
   fireEvent.click(screen.getByRole('button', { name: '취소' }));
   expect(screen.queryByLabelText('프로젝트 이름')).not.toBeInTheDocument();
   expect(screen.getByTestId('location')).toHaveTextContent('?keep=yes');
@@ -28,6 +29,7 @@ it('opens management without the form and allows adding a project in English', (
   expect(screen.queryByLabelText('Project Name')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Add Project' }));
   expect(screen.getByLabelText('Project Name')).toBeInTheDocument();
+  expect(screen.getByLabelText('Project Name')).toHaveFocus();
 });
 
 it('keeps the form on failure and closes it after a successful retry', async () => {

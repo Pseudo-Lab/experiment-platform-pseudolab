@@ -1,3 +1,4 @@
+import { ProjectInvitationInbox } from '../features/dashboard/components/ProjectInvitationInbox';
 import { IterglowLogo } from '../components/IterglowLogo';
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -350,6 +351,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     </div>
                 </header>
                 <div className="flex-1 p-4 md:p-8 overflow-auto">
+                    {accountId && <ProjectInvitationInbox key={accountId} lang={lang} />}
                     {children}
                 </div>
             </main>
