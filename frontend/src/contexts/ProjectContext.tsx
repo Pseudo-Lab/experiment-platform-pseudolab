@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { projectApi, type Project } from '../services/api';
 
 const STORAGE_KEY = 'currentProjectId';
@@ -6,6 +6,7 @@ const STORAGE_KEY = 'currentProjectId';
 interface ProjectContextValue {
   projects: Project[];
   loading: boolean;
+  error: boolean;
   currentProjectId: string | null;
   currentProject: Project | null;
   setCurrentProjectId: (id: string | null) => void;
@@ -15,6 +16,7 @@ interface ProjectContextValue {
 const ProjectContext = createContext<ProjectContextValue>({
   projects: [],
   loading: false,
+  error: false,
   currentProjectId: null,
   currentProject: null,
   setCurrentProjectId: () => {},
@@ -26,34 +28,57 @@ export const useProject = () => useContext(ProjectContext);
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [currentProjectId, setCurrentProjectIdState] = useState<string | null>(
-    () => localStorage.getItem(STORAGE_KEY),
+    () => localStorage.getItem(STORAGE_KEY) || null,
   );
+  const currentProjectIdRef = useRef<string | null>(currentProjectId);
+  const mountedRef = useRef(true);
+  const requestIdRef = useRef(0);
 
   const setCurrentProjectId = useCallback((id: string | null) => {
-    setCurrentProjectIdState(id);
-    if (id) localStorage.setItem(STORAGE_KEY, id);
+    if (!mountedRef.current) return;
+    const nextId = id || null;
+    currentProjectIdRef.current = nextId;
+    setCurrentProjectIdState(nextId);
+    if (nextId) localStorage.setItem(STORAGE_KEY, nextId);
     else localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   const reloadProjects = useCallback(async () => {
+    if (!mountedRef.current) return;
+    const seq = ++requestIdRef.current;
     setLoading(true);
+    setError(false);
     try {
       const list = await projectApi.list();
+      if (!mountedRef.current || seq !== requestIdRef.current) return;
       setProjects(list);
-      // Drop a stale selection that no longer exists.
-      setCurrentProjectIdState((prev) =>
-        prev && !list.some((p) => p.id === prev) ? null : prev,
-      );
+      // Drop and unpersist a stale/inaccessible selection after reload succeeds.
+      const activeId = currentProjectIdRef.current;
+      if (activeId && !list.some((p) => p.id === activeId)) {
+        currentProjectIdRef.current = null;
+        setCurrentProjectIdState(null);
+        localStorage.removeItem(STORAGE_KEY);
+      }
     } catch {
+      if (!mountedRef.current || seq !== requestIdRef.current) return;
       setProjects([]);
+      setError(true);
     } finally {
-      setLoading(false);
+      if (mountedRef.current && seq === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     void reloadProjects();
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current += 1;
+    };
   }, [reloadProjects]);
 
   const currentProject = useMemo(
@@ -62,8 +87,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ projects, loading, currentProjectId, currentProject, setCurrentProjectId, reloadProjects }),
-    [projects, loading, currentProjectId, currentProject, setCurrentProjectId, reloadProjects],
+    () => ({ projects, loading, error, currentProjectId, currentProject, setCurrentProjectId, reloadProjects }),
+    [projects, loading, error, currentProjectId, currentProject, setCurrentProjectId, reloadProjects],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

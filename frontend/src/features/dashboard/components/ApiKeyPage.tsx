@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
 import {
-  Copy, Check, Eye, EyeOff, Key, Trash2, Plus,
+  Copy, Check, Eye, EyeOff, Key, Plus,
   FolderOpen, CheckCircle2, Clock, Loader2, FlaskConical,
   ChevronRight,
 } from 'lucide-react';
-import { projectApi, experimentApi, type Project, type ProjectSdkStatus, type Experiment } from '../../../services/api';
+import { projectApi, experimentApi, type ProjectSdkStatus, type Experiment } from '../../../services/api';
 import { useProject } from '../../../contexts/ProjectContext';
 
 interface Props { lang: 'en' | 'ko'; }
@@ -32,7 +31,7 @@ const tr = {
   ko: {
     title: 'SDK 연동',
     noProject: '프로젝트를 선택하세요',
-    noProjectDesc: '사이드바 상단의 드롭다운에서 프로젝트를 선택하면 해당 프로젝트의 공개 SDK 키를 확인할 수 있어요.',
+    noProjectDesc: '사이드바의 프로젝트 목록에서 프로젝트를 선택하면 해당 프로젝트의 공개 SDK 키를 확인할 수 있어요.',
     goProjects: '프로젝트 목록으로',
     projectKey: '프로젝트 공개 SDK 키',
     keyDesc: '브라우저 SDK의 apiKey에 넣는 프로젝트 공개 키입니다. 같은 프로젝트의 실험·플래그와 함께 사용하세요. 방문자 인증용 비밀키가 아니며, 키를 아는 사람이 SDK 요청을 보낼 수 있습니다. 서버 비밀키·세션 토큰은 프런트엔드에 넣지 마세요. SDK baseUrl 예시: https://platform.example.invalid/api/v1 — 실제 플랫폼 API 주소로 바꾸세요. 고객 서비스의 앱 도메인과는 다른 주소입니다.',
@@ -43,34 +42,21 @@ const tr = {
     hide: '숨기기',
     copy: '복사',
     copied: '복사됨!',
-    baseUrl: '앱 도메인',
-    baseUrlDesc: 'Visual Editor에서 열 고객 서비스 주소입니다. SDK의 baseUrl은 이 주소가 아닌 플랫폼 API 주소입니다(예: https://platform.example.invalid/api/v1).',
-    baseUrlPlaceholder: 'https://your-app.example.invalid',
-    baseUrlEdit: '편집',
-    baseUrlSave: '저장',
-    baseUrlCancel: '취소',
     sdkStatus: 'SDK 연결 상태',
     sdkConnected: '연결됨',
     sdkNotConnected: 'SDK 대기 중',
     sdkChecking: '확인 중...',
     sdkConnectedDesc: 'SDK가 정상적으로 연결되어 실험 데이터를 수집하고 있습니다.',
     sdkNotConnectedDesc: '아직 수신된 이벤트가 없습니다. 연결된 서비스의 SDK 설정을 확인하세요.',
-    openVisualEditor: 'Visual Editor 열기',
     abExperiments: 'A/B 테스트 실험',
     abExperimentsDesc: '이 프로젝트에 연결된 A/B 테스트 실험 목록입니다.',
     noAbExperiments: '연결된 A/B 테스트 실험이 없습니다.',
     goCreateExperiment: '실험 만들기',
-    dangerZone: 'Danger Zone',
-    deleteProject: '프로젝트 삭제',
-    deleteProjectDesc: '이 프로젝트와 관련된 모든 데이터가 삭제됩니다. 연결된 실험이나 플래그가 있으면 삭제가 거부됩니다.',
-    deleteConfirm: (name: string) => `"${name}" 프로젝트를 삭제하시겠습니까?\n연결된 실험이나 플래그가 있으면 삭제되지 않습니다.`,
-    deleting: '삭제 중...',
-    deleteError: '삭제에 실패했습니다.',
   },
   en: {
     title: 'SDK Integration',
     noProject: 'Select a Project',
-    noProjectDesc: 'Choose a project from the dropdown at the top of the sidebar to view its public SDK key.',
+    noProjectDesc: 'Choose a project from the project list in the sidebar to view its public SDK key.',
     goProjects: 'Go to projects',
     projectKey: 'Project Public SDK Key',
     keyDesc: 'Use this project public key as apiKey in the browser SDK, with experiments and flags from the same project. It does not authenticate visitors; anyone who knows it can send SDK requests. Keep server secrets and session tokens out of frontend code. SDK baseUrl example: https://platform.example.invalid/api/v1 — replace it with your platform API address, not your customer service app domain.',
@@ -81,40 +67,34 @@ const tr = {
     hide: 'Hide',
     copy: 'Copy',
     copied: 'Copied!',
-    baseUrl: 'App Domain',
-    baseUrlDesc: 'The customer service URL opened by Visual Editor. SDK baseUrl uses the separate platform API address (for example, https://platform.example.invalid/api/v1).',
-    baseUrlPlaceholder: 'https://your-app.example.invalid',
-    baseUrlEdit: 'Edit',
-    baseUrlSave: 'Save',
-    baseUrlCancel: 'Cancel',
     sdkStatus: 'SDK Connection',
     sdkConnected: 'Connected',
     sdkNotConnected: 'Awaiting connection',
     sdkChecking: 'Checking...',
     sdkConnectedDesc: 'The SDK is connected and collecting experiment data.',
     sdkNotConnectedDesc: 'No events received yet. Check the SDK configuration of the connected service.',
-    openVisualEditor: 'Open Visual Editor',
     abExperiments: 'A/B Test Experiments',
     abExperimentsDesc: 'A/B test experiments linked to this project.',
     noAbExperiments: 'No A/B test experiments yet.',
     goCreateExperiment: 'Create experiment',
-    dangerZone: 'Danger Zone',
-    deleteProject: 'Delete Project',
-    deleteProjectDesc: 'All data associated with this project will be deleted. Deletion fails if linked experiments or flags exist.',
-    deleteConfirm: (name: string) => `Delete project "${name}"?\nProjects with linked experiments or flags cannot be deleted.`,
-    deleting: 'Deleting...',
-    deleteError: 'Failed to delete project.',
   },
 };
 
 function CopyButton({ value, labels }: { value: string; labels: { copy: string; copied: string } }) {
   const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
+
   return (
     <button
       onClick={async () => {
         await navigator.clipboard.writeText(value);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => setCopied(false), 2000);
       }}
       className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
     >
@@ -127,7 +107,7 @@ function CopyButton({ value, labels }: { value: string; labels: { copy: string; 
 export function ApiKeyPage({ lang }: Props) {
   const t = tr[lang];
   const navigate = useNavigate();
-  const { currentProject, reloadProjects } = useProject();
+  const { currentProject } = useProject();
 
   const [revealed, setRevealed] = useState(false);
   const [keyResult, setKeyResult] = useState<{ projectId: string; key?: string; failed?: boolean } | null>(null);
@@ -147,52 +127,33 @@ export function ApiKeyPage({ lang }: Props) {
     }
     return () => { cancelled = true; };
   }, [projectId, currentProject?.access_role, keyAttempt]);
+
   const [sdkStatus, setSdkStatus] = useState<'checking' | 'connected' | 'not_connected'>('checking');
-  const [editingBaseUrl, setEditingBaseUrl] = useState(false);
-  const [baseUrlInput, setBaseUrlInput] = useState('');
-  const [baseUrl, setBaseUrl] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [abExperiments, setAbExperiments] = useState<Experiment[]>([]);
 
   useEffect(() => {
-    if (!currentProject) return;
+    let cancelled = false;
     setSdkStatus('checking');
-    setBaseUrl(currentProject.base_url ?? null);
-    projectApi.sdkStatus(currentProject.id)
-      .then((r) => setSdkStatus(r.status === 'connected' ? 'connected' : 'not_connected'))
-      .catch(() => setSdkStatus('not_connected'));
+    setAbExperiments([]);
+    if (!projectId || currentProject?.access_role === 'viewer') return;
+    projectApi.sdkStatus(projectId)
+      .then((r) => {
+        if (!cancelled) setSdkStatus(r.status === 'connected' ? 'connected' : 'not_connected');
+      })
+      .catch(() => {
+        if (!cancelled) setSdkStatus('not_connected');
+      });
     experimentApi.list()
-      .then((all) => setAbExperiments(
-        all.filter((e) => e.experiment_type === 'ab_test' && e.project_id === currentProject.id)
-      ))
-      .catch(() => setAbExperiments([]));
-  }, [currentProject]);
-
-  const handleSaveBaseUrl = async () => {
-    if (!currentProject) return;
-    try {
-      const updated = await projectApi.patch(currentProject.id, { base_url: baseUrlInput || null });
-      setBaseUrl(updated.base_url ?? null);
-      setEditingBaseUrl(false);
-    } catch { /* ignore */ }
-  };
-
-  const handleDelete = async () => {
-    if (!currentProject) return;
-    if (!window.confirm(t.deleteConfirm(currentProject.name))) return;
-    setDeleting(true);
-    setDeleteError(null);
-    try {
-      await projectApi.delete(currentProject.id);
-      await reloadProjects();
-      navigate('/projects');
-    } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : t.deleteError);
-    } finally {
-      setDeleting(false);
-    }
-  };
+      .then((all) => {
+        if (!cancelled) {
+          setAbExperiments(all.filter((e) => e.experiment_type === 'ab_test' && e.project_id === projectId));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAbExperiments([]);
+      });
+    return () => { cancelled = true; };
+  }, [projectId, currentProject?.access_role]);
 
   if (!currentProject) {
     return (
@@ -219,7 +180,7 @@ export function ApiKeyPage({ lang }: Props) {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t.title}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{currentProject.name} · <span className="font-mono">{currentProject.id}</span></p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{currentProject.name}</p>
       </div>
 
       {/* API Key card */}
@@ -325,30 +286,6 @@ export function ApiKeyPage({ lang }: Props) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Danger Zone */}
-      <Card className="rounded-2xl border border-rose-200 dark:border-rose-900/50">
-        <CardContent className="pt-5 space-y-3">
-          <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">{t.dangerZone}</p>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{t.deleteProject}</p>
-              <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{t.deleteProjectDesc}</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0 gap-2 rounded-xl border-rose-300 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-              disabled={deleting || currentProject.access_role === 'editor'}
-              onClick={handleDelete}
-            >
-              <Trash2 size={14} />
-              {deleting ? t.deleting : t.deleteProject}
-            </Button>
-          </div>
-          {deleteError && <p className="text-xs text-rose-500">{deleteError}</p>}
         </CardContent>
       </Card>
     </div>

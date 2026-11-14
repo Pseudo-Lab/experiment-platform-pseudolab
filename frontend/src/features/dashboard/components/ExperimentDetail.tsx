@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useProject } from '../../../contexts/ProjectContext';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -431,9 +432,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
   const [editOneTime, setEditOneTime] = useState(false);
   const [editCompletionEvent, setEditCompletionEvent] = useState('');
   const [editExperimentType, setEditExperimentType] = useState<ExperimentType>('ab_test');
+  const { projects: workspaceProjects, currentProjectId, setCurrentProjectId } = useProject();
   const [editProjectId, setEditProjectId] = useState('');
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
-  const readOnly = availableProjects.find(p => p.id === experiment?.project_id)?.access_role === 'viewer';
+  const readOnly = availableProjects.find(p => p.id === (experiment?.project_id || experiment?.product))?.access_role === 'viewer';
   const readoutSeconds = experiment?.conversion_window_seconds;
   const windowUnit = readoutSeconds != null && readoutSeconds % 3600 === 0 ? 'hour'
     : readoutSeconds != null && readoutSeconds % 60 === 0 ? 'minute' : 'second';
@@ -482,36 +484,51 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
   const [adoptWinnerMsg, setAdoptWinnerMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    const projectId = experiment?.project_id || experiment?.product;
+    if (projectId && currentProjectId !== projectId && workspaceProjects.some(project => project.id === projectId)) {
+      setCurrentProjectId(projectId);
+    }
+  }, [experiment?.id, experiment?.project_id, experiment?.product, workspaceProjects, setCurrentProjectId]);
+
+  useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     setLoading(true);
+    setExperiment(null);
+    setAvailableFlags([]);
+    setError(null);
     experimentApi.get(id)
-      .then((data) => { setExperiment(data); setLoading(false); })
-      .catch(() => { setError(t.error); setLoading(false); });
+      .then((data) => { if (!cancelled) { setExperiment(data); setLoading(false); } })
+      .catch(() => { if (!cancelled) { setError(t.error); setLoading(false); } });
     if (isAdmin) {
     setPlacementsLoading(true);
     setPlacementsError(null);
     experimentPlacementApi.list(id)
       .then((data) => {
+        if (cancelled) return;
         setPlacements(data);
         setSelectedPlacementKey((current) => {
           if (current && data.some((placement) => placement.placement_key === current)) return current;
           return data[0]?.placement_key ?? null;
         });
       })
-      .catch(() => setPlacementsError(t.placementsError))
-      .finally(() => setPlacementsLoading(false));
+      .catch(() => { if (!cancelled) setPlacementsError(t.placementsError); })
+      .finally(() => { if (!cancelled) setPlacementsLoading(false); });
     }
-    projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
+    projectApi.list().then(data => { if (!cancelled) setAvailableProjects(data); }).catch(() => { if (!cancelled) setAvailableProjects([]); });
+    return () => { cancelled = true; };
   }, [id]);
 
   useEffect(() => {
     const flagKey = experiment?.flag_key;
     if (!flagKey) {
+      setAvailableFlags([]);
       setLinkedFlag(null);
       setLinkedFlagExposure(undefined);
       setLinkedFlagRules([]);
       return;
     }
+    let cancelled = false;
     setLinkedFlagLoading(true);
     Promise.all([
       featureFlagApi.list(false),
@@ -519,24 +536,27 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
       featureFlagApi.listRules(flagKey).catch(() => [] as FeatureFlagRule[]),
     ])
       .then(([flags, exposure, rules]) => {
+        if (cancelled) return;
         const flag = flags.find(f => f.flag_key === flagKey) ?? null;
         setLinkedFlag(flag);
         if (flag) setFlagRolloutDraft(flag.rollout_pct);
-        setAvailableFlags(flags);
+        setAvailableFlags(flags.filter(flag => Boolean(experiment?.project_id || experiment?.product) && (flag.project_id || flag.product) === (experiment?.project_id || experiment?.product)));
         setLinkedFlagExposure(exposure);
         setLinkedFlagRules(rules);
       })
       .catch(() => {
+        if (cancelled) return;
         setLinkedFlag(null);
         setLinkedFlagExposure(null);
       })
-      .finally(() => setLinkedFlagLoading(false));
-  }, [experiment?.flag_key]);
+      .finally(() => { if (!cancelled) setLinkedFlagLoading(false); });
+    return () => { cancelled = true; };
+  }, [experiment?.flag_key, experiment?.project_id, experiment?.product]);
 
   const startFlagEdit = () => {
     setFlagError(null);
     if (availableFlags.length === 0) {
-      featureFlagApi.list(false).then(setAvailableFlags).catch(() => {});
+      featureFlagApi.list(false).then(flags => setAvailableFlags(flags.filter(flag => Boolean(experiment?.project_id || experiment?.product) && (flag.project_id || flag.product) === (experiment?.project_id || experiment?.product)))).catch(() => {});
     }
     setFlagEditing(true);
   };
@@ -905,10 +925,10 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
   const experimentTypeLabel = experimentTypeOptions.find(
     (option) => option.value === (experiment.experiment_type || 'ab_test'),
   )?.[lang] ?? experiment.experiment_type ?? t.none;
-  const matchedProject = availableProjects.find((p) => p.id === experiment.project_id);
+  const matchedProject = availableProjects.find((p) => p.id === (experiment.project_id || experiment.product)) || workspaceProjects.find((p) => p.id === (experiment.project_id || experiment.product));
   const projectLabel = matchedProject
-    ? `${matchedProject.name} (${matchedProject.id})`
-    : experiment.project_id || t.none;
+    ? matchedProject.name
+    : (experiment.project_id || experiment.product) ? (lang === 'ko' ? '프로젝트 정보 없음' : 'Project information unavailable') : t.none;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -983,14 +1003,14 @@ export const ExperimentDetail: React.FC<ExperimentDetailProps> = ({ lang, isAdmi
 
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProject}</label>
-                <Select disabled={!isAdmin || experiment.measurement_locked} value={editProjectId || '__none__'} onValueChange={(value) => setEditProjectId(value === '__none__' ? '' : value)}>
+                <Select disabled value={editProjectId || '__none__'} onValueChange={(value) => setEditProjectId(value === '__none__' ? '' : value)}>
                   <SelectTrigger className="rounded-xl" aria-label={t.labelProject}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">{t.projectNone}</SelectItem>
                     {availableProjects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name} ({p.id})</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

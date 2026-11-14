@@ -135,23 +135,22 @@ it.each(['ko', 'en'] as const)('uses the existing default destination after dire
 });
 
 
-it('returns an authenticated guide reader to the exact workspace screen', async () => {
-  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
-  render(<MemoryRouter initialEntries={['/api-key?view=keys#details']}><App /><LocationProbe /></MemoryRouter>);
-  fireEvent.click(await screen.findByRole('link', { name: 'SDK 가이드' }));
-  await screen.findByRole('heading', { name: '개발자 SDK 가이드' });
-  const links = await screen.findAllByRole('link', { name: '플랫폼으로 돌아가기' });
-  expect(links[0]).toHaveAttribute('href', '/api-key?view=keys#details');
-  expect(screen.queryByRole('link', { name: '로그인' })).not.toBeInTheDocument();
-  fireEvent.click(links[0]);
-  await waitFor(() => expect(JSON.parse(screen.getByTestId('location').textContent!)).toMatchObject({ pathname: '/api-key', search: '?view=keys', hash: '#details' }));
+it('opens the workspace guide in a new tab without replacing its exact route or draft', async () => {
+  render(<MemoryRouter initialEntries={['/experiments/draft?view=design#details']}><MainLayout lang="ko" setLang={() => {}} backendStatus="Online"><input aria-label="Working draft" defaultValue="Unsaved hypothesis" /></MainLayout><LocationProbe /></MemoryRouter>);
+  const link = screen.getByRole('link', { name: 'SDK 가이드' });
+  expect(link).toHaveAttribute('target', '_blank');
+  expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  fireEvent.click(link);
+  expect(JSON.parse(screen.getByTestId('location').textContent!)).toMatchObject({ pathname: '/experiments/draft', search: '?view=design', hash: '#details' });
+  expect(screen.getByLabelText('Working draft')).toHaveValue('Unsaved hypothesis');
+  expect(screen.queryByRole('heading', { name: '개발자 SDK 가이드' })).not.toBeInTheDocument();
 });
 
 it('sends an authenticated unknown route to project management instead of a blank screen', async () => {
   vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
   render(<MemoryRouter initialEntries={['/docs/sdk/missing']}><App /><LocationProbe /></MemoryRouter>);
   await waitFor(() => expect(JSON.parse(screen.getByTestId('location').textContent!).pathname).toBe('/projects'));
-  expect(screen.getByRole('heading', { level: 1, name: '프로젝트 관리' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 1, name: '프로젝트 목록' })).toBeInTheDocument();
 });
 
 

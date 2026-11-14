@@ -102,7 +102,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
   const [showForm, setShowForm] = useState(false);
   const [newKey, setNewKey] = useState('');
   const [newDesc, setNewDesc] = useState('');
-  const [newProjectId, setNewProjectId] = useState('');
+  const newProjectId = currentProject?.id ?? '';
   const [newRollout, setNewRollout] = useState(0);
   const [includeArchived, setIncludeArchived] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -112,44 +112,53 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
   const [archivingKey, setArchivingKey] = useState<string | null>(null);
   const [restoringKey, setRestoringKey] = useState<string | null>(null);
-  const [assigningProjectKey, setAssigningProjectKey] = useState<string | null>(null);
   const [exposureSummaries, setExposureSummaries] = useState<Record<string, FeatureFlagExposureSummary | null>>({});
   const [exposureLoading, setExposureLoading] = useState(false);
   const [flagRules, setFlagRules] = useState<Record<string, FeatureFlagRule[]>>({});
 
-  const loadFlagRules = async (items: FeatureFlag[]) => {
+  const loadFlagRules = async (items: FeatureFlag[], active = () => true) => {
     const results = await Promise.allSettled(items.map(flag => featureFlagApi.listRules(flag.flag_key)));
+    if (!active()) return;
     setFlagRules(Object.fromEntries(items.map((flag, index) => [
       flag.flag_key,
       results[index].status === 'fulfilled' ? (results[index] as PromiseFulfilledResult<FeatureFlagRule[]>).value : [],
     ])));
   };
 
-  const loadExposureSummaries = async (items: FeatureFlag[]) => {
+  const loadExposureSummaries = async (items: FeatureFlag[], active = () => true) => {
     setExposureLoading(true);
     try {
       const results = await Promise.allSettled(items.map(flag => featureFlagApi.exposureSummary(flag.flag_key)));
+      if (!active()) return;
       setExposureSummaries(Object.fromEntries(items.map((flag, index) => [
         flag.flag_key,
         results[index].status === 'fulfilled' ? results[index].value : null,
       ])));
     } finally {
-      setExposureLoading(false);
+      if (active()) setExposureLoading(false);
     }
   };
 
   useEffect(() => {
+    let cancelled = false;
+    const active = () => !cancelled;
+    setFlags([]);
+    setError(null);
     setLoading(true);
+    if (!currentProjectId) { setLoading(false); return; }
     featureFlagApi.list(includeArchived)
       .then(items => {
-        setFlags(items);
-        setRolloutDrafts(Object.fromEntries(items.map(flag => [flag.flag_key, flag.rollout_pct])));
-        void loadExposureSummaries(items);
-        void loadFlagRules(items);
+        if (cancelled) return;
+        const scoped = items.filter(flag => (flag.project_id || flag.product) === currentProjectId);
+        setFlags(scoped);
+        setRolloutDrafts(Object.fromEntries(scoped.map(flag => [flag.flag_key, flag.rollout_pct])));
+        void loadExposureSummaries(scoped, active);
+        void loadFlagRules(scoped, active);
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [includeArchived]);
+      .catch(() => { if (!cancelled) setError(lang === 'ko' ? '플래그를 불러오지 못했습니다.' : 'Could not load flags.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [includeArchived, currentProjectId]);
 
   const replaceFlag = (updated: FeatureFlag) => {
     setFlags(prev => prev.map(f => f.flag_key === updated.flag_key ? updated : f));
@@ -157,7 +166,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
   };
 
   const handleCreate = async () => {
-    if (!newKey.trim()) return;
+    if (!newKey.trim() || !currentProject || currentProject.access_role === 'viewer') return;
     setCreating(true);
     setError(null);
     try {
@@ -184,7 +193,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
           variant_counts: {},
         },
       }));
-      setNewKey(''); setNewDesc(''); setNewProjectId(''); setNewRollout(0); setShowForm(false);
+      setNewKey(''); setNewDesc(''); setNewRollout(0); setShowForm(false);
     } catch (error) {
       setError(flagCreateError(error, lang, tr.errorCreate));
     } finally {
@@ -263,19 +272,6 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
     }
   };
 
-  const handleAssignProject = async (flag: FeatureFlag, projectId: string | null) => {
-    setAssigningProjectKey(flag.flag_key);
-    setError(null);
-    try {
-      const updated = await featureFlagApi.update(flag.flag_key, { project_id: projectId ?? undefined });
-      replaceFlag(updated);
-    } catch {
-      setError(tr.errorUpdate);
-    } finally {
-      setAssigningProjectKey(null);
-    }
-  };
-
   const renderExposureSummary = (flagKey: string) => {
     const summary = exposureSummaries[flagKey];
     if (summary === undefined) return <span className="text-xs text-slate-400">{tr.exposureLoading}</span>;
@@ -314,20 +310,12 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
 
   const filteredFlags = currentProjectId
     ? flags.filter(f => (f.project_id || f.product) === currentProjectId)
-    : flags;
+    : [];
 
   if (loading) return <p className="text-slate-500 text-sm p-8">{tr.loading}</p>;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
-        <span className="shrink-0 mt-0.5">ℹ️</span>
-        <span>
-          {lang === 'ko'
-            ? '이 탭은 실험에 연결되지 않은 독립 Feature Flag를 관리합니다. 실험과 연결된 Flag의 롤아웃·활성 여부는 실험 상세 페이지에서 바로 조작할 수 있습니다.'
-            : 'This tab manages standalone feature flags not linked to any experiment. Flags linked to an experiment can be toggled and adjusted directly on the experiment detail page.'}
-        </span>
-      </div>
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{tr.title}</h1>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -362,20 +350,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
             <div className="flex gap-2 flex-wrap">
               <Input value={newKey} onChange={e => setNewKey(e.target.value)} placeholder={tr.keyPlaceholder} className="rounded-xl font-mono flex-1 min-w-32" />
               <Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder={tr.descPlaceholder} className="rounded-xl flex-1 min-w-32" />
-              <Select
-                value={newProjectId || '__none__'}
-                onValueChange={(v) => setNewProjectId(v === '__none__' ? '' : v)}
-              >
-                <SelectTrigger className="rounded-xl w-40">
-                  <SelectValue placeholder={tr.productPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
-                  {availableProjects.filter(p => p.access_role !== 'viewer').map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <p className="self-center text-sm text-muted-foreground">{tr.colProject}: {currentProject?.name}</p>
             </div>
             <div className="flex items-center gap-3">
               <label className="text-sm text-slate-500 shrink-0">{tr.rolloutLabel}</label>
@@ -391,11 +366,11 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
       )}
 
       <div className="flex items-start gap-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 p-3 text-xs text-indigo-700 dark:text-indigo-300">
-        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
         <span>
           {lang === 'ko'
-            ? '실험에 연결된 플래그는 각 실험 상세 페이지에서 롤아웃(%) 및 활성 상태를 바로 관리할 수 있습니다.'
-            : 'Flags linked to experiments can be managed directly (rollout %, enabled state) from the experiment detail page.'}
+            ? '실험에 연결되지 않은 플래그를 관리하는 화면입니다. 실험에 연결된 플래그의 롤아웃과 활성 상태는 실험 상세에서 관리하세요.'
+            : 'Manage standalone flags here. For flags linked to experiments, manage rollout and enabled state on the experiment detail page.'}
         </span>
       </div>
 
@@ -403,7 +378,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
         <CardContent className="p-0">
           {error && !showForm && <p className="text-xs text-rose-500 px-6 pt-4">{error}</p>}
           {filteredFlags.length === 0 ? (
-            <p className="text-sm text-slate-400 p-6">{tr.empty}</p>
+            error && !showForm ? null : <p className="text-sm text-slate-400 p-6">{tr.empty}</p>
           ) : (
             <Table>
               <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
@@ -426,7 +401,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
                   const isArchiving = archivingKey === flag.flag_key;
                   const isRestoring = restoringKey === flag.flag_key;
                   const isArchived = Boolean(flag.archived_at);
-                  const readOnly = availableProjects.find(p => p.id === flag.project_id)?.access_role === 'viewer';
+                  const readOnly = availableProjects.find(p => p.id === (flag.project_id || flag.product))?.access_role === 'viewer';
 
                   return (
                   <TableRow key={flag.flag_key} className={isArchived ? 'bg-slate-50/70 opacity-75 dark:bg-slate-900/40' : undefined}>
@@ -468,21 +443,7 @@ export const FeatureFlags: React.FC<Props> = ({ lang, isAdmin = true }) => {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value={flag.project_id || flag.product || '__none__'}
-                        onValueChange={(v) => handleAssignProject(flag, v === '__none__' ? null : v)}
-                        disabled={!isAdmin || assigningProjectKey === flag.flag_key || isArchived}
-                      >
-                        <SelectTrigger className="h-7 rounded-lg text-xs w-32 border-slate-200 dark:border-slate-700">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">{tr.noProject}</SelectItem>
-                          {availableProjects.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <span className="text-sm">{currentProject?.name}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

@@ -1,7 +1,7 @@
 import { ProjectInvitationInbox } from '../features/dashboard/components/ProjectInvitationInbox';
 import { IterglowLogo } from '../components/IterglowLogo';
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
     ChevronRight,
     ChevronLeft,
@@ -21,11 +21,14 @@ import {
     Plug,
     Flag,
     Plus,
+    Settings,
+    ExternalLink,
+    ChevronsUpDown,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Button } from '../components/ui/button';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuLabel } from '../components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuLabel } from '../components/ui/dropdown-menu';
 import { useProject } from '../contexts/ProjectContext';
 
 function cn(...inputs: ClassValue[]) {
@@ -78,7 +81,7 @@ const SectionDivider = ({ label, expanded }: { label: string; expanded: boolean 
     <div className={cn("flex items-center gap-2 px-2 pb-1", expanded ? "pt-5" : "pt-4")}>
         {expanded ? (
             <>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-nowrap shrink-0">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">
                     {label}
                 </span>
                 <div className="flex-1 h-px bg-border" />
@@ -121,11 +124,38 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
     const location = useLocation();
     const navigate = useNavigate();
-    const { projects, currentProjectId, setCurrentProjectId, loading } = useProject();
-    const selectedProject = projects.find(project => project.id === currentProjectId);
+    const { projects, currentProjectId, currentProject, setCurrentProjectId, loading, error, reloadProjects } = useProject();
+    const projectListRef = useRef<HTMLDivElement>(null);
+    const [projectListOverflows, setProjectListOverflows] = useState(false);
+    const projectShortcuts = projects.slice(0, 5);
+    if (currentProject && !projectShortcuts.some(project => project.id === currentProject.id)) {
+        projectShortcuts.splice(4, 1, currentProject);
+    }
 
-    const activePath = location.pathname;
+    const activePath = location.pathname.replace(/\/+$/, '') || '/';
     const isCommunity = activePath.startsWith("/metrics");
+    const isProjectManagement = activePath === '/projects';
+    const isWorkspaceList = ['/experiments', '/api-key', '/feature-flags', '/placements', '/project-settings'].includes(activePath);
+    const isWorkspace = isWorkspaceList || activePath.startsWith('/experiments/') || activePath.startsWith('/example');
+
+    useEffect(() => {
+        const list = projectListRef.current;
+        if (!list) { setProjectListOverflows(false); return; }
+        const update = () => {
+            setProjectListOverflows(list.scrollHeight > list.clientHeight + 1);
+            if (isProjectManagement) return;
+            const active = list.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
+            if (!active) return;
+            const bounds = list.getBoundingClientRect();
+            const row = active.getBoundingClientRect();
+            if (row.top < bounds.top + 4) list.scrollTop += row.top - bounds.top - 4;
+            else if (row.bottom > bounds.bottom - 4) list.scrollTop += row.bottom - bounds.bottom + 4;
+        };
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+    }, [currentProjectId, projects, isSidebarOpen, isProjectManagement, isCommunity, loading, error, currentProject?.access_role, isAdmin]);
+
 
     const handleNav = (path: string) => {
         navigate(path);
@@ -133,8 +163,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     };
 
     const translations = {
-        en: { experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & suggestions", featureFlags: "Feature Flags", projects: "Project management", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project", logout: "Logout" },
-        ko: { experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그·건의", featureFlags: "Feature Flags", projects: "프로젝트 관리", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트", logout: "로그아웃" }
+        en: { experiments: "Experiments", githubMetrics: "GitHub Activity", discordMetrics: "Discord Activity", bugReport: "Bugs & suggestions", featureFlags: "Feature Flags", projects: "Project list", projectSettings: "Settings & members", apiKey: "SDK Integration", example: "Example App", settings: "Settings", placements: "Placements", sectionOther: "Analytics & Other", sectionProjectTools: "Project Tools", sectionNoProject: "Select a Project", allProjects: "All Projects", selectProject: "Select a project", noProjectHint: "Select a project above to see more menu items", newProject: "New Project", logout: "Logout" },
+        ko: { experiments: "실험 관리", githubMetrics: "GitHub 활동 분석", discordMetrics: "Discord 활동 분석", bugReport: "버그·건의", featureFlags: "Feature Flags", projects: "프로젝트 목록", projectSettings: "설정·멤버", apiKey: "SDK 연동", example: "예제 앱", settings: "설정", placements: "Placements", sectionOther: "분석 / 기타", sectionProjectTools: "프로젝트 도구", sectionNoProject: "프로젝트를 선택하세요", allProjects: "전체 프로젝트", selectProject: "프로젝트를 선택하세요", noProjectHint: "프로젝트를 선택하면 더 많은 메뉴가 표시됩니다", newProject: "새 프로젝트", logout: "로그아웃" }
     };
 
     const t = translations[lang];
@@ -154,6 +184,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         activePath === '/placements' ? t.placements :
         activePath === '/projects' ? t.projects :
         activePath === '/api-key' ? t.apiKey :
+        activePath === '/project-settings' ? t.projectSettings :
         activePath.startsWith('/example') ? t.example :
         t.experiments;
 
@@ -210,7 +241,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     {isSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
                 </button>
 
-                <div className="flex items-center justify-between h-16 px-4 lg:px-6 border-b dark:border-slate-800">
+                <div className="flex shrink-0 items-center justify-between h-16 px-4 lg:px-6 border-b dark:border-slate-800">
                     <div className="flex flex-col gap-1">
                         <Link to="/projects" onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false); }} aria-label={lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home'} className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                             <IterglowLogo lang={lang} compact={!isSidebarOpen} />
@@ -226,71 +257,85 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                     </button>
                 </div>
 
-                {!isCommunity && (
-                    <section aria-label={t.projects} className="px-3 pt-4">
-                        {isSidebarOpen ? (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="h-auto w-full justify-start gap-3 bg-background p-3 text-left" aria-label={t.selectProject}>
-                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
-                                            <FolderOpen size={18} />
-                                        </span>
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block truncate font-semibold">{selectedProject?.name || currentProjectId || t.allProjects}</span>
-                                            <span className="block truncate text-xs font-normal text-muted-foreground">{lang === 'ko' ? '프로젝트 전환' : 'Switch project'}</span>
-                                        </span>
-                                        <ChevronDown size={16} className="shrink-0 text-muted-foreground" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-60 max-w-[calc(100vw-2rem)]">
-                                    <DropdownMenuRadioGroup value={currentProjectId ?? '__all__'} onValueChange={value => {
-                                        setCurrentProjectId(value === '__all__' ? null : value);
-                                        if (activePath.startsWith('/experiments/')) handleNav('/experiments');
-                                        else if (window.innerWidth < 1024) setSidebarOpen(false);
-                                    }} className="max-h-64 overflow-y-auto">
-                                        <DropdownMenuRadioItem value="__all__">{t.allProjects}</DropdownMenuRadioItem>
-                                        {loading && <DropdownMenuItem disabled>{lang === 'ko' ? '불러오는 중...' : 'Loading...'}</DropdownMenuItem>}
-                                        {projects.map(project => <DropdownMenuRadioItem key={project.id} value={project.id}><span className="truncate">{project.name}</span></DropdownMenuRadioItem>)}
-                                    </DropdownMenuRadioGroup>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="gap-2" onSelect={() => handleNav('/projects')}>
-                                        <FolderOpen size={15} />{t.projects}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="gap-2" onSelect={() => handleNav('/projects?create=1')}>
-                                        <Plus size={15} />{t.newProject}
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        ) : (
-                            <Button variant="ghost" size="icon" className="w-full" aria-label={t.selectProject} title={t.selectProject} onClick={() => setSidebarOpen(true)}>
-                                <FolderOpen size={20} />
-                            </Button>
-                        )}
-                    </section>
-                )}
-
-                <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
-                    <SectionDivider label={lang === 'ko' ? '실험 플랫폼' : 'Experiment platform'} expanded={isSidebarOpen} />
-                    <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath.startsWith('/experiments')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
-                    <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />
-                    <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
+                <nav aria-label={lang === 'ko' ? '프로젝트 탐색' : 'Project navigation'} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-4">
+                    {!isCommunity && (
+                        <section aria-label={t.projects} className="flex min-h-0 shrink flex-col pt-4">
+                            <div className={cn('flex shrink-0 gap-1', !isSidebarOpen && 'flex-col')}>
+                                <SidebarItem icon={FolderOpen} label={t.projects} active={isProjectManagement} expanded={isSidebarOpen} onClick={() => handleNav('/projects')} />
+                                <Button variant="ghost" size="icon" className="min-h-11 min-w-11 shrink-0 text-muted-foreground" aria-label={t.newProject} title={t.newProject} onClick={() => handleNav('/projects?create=1')}>
+                                    <Plus size={18} />
+                                </Button>
+                            </div>
+                            {isSidebarOpen && (
+                                <div className="mt-2 flex min-h-0 flex-col">
+                                    <div ref={projectListRef} role="group" aria-label={lang === 'ko' ? '프로젝트 빠른 전환' : 'Quick project switch'} className="project-shortcut-scroll -mx-1 min-h-14 max-h-32 scroll-py-1 space-y-1 overflow-y-auto overscroll-contain border-y border-border/60 bg-muted/20 p-1">
+                                    {loading ? <p role="status" className="px-3 py-2 text-xs text-muted-foreground">{lang === 'ko' ? '불러오는 중...' : 'Loading...'}</p> : error ? (
+                                        <Button variant="ghost" className="h-auto w-full justify-start whitespace-normal text-left text-xs" onClick={() => void reloadProjects()}>{lang === 'ko' ? '프로젝트 다시 불러오기' : 'Retry loading projects'}</Button>
+                                    ) : projectShortcuts.map(project => (
+                                        <button key={project.id} type="button" aria-label={project.name} title={project.name}
+                                            aria-pressed={!isProjectManagement && currentProjectId === project.id}
+                                            className={cn('flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm transition-colors hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring', !isProjectManagement && currentProjectId === project.id ? 'bg-accent font-semibold text-accent-foreground' : 'text-muted-foreground')}
+                                            onClick={() => {
+                                                if (project.id === currentProjectId && isWorkspace) {
+                                                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                                                    return;
+                                                }
+                                                setCurrentProjectId(project.id);
+                                                const retainTool = ['/experiments', '/feature-flags', '/api-key', '/project-settings'].includes(activePath)
+                                                    && !(activePath === '/api-key' && project.access_role === 'viewer')
+                                                    && !(activePath === '/project-settings' && (project.access_role || 'owner') !== 'owner');
+                                                if (!retainTool) handleNav('/experiments');
+                                                else if (window.innerWidth < 1024) setSidebarOpen(false);
+                                            }}>
+                                            <FolderOpen size={14} aria-hidden="true" className="shrink-0" />
+                                            <span className="truncate">{project.name}</span>
+                                        </button>
+                                    ))}
+                                    </div>
+                                    {!loading && !error && projects.length > 0 && (
+                                        <div className="flex h-9 shrink-0 items-center justify-between gap-1">
+                                            <span className="flex items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground">
+                                                {projectListOverflows && <><ChevronsUpDown size={12} aria-hidden="true" />{lang === 'ko' ? '스크롤' : 'Scroll'}</>}
+                                            </span>
+                                            <Button variant="ghost" size="sm" className="h-8 gap-1 px-1 text-xs text-foreground" onClick={() => handleNav('/projects')}>
+                                                {lang === 'ko' ? `전체 ${projects.length}개 보기` : `View all ${projects.length}`}
+                                                <ChevronRight size={13} aria-hidden="true" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </section>
+                    )}
+                    {!isProjectManagement && !isCommunity && currentProject && !error && !loading ? (
+                        <section aria-label={lang === 'ko' ? '현재 프로젝트 도구' : 'Current project tools'} className="shrink-0">
+                            <SectionDivider label={currentProject.name} expanded={isSidebarOpen} />
+                            <SidebarItem icon={FlaskConical} label={t.experiments} active={activePath.startsWith('/experiments')} expanded={isSidebarOpen} onClick={() => handleNav('/experiments')} />
+                            {currentProject.access_role !== 'viewer' && <SidebarItem icon={Plug} label={t.apiKey} active={activePath === '/api-key'} expanded={isSidebarOpen} onClick={() => handleNav('/api-key')} />}
+                            <SidebarItem icon={Flag} label={t.featureFlags} active={activePath === '/feature-flags'} expanded={isSidebarOpen} onClick={() => handleNav('/feature-flags')} />
+                            {(currentProject.access_role || 'owner') === 'owner' && <SidebarItem icon={Settings} label={t.projectSettings} active={activePath === '/project-settings'} expanded={isSidebarOpen} onClick={() => handleNav('/project-settings')} />}
+                        </section>
+                    ) : isSidebarOpen && !isCommunity && !loading && !error && (
+                        <p className="px-3 pt-5 text-xs leading-relaxed text-muted-foreground">{lang === 'ko' ? '프로젝트를 선택하면 실험과 도구가 표시됩니다.' : 'Choose a project to open its experiments and tools.'}</p>
+                    )}
                 </nav>
 
-                <div className="px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-muted/40 space-y-1">
+                <div className="shrink-0 px-3 pb-3 pt-2 mt-auto border-t dark:border-slate-800 bg-muted/40 space-y-1">
                     <SidebarItem icon={Bug} label={t.bugReport} active={activePath.startsWith('/bug-report')} expanded={isSidebarOpen} onClick={() => handleNav('/bug-report')} secondary />
-                    <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
-                        <Link to="/docs/sdk" state={{ from: location }} aria-label={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
+                    <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? 'SDK 가이드 (새 탭)' : 'SDK guide (new tab)'}>
+                        <Link to="/docs/sdk" target="_blank" rel="noopener noreferrer" aria-describedby="sidebar-new-tab-hint" aria-label={lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}>
                             <BookOpen aria-hidden="true" className="shrink-0" />
-                            {isSidebarOpen && <span>{lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}</span>}
+                            {isSidebarOpen && <><span>{lang === 'ko' ? 'SDK 가이드' : 'SDK guide'}</span><ExternalLink size={13} aria-hidden="true" className="ml-auto shrink-0" /></>}
                         </Link>
                     </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? '서비스 소개' : 'About Iterglow'}>
-                        <Link to="/" aria-label={lang === 'ko' ? '서비스 소개' : 'About Iterglow'}>
+                    <Button asChild variant="ghost" className="w-full justify-start gap-3 px-3 text-muted-foreground" title={lang === 'ko' ? '서비스 소개 (새 탭)' : 'About Iterglow (new tab)'}>
+                        <Link to="/" target="_blank" rel="noopener noreferrer" aria-describedby="sidebar-new-tab-hint" aria-label={lang === 'ko' ? '서비스 소개' : 'About Iterglow'}>
                             <Info aria-hidden="true" className="shrink-0" />
-                            {isSidebarOpen && <span>{lang === 'ko' ? '서비스 소개' : 'About Iterglow'}</span>}
+                            {isSidebarOpen && <><span>{lang === 'ko' ? '서비스 소개' : 'About Iterglow'}</span><ExternalLink size={13} aria-hidden="true" className="ml-auto shrink-0" /></>}
                         </Link>
                     </Button>
-                    {isAdmin && currentProjectId === 'demo-app' && (
+                    <span id="sidebar-new-tab-hint" className="sr-only">{lang === 'ko' ? '새 탭에서 열립니다.' : 'Opens in a new tab.'}</span>
+                    {isAdmin && currentProject?.id === 'demo-app' && (
                         <SidebarItem icon={Code2} label={t.example} active={activePath.startsWith('/example')} expanded={isSidebarOpen} onClick={() => handleNav('/example')} secondary />
                     )}
                 </div>
@@ -352,7 +397,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 </header>
                 <div className="flex-1 p-4 md:p-8 overflow-auto">
                     {accountId && <ProjectInvitationInbox key={accountId} lang={lang} />}
-                    {children}
+                    {isWorkspace && loading && !(activePath === '/project-settings' && currentProject) ? (
+                        <p role="status" className="text-sm text-muted-foreground">{lang === 'ko' ? '프로젝트를 불러오는 중...' : 'Loading projects...'}</p>
+                    ) : isWorkspace && error ? (
+                        <div role="alert" className="space-y-3">
+                            <p>{lang === 'ko' ? '프로젝트를 불러오지 못했습니다.' : 'Could not load projects.'}</p>
+                            <Button variant="outline" onClick={() => void reloadProjects()}>{lang === 'ko' ? '다시 시도' : 'Retry'}</Button>
+                        </div>
+                    ) : (isWorkspaceList && !currentProject) || (activePath.startsWith('/example') && currentProject?.id !== 'demo-app') ? (
+                        <Navigate to="/projects" replace />
+                    ) : (
+                        <React.Fragment key={isWorkspaceList ? currentProjectId : 'page'}>{children}</React.Fragment>
+                    )}
                 </div>
             </main>
         </div>

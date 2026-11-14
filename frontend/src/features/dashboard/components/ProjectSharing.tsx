@@ -123,7 +123,7 @@ export function ProjectSharing({
 }: {
   project: Project;
   lang: "ko" | "en";
-  onClose: () => void;
+  onClose?: () => void;
 }) {
   const t = copy[lang];
   const [members, setMembers] = useState<ProjectMember[]>([]);
@@ -203,9 +203,9 @@ export function ProjectSharing({
             {project.name}
           </p>
         </div>
-        <Button variant="ghost" onClick={onClose}>
+        {onClose && <Button variant="ghost" onClick={onClose}>
           {t.close}
-        </Button>
+        </Button>}
       </CardHeader>
       <CardContent className="space-y-6">
         <p className="max-w-prose text-sm text-muted-foreground">

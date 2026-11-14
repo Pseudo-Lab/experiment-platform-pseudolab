@@ -76,7 +76,7 @@ const formatWindow = (start?: string | null, end?: string | null) => {
 
 export const Placements: React.FC<Props> = ({ lang }) => {
   const tr = t[lang];
-  const { currentProjectId, projects: availableProjects } = useProject();
+  const { currentProjectId, currentProject, projects: availableProjects } = useProject();
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -87,28 +87,34 @@ export const Placements: React.FC<Props> = ({ lang }) => {
   const [newKey, setNewKey] = useState('');
   const [newName, setNewName] = useState('');
   const [newStatus, setNewStatus] = useState('active');
-  const [newProjectId, setNewProjectId] = useState('');
+  const newProjectId = currentProject?.id ?? '';
   const [newCohort, setNewCohort] = useState('');
   const [newRoles, setNewRoles] = useState('');
   const [newStart, setNewStart] = useState('');
   const [newEnd, setNewEnd] = useState('');
 
-  const load = async () => {
+  const load = async (active = () => true) => {
+    if (!currentProjectId) { setPlacements([]); setLoading(false); return; }
     setLoading(true);
+    setError(null);
     try {
-      const items = await placementApi.list(currentProjectId ?? undefined);
-      setPlacements(items);
+      const items = await placementApi.list(currentProjectId);
+      if (active()) setPlacements(items);
     } catch {
-      /* silently fail */
+      if (active()) setError(lang === 'ko' ? 'Placement를 불러오지 못했습니다.' : 'Could not load placements.');
     } finally {
-      setLoading(false);
+      if (active()) setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, [currentProjectId]);
+  useEffect(() => {
+    let cancelled = false;
+    void load(() => !cancelled);
+    return () => { cancelled = true; };
+  }, [currentProjectId]);
 
   const handleCreate = async () => {
-    if (!newKey.trim() || !newName.trim()) return;
+    if (!newKey.trim() || !newName.trim() || !currentProject) return;
     setCreating(true);
     setError(null);
     try {
@@ -128,7 +134,7 @@ export const Placements: React.FC<Props> = ({ lang }) => {
       const created = await placementApi.create(data);
       setPlacements(prev => [created, ...prev]);
       setNewKey(''); setNewName(''); setNewStatus('active');
-      setNewProjectId(''); setNewCohort(''); setNewRoles('');
+       setNewCohort(''); setNewRoles('');
       setNewStart(''); setNewEnd('');
       setShowForm(false);
     } catch (e: any) {
@@ -182,17 +188,7 @@ export const Placements: React.FC<Props> = ({ lang }) => {
                   <SelectItem value="archived">{tr.archived}</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={newProjectId || '__none__'} onValueChange={v => setNewProjectId(v === '__none__' ? '' : v)}>
-                <SelectTrigger className="rounded-xl w-40">
-                  <SelectValue placeholder={tr.projectLabel} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{tr.noProject}</SelectItem>
-                  {availableProjects.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <p className="self-center text-sm text-muted-foreground">{tr.projectLabel}: {currentProject?.name}</p>
               <Input value={newCohort} onChange={e => setNewCohort(e.target.value)} placeholder={tr.cohortPlaceholder} className="rounded-xl w-40" />
               <Input value={newRoles} onChange={e => setNewRoles(e.target.value)} placeholder={tr.rolesPlaceholder} className="rounded-xl flex-1 min-w-48" />
             </div>
