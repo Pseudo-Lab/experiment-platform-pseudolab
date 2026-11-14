@@ -75,6 +75,6 @@ SDK v1과 legacy의 이벤트 계약은 구분됩니다. 기존 query segment는
 
 ## 라이선스와 기여자
 
-[MIT License](https://opensource.org/licenses/MIT).
+[MIT License](LICENSE).
 
 Iterglow는 [Pseudo-Lab](https://pseudo-lab.com/)에서 시작한 오픈소스 프로젝트입니다. [모든 기여자](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/graphs/contributors)에게 감사드립니다.
