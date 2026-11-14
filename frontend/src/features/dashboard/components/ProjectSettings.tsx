@@ -35,7 +35,16 @@ const copy = {
     deleteProjectDesc: '이 프로젝트와 관련된 설정을 삭제합니다. 연결된 실험이나 플래그, 서버 키가 남아 있으면 삭제가 거부됩니다.',
     deleteConfirm: (name: string) => `"${name}" 프로젝트를 삭제하시겠습니까?\n연결된 실험이나 플래그가 있으면 삭제되지 않습니다.`,
     deleting: '삭제 중...',
-    deleteError: '프로젝트를 삭제하지 못했습니다.',
+    deleteError: '프로젝트 삭제를 완료하지 못했습니다. 목록을 새로고침한 뒤 다시 확인해 주세요.',
+    deleteExperiments: '연결된 실험이 있어 삭제할 수 없습니다. 실험 관리에서 연결된 실험을 먼저 확인해 주세요.',
+    deleteFlags: '연결된 플래그가 있어 삭제할 수 없습니다. 플래그 화면에서 연결된 항목을 먼저 확인해 주세요.',
+    deleteCredentials: '서버 키 발급 이력이 있어 삭제할 수 없습니다. 폐기된 키의 이력도 보존됩니다.',
+    deleteConflict: '프로젝트가 사용 중이거나 상태가 변경되어 삭제할 수 없습니다. 목록을 새로고침한 뒤 연결된 항목을 확인해 주세요.',
+    deleteForbidden: '이 프로젝트를 삭제할 권한이 없습니다. 프로젝트와 계정 권한을 확인해 주세요.',
+    deleteMissing: '프로젝트에 접근할 수 없습니다. 목록을 새로고침해 주세요.',
+    deleteSignedOut: '로그인이 만료됐습니다. 다시 로그인한 뒤 시도해 주세요.',
+    deleteServer: '서버 오류로 삭제 결과를 확인하지 못했습니다. 목록을 새로고침해 프로젝트가 남아 있는지 확인해 주세요.',
+    deleteNetwork: '삭제 결과를 확인하지 못했습니다. 연결 상태를 확인한 뒤 프로젝트 목록을 새로고침해 주세요.',
   },
   en: {
     title: 'Project settings',
@@ -59,7 +68,16 @@ const copy = {
     deleteProjectDesc: 'Delete this project. Deletion is refused if any linked experiments, feature flags, or server credentials remain.',
     deleteConfirm: (name: string) => `Delete project "${name}"?\nProjects with linked experiments or flags cannot be deleted.`,
     deleting: 'Deleting...',
-    deleteError: 'Failed to delete project.',
+    deleteError: 'Could not complete deletion. Refresh the project list and check again.',
+    deleteExperiments: 'This project has linked experiments and cannot be deleted. Check them in Experiments first.',
+    deleteFlags: 'This project has linked flags and cannot be deleted. Check them in Feature Flags first.',
+    deleteCredentials: 'This project has server credential history and cannot be deleted. Revoked credential records are also retained.',
+    deleteConflict: 'This project is in use or its state changed. Refresh the list and check linked resources before trying again.',
+    deleteForbidden: 'You cannot delete this project. Check the project and your account permissions.',
+    deleteMissing: 'This project is unavailable. Refresh the project list.',
+    deleteSignedOut: 'Your session expired. Sign in again before trying.',
+    deleteServer: 'The server could not confirm deletion. Refresh the project list to check whether it still exists.',
+    deleteNetwork: 'Could not confirm deletion. Check your connection, then refresh the project list.',
   },
 };
 
@@ -238,7 +256,16 @@ export function ProjectSettings({ lang }: Props) {
       }
     } catch (err) {
       if (!mountedRef.current || activeProjectIdRef.current !== targetId || deleteSeqRef.current !== seq) return;
-      setDeleteError(err instanceof Error && err.message ? err.message : t.deleteError);
+      const status = err instanceof Error && 'status' in err ? err.status : undefined;
+      const reason = err instanceof Error && 'reason' in err ? err.reason : undefined;
+      const conflict = reason === 'experiments' ? t.deleteExperiments
+        : reason === 'feature_flags' ? t.deleteFlags
+        : reason === 'server_credentials' ? t.deleteCredentials : t.deleteConflict;
+      const messages: Record<number, string> = {
+        401: t.deleteSignedOut, 403: t.deleteForbidden, 404: t.deleteMissing, 409: conflict,
+      };
+      const fallback = typeof status === 'number' && status >= 500 && status < 600 ? t.deleteServer : t.deleteError;
+      setDeleteError(typeof status === 'number' ? messages[status] || fallback : t.deleteNetwork);
     } finally {
       if (mountedRef.current && activeProjectIdRef.current === targetId && deleteSeqRef.current === seq) {
         setDeleting(false);

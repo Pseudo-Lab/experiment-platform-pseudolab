@@ -198,7 +198,7 @@ it.each(['ko', 'en'] as const)('handles delete confirmation, linked-resource ref
   const confirmSpy = vi.spyOn(window, 'confirm');
   confirmSpy.mockReturnValueOnce(false).mockReturnValueOnce(true).mockReturnValueOnce(true);
   vi.mocked(projectApi.delete)
-    .mockRejectedValueOnce(new Error("Cannot delete project 'alpha': referenced by one or more experiments"))
+    .mockRejectedValueOnce(Object.assign(new Error("Cannot delete project 'internal-project-id': referenced by one or more experiments"), { status: 409, reason: 'experiments' }))
     .mockResolvedValueOnce(undefined);
 
   renderSettings(lang);
@@ -210,7 +210,8 @@ it.each(['ko', 'en'] as const)('handles delete confirmation, linked-resource ref
 
   // Linked resource refusal displays error and keeps selection/route
   fireEvent.click(deleteBtn);
-  expect(await screen.findByRole('alert')).toHaveTextContent('referenced by one or more experiments');
+  expect(await screen.findByRole('alert')).toHaveTextContent(lang === 'ko' ? '연결된 실험이 있어 삭제할 수 없습니다.' : 'This project has linked experiments');
+  expect(screen.queryByText(/internal-project-id/)).not.toBeInTheDocument();
   expect(reloadMock).not.toHaveBeenCalled();
   expect(selectMock).not.toHaveBeenCalled();
   expect(screen.getByTestId('location')).toHaveTextContent('/project-settings');
@@ -325,4 +326,31 @@ it('ignores a delete response after the settings page unmounts', async () => {
 
   expect(reloadMock).not.toHaveBeenCalled();
   expect(selectMock).not.toHaveBeenCalled();
+});
+
+it.each([
+  [409, 'feature_flags', '연결된 플래그가 있어', 'This project has linked flags'],
+  [409, 'server_credentials', '서버 키 발급 이력이 있어', 'This project has server credential history'],
+  [409, undefined, '프로젝트가 사용 중이거나 상태가 변경되어', 'This project is in use or its state changed'],
+  [403, 'experiments', '삭제할 권한이 없습니다', 'You cannot delete this project'],
+  [404, undefined, '프로젝트에 접근할 수 없습니다', 'This project is unavailable'],
+  [401, undefined, '로그인이 만료됐습니다', 'Your session expired'],
+  [503, undefined, '서버 오류로 삭제 결과를 확인하지 못했습니다', 'The server could not confirm deletion'],
+  [400, undefined, '프로젝트 삭제를 완료하지 못했습니다', 'Could not complete deletion'],
+  [undefined, undefined, '삭제 결과를 확인하지 못했습니다', 'Could not confirm deletion'],
+] as const)('localizes delete failure %s/%s without rendering server details', async (status, reason, ko, en) => {
+  for (const lang of ['ko', 'en'] as const) {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const error = status === undefined
+      ? new TypeError('server-internal-uuid and private detail')
+      : Object.assign(new Error('server-internal-uuid and private detail'), { status, reason });
+    vi.mocked(projectApi.delete).mockRejectedValueOnce(error);
+    renderSettings(lang);
+    fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '프로젝트 삭제' : 'Delete Project' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(lang === 'ko' ? ko : en);
+    expect(screen.queryByText(/server-internal-uuid|private detail/)).not.toBeInTheDocument();
+    expect(reloadMock).not.toHaveBeenCalled();
+    expect(selectMock).not.toHaveBeenCalled();
+    cleanup();
+  }
 });
