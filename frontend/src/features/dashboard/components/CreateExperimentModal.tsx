@@ -5,7 +5,7 @@ import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { X, Plus, Trash2 } from 'lucide-react';
-import { experimentApi, experimentPlacementApi, featureFlagApi, projectApi, type FeatureFlag, type Project, type Experiment } from '../../../services/api';
+import { experimentApi, experimentPlacementApi, featureFlagApi, type FeatureFlag, type Experiment } from '../../../services/api';
 import { useProject } from '../../../contexts/ProjectContext';
 import { flagCreateError } from '../../../lib/flagCreateError';
 
@@ -34,9 +34,9 @@ const translations = {
     labelName: '* Experiment Name',
     placeholderName: 'e.g. Button Color Test',
     requiredLegend: 'Save a draft first. Finish measurement and delivery settings before launch. * required',
-    labelProduct: 'Product',
+    labelProduct: 'Project',
     placeholderProduct: 'e.g. lvup',
-    productHelp: 'Product or service this experiment belongs to.',
+    productHelp: 'This experiment will be created in the current project.',
     labelType: 'Experiment type',
     labelHypothesis: 'Hypothesis',
     placeholderHypothesis: 'e.g. Changing the button color will increase CTR.',
@@ -132,9 +132,9 @@ const translations = {
     labelName: '* 실험 이름',
     placeholderName: '예: 버튼 색상 테스트',
     requiredLegend: '초안을 먼저 저장하고, 실험 시작 전에 수집·노출 설정을 채우세요. * 필수 입력',
-    labelProduct: '제품/서비스',
+    labelProduct: '프로젝트',
     placeholderProduct: '예: lvup',
-    productHelp: '이 실험이 속한 제품 또는 서비스입니다.',
+    productHelp: '현재 프로젝트에 실험을 생성합니다.',
     labelType: '실험 유형',
     labelHypothesis: '가설',
     placeholderHypothesis: '예: 버튼 색상 변경이 클릭률을 높일 것이다.',
@@ -273,8 +273,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
     { name: 'control', traffic_ratio: '0.5' },
     { name: 'treatment', traffic_ratio: '0.5' },
   ]);
-  const [projectId, setProjectId] = useState(currentProject?.id ?? '');
-  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
+  const projectId = currentProject?.id ?? '';
   const [flagMode, setFlagMode] = useState<'none' | 'existing' | 'auto'>('none');
   const [flagKey, setFlagKey] = useState<string>('');
   const [autoFlagKey, setAutoFlagKey] = useState('');
@@ -297,9 +296,12 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   const ratioValid = Math.abs(ratioSum - 1.0) <= 0.01;
 
   useEffect(() => {
-    featureFlagApi.list(false).then(setAvailableFlags).catch(() => setAvailableFlags([]));
-    projectApi.list().then(setAvailableProjects).catch(() => setAvailableProjects([]));
-  }, []);
+    let cancelled = false;
+    featureFlagApi.list(false).then(flags => {
+      if (!cancelled) setAvailableFlags(flags.filter(flag => projectId && (flag.project_id || flag.product) === projectId));
+    }).catch(() => { if (!cancelled) setAvailableFlags([]); });
+    return () => { cancelled = true; };
+  }, [projectId]);
 
   useEffect(() => {
     if (flagMode !== 'auto') return;
@@ -377,6 +379,10 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
   );
 
   const handleSubmit = async () => {
+    if (!currentProject || currentProject.access_role === 'viewer') {
+      setError(lang === 'ko' ? '편집 가능한 프로젝트를 선택하세요.' : 'Select a project you can edit.');
+      return;
+    }
     if (!name.trim()) { setError(t.nameRequired); return; }
     if (experimentType !== 'quasi_experiment' && variants.length > 0 && !ratioValid) { setError(t.ratioWarning.replace('{sum}', ratioSum.toFixed(2))); return; }
     if (configurePlacement && !placementValid) { setError(t.placementRequired); return; }
@@ -502,20 +508,7 @@ export const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({ la
 
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t.labelProduct}</label>
-            <Select
-              value={projectId || '__none__'}
-              onValueChange={(v) => setProjectId(v === '__none__' ? '' : v)}
-            >
-              <SelectTrigger className="rounded-xl" aria-label={t.labelProduct}>
-                <SelectValue placeholder={t.placeholderProduct} />
-              </SelectTrigger>
-              <SelectContent className="z-[10000]">
-                <SelectItem value="__none__">{lang === 'ko' ? '(없음)' : '(none)'}</SelectItem>
-                {availableProjects.filter(p => p.access_role !== 'viewer').map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name} ({p.id})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input aria-label={t.labelProduct} value={currentProject?.name || projectId} readOnly className="rounded-xl bg-muted" />
             <p className="text-xs text-slate-500 dark:text-slate-400">{t.productHelp}</p>
           </div>
 

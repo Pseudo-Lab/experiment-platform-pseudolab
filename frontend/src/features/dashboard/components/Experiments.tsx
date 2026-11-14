@@ -134,7 +134,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang, isAdmin = true }
     }
   };
 
-  const scopedExperiments = experiments.filter((exp) => !currentProjectId || (exp.project_id || exp.product) === currentProjectId);
+  const scopedExperiments = experiments.filter((exp) => currentProjectId && (exp.project_id || exp.product) === currentProjectId);
   const filteredExperiments = scopedExperiments.filter((exp) =>
     `${exp.name} ${exp.hypothesis || ''}`.toLowerCase().includes(search.toLowerCase()) &&
     (statusFilter === 'all' || exp.status === statusFilter)
@@ -155,7 +155,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang, isAdmin = true }
         </Button>
       </div>
 
-      <p className="text-sm text-muted-foreground">{t.scope}: <span className="font-medium text-foreground">{currentProject?.name || currentProjectId || (lang === 'ko' ? '전체 프로젝트' : 'All projects')}</span></p>
+      <p className="text-sm text-muted-foreground">{t.scope}: <span className="font-medium text-foreground">{currentProject?.name || (lang === 'ko' ? '프로젝트를 선택하세요' : 'Select a project')}</span></p>
       <div role="group" className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label={t.allStatus}>
         {(['all', 'draft', 'running', 'completed'] as const).map((status) => (
           <Button key={status} variant="outline" aria-pressed={statusFilter === status}
@@ -260,7 +260,7 @@ export const Experiments: React.FC<ExperimentsProps> = ({ lang, isAdmin = true }
                             <Eye className="h-4 w-4 text-slate-400" />
                             <span className="font-medium">{t.actionView}</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled={projects.find(p => p.id === exp.project_id)?.access_role === 'viewer'} className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => handleDelete(exp.id)}>
+                          <DropdownMenuItem disabled={projects.find(p => p.id === (exp.project_id || exp.product))?.access_role === 'viewer'} className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600" onClick={() => handleDelete(exp.id)}>
                             <Trash2 className="h-4 w-4" />
                             <span className="font-medium">{t.actionDelete}</span>
                           </DropdownMenuItem>

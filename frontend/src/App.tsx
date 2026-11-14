@@ -16,6 +16,7 @@ import { Projects } from './features/dashboard/components/Projects';
 import { ApiKeyPage } from './features/dashboard/components/ApiKeyPage';
 import { Placements } from './features/dashboard/components/Placements';
 import { ExampleApp } from './features/example/ExampleApp';
+import { ProjectSettings } from './features/dashboard/components/ProjectSettings';
 import { ProjectProvider } from './contexts/ProjectContext';
 
 export default function App() {
@@ -91,7 +92,7 @@ function AppShell() {
   }
 
   return (
-    <ProjectProvider>
+    <ProjectProvider key={user?.account_id || user?.username}>
       <MainLayout
         lang={lang}
         setLang={setLang}
@@ -107,7 +108,7 @@ function AppShell() {
           <Route path="/dashboard" element={<Navigate to="/experiments" replace />} />
           <Route path="/community" element={<Navigate to="/experiments" replace />} />
           <Route path="/experiments" element={<Experiments lang={lang} isAdmin={user?.is_admin !== false} />} />
-          <Route path="/experiments/:id" element={<ExperimentDetail lang={lang} isAdmin={user?.is_admin !== false} />} />
+          <Route path="/experiments/:id" element={<ExperimentDetail key={location.pathname} lang={lang} isAdmin={user?.is_admin !== false} />} />
           <Route path="/metrics" element={<Navigate to="/metrics/github" replace />} />
           <Route path="/metrics/github" element={user?.is_admin !== false ? <GitHubDashboard lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="/metrics/discord" element={user?.is_admin !== false ? <DiscordDashboard lang={lang} /> : <Navigate to="/projects" replace />} />
@@ -116,6 +117,7 @@ function AppShell() {
           <Route path="/feature-flags" element={<FeatureFlags lang={lang} isAdmin={user?.is_admin !== false} />} />
           <Route path="/placements" element={user?.is_admin !== false ? <Placements lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="/projects" element={<Projects lang={lang} />} />
+          <Route path="/project-settings" element={<ProjectSettings lang={lang} />} />
           <Route path="/api-key" element={<ApiKeyPage lang={lang} />} />
           <Route path="/example/*" element={user?.is_admin !== false ? <ExampleApp lang={lang} /> : <Navigate to="/projects" replace />} />
           <Route path="*" element={<Navigate to="/projects" replace />} />

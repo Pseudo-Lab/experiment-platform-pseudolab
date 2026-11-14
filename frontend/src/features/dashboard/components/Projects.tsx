@@ -1,27 +1,21 @@
-import { ProjectSharing, AcceptProjectInvitation } from './ProjectSharing';
-import React, { useState, useEffect } from 'react';
+import { AcceptProjectInvitation } from './ProjectSharing';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Plus, FolderOpen, Trash2 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-import { projectApi, type Project, type ProjectSdkStatus } from '../../../services/api';
+import { Plus, FolderOpen, Search } from 'lucide-react';
+import { projectApi, type ProjectSdkStatus } from '../../../services/api';
 import { useProject } from '../../../contexts/ProjectContext';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 interface Props { lang: 'en' | 'ko'; }
 
 const t = {
   ko: {
-    title: '프로젝트 관리',
+    title: '프로젝트 목록',
+    subtitle: '프로젝트를 선택해 해당 프로젝트의 실험, SDK, 플래그를 관리하세요.',
     cancel: '취소',
     name: '프로젝트 이름',
-    createdAt: '생성일',
     addProject: '프로젝트 추가',
     namePlaceholder: 'e.g. My App',
     create: '생성',
@@ -29,20 +23,22 @@ const t = {
     loading: '불러오는 중...',
     empty: '등록된 프로젝트가 없습니다.',
     errorCreate: '생성에 실패했습니다.',
-    delete: '삭제',
-    deleting: '삭제 중...',
-    deleteConfirm: (name: string) => `"${name}" 프로젝트를 삭제하시겠습니까?\n연결된 실험이나 플래그가 있으면 삭제되지 않습니다.`,
-    errorDelete: '삭제에 실패했습니다.',
+    errorLoad: '프로젝트를 불러오지 못했습니다.',
+    retry: '다시 시도',
+    searchLabel: '프로젝트 검색',
+    searchPlaceholder: '프로젝트 이름 검색...',
+    searchEmpty: '검색 조건에 맞는 프로젝트가 없습니다.',
+    clearSearch: '검색 초기화',
     sdkConnected: '연결됨',
     sdkNotConnected: 'SDK 미설치',
     sdkChecking: '확인 중...',
-    openVisualEditor: 'Visual Editor 열기', share: '공유·멤버 관리', owner: '소유자', viewer: '조회자', editor: '편집자',
+    owner: '소유자', viewer: '조회자', editor: '편집자',
   },
   en: {
-    title: 'Project management',
+    title: 'Project list',
+    subtitle: 'Choose a project to manage its experiments, SDK, and flags.',
     cancel: 'Cancel',
     name: 'Project Name',
-    createdAt: 'Created',
     addProject: 'Add Project',
     namePlaceholder: 'e.g. My App',
     create: 'Create',
@@ -50,22 +46,23 @@ const t = {
     loading: 'Loading...',
     empty: 'No projects yet.',
     errorCreate: 'Failed to create project.',
-    delete: 'Delete',
-    deleting: 'Deleting...',
-    deleteConfirm: (name: string) => `Delete project "${name}"?\nProjects with linked experiments or flags cannot be deleted.`,
-    errorDelete: 'Failed to delete project.',
+    errorLoad: 'Could not load projects.',
+    retry: 'Retry',
+    searchLabel: 'Search projects',
+    searchPlaceholder: 'Search by project name...',
+    searchEmpty: 'No projects match your search.',
+    clearSearch: 'Clear search',
     sdkConnected: 'Connected',
     sdkNotConnected: 'SDK not installed',
     sdkChecking: 'Checking...',
-    openVisualEditor: 'Open Visual Editor', share: 'Sharing and members', owner: 'Owner', viewer: 'Viewer', editor: 'Editor',
+    owner: 'Owner', viewer: 'Viewer', editor: 'Editor',
   },
 };
 
 export function Projects({ lang }: Props) {
   const tr = t[lang];
-  const [sharing, setSharing] = useState<Project | null>(null);
   const navigate = useNavigate();
-  const { projects, loading, reloadProjects, setCurrentProjectId } = useProject();
+  const { projects, loading, error, reloadProjects, setCurrentProjectId } = useProject();
   const [searchParams, setSearchParams] = useSearchParams();
   const showForm = searchParams.get('create') === '1';
   const setShowForm = (open: boolean) => {
@@ -76,11 +73,21 @@ export function Projects({ lang }: Props) {
     }, { replace: true });
   };
   const [newName, setNewName] = useState('');
+  const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [sdkStatuses, setSdkStatuses] = useState<Record<string, ProjectSdkStatus['status']>>({});
+
+  const mountedRef = useRef(true);
+  const createSeqRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      createSeqRef.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     if (projects.length === 0) { setSdkStatuses({}); return; }
@@ -96,33 +103,32 @@ export function Projects({ lang }: Props) {
     return () => { cancelled = true; };
   }, [projects]);
 
-  const handleCreate = async () => {
-    if (!newName.trim()) return;
+  const handleCreate = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!newName.trim() || creating) return;
+    const seq = ++createSeqRef.current;
     setCreating(true);
     setCreateError(null);
     try {
-      await projectApi.create({ name: newName.trim() });
-      await reloadProjects();
+      const created = await projectApi.create({ name: newName.trim() });
+      if (!mountedRef.current || createSeqRef.current !== seq) return;
+      try {
+        await reloadProjects();
+      } catch {
+        // Keep creation flow coherent if context refresh rejects.
+      }
+      if (!mountedRef.current || createSeqRef.current !== seq) return;
       setNewName('');
       setShowForm(false);
-    } catch (e) {
-      setCreateError(e instanceof Error ? e.message : tr.errorCreate);
+      setCurrentProjectId(created.id);
+      navigate('/experiments');
+    } catch (err) {
+      if (!mountedRef.current || createSeqRef.current !== seq) return;
+      setCreateError(err instanceof Error ? err.message : tr.errorCreate);
     } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleDelete = async (p: Project) => {
-    if (!window.confirm(tr.deleteConfirm(p.name))) return;
-    setDeletingId(p.id);
-    setDeleteError(null);
-    try {
-      await projectApi.delete(p.id);
-      await reloadProjects();
-    } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : tr.errorDelete);
-    } finally {
-      setDeletingId(null);
+      if (mountedRef.current && createSeqRef.current === seq) {
+        setCreating(false);
+      }
     }
   };
 
@@ -137,90 +143,117 @@ export function Projects({ lang }: Props) {
     return <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">○ {tr.sdkNotConnected}</span>;
   };
 
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredProjects = normalizedSearch
+    ? projects.filter((p) =>
+        p.name.toLowerCase().includes(normalizedSearch) ||
+        p.id.toLowerCase().includes(normalizedSearch),
+      )
+    : projects;
+
   return (
     <div className="space-y-6">
       <AcceptProjectInvitation lang={lang} />
-      {sharing && !showForm && <ProjectSharing key={sharing.id} project={sharing} lang={lang} onClose={() => setSharing(null)} />}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">{tr.title}</h1>
         <Button onClick={() => setShowForm(!showForm)} size="sm" className="gap-2">
           <Plus size={16} /> {tr.addProject}
         </Button>
       </div>
 
+      <p className="text-sm text-muted-foreground">{tr.subtitle}</p>
+
       {showForm && (
         <Card>
-          <CardContent className="pt-6 space-y-4">
-            <div>
-              <label htmlFor="new-project-name" className="text-xs font-medium text-muted-foreground mb-1 block">{tr.name}</label>
-              <Input
-                id="new-project-name"
-                autoFocus
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder={tr.namePlaceholder}
-                className="text-sm"
-              />
-            </div>
-            {createError && <p className="text-xs text-destructive">{createError}</p>}
-            <div className="flex gap-2">
-              <Button onClick={handleCreate} disabled={creating || !newName.trim()} size="sm">
-                {creating ? tr.creating : tr.create}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setCreateError(null); }}>
-                {tr.cancel}
-              </Button>
-            </div>
+          <CardContent className="pt-6">
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <label htmlFor="new-project-name" className="text-xs font-medium text-muted-foreground mb-1 block">{tr.name}</label>
+                <Input
+                  id="new-project-name"
+                  autoFocus
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder={tr.namePlaceholder}
+                  disabled={creating}
+                  className="text-sm"
+                />
+              </div>
+              {createError && <p role="alert" className="text-xs text-destructive">{createError}</p>}
+              <div className="flex gap-2">
+                <Button type="submit" disabled={creating || !newName.trim()} size="sm">
+                  {creating ? tr.creating : tr.create}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setShowForm(false); setCreateError(null); }}>
+                  {tr.cancel}
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
       )}
 
-      {deleteError && <p className="text-xs text-destructive">{deleteError}</p>}
+      {!loading && !error && (
+        <div className="relative w-full max-w-sm">
+          <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            aria-label={tr.searchLabel}
+            placeholder={tr.searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-card"
+          />
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-muted-foreground">{tr.loading}</p>
+      ) : error ? (
+        <div role="alert" className="space-y-3">
+          <p>{tr.errorLoad}</p>
+          <Button variant="outline" onClick={() => void reloadProjects()}>{tr.retry}</Button>
+        </div>
       ) : projects.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <FolderOpen size={40} className="mx-auto mb-3 opacity-40" />
           <p className="text-sm">{tr.empty}</p>
         </div>
+      ) : filteredProjects.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground space-y-3">
+          <p className="text-sm">{tr.searchEmpty}</p>
+          <Button variant="outline" size="sm" onClick={() => setSearch('')}>{tr.clearSearch}</Button>
+        </div>
       ) : (
         <div className="grid gap-4">
-          {projects.map((p) => (
+          {filteredProjects.map((p) => (
             <Card
               key={p.id}
               className="cursor-pointer hover:shadow-md hover:border-foreground/40 transition-all"
               onClick={() => { setCurrentProjectId(p.id); navigate('/experiments'); }}
             >
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <CardTitle className="text-base">{p.name}</CardTitle>
+                      <CardTitle className="text-base break-words">
+                        <button
+                          type="button"
+                          className="text-left underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+                          onClick={(e) => { e.stopPropagation(); setCurrentProjectId(p.id); navigate('/experiments'); }}
+                        >
+                          {p.name}
+                        </button>
+                      </CardTitle>
                       {renderSdkBadge(p.id)}
                       <span className="text-xs text-muted-foreground">{tr[p.access_role || 'owner']}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground font-mono mt-0.5">{p.id}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(p.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
-                    </span>
-                    {(p.access_role || 'owner') === 'owner' && <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); setSharing(p); }}>{tr.share}</Button>}
-                    {(p.access_role || 'owner') === 'owner' && <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-muted-foreground hover:text-rose-600"
-                      disabled={deletingId === p.id}
-                      onClick={(e) => { e.stopPropagation(); handleDelete(p); }}
-                      aria-label={tr.delete}
-                    >
-                      <Trash2 size={14} />
-                    </Button>}
-                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {new Date(p.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US')}
+                  </span>
                 </div>
               </CardHeader>
-
             </Card>
           ))}
         </div>

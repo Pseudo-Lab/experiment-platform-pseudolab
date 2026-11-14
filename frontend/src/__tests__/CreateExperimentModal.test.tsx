@@ -25,7 +25,7 @@ vi.mock('@/services/api', () => ({
 describe('CreateExperimentModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useProject).mockReturnValue({ currentProject: null } as any);
+    vi.mocked(useProject).mockReturnValue({ currentProject: { id: 'selected', name: 'Selected project', access_role: 'owner' } } as any);
     (experimentApi.create as any).mockResolvedValue({
       id: 's12-mid-reflection',
       name: '12기 중간 회고',
@@ -170,7 +170,7 @@ describe('CreateExperimentModal', () => {
 
   it.each(['ko', 'en'] as const)('uses v1 for an existing A/B flag and explains explicit exposure in %s', async (lang) => {
     vi.mocked(useProject).mockReturnValue({ currentProject: { id: 'selected', project_type: 'ab_test' } } as any);
-    vi.mocked(featureFlagApi.list).mockResolvedValueOnce([{ flag_key: 'existing-flag' }] as any);
+    vi.mocked(featureFlagApi.list).mockResolvedValueOnce([{ flag_key: 'existing-flag', project_id: 'selected' }] as any);
     render(<CreateExperimentModal lang={lang} isAdmin={false} onClose={vi.fn()} onCreated={vi.fn()} />);
     fireEvent.change(screen.getByPlaceholderText(lang === 'ko' ? '예: 버튼 색상 테스트' : 'e.g. Button Color Test'), { target: { value: 'Existing flag experiment' } });
     fireEvent.click(screen.getByText(lang === 'ko' ? '수집·노출 세부 설정 (선택)' : 'Measurement and delivery settings (optional)'));

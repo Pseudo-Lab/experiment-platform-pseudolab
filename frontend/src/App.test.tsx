@@ -221,12 +221,15 @@ describe('App Component', () => {
     expect(projectApi.list).not.toHaveBeenCalled();
   });
 
-  it('lets signed-in users visit the introduction from the sidebar and return', async () => {
+  it('keeps the management screen when opening the introduction in a new tab', async () => {
     await act(async () => { renderApp(['/experiments']); });
-    fireEvent.click(screen.getByRole('link', { name: '서비스 소개' }));
-    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
-    await act(async () => { fireEvent.click(screen.getAllByRole('link', { name: '관리 화면 열기' })[0]); });
+    const link = screen.getByRole('link', { name: '서비스 소개' });
+    expect(link).toHaveAttribute('href', '/');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    fireEvent.click(link);
     expect(screen.getByRole('complementary')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '관리 화면 열기' })).not.toBeInTheDocument();
   });
 
   it('keeps Google-only login after language and introduction navigation', async () => {

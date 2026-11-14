@@ -2,6 +2,8 @@ import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import { FeatureFlags } from '@/features/dashboard/components/FeatureFlags';
 import { featureFlagApi } from '@/services/api';
 
+vi.mock('@/contexts/ProjectContext', () => ({ useProject: () => ({ currentProjectId: 'selected', currentProject: { id: 'selected', name: 'Selected', access_role: 'owner' }, projects: [{ id: 'selected', name: 'Selected', access_role: 'owner' }] }) }));
+
 vi.mock('@/services/api', () => ({
   featureFlagApi: {
     list: vi.fn(),
@@ -23,7 +25,7 @@ describe('FeatureFlags', () => {
     vi.clearAllMocks();
     (featureFlagApi.list as any).mockResolvedValue([
       {
-        flag_key: 'new_home',
+        flag_key: 'new_home', project_id: 'selected',
         description: 'New homepage',
         rollout_pct: 50,
         enabled: true,
@@ -33,7 +35,7 @@ describe('FeatureFlags', () => {
       },
     ]);
     (featureFlagApi.exposureSummary as any).mockResolvedValue({
-      flag_key: 'new_home',
+      flag_key: 'new_home', project_id: 'selected',
       from: null,
       to: null,
       total_exposures: 12,
@@ -68,6 +70,29 @@ describe('FeatureFlags', () => {
     }
   });
 
+  it('keeps the existing table visible after a mutation fails', async () => {
+    vi.mocked(featureFlagApi.update).mockRejectedValueOnce(new Error('network'));
+    await act(async () => { render(<FeatureFlags lang="en" />); });
+    fireEvent.click(screen.getByRole('button', { name: 'Disabled' }));
+    expect(await screen.findByText('Failed to update flag.')).toBeInTheDocument();
+    expect(screen.getByText('new_home')).toBeVisible();
+    expect(screen.getByRole('table')).toBeVisible();
+  });
+
+  it('does not fetch rules or summaries for other projects', async () => {
+    vi.mocked(featureFlagApi.list).mockResolvedValueOnce([
+      { flag_key: 'mine', project_id: 'selected', enabled: false, rollout_pct: 0 },
+      { flag_key: 'other', project_id: 'other', enabled: true, rollout_pct: 100 },
+    ] as any);
+    await act(async () => { render(<FeatureFlags lang="en" />); });
+    expect(screen.getByText('mine')).toBeVisible();
+    expect(screen.queryByText('other')).not.toBeInTheDocument();
+    expect(featureFlagApi.listRules).toHaveBeenCalledTimes(1);
+    expect(featureFlagApi.listRules).toHaveBeenCalledWith('mine');
+    expect(featureFlagApi.exposureSummary).toHaveBeenCalledTimes(1);
+    expect(featureFlagApi.exposureSummary).toHaveBeenCalledWith('mine');
+  });
+
   it('renders exposure summary in Korean', async () => {
     await act(async () => {
       render(<FeatureFlags lang="ko" />);
@@ -85,7 +110,7 @@ describe('FeatureFlags', () => {
     (featureFlagApi.listRules as any).mockResolvedValue([
       {
         id: 'rule-1',
-        flag_key: 'new_home',
+        flag_key: 'new_home', project_id: 'selected',
         priority: 1,
         segment_id: null,
         rollout_pct: 50,
@@ -98,7 +123,7 @@ describe('FeatureFlags', () => {
       },
       {
         id: 'rule-2-disabled',
-        flag_key: 'new_home',
+        flag_key: 'new_home', project_id: 'selected',
         priority: 1,
         segment_id: null,
         rollout_pct: 50,
@@ -134,7 +159,7 @@ describe('FeatureFlags', () => {
     (featureFlagApi.list as any)
       .mockResolvedValueOnce([
         {
-          flag_key: 'active_flag',
+          flag_key: 'active_flag', project_id: 'selected',
           description: 'Active flag',
           rollout_pct: 50,
           enabled: true,
@@ -145,7 +170,7 @@ describe('FeatureFlags', () => {
       ])
       .mockResolvedValueOnce([
         {
-          flag_key: 'archived_flag',
+          flag_key: 'archived_flag', project_id: 'selected',
           description: 'Archived flag',
           rollout_pct: 50,
           enabled: false,
@@ -172,7 +197,7 @@ describe('FeatureFlags', () => {
     vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
     (featureFlagApi.list as any).mockResolvedValueOnce([
       {
-        flag_key: 'archived_flag',
+        flag_key: 'archived_flag', project_id: 'selected',
         description: 'Archived flag',
         rollout_pct: 50,
         enabled: false,
@@ -182,7 +207,7 @@ describe('FeatureFlags', () => {
       },
     ]);
     (featureFlagApi.restore as any).mockResolvedValueOnce({
-      flag_key: 'archived_flag',
+      flag_key: 'archived_flag', project_id: 'selected',
       description: 'Archived flag',
       rollout_pct: 50,
       enabled: false,
@@ -208,7 +233,7 @@ describe('FeatureFlags', () => {
 
   it('renders custom variant chips (e.g. list, sidebar) beyond treatment/control', async () => {
     (featureFlagApi.exposureSummary as any).mockResolvedValueOnce({
-      flag_key: 'new_home',
+      flag_key: 'new_home', project_id: 'selected',
       from: null,
       to: null,
       total_exposures: 200,
@@ -228,7 +253,7 @@ describe('FeatureFlags', () => {
 
   it('omits zero-count variants from chips', async () => {
     (featureFlagApi.exposureSummary as any).mockResolvedValueOnce({
-      flag_key: 'new_home',
+      flag_key: 'new_home', project_id: 'selected',
       from: null,
       to: null,
       total_exposures: 15,
@@ -248,7 +273,7 @@ describe('FeatureFlags', () => {
 
   it('renders empty exposure state in English', async () => {
     (featureFlagApi.exposureSummary as any).mockResolvedValueOnce({
-      flag_key: 'new_home',
+      flag_key: 'new_home', project_id: 'selected',
       from: null,
       to: null,
       total_exposures: 0,
