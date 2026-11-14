@@ -1,106 +1,27 @@
 Status: active
-Last-Validated: 2026-05-27
+Last-Validated: 2026-11-15
 
-# Decision Log (append-only)
+# 공개 제품·개발 결정 로그
 
-포맷:
-- Date:
-- Decision:
-- Why:
-- Impact:
-- Owner:
+제품·개발에 공통으로 적용되는 결정의 요약입니다. 기존 원문 로그와 내부 운영·인계 이력은 팀 Notion에 보존했습니다. 기존 Git 이력은 유지합니다. 이후 공통 결정은 아래에 추가하고 내부 실행 기록은 Notion에서 관리합니다.
 
----
+## 2026-11-15 · 범용 실험 플랫폼
 
-- Date: 2026-03-22
-- Decision: 운영 모드를 MVP로 고정하고, 이번 주는 경량 프로세스 적용/검증에 집중한다.
-- Why: 빠르게 적용하고 빠르게 확인하는 주기를 확보하기 위함.
-- Impact: PR/QA/Release 문서가 축약되고, 적용 속도 우선으로 운영.
-- Owner: soo
+- 결정: 모든 서비스에서 연동·사용 가능한 범용 실험 플랫폼 지향.
+- 근거: 초기 적용 서비스와 제품의 공통 범위 구분 필요.
+- 적용: 플랫폼의 실험·수집·분석 기능과 연동 서비스의 사용자 속성·이벤트·목표 지표 정의 책임 구분. 특정 서비스의 분류·운영 방식을 플랫폼 고정 조건으로 추가하지 않는 원칙.
 
-- Date: 2026-03-22
-- Decision: Guard/Freeze 전면 적용은 보류하고, 고위험 3종(배포/시크릿·권한/DB 스키마)만 승인 게이트 적용.
-- Why: 운영 부담을 줄이면서 필수 안전장치만 유지하기 위함.
-- Impact: 승인 병목 감소, 고위험 변경 추적 유지.
-- Owner: soo
+## 2026-11-15 · 공개 문서와 내부 기록 분리
 
-- Date: 2026-03-22
-- Decision: OSS 물리 분리는 즉시 실행하지 않고 가치 판단(GrowthBook 포함) 이후 재개한다.
-- Why: 현재는 문제정의/가치 확정 전 대규모 전환 리스크가 큼.
-- Impact: MVP 운영/검증 우선, OSS 분리는 보류.
-- Owner: soo
+- 결정: 공개 저장소에 설치·연동·기여 가이드와 재사용 가능한 기술 계약·정책 보관. 회의·과거 계획·운영 조사·개인 기록·내부 인계는 Notion 관리.
+- 근거: 외부 사용자의 팀 내부 계정·자료실 의존 제거와 과거 작업 지시의 오인 방지.
+- 적용: 원문·원래 경로·고정 커밋·SHA-256의 Notion 보존 및 원문 재조회 확인 후 파일 정리. Git 이력 재작성과 로컬 전용 자료 변경 제외.
+- 공개 가이드: [아키텍처](../guides/architecture.md), [프로젝트 접근](../guides/project-access.md), [서버 접근 판정](../guides/access-decision.md), [실험 수명주기](../guides/experiment-lifecycle.md).
 
-- Date: 2026-03-22
-- Decision: 멀티 에이전트 병렬 작업을 위해 source 우선순위와 PR/핸드오프 최소 트리거를 공통 규칙에 추가한다.
-- Why: 소규모 팀이라도 병렬 작업이 잦아지면 속도보다 충돌 비용이 커지므로 최소한의 경계 규칙이 필요함.
-- Impact: 작은 단일 작업은 계속 빠르게 진행하고, 교차 영향 작업만 명시적으로 공유/검토한다.
-- Owner: soo
+## 유지하는 기술 원칙
 
-- Date: 2026-04-20
-- Decision: 미사용 중인 `packages/core` 폴더 및 관련 설정을 제거한다.
-- Why: 현재 공유 로직이 없고 빈 폴더 상태로 방치되어 Docker 빌드 에러 및 프로젝트 복잡도를 유발함. 필요 시 다시 생성하기 용이함.
-- Impact: 프로젝트 구조 단순화, Docker 빌드 안정성 확보.
-- Owner: Gemini CLI (Agent)
-
-- Date: 2026-05-18
-- Decision: 실험 플랫폼과 feature flag 분석에서 raw Supabase DB를 직접 활용하지 않고, D1 동기화 데이터/export/제한 API를 기준 데이터 접근 경로로 사용한다.
-- Why: 운영 raw DB 직접 접근에 따른 보안/권한/성능 리스크를 줄이고, 실험 플랫폼의 분석 경로를 D1 기반으로 일관되게 유지하기 위함.
-- Impact: `initiative_analyst_reader` PostgreSQL read-only 계정은 legacy/reference 성격으로만 남기고, 신규 분석가 접근은 D1 스키마, export, 또는 read-only query/API 중심으로 제공한다.
-- Owner: soo
-
-- Date: 2026-05-18
-- Decision: `Pseudo-Lab/event-bingo`의 에이전트 협업 방식 중 worktree 격리, 도메인 소유권, impact trigger, handoff 템플릿을 이 저장소에 맞게 도입한다.
-- Why: 실험 플랫폼 작업이 backend/frontend/docs/infra를 자주 넘나들고, 여러 에이전트나 에디터 창이 병렬로 열릴 수 있어 파일 충돌과 맥락 손실을 줄여야 한다.
-- Impact: 병렬 작업은 기본적으로 `git worktree`를 사용하고, 영향 범위가 큰 작업은 `docs/templates/agent-handoff.md` 형식으로 handoff를 남긴다.
-- Owner: soo
-
-- Date: 2026-05-18
-- Decision: 실험 의사결정 품질을 검토하는 `Experiment Analyst` 에이전트 역할을 공식 협업 역할에 추가한다.
-- Why: 실험 플랫폼은 기능 동작 여부뿐 아니라 가설, primary/guardrail metric, randomization unit, exposure 품질, SRM, 데이터 신선도, 결과 해석이 의사결정 신뢰도를 좌우하기 때문이다.
-- Impact: 새 실험, metric 변경, query-backed segment/rule 변경, exposure/result readout 작업은 `Experiment Analyst` 체크를 우선 고려하고, 분석 결과는 `docs/templates/experiment-analyst-brief.md` 또는 `docs/reports/**`에 남긴다.
-- Owner: soo
-
-- Date: 2026-05-27
-- Decision: 12기 중간 회고는 정식 A/B 분배 실험이 아니라 과도기 준실험으로 우선 집행하고, GrowthBook/Hackle류 실험 플랫폼 기능은 후속 로드맵으로 분리한다.
-- Why: 현재 목적은 12기 회고 UI 노출 판단, 일정 제어, completion 판단, LVUP 연동 계약을 검증하는 것이며, 정식 assignment/segment/metric readout까지 한 번에 확장하면 이번 운영 일정과 범위가 흐려진다.
-- Impact: PR #17은 12기 준실험 운영에 필요한 placement decide와 일정/완료 계약에 집중한다. 재사용 segment, targeting rule builder, variant별 payload, deterministic assignment, 자동 exposure logging, metric/guardrail readout은 별도 플랫폼 고도화 작업으로 관리한다.
-- Owner: soo
-
-- Date: 2026-05-27
-- Decision: D1 migration 관리 체계 보강은 12기 준실험 운영을 막지 않고 후속 작업으로 분리한다.
-- Why: 운영 생성 실패 원인은 코드 배포 후 운영 D1에 일부 schema migration이 누락된 것이었고, 현재 필요한 DDL은 적용되어 12기 준실험 생성은 가능하다. 다만 현재 `run_migration.sh`는 적용 이력 테이블이 없어 재실행/중복 컬럼/seed 혼입 위험이 있다.
-- Impact: 지금은 실험 생성과 LVUP 연동 검증을 계속 진행한다. 후속 작업으로 `schema_migrations` 같은 적용 이력, 운영 baseline, seed/schema 분리, 배포 전 migration 체크를 정리한다.
-- Owner: soo
-
-- Date: 2026-06-02
-- Decision: GitOps 이미지 빌드는 GitHub-hosted Linux ARM64 runner(`ubuntu-24.04-arm`)에서 `linux/arm64` 단일 플랫폼으로 수행하고, frontend/backend Buildx GHA cache를 분리 적용한다.
-- Why: 운영 서버가 ARM64이고, 기존 x64 runner + QEMU 기반 ARM64 backend 이미지 빌드가 배포 시간의 critical path였기 때문이다.
-- Impact: 이 서비스는 더 이상 `linux/amd64` 이미지를 publish하지 않는다. QEMU 설정은 제거되며, 첫 빌드는 cache miss가 날 수 있지만 이후 빌드는 dependency/build layer 재사용으로 단축될 수 있다.
-- Owner: soo
-
-
-- Date: 2026-10-31
-- Decision: 운영 GitOps에 연결된 이 앱에서 main 반영은 운영 배포 시작으로 취급한다. 해당 변경의 main 반영 승인에는 기존 자동 배포가 포함되며 별도 수동 배포나 재승인을 요구하지 않는다.
-- Why: 사용자 정정 — “앱들은 운영에 다 gitops로 연결돼있으니까 배포를 따로 할 필요는 없고 main 반영 == 배포야.” 다른 에이전트도 동일하게 해석하도록 AGENTS.md에 운영 기준을 명시했다.
-- Impact: 앱 변경은 사전 검증 후 main에 반영하고 기존 CI/GitOps 및 운영 반영 결과를 확인한다. 보고는 main 반영/자동 배포 진행/운영 확인 상태를 구분한다. docs-only 워크플로 제외는 유지하며 CI/Ops 설정은 변경하지 않는다.
-- Owner: soo
-
-
-- Date: 2026-11-01
-- Decision: 제품 브랜드명을 **Iterglow · 이터글로**로 확정하고, 설명어는 **오픈소스 A/B 테스트·실험 플랫폼**으로 사용한다.
-- Why: 사용자가 후보 검토 후 Iterglow 설명에 “응 그렇게 가져가자”라고 채택했으며, 플랫폼에도 이름을 반영하도록 요청했다.
-- Impact: 소개·로그인·관리 메뉴·공개 SDK 가이드·브라우저 제목·API 기본 표시명과 현재 문서를 새 브랜드로 맞춘다. npm 패키지명, SDK 공개 클래스/훅, 저장 키·쿠키, API 경로·도메인·저장소 식별자는 유지한다. 로고/파비콘 도형은 별도 채택 전까지 기존 자산을 사용한다. 사용자가 2026-11-01 “Iterglow main 반영”을 승인했다. 기존 CI/GitOps로 반영하고 운영 표시명을 확인한다. npm 게시는 계속 보류한다.
-- Owner: soo
-
-
-- Date: 2026-11-15
-- Decision: 모든 서비스에서 연동·사용 가능한 범용 실험 플랫폼 원칙의 저장소 공통 기준 반영.
-- Why: 특정 서비스의 초기 적용·검증과 플랫폼의 공통 제품 범위 구분 필요.
-- Impact: 공통 실험·수집·분석 기능과 연동 서비스의 사용자 속성·이벤트·목표 지표 정의 책임 구분. 특정 서비스 분류의 플랫폼 고정 내장 지양.
-- Owner: soo
-
-- Date: 2026-11-15
-- Decision: 팀 내부 기록의 Notion 관리 및 공개 문서의 사용자·기여자 중심 진입점 채택.
-- Why: 외부 사용자의 팀 자료실 의존 제거 및 과거 조직 대시보드 계획과 현재 제품 방향의 혼동 방지.
-- Impact: main 기준 과거 계획·운영 조사·LVUP 전용 자료 32개의 원문·경로·커밋·SHA-256 Notion 보관과 재조회 검증 완료 후 공개 작업 브랜치에서 제거. 기존 Git 이력과 로컬 전용 자료 보존. 설치·데이터 접근·협업·핵심 개념·문서 인덱스 갱신. 나머지 과거 인계·개인 작업 기록 이관은 별도 범위. 새 D1 초기화·Compose 구성의 확인된 제한 명시; 런타임 수정·운영 배포 미포함.
-- Owner: soo
+- 이벤트 계약: SDK v1의 판단·실제 노출·행동 분리, legacy 데이터의 비소급 변경. [SDK 가이드](../../packages/sdk/README.md) 기준.
+- 접근 경계: 공개 SDK 키·서버 credential·사용자 관리 세션 분리. 공개 키의 서버 인증 fallback 금지.
+- 결과 계약: 이벤트 발생 시각과 수신 시각, 실험 상태와 관찰·확정 단계 구분. [수명주기 가이드](../guides/experiment-lifecycle.md) 기준.
+- 저장소·권한: 개발·운영 데이터 분리와 최소 접근 범위 유지. 키·원문 사용자 데이터의 공개 문서 게시 금지.
+- 구현·운영: 로컬 검증·main 반영·런타임 확인의 구분 및 docs-only 배포 제외 유지. [AGENTS.md](../../AGENTS.md) 기준.
