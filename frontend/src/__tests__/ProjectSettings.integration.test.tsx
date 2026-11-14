@@ -220,7 +220,7 @@ describe('ProjectSettings + ProjectProvider + MainLayout integration', () => {
     const deleteBtn = await screen.findByRole('button', { name: 'Delete Project' });
     fireEvent.click(deleteBtn);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Delete refused');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not confirm deletion.');
     expect(projectApi.list).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('location')).toHaveTextContent('/project-settings');
     expect(localStorage.getItem(STORAGE_KEY)).toBe('alpha');

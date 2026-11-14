@@ -87,16 +87,25 @@ export const projectApi = {
   delete: async (id: string): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (!res.ok) {
-      let detail = 'Failed to delete project';
-      try {
-        const b = await res.json();
-        if (Array.isArray(b?.detail)) {
-          detail = b.detail.map((e: { msg: string }) => e.msg).join('; ');
-        } else if (b?.detail) {
-          detail = b.detail;
-        }
-      } catch { /* */ }
-      throw new Error(detail);
+      const reasons = {
+        'one or more experiments': 'experiments',
+        'one or more feature flags': 'feature_flags',
+        'server credentials': 'server_credentials',
+      } as const;
+      let reason: typeof reasons[keyof typeof reasons] | undefined;
+      if (res.status === 409) {
+        try {
+          const body = await res.json();
+          const detail = typeof body?.detail === 'string' ? body.detail : '';
+          for (const suffix of Object.keys(reasons) as (keyof typeof reasons)[]) {
+            if (detail.startsWith('Cannot delete project ') && detail.endsWith(`: referenced by ${suffix}`)) {
+              reason = reasons[suffix];
+              break;
+            }
+          }
+        } catch { /* Unrecognized responses use the status-specific fallback. */ }
+      }
+      throw Object.assign(new Error('Failed to delete project'), { status: res.status, reason });
     }
   },
   sdkStatus: async (id: string): Promise<ProjectSdkStatus> => {
