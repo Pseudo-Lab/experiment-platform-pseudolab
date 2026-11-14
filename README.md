@@ -1,162 +1,80 @@
 # Iterglow
 
-<div align="center">
-  <a href="https://pseudo-lab.com"><img src="https://img.shields.io/badge/PseudoLab-S12-808080" alt="PseudoLab Season 12"/></a>
-  <a href="https://pseudo-lab.com"><img src="https://img.shields.io/badge/PseudoLab-S13-3776AB" alt="PseudoLab Season 13"/></a>
-  <a href="https://discord.gg/EPurkHVtp2"><img src="https://img.shields.io/badge/Discord-BF40BF" alt="Discord Community"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/stargazers"><img src="https://img.shields.io/github/stars/Pseudo-Lab/experiment-platform-pseudolab" alt="Stars Badge"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/network/members"><img src="https://img.shields.io/github/forks/Pseudo-Lab/experiment-platform-pseudolab" alt="Forks Badge"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pulls"><img src="https://img.shields.io/github/issues-pr/Pseudo-Lab/experiment-platform-pseudolab" alt="Pull Requests Badge"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues"><img src="https://img.shields.io/github/issues/Pseudo-Lab/experiment-platform-pseudolab" alt="Issues Badge"/></a>
-  <a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/Pseudo-Lab/experiment-platform-pseudolab?color=2b9348"></a>
-</div>
-<br>
+**오픈소스 A/B 테스트·실험 플랫폼**
 
-> **오픈소스 A/B 테스트·실험 플랫폼**
->
-> 모든 서비스에서 연동·사용할 수 있는 실험 플랫폼입니다. 가짜연구소 서비스는 초기 적용·검증 사례입니다.
+Iterglow는 서비스의 기능을 사용자별로 나누어 제공하고, 실제 노출과 행동을 수집해 결과를 비교하는 플랫폼입니다. 서비스별 사용자 식별자·이벤트·목표 지표를 정의하고 SDK로 연결할 수 있습니다.
 
-[서비스 홈페이지](https://iterglow.pseudolab-devfactory.com) · [팀 소개 및 활동](https://pseudo-lab.github.io/experiment-platform-pseudolab/)
+[서비스](https://iterglow.pseudolab-devfactory.com) · [문서](docs/README.md) · [SDK](packages/sdk/README.md) · [기여 가이드](docs/guides/agent_collaboration.md) · [Issues](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues)
 
-Iterglow는 사용자 그룹에 서로 다른 기능 버전을 제공하고, 이후의 행동을 비교할 수 있도록 실험을 지원하는 플랫폼입니다. 실험 도구를 직접 개발하고 서비스에 적용하면서 **문제 발견 → 기능 개발 → 실험 → 분석·개선**으로 이어지는 과정을 만들어갑니다.
+## 주요 기능
 
-12기에서 시작한 플랫폼 개발을 이어, 13기에는 가짜연구소 홈페이지와 서비스에 적용해 실제 기능 개선 사이클을 완주하는 데 집중합니다.
+- 프로젝트별 실험·Feature Flag 및 구성원 권한 관리
+- 사용자별 variant 판단과 점진적 기능 공개
+- SDK의 `decide → expose → track` 흐름을 통한 판단·실제 노출·행동 분리
+- 노출·전환 집계, SRM·가드레일 및 데이터 품질 경고
+- 신규 SDK A/B 실험의 상태 이력·전환 창·수신 유예·결과 확정
+- Google 로그인과 프로젝트 공유·초대
 
-## ✨ Why this project?
+플랫폼은 실험·수집·분석의 공통 기능을 제공하고, 연결하는 서비스에서 화면·사용자 속성·이벤트·목표 지표를 정의합니다.
 
-새로운 기능을 만들었다고 해서 서비스가 반드시 좋아지는 것은 아닙니다. 구성원이 자료를 더 쉽게 찾는지, 필요한 정보를 얻는지, 활동에 참여하는 데 도움이 되는지 확인할 필요가 있습니다.
+## 시작하기
 
-비영리 커뮤니티에서도 한정된 개발·운영 여력 안에서 무엇을 개선할지 판단할 근거가 필요합니다. 하지만 기능 개발, 사용자 행동 기록, 실험 설계와 분석이 연결되어 있지 않으면 바꾼 기능의 효과를 확인하기 어렵습니다.
+### 기존 설치에 서비스 연결
 
-### 우리가 풀고 싶은 문제
+1. Iterglow에 로그인하고 프로젝트 생성 또는 초대 수락.
+2. 자신의 프로젝트 공개 SDK 키와 설치의 API 주소 확인.
+3. [SDK 가이드](packages/sdk/README.md)에 따라 variant 판단, 실제 노출, 행동 전송 연결.
+4. 수집 이벤트와 접근 가능한 결과 화면에서 연결 상태 확인.
 
-> 커뮤니티 서비스를 만드는 사람들이 기능 변경과 사용자 행동 데이터를 연결해, 어떤 변화가 실제로 도움이 되었는지 판단할 수 있도록 돕고자 합니다.
-
-### 무엇을 만드나요?
-
-1. **서비스에 연결되는 실험 플랫폼** — 사용자 배정, 기능 버전 분기, 노출·전환 수집과 분석을 연결하는 도구를 개발합니다. SDK를 통해 실제 서비스에서 실험할 수 있는 기반을 마련합니다.
-2. **실험으로 개선하는 기능과 서비스** — 기존 기능을 개선하거나 외부 데이터를 활용한 작은 서비스를 만들고, 사용자 반응을 확인합니다.
-3. **다시 활용할 수 있는 데이터와 실험 과정** — 어떤 행동을 기록하고 무엇을 지표로 볼지 정의하며, 설계·운영·분석·후속 결정 과정을 가이드로 정리합니다.
-
-## 🎯 Goal — 13기에 만들고 싶은 것
-
-- [ ] 실험 플랫폼 SDK를 정리하고 가짜연구소 홈페이지에 연동합니다.
-- [ ] 작은 개선 과제를 선정해 기능을 개선하거나 새로 만듭니다.
-- [ ] 실제 사용자 대상 실험을 최소 1회 진행하고 결과와 후속 결정을 기록합니다.
-- [ ] 실험에 활용한 데이터·지표 정의와 재사용 가능한 실험 가이드를 남깁니다.
-
-문서함 개선을 우선 후보로 검토합니다. 콘텐츠 요약·활동 이력 연동·메일링, 뱃지·도전과제, 외부 데이터 기반 서비스 등을 살펴보되, 사용자 가치와 구현·측정 가능성을 확인해 범위를 정합니다. 모든 후보를 구현하는 것은 아닙니다.
-
-### 📦 Expected Outcome
-
-- **Product**: 실제 서비스에 연결한 실험 플랫폼과 개선 기능
-- **Experiment**: 실험 설계·운영·분석, 해석의 한계와 후속 결정 기록
-- **Data & Documentation**: 데이터·사용자 행동·지표 정의와 실험 가이드
-- **Open Source**: 다른 비영리 단체와 작은 커뮤니티도 참고할 수 있는 코드와 방법
-
-지표 상승만을 성공으로 보지 않습니다. 변화가 없거나 데이터가 부족해 판단하기 어려운 경우에도 근거와 한계를 남기는 것이 중요한 결과입니다.
-
-## 🗺️ Weekly Roadmap — 12주
-
-핵심 실험 1개를 기준으로 한 13기 활동 초안입니다. 대상 기능과 세부 일정은 팀 검토 및 준비 상태에 따라 조정합니다. 주차별 날짜와 방학 배치는 확정 후 반영합니다.
-
-| Week | 주요 활동 | 결과물 |
-|---|---|---|
-| W01 | OT·로드맵 공유, 기존 서비스·데이터 확인, SDK 연동 준비 | 현황 요약, SDK 보완 항목 |
-| W02 | 개선 과제와 최소 기능 범위 선정, 관련·외부 데이터 활용 검토 | 개선 과제와 선정 근거, 최소 범위 |
-| W03 | 가설·지표·분석 방법·종료 기준 설계, 기능 구현 시작 | 실험 계획, 데이터·지표 정의 초안 |
-| W04 | 기능·SDK 연동, 사용자 배정·화면 분기·데이터 수집 흐름 점검 | 연동·실험 흐름 점검 결과, 시작 전 확인 사항 |
-| W05 | 준비가 완료된 실험 시작, 초기 데이터·오류 점검 | 실험 시작·초기 운영 기록 |
-| W06 | 실험 운영과 데이터 품질 확인, 분석용 데이터 정리 | 운영 기록, 데이터·지표 정의 보완 |
-| W07 | 실험 운영 지속, 실제 사례를 바탕으로 진행 절차 보완 | 실험 과정과 가이드 초안 |
-| W08 | 사전 종료 기준과 분석 준비 상태 확인 | 종료·분석 준비 점검 결과 |
-| W09 | 사전 기준에 따른 종료 여부 판단, 분석 데이터 정리 | 종료 또는 추가 수집 판단 기록, 분석용 데이터 |
-| W10 | 사전 계획에 따른 결과 분석과 한계 정리 | 결과 보고서 초안 |
-| W11 | 기능의 후속 방향 결정, 데이터·지표 정의와 가이드 정리 | 후속 결정, 실험 가이드 |
-| W12 | Ending — 개선 사이클 회고와 결과 공유 | 최종 결과와 후속 계획 |
-
-서비스 연동 준비와 데이터 정리는 초반부터 병행합니다. 준비가 완료되면 실험을 앞당겨 시작할 수 있으며, 실제 시작·종료 시점은 점검 결과와 사전에 정한 기준에 따릅니다.
-
-운영·분석에 지장이 없는 여유가 생기면 다음 후보 조사, 소규모 서비스 시제품이나 작은 개선을 병행합니다. 추가 배포·실험은 진행 중인 실험에 대한 영향과 남은 분석 시간을 검토한 뒤 결정하며, 두 번째 실험은 필수 결과물이 아닙니다.
-
-## 👥 Team — 13기
-
-| 역할 | 이름 | 주요 담당 |
-|---|---|---|
-| Builder · 프로젝트 리드 | 김수현 | 프로젝트 조율, 실험 플랫폼·서비스 개발과 운영 |
-| Builder · 데이터 분석가 | 최지환 | 실험 설계·분석, 실험 워크플로우와 기능 아이디어 구체화 |
-| Builder · 데이터 엔지니어 | 이동욱 | 외부 데이터 조회 기반, 데이터 기반 소규모 서비스 개발·실험 연동 |
-| Builder · 데이터 분석가 | 신진수 | 데이터의 서비스 활용·지표 정의, 실험 워크플로우·가이드 |
-
-네 명 모두 빌더로 참여하며, 김수현이 프로젝트 리드를 맡아 방향과 진행을 조율합니다. 각자의 전문성을 바탕으로 개발·데이터·실험 역할을 나누고, 설계·코드·분석 결과를 함께 검토하며 서로 피드백합니다.
-
-## 🧑‍🤝‍🧑 How We Work
-
-```text
-문제 발견 → 데이터 확인·가설 및 지표 정의 → 기능 개발 → 실험 → 분석·후속 결정 → 공유
+```bash
+npm install @pseudo-lab/iterglow-sdk
 ```
 
-- **작은 범위부터**: 실제 사용자 문제를 기준으로 개선 과제를 고르고, 필요한 만큼 구현합니다.
-- **개발과 데이터 정리를 함께**: 설계가 합의된 부분부터 병행하며 주간 모임에서 진행 상황과 필요한 협업을 공유합니다.
-- **근거와 한계까지 기록**: 실험 전에 판단 기준을 정하고, 기대한 변화가 없더라도 결과와 배운 점을 남깁니다.
-- **공개 범위를 구분**: 공개 가능한 코드와 실험 방법을 공유합니다. 개인정보·내부 운영 데이터·회의록·접근 정보는 공개하지 않습니다.
-- **정기 모임**: 매주 일요일 오후 10시(KST), Discord
+브라우저에는 공개 SDK 키를 사용합니다. 서버 credential과 설치 관리자 자격증명은 브라우저에 전달하지 않습니다.
 
-## 🏛️ Architecture & Tech Stack
+### 직접 설치·개발
 
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS
-- **Backend**: FastAPI, Python, Pydantic
-- **SDK**: TypeScript, React 연동
-- **Data**: Cloudflare D1·R2, Supabase PostgreSQL·Auth
-- **Infrastructure**: Docker, Kubernetes, ArgoCD
+[설치 가이드](docs/guides/setup_guide.md)에서 Python 3.11·Node.js 22, 자신의 Cloudflare D1·R2, 인증과 개발 서버 설정을 안내합니다.
 
-## 🖥️ Local Deployment
+현재 빈 DB 초기화와 전체 Docker Compose 실행에는 [설명된 제약](docs/guides/setup_guide.md#새-db-초기화의-현재-제한)이 있습니다. 설치 가이드의 실행 경로와 초기화 조건을 확인해야 하며, 서버 기동만으로 전체 설치 성공을 판단하지 않습니다.
 
-자신의 Cloudflare 리소스와 인증 설정을 준비하는 절차는 [설치 및 개발 환경](./docs/guides/setup_guide.md)을 참고합니다. SDK를 기존 설치에 연결하려면 [SDK 가이드](./packages/sdk/README.md)를 사용합니다.
+## 문서
 
-현재 빈 DB bootstrap과 전체 Docker Compose 실행에는 문서화된 제한이 있습니다. 설치 가이드에서 백엔드·프런트엔드 실행 경로와 DB 초기화 조건을 확인합니다.
-
-## 📚 Documentation
-
-[문서 시작점](./docs/README.md)에서 사용 목적에 맞는 경로를 선택할 수 있습니다.
-
-| 목적 | 문서 |
+| 목적 | 가이드 |
 | --- | --- |
-| 플랫폼 이해 | [핵심 개념](./docs/guides/experiment_platform_concepts.md) |
-| 내 서비스에 연결 | [SDK 설치·사용](./packages/sdk/README.md) |
-| 직접 설치·운영 | [설치 가이드](./docs/guides/setup_guide.md), [데이터 저장소](./docs/guides/data_access.md) |
-| 코드·문서 기여 | [기여·에이전트 협업](./docs/guides/agent_collaboration.md) |
-| UI·브랜드 수정 | [디자인 시스템](./docs/guides/design_system.md), [브랜드 자산](./docs/guides/iterglow-brand.md) |
+| 플랫폼 이해 | [핵심 개념](docs/guides/experiment_platform_concepts.md), [아키텍처](docs/guides/architecture.md) |
+| 서비스 연결 | [SDK](packages/sdk/README.md), [패키징·연동](packages/sdk/SDK_PACKAGING_GUIDE.md) |
+| 설치·데이터 저장소 | [설치](docs/guides/setup_guide.md), [데이터 접근](docs/guides/data_access.md) |
+| 프로젝트·초대·키 | [접근 권한](docs/guides/project-access.md) |
+| 서버 접근 정책 | [접근 판정 API](docs/guides/access-decision.md) |
+| 실험 중지·종료·결과 | [실험 수명주기](docs/guides/experiment-lifecycle.md) |
+| 코드·문서 기여 | [기여 가이드](docs/guides/agent_collaboration.md) |
+| UI·브랜드 | [디자인 시스템](docs/guides/design_system.md), [브랜드 자산](docs/guides/iterglow-brand.md) |
 
-공개 문서는 설치·연동·기여에 필요한 내용을 우선합니다. 팀 회의·과거 계획·내부 운영 기록은 Notion에서 관리합니다.
+## 기술 구성
 
-## 🌱 참여 및 기여 안내 (How to Engage)
+| 구성 | 기술 |
+| --- | --- |
+| 관리 화면 | React·Vite·TypeScript·Tailwind CSS |
+| API | FastAPI·Python·Pydantic |
+| SDK | TypeScript·React 연동 |
+| 저장소 | Cloudflare D1·R2 |
+| 개발·배포 | Docker, Kubernetes·ArgoCD |
 
-**13기에는 러너를 추가 모집하지 않습니다.** 저장소에 대한 버그 리포트, 문서 개선과 코드 기여는 환영합니다.
+SDK v1과 legacy의 이벤트 계약은 구분됩니다. 기존 query segment는 등록된 소스 스키마가 필요하며, 임의 사용자 속성 기반의 세그먼트별 결과 비교가 자동 제공되는 기능은 아닙니다. 현재 지원 범위는 각 가이드와 [기능 이슈](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues)에서 확인합니다.
 
-- 버그·개선 제안: [GitHub Issues](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues)
-- 코드·문서 기여: 관련 Issue에서 범위를 논의한 뒤 Pull Request를 보내주세요.
-- 커뮤니티 문의: [가짜연구소 Discord](https://discord.gg/EPurkHVtp2)
+## 기여
 
-Issue와 Pull Request에도 개인정보, 내부 회의 내용, 실제 운영 데이터나 인증 정보를 포함하지 말아주세요.
+버그 제보, 문서 개선과 코드 기여를 환영합니다. [기여 가이드](docs/guides/agent_collaboration.md)에서 개발 환경·검증·PR 작성 기준을 확인합니다.
 
-## Acknowledgement 🙏
+- 버그·기능 제안: [GitHub Issues](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues)
+- 변경 제안: 관련 Issue와 연결한 Pull Request
+- 변경 설명: 해결할 문제, 변경 후 동작, 실행한 검증과 호환성·데이터 영향
 
-이 프로젝트는 가짜연구소 Open Academy로 진행됩니다.
-여러분의 참여와 기여가 ‘우연한 혁명(Serendipity Revolution)’을 가능하게 합니다. 모두에게 깊은 감사를 전합니다.
+실제 키·토큰·개인정보·운영 원문 데이터는 Issue·PR·로그에 게시하지 않습니다.
 
-Iterglow is developed as part of Pseudo-Lab's Open Research Initiative. Special thanks to our contributors and the open source community for their valuable insights and contributions.
+## 라이선스와 기여자
 
-## About Pseudo Lab 👋🏼
+[MIT License](https://opensource.org/licenses/MIT).
 
-[Pseudo-Lab](https://pseudo-lab.com/) is a non-profit organization focused on advancing machine learning and AI technologies. Our core values of Sharing, Motivation, and Collaborative Joy drive us to create impactful open-source projects. With over 5k+ researchers, we are committed to advancing machine learning and AI technologies.
-
-## Contributors 😃
-
-<a href="https://github.com/Pseudo-Lab/experiment-platform-pseudolab/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Pseudo-Lab/experiment-platform-pseudolab" alt="Iterglow contributors" />
-</a>
-
-## License 🗞
-
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+Iterglow는 [Pseudo-Lab](https://pseudo-lab.com/)에서 시작한 오픈소스 프로젝트입니다. [모든 기여자](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/graphs/contributors)에게 감사드립니다.

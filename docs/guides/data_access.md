@@ -3,7 +3,7 @@ Last-Validated: 2026-11-15
 
 # 데이터 저장소 설정과 접근
 
-Iterglow는 설치 운영자가 준비한 Cloudflare D1·R2를 사용합니다. 특정 조직의 DB·사용자 데이터·팀 계정은 설치 전제가 아닙니다. 이 가이드는 현재 구현의 연결 설정과 접근 경계를 설명합니다.
+Iterglow는 설치 운영자가 준비한 Cloudflare D1·R2를 사용합니다. 이 가이드는 현재 구현의 연결 설정과 접근 경계를 설명합니다.
 
 ## 저장소 역할
 
@@ -13,7 +13,7 @@ Iterglow는 설치 운영자가 준비한 Cloudflare D1·R2를 사용합니다. 
 | `D1_MAIN_DATABASE_ID` | 기존 allowlisted query segment·조직 대시보드의 별도 소스 | 해당 기능 사용 시 |
 | `R2_BUCKET_NAME` | 첨부파일 객체 저장 | 첨부파일 기능 사용 시 |
 
-DB·bucket 이름은 자신의 설치에 맞게 선택합니다. 설정값은 ID와 bucket 이름이며 예전 팀 운영 리소스를 사용할 필요가 없습니다. R2 bucket 이름은 명시적으로 설정해 코드의 과거 기본값에 의존하지 않습니다.
+DB·bucket 이름은 자신의 설치에 맞게 선택합니다. 연결 설정에는 자신의 database ID와 bucket 이름을 사용합니다. R2 bucket 이름은 명시적으로 설정해 코드의 과거 기본값에 의존하지 않습니다.
 
 현재 query segment 템플릿은 특정 외부 소스 테이블을 전제로 합니다. `D1_MAIN_DATABASE_ID`에 임의 DB를 연결하는 것만으로 모든 서비스의 사용자 속성을 지원하지 않습니다. manual segment와 구분하고 사용할 template의 스키마를 확인해야 합니다. 사용자 속성 기반의 범용 세그먼트별 결과 분석은 [#23](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues/23)의 후속 범위입니다.
 
@@ -53,4 +53,4 @@ D1 API token과 R2 S3 access key는 서로 다른 자격증명입니다. 값은 
 - migration·데이터 정리 전 대상과 보존·복구 기준 확인. 개발 테스트를 실제 운영 DB에 쓰는 방식으로 실행 금지.
 - 원문 사용자 데이터·키·토큰을 로그·이슈·문서에 게시 금지.
 
-추가 접근 권한은 자신의 설치 운영자에게 요청합니다. 특정 팀원의 개인 계정이나 기존 조직의 접근 권한을 요구하지 않습니다.
+추가 접근 권한은 자신의 설치 운영자에게 요청합니다.

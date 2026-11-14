@@ -27,7 +27,7 @@ Iterglow는 연동 서비스가 사용자에게 서로 다른 경험을 제공�
 | Metric | 구매 완료 등 실험에서 비교할 목표 지표 |
 | Guardrail | 목표 지표 외에 악화 여부를 함께 확인할 보호 지표 |
 
-세그먼트 타기팅은 실험 대상 선정이고 세그먼트별 결과 분석은 결과를 그룹별로 비교하는 기능입니다. 후자는 [#23](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues/23)의 후속 범위입니다. 서비스별 기수·요금제·역할 등을 플랫폼 고정 분류로 사용하지 않습니다.
+세그먼트 타기팅은 실험 대상 선정이고 세그먼트별 결과 분석은 결과를 그룹별로 비교하는 기능입니다. 후자는 [#23](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues/23)의 후속 범위입니다. 분류 기준은 연동 서비스의 사용자 속성에 따릅니다.
 
 ## 판단과 실제 노출의 구분
 
