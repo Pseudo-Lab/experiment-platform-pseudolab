@@ -228,14 +228,14 @@ export function ProjectSettings({ lang }: Props) {
     try {
       await projectApi.delete(targetId);
       if (!mountedRef.current || activeProjectIdRef.current !== targetId || deleteSeqRef.current !== seq) return;
+      // Finish deletion before a list refresh can unmount this page or fail.
+      setCurrentProjectId(null);
+      navigate('/projects', { replace: true });
       try {
         await reloadProjects();
       } catch {
-        // Keep deletion completion coherent if context refresh rejects.
+        // Selection and navigation already reflect the successful deletion.
       }
-      if (!mountedRef.current || activeProjectIdRef.current !== targetId || deleteSeqRef.current !== seq) return;
-      setCurrentProjectId(null);
-      navigate('/projects', { replace: true });
     } catch (err) {
       if (!mountedRef.current || activeProjectIdRef.current !== targetId || deleteSeqRef.current !== seq) return;
       setDeleteError(err instanceof Error && err.message ? err.message : t.deleteError);

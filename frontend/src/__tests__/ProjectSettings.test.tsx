@@ -292,7 +292,7 @@ it('guards stale delete completion across project switch and unmount without alt
   expect(selectMock).not.toHaveBeenCalled();
   expect(screen.getByTestId('location')).toHaveTextContent('/project-settings');
 
-  // Unmounting while reloadProjects is pending (e.g. MainLayout loading gate) must not call setCurrentProjectId/navigate later
+  // Clear selection and leave settings before reload can unmount the page.
   const delReq2 = deferred<void>();
   const reloadReq2 = deferred<void>();
   vi.mocked(projectApi.delete).mockReturnValueOnce(delReq2.promise);
@@ -302,10 +302,27 @@ it('guards stale delete completion across project switch and unmount without alt
   await act(async () => {
     delReq2.resolve(undefined);
   });
+  expect(selectMock).toHaveBeenCalledTimes(1);
+  expect(selectMock).toHaveBeenCalledWith(null);
+  expect(screen.getByTestId('location')).toHaveTextContent('/projects');
   ui.unmount();
   await act(async () => {
     reloadReq2.resolve(undefined);
   });
 
+  expect(selectMock).toHaveBeenCalledTimes(1);
+});
+
+it('ignores a delete response after the settings page unmounts', async () => {
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  const request = deferred<void>();
+  vi.mocked(projectApi.delete).mockReturnValueOnce(request.promise);
+  const ui = renderSettings();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Delete Project' }));
+  ui.unmount();
+  await act(async () => { request.resolve(undefined); });
+
+  expect(reloadMock).not.toHaveBeenCalled();
   expect(selectMock).not.toHaveBeenCalled();
 });
