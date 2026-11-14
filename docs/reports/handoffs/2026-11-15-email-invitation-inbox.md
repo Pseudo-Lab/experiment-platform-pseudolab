@@ -6,7 +6,7 @@ Last-Validated: 2026-11-15
 ## Task Metadata
 - Task ID: email-invitation-inbox-20261115
 - Owner: soo / Codex
-- 상태: 구현·로컬 검증 완료, 운영 미반영
+- 상태: 운영 반영 및 합성 계정 HTTPS QA 완료, 실제 Google 재로그인 확인은 미수행
 
 ## Scope
 - 가입 전에도 이메일 초대를 등록하고, 상대가 Google 로그인 후 서비스 안에서 발견하여 명시적으로 수락·거절한다.
@@ -17,7 +17,7 @@ Last-Validated: 2026-11-15
 - Worktree: `/home/ubuntu/.openclaw/workspace-experiment-email-inbox-20261115`
 - Branch: `feat/email-invitation-inbox-20261115`
 - Base: `4895a5e261c4a785f60fc135153fb7f669445dbd`
-- 배포 후보를 로컬 커밋으로 정리한다. GitHub 게시·운영 배포·운영 migration045 적용은 아직 실행하지 않았다.
+- 구현 커밋 `3f5a24c`를 PR41로 병합했다. 운영 애플리케이션 SHA는 `26605ef85a86ed7babb0986718fe5278f6084587`이며 migration045도 적용됐다.
 
 ## Inputs Used
 - `AGENTS.md`, `docs/reports/_index.md`, `docs/guides/agent_collaboration.md`
@@ -43,7 +43,7 @@ Last-Validated: 2026-11-15
 - 독립 Gemini Argon High 검토와 총괄 diff 확인: 추가 차단 결함 없음. Backend 구현은 Codex B 작업자, Frontend·통합·브라우저 검증은 총괄이 담당했다.
 - 로컬 Miniflare D1 + 실제 FastAPI + 빌드된 Frontend: KO/EN, 390/1280px에서 이메일 초대·독립 로그인·발견·수락·거절·다른 계정 차단·역할 유지 검증.
 - 증거: `/home/ubuntu/.codex/reviews/iterglow-email-inbox-20261115/`의 테스트 로그·review.md·browser-results.json·스크린샷.
-- 실제 Google OAuth 재검증과 운영 D1 적용은 수행하지 않았다. 브라우저 로그인은 격리된 합성 계정 fixture다.
+- 로컬 브라우저 로그인은 격리된 합성 계정 fixture다. 아래 운영 반영 기록과 구분하며, 실제 Google OAuth 재로그인은 이번 자동 QA에서 수행하지 않았다.
 - 권한 표시·변경 후속 수정: 관련 ProjectSharing 테스트 18개, TypeScript·Vite 빌드 통과. 실제 API에 대한 KO/EN·390/1280px 브라우저 4개 시나리오에서 현재 역할 표시·버튼 메뉴·선택 상태·편집자 변경 후 표시와 접근 권한 갱신을 확인했다. 증거는 `member-role-browser-results.json`, `member-role-*.png`, `role-menu-*.png`다. 기존 254개 전체 결과는 후속 수정 전 기준이다.
 
 ### 상태 필터 리서치
@@ -58,10 +58,20 @@ Last-Validated: 2026-11-15
 - 운영 적용 전에 승인된 운영 절차로 migration045를 한 번 적용해야 한다. 트리거 전체 SQL 문장을 유지하고 세미콜론으로 단순 분리하지 않는다.
 - backend가 새 컬럼을 읽으므로 migration을 먼저 적용한다. 기존 프로세스 종료·진행 중 요청 배출 후 적용하는 기존 배포 경계를 유지한다.
 - migration045는 ALTER TABLE을 포함한 단회 마이그레이션이다. 무조건 재실행하지 않고 적용 상태를 확인한다.
-- TS: https://agent-server.tail03ec4e.ts.net:9457/ — Tailnet 전용, 합성 소유자/수신자/다른 계정 선택. 운영 데이터나 Google 로그인 화면이 아니다.
-- 사용자 운영 반영 지시 후 main 반영과 기존 자동 배포 확인을 진행하고, 실제 Google 계정으로 초대 발견·수락을 확인한다.
+- 이전 TS: https://agent-server.tail03ec4e.ts.net:9457/ — 검토 완료 후 사용자 지시로 종료했다. DB 복원 검증을 거친 비공개 백업·소스·테스트 산출물은 보존했다. 이전 9455 및 서비스 소개 9449도 종료했다.
+- 운영 적용 완료. 실제 Google 계정 재로그인·받은 초대 확인은 사용자가 추후 확인할 수 있는 잔여 수동 QA다. 자동 QA를 Google 로그인 검증으로 간주하지 않는다.
 - 배포 후보 준비 시 원격 main을 읽기 전용으로 확인했다. 기준 SHA와 동일한 `4895a5e261c4a785f60fc135153fb7f669445dbd`로, 새 main 변경에 따른 통합 충돌은 없다. 검증 파일 해시와 SQL 전체 문장 경계를 별도 release manifest로 보존한다.
 
 ## 별도 예약된 SDK 검사
 - 기존 운영 합성 QA의 최종 확정·불변성 검사는 사용자 요청으로 systemd user timer에 예약했다: 2026-11-15 06:08 KST, `iterglow-sdk-finalize-20261115.timer`.
 - 새 초대 기능 배포와 무관하다. 실제 마감 이후 결과 고정·원본 이벤트 삭제 후 동일 결과를 검사하고, 해당 합성 fixture만 정리한다. 현재는 예약 상태이며 검사 성공으로 기록하지 않는다.
+
+## 운영 반영 기록
+- 사용자 명시 승인 후 [PR41](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pull/41)을 main에 병합했다. main CI43636642339에서 Frontend258개·Backend742개 테스트 통과, GitOps CI43636771282 성공.
+- 운영 D1 전체 export와 Time Travel bookmark를 비공개 보존하고, 복원 무결성과 기존 행 보존 리허설을 확인했다. 백엔드 요청 배출·0개 pod·35초 유예 후 migration045의 전체 SQL8문장을 적용했다. 문장별 스키마/FK 검사와 기존 건수 보존을 확인했다. 실패·불명확 응답 시 무조건 재실행하지 않는 단일 시도 잠금을 사용했다.
+- 기존 백엔드 제공을 복구하고 타 앱에 영향 없는 임시 동기화 차단과 migration pod를 제거했다. 자동 GitOps가 Ops SHA `3fd894ccb8b71ad6a7ae016ae4ace1fd1ab376f7`를 반영했다. 운영 FE/BE 모두 앱 SHA `26605ef85a86ed7babb0986718fe5278f6084587` 이미지 ready1/1이며 Argo Synced/Healthy다.
+- 운영 전환 확인: 2026-11-15 05:25:33 KST. 폴링/캐시 지연으로 이전 revision이 잠시 유지돼 정상 비교 refresh를 한 번 요청했다. 수동 sync·이미지 태그 재작성·중복 배포는 하지 않았다. 정확한 지연 원인은 로그로 확정하지 않았다.
+- 운영 HTTPS 합성 QA: 가입 전 이메일 초대, 다른 계정 차단, 독립 로그인 후 초대 발견, 명시적 수락과 재시도, 거절·회수, 기존 역할 보존, 소유자 권한 변경, 멤버 제거 후404 및 재수락410, 수락 이력 유지가 통과했다. 생성한 프로젝트1개와 합성 계정3개는 삭제·부재 확인했다. 실제 Google OAuth 콜백은 실행하지 않았다.
+- 공개 홈·로그인·SDK 가이드 및 비로그인 보호 라우트는 KO1280/EN390px의8개 브라우저 검사에서 오류 없이 동작했다. 배포 JS의 새 초대/권한/기한 문구와 비로그인 API401도 확인했다.
+- Gemini Argon High가 적용 절차와 QA 스크립트를 독립 검토했다. 총괄은 스키마·diff·실행 결과를 직접 확인하고 과도한 검토 문구를 정정 요청했다. 실행 성공은 검토 동의가 아닌 실제 receipt와 runtime 상태로 판정했다.
+- 증거: `/home/ubuntu/.codex/reviews/iterglow-email-inbox-release-20261115/`. DB export·세션 관련 private 자료는 공개하지 않는다.
