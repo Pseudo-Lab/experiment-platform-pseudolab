@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-11-06
+Last-Validated: 2026-11-15
 
 # Iterglow CI 사용 가이드
 
@@ -74,4 +74,4 @@ Coral과 흰색의 대비는 약 **2.99:1**이므로 작은 문구나 흰 글씨
 - [제작 메타데이터](../assets/iterglow/source/trace-metadata.json)에 원본 윤곽의 복원 방식을 기록합니다.
 - 로고 적용은 API 경로·npm 패키지명·도메인·인증 설정의 변경을 요구하지 않습니다.
 
-서비스 적용 및 운영 확인 기록은 [2026년 11월 4일 브랜드 자산 핸드오프](../reports/handoffs/2026-11-04-iterglow-brand-assets.md)에 있습니다.
+과거 적용·운영 검수 기록은 팀 Notion에서 관리합니다. 자산의 현재 파일·색상·검증 기준은 이 가이드와 위 자산 명세를 사용합니다.

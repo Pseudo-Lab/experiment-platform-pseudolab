@@ -1,26 +1,20 @@
 Status: active
 Last-Validated: 2026-11-15
 
-# 설계·정책 참고 목록
+# 공개 기술 문서 인덱스
 
-사용자·설치 운영자는 먼저 [문서 시작점](../README.md)을 확인합니다. 이 목록은 기능의 기술 근거를 찾는 기여자를 위한 참고 자료입니다.
+설치·연동·기여의 시작점은 [문서 안내](../README.md)입니다. 과거 보고·인계·개인 작업 기록은 팀 Notion에 원문 보관 후 공개 문서에서 분리했습니다. 현재 기능의 설명은 아래 가이드와 코드에서 확인합니다.
 
-## 현재 기능의 참고 자료
+| 주제 | 공개 문서 |
+| --- | --- |
+| 제품·구조 | [핵심 개념](../guides/experiment_platform_concepts.md), [아키텍처](../guides/architecture.md) |
+| 서비스 SDK 연동 | [SDK README](../../packages/sdk/README.md), [패키징·연동](../../packages/sdk/SDK_PACKAGING_GUIDE.md) |
+| 설치·데이터 저장소 | [설치](../guides/setup_guide.md), [데이터 접근](../guides/data_access.md) |
+| 프로젝트·초대·키 | [프로젝트 접근](../guides/project-access.md) |
+| 서버 접근 정책 | [서버 간 접근 판정](../guides/access-decision.md) |
+| 실험 상태·집계 확정 | [실험 수명주기](../guides/experiment-lifecycle.md) |
+| UI·브랜드 | [디자인 시스템](../guides/design_system.md), [브랜드 자산](../guides/iterglow-brand.md) |
+| 개발·검증 | [기여·에이전트 협업](../guides/agent_collaboration.md), [AGENTS.md](../../AGENTS.md) |
+| 제품·개발 결정 | [공개 결정 로그](decision-log.md) |
 
-| 주제 | 참고 문서 | 읽는 기준 |
-| --- | --- | --- |
-| 제품 범위 | [Iterglow PRD와 구현 대조](experibase-service-prd.md) | 제품 정의와 검토 당시 코드의 대조. 제안과 구현 상태 구분 |
-| SDK 계약 | [SDK README](../../packages/sdk/README.md) | 설치·decide/expose/track·legacy 이행 계약 |
-| 중지·종료 및 결과 확정 | [정책 결정](experiment-stop-policy-2026-11-14.md) | 정책 근거. 실행 상태는 해당 문서의 최신 절과 코드 확인 |
-| 프로젝트 공유 | [공유·초대 구현 기록](project-sharing-2026-11-12.md) | 작성 당시 범위. 이후 이메일 초대 추가에 주의 |
-| 프로젝트 자격증명 | [키 교체 구현 기록](key-rotation-2026-10-28.md) | 공개 SDK 키와 서버 credential 분리의 변경 근거 |
-| 공통 개발 규칙 | [기여·에이전트 협업](../guides/agent_collaboration.md) | 현재 작업 절차·파일 소유권·검증 |
-| 결정 이력 | [Decision Log](decision-log.md) | 과거 결정의 맥락. 최신 제품 원칙은 AGENTS.md 우선 |
-
-## 과거 계획과 작업 기록
-
-과거 조직 대시보드 KPI·팀장 계획·서비스별 협업 초안은 Notion으로 이관했습니다. 현재 제품의 기본 방향이나 필수 실행 절차로 사용하지 않습니다.
-
-남아 있는 `handoffs/`와 개인 작업 기록은 작성 당시의 검증·인계 자료이며 현재 설치 상태의 보장이 아닙니다. 팀 내부 기록의 후속 이관과 별개로 공개 가이드의 필수 읽기 목록에서는 제외합니다.
-
-현재 플랫폼은 서비스에 종속되지 않는 실험·수집·분석 기능을 제공하며, 서비스별 사용자 속성·이벤트·목표 지표 정의는 연동 서비스의 책임입니다.
+특정 운영 설치의 배포·데이터 상태나 과거 테스트 실행 결과는 공개 API 계약과 구분합니다. 과거 기록의 TODO·미반영 표기는 현재 작업 지시로 사용하지 않습니다.
