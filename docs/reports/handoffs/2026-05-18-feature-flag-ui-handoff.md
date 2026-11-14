@@ -23,7 +23,7 @@ Owner: experiment-lab
 - `AGENTS.md`
 - `docs/reports/_index.md`
 - `docs/guides/experiment_platform_concepts.md`
-- `docs/reports/feature-flag-improvement-plan.md`
+- [과거 문서: feature-flag-improvement-plan](https://app.notion.com/p/418c883aedfc8137b169c4ac706a7295?pvs=204)
 - `docs/guides/data_access.md`
 
 ## Current State

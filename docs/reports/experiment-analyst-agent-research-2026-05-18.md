@@ -79,9 +79,9 @@ Microsoft의 controlled experiment metric interpretation 논문은 SRM과 metric
 
 현재 저장소에도 이미 분석가 역할이 필요했던 흔적이 있다.
 
-- `docs/reports/data-analyst-report-v2.md`는 `Data Analyst Subagent`가 KPI 체계, 근거 데이터, 쿼리, 가정, 한계를 정리한 리포트다.
-- `docs/reports/dataset-validation-v2.md`는 read-only 분석 스냅샷과 데이터 검증 프레임을 남겼다.
-- `docs/reports/feature-flag-improvement-plan.md`는 feature flag를 segment, rule, exposure, analysis와 연결하는 방향을 정의한다.
+- [과거 문서: data-analyst-report-v2](https://app.notion.com/p/418c883aedfc8185bf24c705d418671d?pvs=204)는 `Data Analyst Subagent`가 KPI 체계, 근거 데이터, 쿼리, 가정, 한계를 정리한 리포트다.
+- [과거 문서: dataset-validation-v2](https://app.notion.com/p/418c883aedfc8128b23ce331dc531fa4?pvs=204)는 read-only 분석 스냅샷과 데이터 검증 프레임을 남겼다.
+- [과거 문서: feature-flag-improvement-plan](https://app.notion.com/p/418c883aedfc8137b169c4ac706a7295?pvs=204)는 feature flag를 segment, rule, exposure, analysis와 연결하는 방향을 정의한다.
 - `docs/reports/decision-log.md`는 raw Supabase DB를 신규 실험/feature flag 분석 경로로 직접 쓰지 않고, D1 동기화 데이터/export/read-only query/API를 기준으로 삼는다고 결정했다.
 
 즉 이 저장소에서 분석가 역할은 새 개념이 아니라, 이미 수행된 작업을 공식 역할로 고정하는 작업이다.
@@ -137,10 +137,10 @@ Microsoft의 controlled experiment metric interpretation 논문은 SRM과 metric
 기본 입력:
 
 1. `docs/guides/experiment_platform_concepts.md`
-2. `docs/reports/feature-flag-improvement-plan.md`
-3. `docs/reports/kpi-definition-v2.md`
-4. `docs/reports/dataset-validation-v2.md`
-5. `docs/reports/data-analyst-report-v2.md`
+2. [과거 문서: feature-flag-improvement-plan](https://app.notion.com/p/418c883aedfc8137b169c4ac706a7295?pvs=204)
+3. [과거 문서: kpi-definition-v2](https://app.notion.com/p/418c883aedfc8197a300ccc70de46981?pvs=204)
+4. [과거 문서: dataset-validation-v2](https://app.notion.com/p/418c883aedfc8128b23ce331dc531fa4?pvs=204)
+5. [과거 문서: data-analyst-report-v2](https://app.notion.com/p/418c883aedfc8185bf24c705d418671d?pvs=204)
 6. D1 read-only 스냅샷 또는 제한 API 결과
 
 기본 산출물:

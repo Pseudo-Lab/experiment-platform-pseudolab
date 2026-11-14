@@ -1,314 +1,79 @@
 Status: active
-Last-Validated: 2026-05-18
-Owner: soo
+Last-Validated: 2026-11-15
 
-# Agent Collaboration Guide
+# 기여 및 에이전트 협업
 
-이 문서는 Codex, Claude, Gemini 등 여러 에이전트나 여러 에디터 창이 같은 저장소에서 작업할 때 따르는 협업 기준입니다.
+이 가이드는 외부 기여자와 코딩 에이전트가 같은 저장소에서 작업할 때의 범위·검증·인계 기준입니다. 팀 내부 계정이나 과거 작업 세션에 대한 접근은 필요하지 않습니다.
 
-기본 목표는 단순합니다.
+## 제품과 작업 기준
 
-1. 같은 기준 문서를 보고 작업한다.
-2. 같은 파일을 동시에 고치지 않는다.
-3. 작업 결과와 검증 근거를 다음 사람에게 남긴다.
+Iterglow는 모든 서비스에서 사용할 수 있는 범용 실험 플랫폼입니다. 특정 서비스의 사용자 분류·운영 데이터·조직 구조를 플랫폼 고정 조건으로 추가하지 않습니다. 서비스별 요구는 플랫폼 공통 기능과 연동 서비스의 책임으로 구분합니다.
 
----
+작업 시작 시 다음을 확인합니다.
 
-## 0. 이 저장소 운영 프로필
+1. [AGENTS.md](../../AGENTS.md)의 공통 규칙.
+2. [문서 시작점](../README.md)과 변경하려는 기능 가이드·코드.
+3. 기존 Issue·PR의 요청 범위, 호환성·보존 조건 및 완료 기준.
 
-이 저장소는 실험 플랫폼 애플리케이션 저장소입니다. agent 작업은 아래 프로젝트 경계를 기준으로 판단합니다.
+과거 계획·회의·팀 운영 기록은 Notion에서 관리하며 공개 저장소 작업의 필수 읽기 자료로 요구하지 않습니다. 기술 변경에 필요한 근거는 Issue·PR 또는 공개 가이드에 남깁니다.
 
-| 영역 | 현재 기준 |
-|---|---|
-| Backend | FastAPI, Pydantic, Cloudflare D1/R2 client, pytest |
-| Frontend | React, Vite, TypeScript, Tailwind CSS, shadcn/ui 스타일 컴포넌트, Vitest |
-| Experiment DB | Cloudflare D1 `pseudolab-exp` |
-| Data source DB | Cloudflare D1 `pseudolab-main` |
-| Raw 운영 DB | Supabase raw DB. 실험 플랫폼/feature flag 분석에서는 직접 조회하지 않음 |
-| Example app | `frontend/src/features/example/**`, served by the main frontend at `/example` |
-| Local dev | `docker-compose.dev.yml`, backend `:8000`, frontend `:8081` |
+## 구조와 파일 소유권
 
-현재 주요 작업 흐름은 Feature Flag 운영 UI 확장입니다.
-
-다음 작업자가 우선 확인할 문서:
-
-1. `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md`
-2. `docs/reports/feature-flag-improvement-plan.md`
-3. `docs/guides/experiment_platform_concepts.md`
-4. `frontend/src/features/dashboard/components/FeatureFlags.tsx`
-5. `frontend/src/services/api.ts`
-
----
-
-## 1. 기준 문서 우선순위
-
-작업 시작 시 아래 순서로 확인합니다.
-
-1. `AGENTS.md`
-2. `docs/reports/_index.md`
-3. 작업 영역별 가이드
-   - UI: `docs/guides/design_system.md`
-   - 데이터/DB: `docs/guides/data_access.md`
-   - 실험 플랫폼 개념: `docs/guides/experiment_platform_concepts.md`
-   - Feature Flag: `docs/reports/feature-flag-improvement-plan.md`
-   - Feature Flag UI 이어받기: `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md`
-
-기준 문서가 충돌하면 `AGENTS.md`를 우선하고, 그 다음 최신 active 문서를 따릅니다.
-
----
-
-## 2. 작업 시작 3줄 브리프
-
-에이전트는 작업을 시작할 때 내부적으로 아래를 먼저 정리합니다.
-
-```text
-Goal: 무엇을 끝낼 것인가
-Scope: 포함 범위 / 제외 범위
-Done checks: 어떤 테스트, 빌드, 문서 확인으로 완료를 판단할 것인가
-```
-
-이 브리프는 작은 작업에서는 최종 응답이나 PR 설명에 녹이면 충분합니다. 중간 이상 규모 작업이나 handoff가 필요한 작업에서는 handoff 문서에 남깁니다.
-
----
-
-## 3. Worktree 격리 정책
-
-병렬 작업, 여러 에이전트, 여러 에디터 창이 예상되면 `git worktree`를 기본으로 사용합니다.
-
-저장소 루트는 `main` 동기화와 조율용으로 둡니다. 실제 구현은 별도 linked worktree에서 진행합니다.
-
-권장 절차:
-
-```bash
-git fetch origin
-git switch main
-git pull --ff-only
-git worktree add ../workspace-experiment-<task> -b <type>/<short-task> origin/main
-cd ../workspace-experiment-<task>
-```
-
-운영 규칙:
-
-1. 작업 전 `git worktree list`와 `git status --short`를 확인합니다.
-2. 하나의 worktree는 하나의 작업/역할/브랜치만 소유합니다.
-3. 같은 브랜치를 둘 이상의 worktree에서 체크아웃하지 않습니다.
-4. 같은 파일은 한 번에 하나의 활성 작업자만 편집합니다.
-5. 완료된 worktree는 브랜치가 머지, 푸시, 또는 폐기된 뒤 제거합니다.
-
-`git worktree`는 로컬 파일 충돌을 줄이지만 머지 충돌을 없애지는 않습니다. 파일 소유권과 작은 작업 범위가 여전히 중요합니다.
-
----
-
-## 4. 도메인 소유권
-
-| 도메인 | 소유 범위 |
-|---|---|
-| Backend | `backend/app/**`, `backend/migrations/**`, `backend/tests/**`, `backend/requirements.txt` |
-| Frontend Dashboard | `frontend/src/**`, `frontend/package.json`, `frontend/vite.config.ts`, `frontend/tailwind.config.js` |
-| Example App | `frontend/src/features/example/**` |
-| Infra/Ops | `.github/**`, `docker-compose*.yml`, `backend/.env.sample`, `frontend/.env.sample`, 배포/운영 매니페스트, 런타임 설정 |
+| 영역 | 경로 및 도구 |
+| --- | --- |
+| Backend | `backend/app/**`, `backend/migrations/**`, `backend/tests/**` — FastAPI·Pydantic·pytest |
+| Frontend | `frontend/src/**` — React·Vite·TypeScript·Vitest |
+| Example | `frontend/src/features/example/**` — `/example` 경로 |
+| SDK | `packages/sdk/**` — TypeScript, React 연동 및 Node 테스트 |
+| Infra/Ops | `.github/**`, Docker·배포 설정 |
 | Docs/Process | `AGENTS.md`, `docs/**` |
 
-Feature Flag UI 작업의 권장 파일 소유:
+여러 작업자가 병렬 작업하면 branch와 linked worktree를 분리하고 같은 파일은 한 작업자만 편집합니다. 저장소 루트는 동기화·조율용으로 사용하며, 기존 변경을 초기화하거나 가져오지 않습니다. 작업 시작 전에 목표·포함/제외 범위·완료 확인 방법을 정리합니다.
 
-| 작업 | 주 소유 파일 |
-|---|---|
-| Segment 관리 UI | `frontend/src/features/dashboard/components/Segments.tsx`, `frontend/src/__tests__/Segments.test.tsx` |
-| Segment API client | `frontend/src/services/api.ts` |
-| Routing/sidebar | `frontend/src/App.tsx`, `frontend/src/layouts/MainLayout.tsx` |
-| Rule builder UI | `frontend/src/features/dashboard/components/FeatureFlags.tsx` 또는 신규 detail/rule 컴포넌트 |
-| Backend API gap | `backend/app/api/v1/endpoints/**`, `backend/app/services/**`, `backend/tests/**` |
+## 개발 환경
 
-여러 도메인을 동시에 바꾸면 PR 또는 명시적 handoff가 필요합니다.
+[설치 가이드](setup_guide.md)에서 의존성·인증·개발용 저장소를 준비합니다. 클라우드와 무관한 테스트는 기존 fixture로 수행합니다. 자신의 운영 DB나 다른 서비스의 원천 DB를 개발 테스트의 쓰기 대상으로 사용하지 않습니다.
 
----
+- 플랫폼 DB: 자신의 `D1_DATABASE_ID`. 앱의 읽기·쓰기 저장소.
+- 기존 query segment 소스: `D1_MAIN_DATABASE_ID`. 등록된 template과 실제 테이블 계약 확인.
+- query segment는 서버 allowlist만 사용. raw SQL 자유 입력 추가 금지.
+- 소스 DB 설정 누락·갱신 실패를 빈 세그먼트 성공으로 처리 금지.
+- 서비스의 raw DB 직접 접근·추가 수집은 별도 데이터·접근 계약 검토.
 
-## 5. Impact Trigger
+## 변경별 검증
 
-아래 조건 중 하나라도 해당하면 PR 또는 명시적 handoff가 필요합니다.
+저장소 루트에서 SDK 의존성을 먼저 준비한 뒤 관련 검사를 실행합니다. 전체 개발 환경 준비는 설치 가이드를 따릅니다.
 
-1. Backend, Frontend, Infra, Docs 등 여러 도메인을 동시에 변경합니다.
-2. API 계약, 인증/권한, DB 스키마, 마이그레이션에 영향이 있습니다.
-3. CI/CD, 배포, 보안, ingress, secrets, 런타임 토폴로지가 바뀝니다.
-4. `AGENTS.md`, `docs/guides/**`, active report 등 기준 문서를 바꿉니다.
-5. 운영 데이터, export, 개인정보성 데이터 흐름에 영향이 있습니다.
-6. Product Owner 또는 도메인 소유자가 리뷰를 요청합니다.
-
-저위험 단일 도메인 작업은 handoff 문서를 생략할 수 있습니다. 이 경우 커밋이나 PR 설명에 변경 내용, 검증, 후속 작업을 짧게 남깁니다.
-
----
-
-## 6. Team Lead Mode
-
-Team Lead Mode는 사용자가 팀 방식, 멀티 에이전트, 병렬 위임을 명시적으로 요청할 때만 사용합니다.
-
-Team Lead 책임:
-
-1. 목표, 범위, 완료 기준을 명확히 합니다.
-2. 필요한 최소 문서만 읽고 작업을 분해합니다.
-3. 역할과 파일 소유권을 배정합니다.
-4. 병렬 가능한 작업과 순차 작업을 구분합니다.
-5. 하위 에이전트 결과를 검토하고 최종 결과로 통합합니다.
-6. 충돌은 기준 문서, 사용자 의도, 도메인 소유자 판단 순서로 해결합니다.
-
-`git worktree` 사용만으로 Team Lead Mode가 켜지는 것은 아닙니다.
-
----
-
-## 7. 역할 기준
-
-| 역할 | 주 관심사 |
-|---|---|
-| Backend API | FastAPI endpoint, schema, service, D1 migration, backend tests |
-| Frontend Dashboard | Dashboard UI, Feature Flag/Segment UI, API client, responsive states, frontend tests |
-| Example App | frontend `/example` behavior, SDK usage, demo seed flow |
-| Infra/Ops | Docker compose, CI, env vars, D1/R2 runtime connectivity, deployment notes |
-| Data/Analytics | D1 source tables, metric definitions, exposure/result connection |
-| Experiment Analyst | experiment hypothesis, primary/guardrail metrics, randomization unit, exposure quality, SRM/readout risk |
-| QA | regression, edge cases, loading/error/empty/success states, release confidence |
-| Security | auth, permission, secrets, privacy-sensitive data flow |
-| Product | scope, acceptance criteria, prioritization |
-
-모든 작업에 모든 역할이 필요한 것은 아닙니다. 필요한 최소 역할만 사용합니다.
-
-### 7-1. Experiment Analyst 역할
-
-이 저장소는 일반 웹서비스가 아니라 실험 플랫폼이므로, 실험 의사결정 품질을 보는 `Experiment Analyst` 역할을 별도로 둡니다.
-
-기본 원칙:
-
-1. `Experiment Analyst`는 read-only가 기본입니다.
-2. 운영 DB를 직접 수정하지 않습니다.
-3. 신규 실험/feature flag 분석에서 raw Supabase DB를 직접 조회하지 않습니다.
-4. D1 동기화 데이터, export, 제한 API, 문서화된 스냅샷을 기준으로 분석합니다.
-5. 최종 제품 결정은 단독으로 내리지 않고, 근거와 리스크를 Product/Backend/Frontend/Infra owner에게 넘깁니다.
-
-호출 조건:
-
-1. 새 experiment 또는 feature flag가 의사결정 metric과 연결됩니다.
-2. primary metric, secondary metric, guardrail metric, KPI 정의가 추가/변경됩니다.
-3. query-backed segment, audience, targeting rule이 추가/변경됩니다.
-4. exposure logging, assignment, rollout algorithm이 변경됩니다.
-5. treatment/control 결과 readout 또는 ship/rollback 판단이 필요합니다.
-6. 데이터 소스, 스키마, freshness, user identifier mapping이 결과 해석에 영향을 줍니다.
-7. “이 숫자를 믿어도 되는가?”가 핵심 질문입니다.
-
-주요 체크:
-
-1. hypothesis가 명확한지 확인합니다.
-2. primary metric과 secondary/guardrail metric을 분리합니다.
-3. metric의 분자, 분모, unit, time window, timezone을 명시합니다.
-4. randomization unit과 metric unit이 일치하는지 확인합니다.
-5. exposure가 결과 event보다 먼저 기록되는지 확인합니다.
-6. expected split과 observed split을 비교하고 SRM 위험을 남깁니다.
-7. ratio metric은 numerator/denominator를 분리해서 해석합니다.
-8. 데이터 신선도, row count, missing day, schema drift를 확인합니다.
-9. 봇/내부 트래픽 제외 가능 여부를 확인합니다.
-10. 결과를 `ship`, `hold`, `rollback`, `rerun`, `needs more data` 중 어떤 후보로 볼지 근거를 제시합니다.
-
-기본 입력:
-
-1. `docs/guides/experiment_platform_concepts.md`
-2. `docs/reports/feature-flag-improvement-plan.md`
-3. `docs/reports/kpi-definition-v2.md`
-4. `docs/reports/dataset-validation-v2.md`
-5. `docs/reports/data-analyst-report-v2.md`
-6. `docs/templates/experiment-analyst-brief.md`
-
-기본 산출물:
-
-1. `docs/reports/**` 아래 분석 리포트 또는 readout
-2. metric contract 초안 또는 변경 제안
-3. segment/exposure 품질 체크 결과
-4. backend/frontend/infra owner에게 넘길 구현 요구사항
-
-템플릿:
-
-```text
-docs/templates/experiment-analyst-brief.md
+```bash
+npm test --prefix packages/sdk
+npm test --prefix frontend -- --run
+npm run build --prefix frontend
 ```
 
-상세 근거:
-
-```text
-docs/reports/experiment-analyst-agent-research-2026-05-18.md
-```
-
----
-
-## 8. Handoff 정책
-
-handoff는 아래 경우에 작성합니다.
-
-1. 작업이 중간 이상 규모입니다.
-2. 여러 도메인을 건드립니다.
-3. 다음 작업자가 이어받아야 합니다.
-4. 운영/DB/API/보안 영향이 있습니다.
-5. 기준 문서를 변경했습니다.
-
-템플릿은 `docs/templates/agent-handoff.md`를 사용합니다.
-
-handoff 최소 항목:
-
-1. Task ID
-2. Scope
-3. Workspace / branch / base
-4. Inputs used
-5. Changes made
-6. Validation
-7. Risks
-8. Next owner / next action
-
----
-
-## 9. 검증 원칙
-
-변경 범위에 맞춰 검증합니다.
-
-Backend:
+백엔드는 설치 가이드에서 준비한 가상환경으로 실행합니다.
 
 ```bash
 cd backend
-./venv/bin/pytest
+.venv/bin/python -m pytest
 ```
 
-Frontend:
-
-```bash
-cd frontend
-npm test -- --run
-npm run build
-```
-
-Docs/process only:
+문서 전용 변경의 최소 확인:
 
 ```bash
 git diff --check
 ```
 
-검증하지 않은 항목은 이유를 남깁니다.
+추가로 변경한 Markdown 상대 링크와 설정·명령의 실제 코드 일치를 확인합니다. API·권한·DB 변경은 관련 회귀, 기존 데이터 보존·마이그레이션 적용 순서·실패 처리를 검증합니다. UI 텍스트 변경은 KO/EN 동시 반영, loading/error/empty/success 상태 확인이 필수입니다.
 
----
+## PR과 인계
 
-## 10. 작업 유형별 기본 검증
+API·권한·DB 스키마, 여러 도메인, 운영 설정 또는 기준 문서 변경에는 PR 또는 명시적 인계가 필요합니다. [인계 템플릿](../templates/agent-handoff.md)을 참고해 다음을 남깁니다.
 
-| 작업 유형 | 최소 검증 |
-|---|---|
-| Backend API/service | `cd backend && ./venv/bin/pytest` |
-| Frontend UI/API client | `cd frontend && npm test -- --run`, `cd frontend && npm run build` |
-| Example app | `cd frontend && npm test -- --run`, `cd frontend && npm run build` |
-| Docs/process only | `git diff --check` |
-| D1 schema/query change | backend tests + 운영 D1에는 민감정보 값 없이 테이블/컬럼/row count만 확인 |
-| Feature Flag UI | frontend tests/build + `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md` 업데이트 여부 확인 |
+- 변경 전 문제와 변경 후 동작
+- 범위·파일 소유권·호환성·데이터 보존 영향
+- 실행한 검증과 결과, 미검증 범위
+- 필요한 설정·migration 및 다음 작업
 
----
+작은 단일 작업은 별도 인계 파일 없이 PR·최종 보고로 충분합니다. 회의·내부 승인 대화·에이전트 실행 기록은 Notion에 남기며 제품 문서에 복제하지 않습니다.
 
-## 11. Feature Flag 작업 시 주의사항
-
-1. Supabase raw DB를 직접 query source로 추가하지 않습니다.
-2. query-backed segment는 서버 allowlist template만 사용합니다.
-3. `D1_MAIN_DATABASE_ID` 누락은 빈 segment 성공이 아니라 실패로 처리해야 합니다.
-4. Discord active user segment는 현재 `is_bot` 컬럼이 없으므로 bot 제외를 전제로 쓰지 않습니다.
-5. UI 텍스트를 추가/수정하면 KO/EN을 함께 반영합니다.
-6. operator-facing UI는 loading/error/empty/success 상태를 테스트에 포함합니다.
-7. rule builder는 100% rollout, disabled/archived flag, refresh 실패 같은 위험 상태를 눈에 띄게 표시해야 합니다.
+운영 반영은 저장소의 기존 승인·배포 규칙을 따릅니다. docs-only 변경은 기존 파이프라인의 경로 제외를 유지하고, 자동화가 처리하는 이미지 변경·배포를 중복 실행하지 않습니다.

@@ -34,7 +34,7 @@ Owner: experiment-lab
 3. `docs/guides/agent_collaboration.md`
 4. `docs/guides/design_system.md`
 5. `docs/guides/experiment_platform_concepts.md`
-6. `docs/reports/feature-flag-improvement-plan.md`
+6. [과거 문서: feature-flag-improvement-plan](https://app.notion.com/p/418c883aedfc8137b169c4ac706a7295?pvs=204)
 7. `docs/reports/handoffs/2026-05-18-feature-flag-ui-handoff.md`
 
 ## Current Backend/API State

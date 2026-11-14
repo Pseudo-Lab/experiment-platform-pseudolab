@@ -133,11 +133,11 @@ README의 13기 목표는 실제 서비스 실험 최소 1회와 결과·후속 
 | [README](../../README.md) | 제품 정의, 13기 목표, 실제 서비스 개선 사이클 |
 | [결정 로그](decision-log.md) | raw DB 접근 제한, 준실험과 플랫폼 고도화 분리 |
 | [개념 가이드](../guides/experiment_platform_concepts.md) | 실험·플래그·세그먼트 용어와 데이터 경로. 오래된 ‘다음 작업’은 재검증 필요 |
-| [기반 계획](experiment-platform-foundation-plan.md) | 초기 모델과 설계 배경. 상태 표는 현재 완료 목록으로 사용하지 않음 |
-| [대시보드 MVP](../dashboard-mvp-plan.md) / [실행 계획](dashboard-execution-plan-v1.md) / [재정렬 계획](team-lead-rebaseline-plan.md) | 초기 화면 요구와 커뮤니티 대시보드 배경. 현재 서비스 범위와 충돌하는 부분 식별 |
-| [KPI 정의](kpi-definition-v2.md) | GitHub/Discord 활동 지표의 범위 확인. 실험 성공 지표와 혼용하지 않음 |
-| [Feature Flag 계획](feature-flag-improvement-plan.md) | 설정·대상·노출의 설계 방향. 과거 운영 수치·외부 제품 정보는 현재 검증으로 승격하지 않음 |
-| [SDK/API 계획](sdk-api-external-service-integration-work-plan-2026-06-08.md) / [협업 계획](lvup-experiment-collaboration-plan-2026-06-08.md) | 표준 연동 목표·서비스 책임 경계. 최종 계약이 아닌 초안 |
+| [기반 계획 — 과거 기록](https://app.notion.com/p/418c883aedfc8178bb2ff17c05bcb5b1?pvs=204) | 초기 모델과 설계 배경. 상태 표는 현재 완료 목록으로 사용하지 않음 |
+| [대시보드 MVP — 과거 기록](https://app.notion.com/p/418c883aedfc81a286afe64e30885984?pvs=204) / [실행 계획 — 과거 기록](https://app.notion.com/p/418c883aedfc810c8ad5f442e1c05492?pvs=204) / [재정렬 계획 — 과거 기록](https://app.notion.com/p/418c883aedfc81bfb531d221424e4cbe?pvs=204) | 초기 화면 요구와 커뮤니티 대시보드 배경. 현재 서비스 범위와 충돌하는 부분 식별 |
+| [KPI 정의 — 과거 기록](https://app.notion.com/p/418c883aedfc8197a300ccc70de46981?pvs=204) | GitHub/Discord 활동 지표의 범위 확인. 실험 성공 지표와 혼용하지 않음 |
+| [Feature Flag 계획 — 과거 기록](https://app.notion.com/p/418c883aedfc8137b169c4ac706a7295?pvs=204) | 설정·대상·노출의 설계 방향. 과거 운영 수치·외부 제품 정보는 현재 검증으로 승격하지 않음 |
+| [SDK/API 계획 — 과거 기록](https://app.notion.com/p/418c883aedfc81d6a17fd6dc826b9629?pvs=204) / [협업 계획 — 과거 기록](https://app.notion.com/p/418c883aedfc8179b9a0f6f2565c96b4?pvs=204) | 표준 연동 목표·서비스 책임 경계. 최종 계약이 아닌 초안 |
 | [SDK README](../../packages/sdk/README.md) / [SDK 코드](../../packages/sdk/src/core.ts) | 설치 안내와 실제 ID·노출 동작 대조 |
 | [UI 반영 기록](handoffs/2026-10-25-experiment-ui-release.md) | 기존 UI 변경 범위와 검증 시점 |
 | [키 분리·삭제 정책](key-rotation-2026-10-28.md) | 현재 main 보안 계약과 #26 통합 주의점 |
