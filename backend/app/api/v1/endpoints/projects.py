@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, Request, Query
 from typing import List
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectApiKey, ProjectSdkStatus
 from app.services.project import project_service
@@ -61,9 +61,9 @@ async def get_project(project_id: str, request: Request):
     return p
 
 
-@router.get("/{project_id}/sdk-status", response_model=ProjectSdkStatus)
-async def get_sdk_status(project_id: str):
-    return await project_service.sdk_status(project_id)
+@router.get("/{project_id}/sdk-status", response_model=ProjectSdkStatus, response_model_exclude_unset=True)
+async def get_sdk_status(project_id: str, experiment_id: str | None = Query(default=None, min_length=1)):
+    return await project_service.sdk_status(project_id, experiment_id)
 
 
 @router.patch("/{project_id}", response_model=Project)

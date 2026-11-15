@@ -65,6 +65,32 @@ def test_accounts_projects_and_revocation(clients, mock_d1):
     assert admin.get('/api/v1/projects/', headers={'Cookie': f'{settings.AUTH_COOKIE_NAME}={admin_token}'}).status_code == 401
 
 
+def test_sdk_diagnostics_preserves_project_and_result_authorization(clients, mock_d1):
+    a, b, _ = clients
+    key = project(a, 'diagnostic-a')
+    project(b, 'diagnostic-b')
+    assert a.post('/api/v1/feature-flags/', json={
+        'flag_key': 'diag-flag', 'project_id': 'diagnostic-a', 'enabled': True,
+    }).status_code == 201
+    assert a.post('/api/v1/experiments/', json={
+        'id': 'diag-exp', 'name': 'Diagnostic', 'project_id': 'diagnostic-a',
+        'flag_key': 'diag-flag', 'event_model': 'sdk_v1', 'primary_metric': 'purchase',
+    }).status_code == 201
+    path = '/api/v1/projects/diagnostic-a/sdk-status?experiment_id=diag-exp'
+    assert a.get(path).json()['diagnostics']['supported'] is True
+    assert b.get(path).status_code == 404
+    assert b.get('/api/v1/projects/diagnostic-b/sdk-status?experiment_id=diag-exp').status_code == 404
+    anonymous = TestClient(app, base_url='https://testserver')
+    assert anonymous.get(path, headers={'X-API-Key': key}).status_code == 401
+    mock_d1.execute("INSERT INTO project_member(project_id,account_id,role) VALUES ('diagnostic-a','b','viewer')")
+    # sdk-status already allows members to read aggregates; keys and /result remain protected.
+    assert b.get(path).status_code == 200
+    assert b.get('/api/v1/projects/diagnostic-a/api-key').status_code == 403
+    assert b.get('/api/v1/experiments/diag-exp/result').status_code == 403
+    mock_d1.execute("DELETE FROM project_member WHERE project_id='diagnostic-a' AND account_id='b'")
+    assert b.get(path).status_code == 404
+
+
 def test_automatic_project_id_keeps_ownership_and_sdk_scope(clients, mock_d1):
     a, b, _ = clients
     response = a.post('/api/v1/projects/', json={'name': 'Automatic'})

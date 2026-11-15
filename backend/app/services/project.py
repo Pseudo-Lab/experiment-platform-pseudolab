@@ -4,8 +4,9 @@ import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import HTTPException
-from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectWithKey
+from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectWithKey, ProjectSdkDiagnostics
 from app.db import d1
+from app.services.sdk_readout import read_bounded_diagnostics
 
 
 class ProjectService:
@@ -91,22 +92,37 @@ class ProjectService:
         if sorted(row.get("token_hash", "") for row in rows) != active:
             raise HTTPException(409, "Server credential changed concurrently")
 
-    async def sdk_status(self, project_id: str) -> dict:
-        existing = await d1.query("SELECT 1 FROM projects WHERE id = ?", [project_id])
+    async def sdk_status(self, project_id: str, experiment_id: str | None = None) -> dict:
+        existing = await d1.security_query("SELECT 1 FROM projects WHERE id = ?", [project_id])
         if not existing:
             raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
 
         cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-        events = await d1.query(
+        events = await d1.security_query(
             "SELECT 1 FROM event_log WHERE project_id = ? AND created_at >= ? LIMIT 1",
             [project_id, cutoff],
         )
-        exposures = await d1.query(
+        exposures = await d1.security_query(
             "SELECT 1 FROM feature_flag_exposure WHERE project_id = ? AND evaluated_at >= ? LIMIT 1",
             [project_id, cutoff],
         )
         connected = bool(events or exposures)
-        return {"project_id": project_id, "status": "connected" if connected else "not_connected"}
+        result = {"project_id": project_id, "status": "connected" if connected else "not_connected"}
+        if experiment_id is not None:
+            experiments = await d1.security_query(
+                "SELECT event_model, experiment_type, primary_metric FROM experiments WHERE id=? AND project_id=?",
+                [experiment_id, project_id],
+            )
+            if not experiments:
+                raise HTTPException(404, 'Experiment not found')
+            diagnostics = await read_bounded_diagnostics(experiment_id, project_id) if (
+                experiments[0]['event_model'] == 'sdk_v1' and experiments[0]['experiment_type'] == 'ab_test'
+            ) else None
+            result['diagnostics'] = diagnostics or ProjectSdkDiagnostics(
+                experiment_id=experiment_id, supported=False, source='unsupported',
+                goal_event=experiments[0]['primary_metric'],
+            ).model_dump()
+        return result
 
     async def delete(self, project_id: str) -> None:
         existing = await d1.security_query("SELECT 1 FROM projects WHERE id = ?", [project_id])

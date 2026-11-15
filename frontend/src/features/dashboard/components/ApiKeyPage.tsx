@@ -7,8 +7,9 @@ import {
   FolderOpen, CheckCircle2, Clock, Loader2, FlaskConical,
   ChevronRight,
 } from 'lucide-react';
-import { projectApi, experimentApi, type ProjectSdkStatus, type Experiment } from '../../../services/api';
+import { projectApi, experimentApi, type Experiment } from '../../../services/api';
 import { useProject } from '../../../contexts/ProjectContext';
+import { SdkDiagnostics } from './SdkDiagnostics';
 
 interface Props { lang: 'en' | 'ko'; }
 
@@ -46,8 +47,11 @@ const tr = {
     sdkConnected: '연결됨',
     sdkNotConnected: 'SDK 대기 중',
     sdkChecking: '확인 중...',
-    sdkConnectedDesc: 'SDK가 정상적으로 연결되어 실험 데이터를 수집하고 있습니다.',
-    sdkNotConnectedDesc: '아직 수신된 이벤트가 없습니다. 연결된 서비스의 SDK 설정을 확인하세요.',
+    sdkConnectedDesc: '최근 30일 이내 이벤트 또는 플래그 평가 기록이 있습니다. 실험 집계 반영 여부는 아래에서 별도로 확인하세요.',
+    sdkNotConnectedDesc: '최근 30일 이내 이벤트·플래그 평가 기록이 없습니다. 연결된 서비스의 요청 응답과 SDK 설정을 확인하세요.',
+    sdkError: 'SDK 연결 기록을 불러오지 못했습니다. 다시 시도해 주세요.',
+    experimentsError: '실험 목록을 불러오지 못했습니다. 다시 시도해 주세요.',
+    refresh: '새로고침',
     abExperiments: 'A/B 테스트 실험',
     abExperimentsDesc: '이 프로젝트에 연결된 A/B 테스트 실험 목록입니다.',
     noAbExperiments: '연결된 A/B 테스트 실험이 없습니다.',
@@ -71,8 +75,11 @@ const tr = {
     sdkConnected: 'Connected',
     sdkNotConnected: 'Awaiting connection',
     sdkChecking: 'Checking...',
-    sdkConnectedDesc: 'The SDK is connected and collecting experiment data.',
-    sdkNotConnectedDesc: 'No events received yet. Check the SDK configuration of the connected service.',
+    sdkConnectedDesc: 'An event or flag evaluation was recorded in the last 30 days. Check experiment readout inclusion separately below.',
+    sdkNotConnectedDesc: 'No event or flag evaluation was recorded in the last 30 days. Check request responses and the SDK configuration in your service.',
+    sdkError: 'Could not load SDK connection records. Please retry.',
+    experimentsError: 'Could not load experiments. Please retry.',
+    refresh: 'Refresh',
     abExperiments: 'A/B Test Experiments',
     abExperimentsDesc: 'A/B test experiments linked to this project.',
     noAbExperiments: 'No A/B test experiments yet.',
@@ -128,32 +135,36 @@ export function ApiKeyPage({ lang }: Props) {
     return () => { cancelled = true; };
   }, [projectId, currentProject?.access_role, keyAttempt]);
 
-  const [sdkStatus, setSdkStatus] = useState<'checking' | 'connected' | 'not_connected'>('checking');
+  const [sdkStatus, setSdkStatus] = useState<'checking' | 'connected' | 'not_connected' | 'error'>('checking');
   const [abExperiments, setAbExperiments] = useState<Experiment[]>([]);
+  const [experimentsState, setExperimentsState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [statusAttempt, setStatusAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setSdkStatus('checking');
     setAbExperiments([]);
+    setExperimentsState('loading');
     if (!projectId || currentProject?.access_role === 'viewer') return;
     projectApi.sdkStatus(projectId)
       .then((r) => {
         if (!cancelled) setSdkStatus(r.status === 'connected' ? 'connected' : 'not_connected');
       })
       .catch(() => {
-        if (!cancelled) setSdkStatus('not_connected');
+        if (!cancelled) setSdkStatus('error');
       });
     experimentApi.list()
       .then((all) => {
         if (!cancelled) {
           setAbExperiments(all.filter((e) => e.experiment_type === 'ab_test' && e.project_id === projectId));
+          setExperimentsState('ready');
         }
       })
       .catch(() => {
-        if (!cancelled) setAbExperiments([]);
+        if (!cancelled) setExperimentsState('error');
       });
     return () => { cancelled = true; };
-  }, [projectId, currentProject?.access_role]);
+  }, [projectId, currentProject?.access_role, statusAttempt]);
 
   if (!currentProject) {
     return (
@@ -216,9 +227,12 @@ export function ApiKeyPage({ lang }: Props) {
       {/* SDK Status */}
       <Card className="rounded-2xl border border-slate-200 dark:border-slate-800">
         <CardContent className="pt-5 space-y-2">
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t.sdkStatus}</p>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">{t.sdkStatus}</h2>
+            <Button variant="outline" size="sm" disabled={sdkStatus === 'checking'} onClick={() => setStatusAttempt(n => n + 1)}>{sdkStatus === 'error' ? t.retry : t.refresh}</Button>
+          </div>
           <div className="flex items-center gap-2">
-            {sdkStatus === 'checking' ? (
+            {sdkStatus === 'error' ? <p role="alert" className="text-sm text-destructive">{t.sdkError}</p> : sdkStatus === 'checking' ? (
               <>
                 <Loader2 size={16} className="animate-spin text-slate-400" />
                 <span className="text-sm text-slate-400">{t.sdkChecking}</span>
@@ -235,9 +249,10 @@ export function ApiKeyPage({ lang }: Props) {
               </>
             )}
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          {sdkStatus !== 'error' && sdkStatus !== 'checking' && <p className="text-sm text-muted-foreground leading-relaxed">
             {sdkStatus === 'connected' ? t.sdkConnectedDesc : t.sdkNotConnectedDesc}
-          </p>
+          </p>}
+          {experimentsState === 'ready' && <SdkDiagnostics key={projectId} projectId={currentProject.id} experiments={abExperiments} lang={lang} />}
         </CardContent>
       </Card>
 
@@ -259,7 +274,9 @@ export function ApiKeyPage({ lang }: Props) {
               {t.goCreateExperiment}
             </Button>
           </div>
-          {abExperiments.length === 0 ? (
+          {experimentsState === 'error' ? <div role="alert" className="text-sm text-destructive">{t.experimentsError} <Button variant="outline" onClick={() => setStatusAttempt(n => n + 1)}>{t.retry}</Button></div>
+            : experimentsState === 'loading' ? <p role="status" className="text-sm text-muted-foreground">{t.sdkChecking}</p>
+            : abExperiments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-slate-400 gap-2">
               <FlaskConical size={28} className="opacity-30" />
               <p className="text-sm">{t.noAbExperiments}</p>

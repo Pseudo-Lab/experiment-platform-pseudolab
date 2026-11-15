@@ -22,6 +22,21 @@ export interface ProjectCreate {
 export interface ProjectSdkStatus {
   project_id: string;
   status: 'connected' | 'not_connected';
+  diagnostics?: ProjectSdkDiagnostics;
+}
+export interface ProjectSdkDiagnostics {
+  experiment_id: string;
+  supported: boolean;
+  source: 'raw' | 'snapshot' | 'unsupported';
+  goal_event: string | null;
+  exposures: number;
+  actions: number;
+  included_exposures: number;
+  included_actions: number;
+  goal_actions: number;
+  unmatched_actions: number;
+  outside_window_actions: number;
+  policy_excluded_events: number;
 }
 export interface VisualChange {
   id: string;
@@ -108,8 +123,9 @@ export const projectApi = {
       throw Object.assign(new Error('Failed to delete project'), { status: res.status, reason });
     }
   },
-  sdkStatus: async (id: string): Promise<ProjectSdkStatus> => {
-    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}/sdk-status`);
+  sdkStatus: async (id: string, experimentId?: string): Promise<ProjectSdkStatus> => {
+    const query = experimentId ? `?experiment_id=${encodeURIComponent(experimentId)}` : '';
+    const res = await apiFetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}/sdk-status${query}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Failed to fetch SDK status');
     return res.json();
   },

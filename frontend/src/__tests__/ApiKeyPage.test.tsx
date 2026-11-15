@@ -54,7 +54,7 @@ it.each(['ko', 'en'] as const)('shows loading, failure, retry and masked key in 
     { id: 'exp-other', name: 'Other Project Test', experiment_type: 'ab_test', project_id: 'second', status: 'running' } as any,
   ]);
   render(page(lang));
-  expect(screen.getByRole('status')).toHaveTextContent(lang === 'ko' ? '키를 불러오는 중' : 'Loading key');
+  expect(screen.getByText(lang === 'ko' ? '키를 불러오는 중...' : 'Loading key...')).toHaveAttribute('role', 'status');
   await act(async () => reject(new Error('unavailable')));
   expect(screen.getByRole('alert')).toHaveTextContent(lang === 'ko' ? '키를 불러오지 못했습니다' : 'Failed to load key');
   fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '다시 시도' : 'Retry' }));
@@ -121,4 +121,25 @@ it.each(['ko', 'en'] as const)('does not fetch SDK keys, status, or experiments 
   expect(projectApi.getApiKey).not.toHaveBeenCalled();
   expect(projectApi.sdkStatus).not.toHaveBeenCalled();
   expect(experimentApi.list).not.toHaveBeenCalled();
+});
+
+it.each(['ko', 'en'] as const)('keeps failed connection checks distinct from missing records and retries in %s', async lang => {
+  vi.mocked(projectApi.getApiKey).mockResolvedValue({ api_key: 'test-key' });
+  vi.mocked(projectApi.sdkStatus).mockRejectedValueOnce(new Error('storage unavailable'))
+    .mockResolvedValueOnce({ project_id: 'first', status: 'connected' });
+  render(page(lang));
+  expect(await screen.findByRole('alert')).toHaveTextContent(lang === 'ko' ? 'SDK 연결 기록을 불러오지 못했습니다' : 'Could not load SDK connection records');
+  expect(screen.queryByText(lang === 'ko' ? 'SDK 대기 중' : 'Awaiting connection')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: lang === 'ko' ? '다시 시도' : 'Retry' }));
+  expect(await screen.findByText(lang === 'ko' ? '연결됨' : 'Connected')).toBeInTheDocument();
+  expect(screen.getByText(lang === 'ko' ? /최근 30일 이내 이벤트 또는/ : /An event or flag evaluation was recorded/)).toBeInTheDocument();
+});
+
+it('does not present a failed experiment list as an empty list', async () => {
+  vi.mocked(projectApi.getApiKey).mockResolvedValue({ api_key: 'test-key' });
+  vi.mocked(experimentApi.list).mockRejectedValue(new Error('unavailable'));
+  render(page());
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not load experiments');
+  expect(screen.queryByText('No A/B test experiments yet.')).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
 });
