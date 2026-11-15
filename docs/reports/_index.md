@@ -1,5 +1,5 @@
 Status: active
-Last-Validated: 2026-11-15
+Last-Validated: 2026-11-16
 
 # 공개 기술 문서 인덱스
 
@@ -8,7 +8,7 @@ Last-Validated: 2026-11-15
 | 주제 | 공개 문서 |
 | --- | --- |
 | 제품·구조 | [핵심 개념](../guides/experiment_platform_concepts.md), [아키텍처](../guides/architecture.md) |
-| 서비스 SDK 연동 | [SDK README](../../packages/sdk/README.md), [패키징·연동](../../packages/sdk/SDK_PACKAGING_GUIDE.md) |
+| 서비스 SDK 연동 | [SDK 가이드](https://iterglow.pseudolab-devfactory.com/docs/sdk), [API·이벤트 계약](../../packages/sdk/README.md), [패키징·연동](../../packages/sdk/SDK_PACKAGING_GUIDE.md) |
 | 설치·데이터 저장소 | [설치](../guides/setup_guide.md), [데이터 접근](../guides/data_access.md) |
 | 프로젝트·초대·키 | [프로젝트 접근](../guides/project-access.md) |
 | 서버 접근 정책 | [서버 간 접근 판정](../guides/access-decision.md) |

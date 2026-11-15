@@ -67,5 +67,6 @@
     "ab-test",
     "sdk"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "homepage": "https://iterglow.pseudolab-devfactory.com/docs/sdk"
 }

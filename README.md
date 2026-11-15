@@ -4,7 +4,7 @@
 
 Iterglow는 서비스의 기능을 사용자별로 나누어 제공하고, 실제 노출과 행동을 수집해 결과를 비교하는 플랫폼입니다. 서비스별 사용자 식별자·이벤트·목표 지표를 정의하고 SDK로 연결할 수 있습니다.
 
-[서비스](https://iterglow.pseudolab-devfactory.com) · [팀 소개 및 활동](https://pseudo-lab.github.io/experiment-platform-pseudolab/) · [문서](docs/README.md) · [SDK](packages/sdk/README.md) · [기여 가이드](docs/guides/agent_collaboration.md) · [Issues](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues)
+[서비스](https://iterglow.pseudolab-devfactory.com) · [팀 소개 및 활동](https://pseudo-lab.github.io/experiment-platform-pseudolab/) · [문서](docs/README.md) · [SDK 가이드](https://iterglow.pseudolab-devfactory.com/docs/sdk) · [기여 가이드](docs/guides/agent_collaboration.md) · [Issues](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues)
 
 ## 주요 기능
 
@@ -23,7 +23,7 @@ Iterglow는 서비스의 기능을 사용자별로 나누어 제공하고, 실�
 
 1. Iterglow에 로그인하고 프로젝트 생성 또는 초대 수락.
 2. 자신의 프로젝트 공개 SDK 키와 설치의 API 주소 확인.
-3. [SDK 가이드](packages/sdk/README.md)에 따라 variant 판단, 실제 노출, 행동 전송 연결.
+3. [SDK 가이드](https://iterglow.pseudolab-devfactory.com/docs/sdk)에 따라 variant 판단, 실제 노출, 행동 전송 연결.
 4. 수집 이벤트와 접근 가능한 결과 화면에서 연결 상태 확인.
 
 ```bash
@@ -31,6 +31,8 @@ npm install @pseudo-lab/iterglow-sdk
 ```
 
 브라우저에는 공개 SDK 키를 사용합니다. 서버 credential과 설치 관리자 자격증명은 브라우저에 전달하지 않습니다.
+
+셀프호스팅 환경에서는 사용하는 Iterglow 설치의 `/docs/sdk`를 확인하세요. 위 SDK 가이드 링크는 공식 공개 서비스의 안내입니다.
 
 ### 직접 설치·개발
 
@@ -43,7 +45,7 @@ npm install @pseudo-lab/iterglow-sdk
 | 목적 | 가이드 |
 | --- | --- |
 | 플랫폼 이해 | [핵심 개념](docs/guides/experiment_platform_concepts.md), [아키텍처](docs/guides/architecture.md) |
-| 서비스 연결 | [SDK](packages/sdk/README.md), [패키징·연동](packages/sdk/SDK_PACKAGING_GUIDE.md) |
+| 서비스 연결 | [SDK 가이드](https://iterglow.pseudolab-devfactory.com/docs/sdk), [API·이벤트 계약](packages/sdk/README.md), [패키징·연동](packages/sdk/SDK_PACKAGING_GUIDE.md) |
 | 설치·데이터 저장소 | [설치](docs/guides/setup_guide.md), [데이터 접근](docs/guides/data_access.md) |
 | 프로젝트·초대·키 | [접근 권한](docs/guides/project-access.md) |
 | 서버 접근 정책 | [접근 판정 API](docs/guides/access-decision.md) |
