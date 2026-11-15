@@ -2,6 +2,13 @@
 
 Iterglow의 실험 설정을 서비스에 연결하는 JavaScript/TypeScript SDK입니다. A/B 버전을 배정하고, 실제 화면 노출과 사용자 행동을 기록할 수 있습니다. React 18 이상을 지원합니다.
 
+**[공식 SDK 가이드](https://iterglow.pseudolab-devfactory.com/docs/sdk)**에서 설치부터 첫 실험 연결까지 확인하세요. 아래 내용은 API·이벤트 계약 참고입니다.
+
+For setup and your first integration, use the [official SDK guide](https://iterglow.pseudolab-devfactory.com/docs/sdk). This README covers API and event-contract details.
+
+셀프호스팅에서는 사용하는 Iterglow 인스턴스의 `/docs/sdk`를 먼저 확인하세요. 위 링크는 공식 공개 서비스의 가이드입니다.
+For self-hosted installations, use `/docs/sdk` on your own Iterglow instance; the link above points to the official hosted guide.
+
 ## 설치
 
 ```bash
