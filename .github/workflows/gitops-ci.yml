@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FRONTEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-pseudolab-frontend
-  BACKEND_IMAGE: ghcr.io/pseudo-lab/experiment-platform-pseudolab-backend
+  FRONTEND_IMAGE: ghcr.io/pseudo-lab/iterglow-frontend
+  BACKEND_IMAGE: ghcr.io/pseudo-lab/iterglow-backend
   IMAGE_PLATFORMS: linux/arm64
   OPS_REPO: pseudo-lab/DevFactory-Ops
   OPS_KUSTOMIZATION_FILE: services/experiment-platform-pseudolab/overlays/prod/kustomization.yaml
@@ -52,8 +52,6 @@ jobs:
           tags: |
             ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}
             ${{ env.FRONTEND_IMAGE }}:latest
-            ghcr.io/pseudo-lab/iterglow-frontend:${{ env.IMAGE_TAG }}
-            ghcr.io/pseudo-lab/iterglow-frontend:latest
 
       - name: Build and push backend image
         uses: docker/build-push-action@v6
@@ -67,8 +65,6 @@ jobs:
           tags: |
             ${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}
             ${{ env.BACKEND_IMAGE }}:latest
-            ghcr.io/pseudo-lab/iterglow-backend:${{ env.IMAGE_TAG }}
-            ghcr.io/pseudo-lab/iterglow-backend:latest
 
   update-ops-repo:
     needs: build-and-push
@@ -88,15 +84,15 @@ jobs:
         uses: mikefarah/yq@v4.44.5
         with:
           cmd: |
-            yq -i '(.images[] | select(.name == "${{ env.FRONTEND_IMAGE }}").newTag) = "${{ env.IMAGE_TAG }}"' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }}
-            yq -i '(.images[] | select(.name == "${{ env.BACKEND_IMAGE }}").newTag) = "${{ env.IMAGE_TAG }}"' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }}
+            yq -i '(.images[] | select(.newName == "${{ env.FRONTEND_IMAGE }}").newTag) = "${{ env.IMAGE_TAG }}"' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }}
+            yq -i '(.images[] | select(.newName == "${{ env.BACKEND_IMAGE }}").newTag) = "${{ env.IMAGE_TAG }}"' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }}
 
       - name: Verify production image tags were updated
         uses: mikefarah/yq@v4.44.5
         with:
           cmd: |
-            FRONTEND_TAG=$(yq -r '.images[] | select(.name == "${{ env.FRONTEND_IMAGE }}") | .newTag // ""' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }})
-            BACKEND_TAG=$(yq -r '.images[] | select(.name == "${{ env.BACKEND_IMAGE }}") | .newTag // ""' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }})
+            FRONTEND_TAG=$(yq -r '.images[] | select(.newName == "${{ env.FRONTEND_IMAGE }}") | .newTag // ""' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }})
+            BACKEND_TAG=$(yq -r '.images[] | select(.newName == "${{ env.BACKEND_IMAGE }}") | .newTag // ""' devfactory-ops/${{ env.OPS_KUSTOMIZATION_FILE }})
 
             if [ -z "$FRONTEND_TAG" ] || [ "$FRONTEND_TAG" != "${{ env.IMAGE_TAG }}" ]; then
               echo "Frontend image entry missing or newTag mismatch. Expected ${{ env.IMAGE_TAG }}, got '$FRONTEND_TAG'"
