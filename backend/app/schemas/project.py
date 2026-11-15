@@ -30,9 +30,25 @@ class ProjectUpdate(BaseModel):
     base_url: Optional[str] = None
 
 
+class ProjectSdkDiagnostics(BaseModel):
+    experiment_id: str
+    supported: bool
+    source: Literal['raw', 'snapshot', 'unsupported']
+    goal_event: Optional[str] = None
+    exposures: int = Field(default=0, ge=0)
+    actions: int = Field(default=0, ge=0)
+    included_exposures: int = Field(default=0, ge=0)
+    included_actions: int = Field(default=0, ge=0)
+    goal_actions: int = Field(default=0, ge=0)
+    unmatched_actions: int = Field(default=0, ge=0)
+    outside_window_actions: int = Field(default=0, ge=0)
+    policy_excluded_events: int = Field(default=0, ge=0)
+
+
 class ProjectSdkStatus(BaseModel):
     project_id: str
     status: str  # "connected" | "not_connected"
+    diagnostics: Optional[ProjectSdkDiagnostics] = None
 
 
 class ProjectApiKey(BaseModel):

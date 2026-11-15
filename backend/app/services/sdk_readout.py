@@ -101,6 +101,59 @@ _JSON = """json_object(
     'attributed',attributed)"""
 
 
+async def read_bounded_diagnostics(experiment_id: str, project_id: str) -> dict | None:
+    """Read aggregate diagnostics from the same input and rules as the readout.
+
+    This must not call read_bounded_input: inspecting an integration never creates
+    a snapshot or finalizes a result. Frozen input remains the diagnostic basis
+    even after raw-event cleanup; it is not a history of every received request.
+    """
+    # The aggregate reuses eligible in several correlated subqueries. Without
+    # this fence SQLite can repeatedly expand the full eligibility query per
+    # event. Materialize only for diagnostics; the readout SQL is unchanged.
+    diagnostic_rows = _ROWS.replace(', eligible AS (', ', eligible AS MATERIALIZED (', 1)
+    rows = await d1.security_query(_CONTEXT + _READ_CONTEXT + diagnostic_rows + """,
+        sdk_candidates AS (
+            SELECT * FROM candidates WHERE json_extract(properties,'$.event_model')='sdk_v1'
+                AND json_extract(properties,'$.sdk_event_type') IN ('exposure','click','conversion')
+        ), matched_actions AS (
+            SELECT e.id FROM eligible e WHERE e.sdk_event_type<>'exposure' AND EXISTS (
+                SELECT 1 FROM eligible x WHERE x.user_id=e.user_id AND x.variant=e.variant
+                    AND x.session_id=e.session_id AND x.event_time<=e.event_time
+                    AND x.sdk_event_type='exposure' AND x.impression_id=e.impression_id
+                    AND x.assignment_id=e.assignment_id
+            )
+        )
+        SELECT c.history_valid,c.frozen,c.input_sealed,
+            COALESCE(json_extract(c.locked_json,'$.primary_metric'),
+                (SELECT primary_metric FROM experiments WHERE id=c.experiment_id)) AS goal_event,
+            (SELECT count(*) FROM sdk_candidates
+                WHERE json_extract(properties,'$.sdk_event_type')='exposure') AS exposures,
+            (SELECT count(*) FROM sdk_candidates
+                WHERE json_extract(properties,'$.sdk_event_type')<>'exposure') AS actions,
+            (SELECT count(*) FROM canonical WHERE sdk_event_type='exposure') AS included_exposures,
+            (SELECT count(*) FROM canonical WHERE sdk_event_type<>'exposure' AND attributed=1) AS included_actions,
+            (SELECT count(*) FROM canonical WHERE sdk_event_type<>'exposure' AND attributed=1
+                AND event_name=json_extract(c.locked_json,'$.primary_metric')) AS goal_actions,
+            (SELECT count(*) FROM eligible e WHERE sdk_event_type<>'exposure'
+                AND NOT EXISTS (SELECT 1 FROM matched_actions m WHERE m.id=e.id)) AS unmatched_actions,
+            (SELECT count(*) FROM matched_actions m
+                WHERE NOT EXISTS (SELECT 1 FROM canonical e WHERE e.id=m.id)) AS outside_window_actions,
+            (SELECT count(*) FROM sdk_candidates e
+                WHERE NOT EXISTS (SELECT 1 FROM eligible x WHERE x.id=e.id)) AS policy_excluded_events
+        FROM read_context c""", [experiment_id, experiment_id, project_id])
+    if not rows:
+        return None
+    row = rows[0]
+    if (row['frozen'] and row['input_sealed'] != 1) or (not row['frozen'] and not row['history_valid']):
+        raise HTTPException(503, 'SDK diagnostics unavailable')
+    return {key: value for key, value in row.items()
+            if key not in ('history_valid', 'frozen', 'input_sealed')} | {
+                'source': 'snapshot' if row['frozen'] else 'raw', 'supported': True,
+                'experiment_id': experiment_id,
+            }
+
+
 async def read_bounded_input(experiment_id: str, project_id: str | None) -> dict | None:
     params = [experiment_id, experiment_id, project_id]
     # A failed enrollment lookup must not silently downgrade to the historic reader.
