@@ -17,7 +17,7 @@ const copy = {
   ko: {
     label: 'A/B 테스트·실험 플랫폼', title: '더 나은 제품을 만드는', titleAccent: '실험의 시작.',
     description: 'Iterglow는 화면과 기능을 비교하고, 사용자 행동을 수집해 다음 결정을 돕는 실험 플랫폼입니다.',
-    login: '로그인', manage: '플랫폼 바로가기', features: '제품 기능', featuresLink: '제품 기능 살펴보기', flowLink: '사용 흐름',
+    manage: '플랫폼 바로가기', login: '로그인', loginRequired: '로그인 후 플랫폼으로 이동합니다.', features: '제품 기능', featuresLink: '제품 기능 살펴보기', flowLink: '사용 흐름',
     access: 'Google 로그인이 설정된 설치에서는 가입 후 자신의 프로젝트를 만들 수 있습니다.', integration: '서비스에 SDK 또는 API를 연동해 실험 데이터를 수집하세요.',
     cycle: '실험에서 다음 결정까지', uses: '가설부터 다음 결정까지.',
     usesText: '실험을 설계하고, 기능 공개와 수집 상태를 확인하고, 판단의 근거를 남기세요.',
@@ -42,7 +42,7 @@ const copy = {
   en: {
     label: 'A/B testing and experimentation platform', title: 'Better products start', titleAccent: 'with an experiment.',
     description: 'Iterglow is an experimentation platform for comparing screens and features, collecting user behavior, and informing your next decision.',
-    login: 'Sign in', manage: 'Open platform', features: 'Product', featuresLink: 'Explore the product', flowLink: 'Workflow',
+    manage: 'Open platform', login: 'Sign in', loginRequired: 'Sign in to continue to the platform.', features: 'Product', featuresLink: 'Explore the product', flowLink: 'Workflow',
     access: 'When Google sign-in is configured, create an account and your own projects.', integration: 'Connect your service through the SDK or API to collect experiment data.',
     cycle: 'From an experiment to your next decision', uses: 'From a hypothesis to your next decision.',
     usesText: 'Design experiments, check feature rollout and collection health, and record your reasoning.',
@@ -70,11 +70,11 @@ export function ServiceIntroPage({ lang, setLang, authenticated }: Props) {
   const t = copy[lang];
   const location = useLocation();
   const destination = authenticated ? '/experiments' : '/login';
-  const action = authenticated ? t.manage : t.login;
+  const platformState = { ...location.state, from: { pathname: '/experiments' } };
   return (
     <div className="service-entry min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 border-b border-border px-4 py-5 md:px-6">
-        <Link to="/" state={location.state} aria-label={lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home'} className="flex items-center gap-2 rounded-md text-lg font-bold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Link to="/" state={location.state} aria-label={lang === 'ko' ? 'Iterglow 홈' : 'Iterglow home'} className="flex min-w-0 items-center gap-2 rounded-md text-lg font-bold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <IterglowLogo lang={lang} />
         </Link>
         <nav aria-label={t.features} className="ml-auto hidden items-center gap-6 text-sm text-muted-foreground md:flex">
@@ -84,7 +84,7 @@ export function ServiceIntroPage({ lang, setLang, authenticated }: Props) {
         </nav>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} aria-label={t.language}><Globe aria-hidden="true" />{lang === 'ko' ? 'EN' : 'KO'}</Button>
-          <Button asChild className="ml-2 hidden lg:inline-flex"><Link to={destination} state={location.state}>{action}<ArrowRight aria-hidden="true" /></Link></Button>
+          <Button asChild variant={authenticated ? 'default' : 'ghost'} className={authenticated ? 'ml-2 hidden lg:inline-flex' : 'ml-2'}><Link to={destination} state={authenticated ? platformState : { ...location.state, from: { pathname: '/' } }}>{authenticated ? t.manage : t.login}</Link></Button>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 pb-10 md:px-6">
@@ -93,10 +93,10 @@ export function ServiceIntroPage({ lang, setLang, authenticated }: Props) {
           <h1 id="intro-title" className="mt-5 break-keep text-4xl font-bold leading-tight tracking-tight md:text-[3.375rem] md:leading-tight">{t.title}<br /><span className="text-primary">{t.titleAccent}</span></h1>
           <p className="mx-auto mt-5 max-w-2xl break-keep text-base leading-relaxed text-muted-foreground">{t.description}</p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg"><Link to={destination} state={location.state}>{action}<ArrowRight aria-hidden="true" /></Link></Button>
+            <Button asChild size="lg"><Link to={destination} state={platformState}>{t.manage}<ArrowRight aria-hidden="true" /></Link></Button>
             <Button asChild variant="outline" size="lg"><a href="#features">{t.featuresLink}</a></Button>
           </div>
-          <p className="mx-auto mt-4 max-w-xl text-xs leading-loose text-muted-foreground">{t.access}<br />{t.integration}</p>
+          <p className="mx-auto mt-4 max-w-xl text-xs leading-loose text-muted-foreground">{authenticated ? t.access : t.loginRequired}<br />{t.integration}</p>
         </section>
         <section aria-label={t.cycle} className="mx-auto mt-9 max-w-[1000px]">
           <ProductPreview lang={lang} />
