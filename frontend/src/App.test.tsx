@@ -106,7 +106,7 @@ describe('App Component', () => {
     await act(async () => { renderApp(['/']); });
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
     expect(screen.getAllByRole('link', { name: '플랫폼 바로가기' })[0])
-      .toHaveAttribute('href', authenticated ? '/experiments' : '/login');
+      .toHaveAttribute('href', authenticated ? '/experiments' : '/login?return_to=%2Fexperiments');
     expect(screen.queryByRole('link', { name: '로그인' }) !== null).toBe(!authenticated);
     expect(projectApi.list).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/status/'));
@@ -200,7 +200,7 @@ describe('App Component', () => {
     vi.spyOn(authApi, 'me').mockReturnValue(new Promise(() => {}));
     await act(async () => { renderApp(['/']); });
     expect(screen.getByRole('heading', { level: 1, name: /더 나은 제품을 만드는/  })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: '플랫폼 바로가기' })[0]).toHaveAttribute('href', '/login');
+    expect(screen.getAllByRole('link', { name: '플랫폼 바로가기' })[0]).toHaveAttribute('href', '/login?return_to=%2Fexperiments');
     expect(projectApi.list).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
   });

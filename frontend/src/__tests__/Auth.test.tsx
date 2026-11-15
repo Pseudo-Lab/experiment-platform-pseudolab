@@ -34,6 +34,38 @@ it('restores a session and returns to the original protected route', async () =>
   expect(await screen.findByText('authenticated:admin')).toBeInTheDocument();
 });
 
+it.each([
+  ['/', '/'],
+  ['/experiments?view=results#conversions', '/experiments?view=results#conversions'],
+  ['/projects#invite=synthetic-token', '/projects#invite=synthetic-token'],
+  ['//evil.invalid', '/projects'],
+  ['https://evil.invalid', '/projects'],
+  ['javascript:alert(1)', '/projects'],
+  ['/login?oauth=success', '/projects'],
+  ['/%2fexample', '/projects'],
+  ['/%252fexample', '/projects'],
+  ['/\\evil.invalid', '/projects'],
+  ['/\u0000example', '/projects'],
+])('restores only a safe URL destination without router state: %s', async (target, expected) => {
+  vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
+  function Destination() { const location = useLocation(); return <output>{location.pathname + location.search + location.hash}</output>; }
+  render(<MemoryRouter initialEntries={['/login?return_to=' + encodeURIComponent(target)]}><AuthProvider><Routes>
+    <Route path="/login" element={<LoginPage lang="en" setLang={() => {}} />} />
+    <Route path="*" element={<Destination />} />
+  </Routes></AuthProvider></MemoryRouter>);
+  expect(await screen.findByText(expected)).toBeInTheDocument();
+});
+
+it('keeps a protected route ahead of a conflicting URL destination', async () => {
+  vi.mocked(authApi.me).mockResolvedValue(authenticated);
+  function Destination() { const location = useLocation(); return <output>{location.pathname + location.search + location.hash}</output>; }
+  render(<MemoryRouter initialEntries={[{ pathname: '/login', search: '?return_to=%2F', state: { from: '/projects#invite=synthetic-token' } }]}><AuthProvider><Routes>
+    <Route path="/login" element={<LoginPage lang="en" setLang={() => {}} />} />
+    <Route path="*" element={<Destination />} />
+  </Routes></AuthProvider></MemoryRouter>);
+  expect(await screen.findByText('/projects#invite=synthetic-token')).toBeInTheDocument();
+});
+
 it.each(['ko', 'en'] as const)('offers Google as the only login entry in %s', async (lang) => {
   const login = vi.spyOn(authApi, 'login');
   vi.spyOn(global, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ google: true }) } as Response);
