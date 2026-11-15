@@ -1,7 +1,7 @@
 Status: active
 Last-Validated: 2026-11-16
 
-# Iterglow 이미지 전환·구형 게시 종료 준비
+# Iterglow 이미지 전환·구형 게시 종료
 
 ## 목표와 범위
 
@@ -14,7 +14,10 @@ Ops와 운영 Pod의 `iterglow-*` 이미지 전환을 확인한 다음 구형 GH
 - Ops main `5a88ed7dfaa510b2cc5340f0e36e8cf87849e4bc`: frontend/backend 모두 구형 `experiment-platform-pseudolab-*` 이미지, 태그는 앱 기준 SHA.
 - 운영 SSH 읽기 조회: 두 Deployment가 구형 이미지의 위 SHA로 실행 중이며 readyReplicas=1. ArgoCD `experiment-platform`은 위 Ops revision에 Synced/Healthy.
 - 공개 경로: 홈페이지 200, `/api/v1/status`는 후행 slash 리다이렉트 후 200, `/api/v1/auth/providers` 200 및 Google 제공자 활성.
-- **Ops 전환이 아직 완료되지 않았다. 구형 게시 종료와 운영 변경은 실행하지 않았다. Ops 전환·배포 승인 대기 중이다.**
+- 최초 조회에서 Ops 전환이 완료되지 않아 구형 게시 종료를 보류했다. 이후 사용자가 Ops 전환·운영 배포와 정상 확인 후 구형 게시 종료를 승인했다.
+- [Ops PR #35](https://github.com/Pseudo-Lab/DevFactory-Ops/pull/35)의 validate/terraform 성공 후 main `7e982a2f31582ec03889961b6199cb5eb3d896fd`에 반영했다. 기존 ArgoCD 자동 배포 후 두 Pod의 Iterglow 이미지 pull 성공(15:38:18 UTC), Ready=true, 재시작 0과 Synced/Healthy를 확인했다.
+- 전환 후 `iterglow.pseudolab-devfactory.com`과 `exp.pseudolab-devfactory.com`의 `/`, `/api/v1/status/`, `/api/v1/auth/providers`, `/api/v1/auth/me` 모두 200. Google 제공자 활성 상태 유지. 인증된 사용자 기능 검증은 포함하지 않는다.
+- imageID 문자열은 동일 content digest의 기존 구형 repo 별칭으로 표시되지만, Pod spec과 kubelet Pulled 이벤트가 새 Iterglow repo의 실제 pull 성공을 확인한다.
 
 ## 준비한 변경
 
@@ -51,4 +54,4 @@ Ops 전환 단계에서 실패하면 동일 SHA의 구형 `newName`으로 되돌
 
 ## 담당과 다음 작업
 
-Codex가 구현·통합 검증, Gemini Hydrogen XHigh가 읽기 전용 독립 검토를 담당한다. 다음 단계는 준비된 Ops 이미지 전환·운영 반영에 대한 사용자 승인이다. 현재 로컬 변경만 있으며 원격 반영은 없다.
+Codex가 구현·통합 검증, Gemini Hydrogen XHigh가 읽기 전용 독립 검토를 담당한다. 사용자 승인 후 Ops PR #35를 main에 반영했다. 새 이미지 운영 실행을 확인했고, 다음 단계는 앱 CI 변경 반영과 해당 SHA의 GitOps 배포 검증이다.
