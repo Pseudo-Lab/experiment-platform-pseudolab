@@ -18,12 +18,14 @@ interface LoginPageProps {
 export function LoginPage({ lang, setLang }: LoginPageProps) {
   const { state, user } = useAuth();
   const location = useLocation();
-  const oauthResult = new URLSearchParams(location.search).get('oauth');
+  const searchParams = new URLSearchParams(location.search);
+  const oauthResult = searchParams.get('oauth');
   const [oauthReturnPath] = useState(() => {
     if (!oauthResult) return null;
     try { return sessionStorage.getItem('oauthReturnPath'); } catch { return null; }
   });
   const requestedPath = safeReturnPath((location.state as { from?: unknown } | null)?.from)
+    || safeReturnPath(searchParams.get('return_to'))
     || safeReturnPath(oauthReturnPath);
   const nextPath = requestedPath || (user?.is_admin === false ? '/projects' : '/experiments');
   useEffect(() => {

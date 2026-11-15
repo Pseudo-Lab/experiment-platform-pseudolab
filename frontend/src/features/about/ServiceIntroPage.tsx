@@ -69,7 +69,7 @@ const copy = {
 export function ServiceIntroPage({ lang, setLang, authenticated }: Props) {
   const t = copy[lang];
   const location = useLocation();
-  const destination = authenticated ? '/experiments' : '/login';
+  const destination = authenticated ? '/experiments' : '/login?return_to=%2Fexperiments';
   const platformState = { ...location.state, from: { pathname: '/experiments' } };
   return (
     <div className="service-entry min-h-screen bg-background text-foreground">
@@ -84,7 +84,7 @@ export function ServiceIntroPage({ lang, setLang, authenticated }: Props) {
         </nav>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} aria-label={t.language}><Globe aria-hidden="true" />{lang === 'ko' ? 'EN' : 'KO'}</Button>
-          <Button asChild variant={authenticated ? 'default' : 'ghost'} className={authenticated ? 'ml-2 hidden lg:inline-flex' : 'ml-2'}><Link to={destination} state={authenticated ? platformState : { ...location.state, from: { pathname: '/' } }}>{authenticated ? t.manage : t.login}</Link></Button>
+          <Button asChild variant={authenticated ? 'default' : 'ghost'} className={authenticated ? 'ml-2 hidden lg:inline-flex' : 'ml-2'}><Link to={authenticated ? destination : '/login?return_to=%2F'} state={authenticated ? platformState : { ...location.state, from: { pathname: '/' } }}>{authenticated ? t.manage : t.login}</Link></Button>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 pb-10 md:px-6">
