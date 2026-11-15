@@ -149,17 +149,18 @@ it('enables Google login only when provider configuration is available', async (
 });
 
 
-it.each(['/api-key', '/bug-report', '/login', '/login?oauth=success', '//evil.invalid', '/\\evil.invalid', 'https://evil.invalid', '/%2fexample', '/%252fexample', '/%5cfoo', '/%0dfoo', '/\u007ffoo'])(
+it.each(['/', '/api-key', '/bug-report', '/login', '/login?oauth=success', '//evil.invalid', '/\\evil.invalid', 'https://evil.invalid', '/%2fexample', '/%252fexample', '/%5cfoo', '/%0dfoo', '/\u007ffoo'])(
   'restores only a safe local OAuth return path: %s', async (path) => {
     sessionStorage.setItem('oauthReturnPath', path);
     vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'member', is_admin: false } });
     render(<MemoryRouter initialEntries={['/login?oauth=success']}><AuthProvider><Routes>
       <Route path="/login" element={<LoginPage lang="en" setLang={() => {}} theme="light" setTheme={() => {}} />} />
+      <Route path="/" element={<span>Original destination</span>} />
       <Route path="/api-key" element={<span>Original destination</span>} />
       <Route path="/bug-report" element={<span>Original destination</span>} />
       <Route path="/projects" element={<span>Safe default destination</span>} />
     </Routes></AuthProvider></MemoryRouter>);
-    expect(await screen.findByText(['/api-key', '/bug-report'].includes(path) ? 'Original destination' : 'Safe default destination')).toBeInTheDocument();
+    expect(await screen.findByText(['/', '/api-key', '/bug-report'].includes(path) ? 'Original destination' : 'Safe default destination')).toBeInTheDocument();
     expect(sessionStorage.getItem('oauthReturnPath')).toBeNull();
   },
 );

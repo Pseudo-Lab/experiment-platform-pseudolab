@@ -105,10 +105,23 @@ describe('App Component', () => {
     authResponse = { authenticated, user: authenticated ? { username: 'admin' } : null };
     await act(async () => { renderApp(['/']); });
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
-    expect(screen.getAllByRole('link', { name: authenticated ? '플랫폼 바로가기' : '로그인' })[0])
+    expect(screen.getAllByRole('link', { name: '플랫폼 바로가기' })[0])
       .toHaveAttribute('href', authenticated ? '/experiments' : '/login');
+    expect(screen.queryByRole('link', { name: '로그인' }) !== null).toBe(!authenticated);
     expect(projectApi.list).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/status/'));
+  });
+
+  it.each(['ko', 'en'] as const)('separates home sign-in from platform navigation in %s', async (lang) => {
+    authResponse = { authenticated: false, user: null };
+    function Probe() { const location = useLocation(); return <output data-testid="destination">{location.state?.from?.pathname}</output>; }
+    await act(async () => { render(<MemoryRouter initialEntries={['/']}><App /><Probe /></MemoryRouter>); });
+    if (lang === 'en') await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch to English' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('link', { name: lang === 'ko' ? '로그인' : 'Sign in' })); });
+    expect(screen.getByTestId('destination')).toHaveTextContent(/^\/$/);
+    await act(async () => { fireEvent.click(screen.getByRole('link', { name: lang === 'ko' ? '서비스 살펴보기' : 'Explore Iterglow' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('link', { name: lang === 'ko' ? '플랫폼 바로가기' : 'Open platform' })); });
+    expect(screen.getByTestId('destination')).toHaveTextContent('/experiments');
   });
 
   it('replaces a legacy introduction URL while preserving its query, anchor and return state', async () => {
@@ -187,7 +200,7 @@ describe('App Component', () => {
     vi.spyOn(authApi, 'me').mockReturnValue(new Promise(() => {}));
     await act(async () => { renderApp(['/']); });
     expect(screen.getByRole('heading', { level: 1, name: /더 나은 제품을 만드는/  })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: '로그인' })[0]).toHaveAttribute('href', '/login');
+    expect(screen.getAllByRole('link', { name: '플랫폼 바로가기' })[0]).toHaveAttribute('href', '/login');
     expect(projectApi.list).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -199,7 +212,7 @@ describe('App Component', () => {
     expect(projectApi.list).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Better products');
-    expect(screen.getAllByRole('link', { name: 'Sign in' })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Open platform' })[0]).toBeInTheDocument();
   });
 
   it('offers a workspace link to signed-in visitors and keeps the root public on expiry', async () => {
@@ -208,7 +221,7 @@ describe('App Component', () => {
     expect(projectApi.list).not.toHaveBeenCalled();
     await act(async () => { window.dispatchEvent(new Event('auth:unauthorized')); });
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
-    expect(screen.getAllByRole('link', { name: '로그인' })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: '플랫폼 바로가기' })[0]).toBeInTheDocument();
   });
 
   it('connects the anonymous login screen to the introduction and back', async () => {
@@ -216,7 +229,7 @@ describe('App Component', () => {
     await act(async () => { renderApp(['/projects']); });
     fireEvent.click(screen.getByRole('link', { name: '서비스 살펴보기' }));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('더 나은 제품');
-    fireEvent.click(screen.getAllByRole('link', { name: '로그인' })[0]);
+    fireEvent.click(screen.getAllByRole('link', { name: '플랫폼 바로가기' })[0]);
     expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument();
     expect(projectApi.list).not.toHaveBeenCalled();
   });
@@ -238,7 +251,7 @@ describe('App Component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
     expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: 'Explore Iterglow' }));
-    fireEvent.click(screen.getAllByRole('link', { name: 'Sign in' })[0]);
+    fireEvent.click(screen.getAllByRole('link', { name: 'Open platform' })[0]);
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
   });
