@@ -4,7 +4,7 @@
 
 Iterglow는 서비스의 기능을 사용자별로 나누어 제공하고, 실제 노출과 행동을 수집해 결과를 비교하는 플랫폼입니다. 서비스별 사용자 식별자·이벤트·목표 지표를 정의하고 SDK로 연결할 수 있습니다.
 
-[서비스](https://iterglow.pseudolab-devfactory.com) · [문서](docs/README.md) · [SDK](packages/sdk/README.md) · [기여 가이드](docs/guides/agent_collaboration.md) · [Issues](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues)
+[서비스](https://iterglow.pseudolab-devfactory.com) · [팀 소개 및 활동](https://pseudo-lab.github.io/experiment-platform-pseudolab/) · [문서](docs/README.md) · [SDK](packages/sdk/README.md) · [기여 가이드](docs/guides/agent_collaboration.md) · [Issues](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/issues)
 
 ## 주요 기능
 
@@ -78,3 +78,5 @@ SDK v1과 legacy의 이벤트 계약은 구분됩니다. 기존 query segment는
 [MIT License](LICENSE).
 
 Iterglow는 [Pseudo-Lab](https://pseudo-lab.com/)에서 시작한 오픈소스 프로젝트입니다. [모든 기여자](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/graphs/contributors)에게 감사드립니다.
+
+프로젝트를 만드는 팀과 활동 소식은 [팀 소개 및 활동](https://pseudo-lab.github.io/experiment-platform-pseudolab/)에서 확인할 수 있습니다.
