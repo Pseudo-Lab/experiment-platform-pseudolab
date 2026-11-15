@@ -84,7 +84,7 @@ it.each([
   ['ko', 'introduction'], ['en', 'introduction'],
   ['ko', 'brand'], ['en', 'brand'],
   ['ko', 'introduction-guide'], ['en', 'introduction-guide'],
-] as const)('returns to the original protected route after the %s guide via %s', async (lang, via) => {
+] as const)('honors the selected sign-in destination after the %s guide via %s', async (lang, via) => {
   localStorage.setItem('lang', lang);
   render(<MemoryRouter initialEntries={[{ pathname: '/experiments/review-original', search: '?tab=summary', hash: '#details', state: { review: 'keep' } }]}><App /><LocationProbe /></MemoryRouter>);
   const loginTitle = lang === 'ko' ? '로그인' : 'Sign in';
@@ -110,15 +110,17 @@ it.each([
   }
   fireEvent.click(screen.getAllByRole('link', { name: via === 'login' ? (lang === 'ko' ? '시작하기' : 'Get started') : loginTitle })[0]);
   await screen.findByRole('heading', { level: 1, name: loginTitle });
-  expect(readLocation().state).toMatchObject(returnState);
+  const expectedReturn = via === 'login' ? returnState : { from: { pathname: '/' } };
+  expect(readLocation().state).toMatchObject(expectedReturn);
   expect(screen.getByRole('button', { name: lang === 'ko' ? 'Google로 계속하기' : 'Continue with Google' })).toBeInTheDocument();
-  sessionStorage.setItem('oauthReturnPath', readLocation().state.from.pathname + readLocation().state.from.search + readLocation().state.from.hash);
+  const from = readLocation().state.from;
+  sessionStorage.setItem('oauthReturnPath', from.pathname + (from.search || '') + (from.hash || ''));
   cleanup();
   vi.mocked(authApi.me).mockResolvedValue({ authenticated: true, user: { username: 'google-member', is_admin: false } });
   render(<MemoryRouter initialEntries={['/login?oauth=success']}><App /><LocationProbe /></MemoryRouter>);
-  await waitFor(() => expect(readLocation().pathname).toBe('/experiments/review-original'));
-  expect(readLocation().search).toBe('?tab=summary');
-  expect(readLocation().hash).toBe('#details');
+  await waitFor(() => expect(readLocation().pathname).toBe(via === 'login' ? '/experiments/review-original' : '/'));
+  expect(readLocation().search).toBe(via === 'login' ? '?tab=summary' : '');
+  expect(readLocation().hash).toBe(via === 'login' ? '#details' : '');
 });
 
 it.each(['ko', 'en'] as const)('uses the existing default destination after direct guide access in %s', async (lang) => {
