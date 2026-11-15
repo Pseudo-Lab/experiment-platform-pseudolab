@@ -7,7 +7,7 @@ Last-Validated: 2026-11-16
 
 Ops와 운영 Pod의 `iterglow-*` 이미지 전환을 확인한 다음 구형 GHCR 태그 게시를 종료한다. 이미지 패키지·기존 버전 삭제, 서비스명·namespace·인증 변경은 포함하지 않는다.
 
-## 현재 확인 결과
+## 전환 전 확인과 단계별 경과
 
 - 앱 기준: `3c69886472b678ca19fb3881e92a46f358383c0c`.
 - [GitOps CI 43730065600](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/43730065600): build/push 및 Ops 태그 갱신 성공. 신·구 이미지는 같은 Buildx 빌드에서 함께 게시된다.
@@ -19,7 +19,7 @@ Ops와 운영 Pod의 `iterglow-*` 이미지 전환을 확인한 다음 구형 GH
 - 전환 후 `iterglow.pseudolab-devfactory.com`과 `exp.pseudolab-devfactory.com`의 `/`, `/api/v1/status/`, `/api/v1/auth/providers`, `/api/v1/auth/me` 모두 200. Google 제공자 활성 상태 유지. 인증된 사용자 기능 검증은 포함하지 않는다.
 - imageID 문자열은 동일 content digest의 기존 구형 repo 별칭으로 표시되지만, Pod spec과 kubelet Pulled 이벤트가 새 Iterglow repo의 실제 pull 성공을 확인한다.
 
-## 준비한 변경
+## 반영한 변경
 
 1. Ops branch `ops/iterglow-images-20261116`, workspace `/home/ubuntu/.openclaw/workspace-ops-iterglow-images-20261116`: prod kustomization의 `newName` 두 개만 `ghcr.io/pseudo-lab/iterglow-frontend`, `ghcr.io/pseudo-lab/iterglow-backend`로 변경한다. base 매칭용 `name`과 기존 SHA는 유지한다.
 2. 앱 branch `ci/retire-legacy-images-20261116`, workspace `/home/ubuntu/.openclaw/workspace-experiment-retire-legacy-images-20261116`: CI 이미지 env를 Iterglow로 변경하고 중복 리터럴 태그를 제거한다. Ops 태그 갱신·검증은 `.newName`을 선택한다. ARM64, cache, trigger, 검증 실패 처리는 유지한다.
@@ -52,6 +52,25 @@ Ops 전환 단계에서 실패하면 동일 SHA의 구형 `newName`으로 되돌
 - 선택적 `(.newName // .name)` fallback은 채택하지 않았다. 현재 Ops는 명시적 `newName`을 사용하며 base 이름 정리는 요청 범위가 아니다. 해당 계약을 유지하고 불일치 시 실패하도록 둔다.
 - 적용 직전에 진행 중 GitOps CI와 양쪽 최신 remote를 확인하여 기존 자동 태그 push와 경합을 피한다.
 
-## 담당과 다음 작업
+## 앱 CI 반영
 
-Codex가 구현·통합 검증, Gemini Hydrogen XHigh가 읽기 전용 독립 검토를 담당한다. 사용자 승인 후 Ops PR #35를 main에 반영했다. 새 이미지 운영 실행을 확인했고, 다음 단계는 앱 CI 변경 반영과 해당 SHA의 GitOps 배포 검증이다.
+- [앱 PR #56](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/pull/56): CI 통과 후 main `2342b4fa746c61503fc715e8a979b12770ad49a4`에 반영.
+- [PR CI](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/43731081114): SDK build, frontend tests/build, backend compile/tests 통과.
+- [main CI](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/43731308026): 성공.
+- [GitOps CI](https://github.com/Pseudo-Lab/experiment-platform-pseudolab/actions/runs/43731441436): build/push와 Ops 태그 갱신 모두 성공. 빌드 명령과 manifest push 로그에 Iterglow frontend/backend의 SHA 및 latest 태그만 있으며 구형 이미지 repo push가 없음을 확인했다.
+- GitOps 시작 전에 별도 README 전용 커밋 `94374d14dc436de98708025e61c5b78934e0558a`가 main에 추가되어 실제 게시 SHA는 `94374d1`이다. 검증한 앱 CI SHA `2342b4f`와 backend/frontend/packages/.github diff는 없다. 기존 workflow_run 동작에 따른 결과이며 수동 빌드·배포를 추가하지 않았다.
+- Ops 태그 갱신 결과: `dfb2b45` main, 두 Iterglow 이미지의 newTag `94374d14dc436de98708025e61c5b78934e0558a`.
+
+## 최종 운영 확인
+
+- 2026-11-16 00:47 KST: ArgoCD가 Ops `dfb2b45816acb6608ced7b5ff3802c84cf606efa`에서 Synced/Healthy.
+- backend/frontend 모두 `ghcr.io/pseudo-lab/iterglow-*:94374d14dc436de98708025e61c5b78934e0558a` 실행, 각 Pod Ready=true, restartCount=0, 대기 오류 없음. kubelet Pulled 이벤트는 각각 15:47:08/09 UTC에 새 태그 pull 성공을 기록한다.
+- imageID content digest는 전환 전과 동일하다. 새 태그는 기존 빌드 layer를 재사용하며, containerd가 imageID에 기존 구형 repo 별칭을 반환하는 것은 실제 pull 대상과 별개다. 새 repo/tag의 실행 근거는 Pod spec·Pulled 이벤트로 확인했다.
+- 두 도메인의 홈페이지, status, auth/providers, auth/me 모두 200. Google 제공자 활성 유지. 인증된 사용자 동작이나 쓰기 기능은 이번 이미지 전환 smoke 범위에 포함하지 않았다.
+- Ops 태그 갱신 뒤 [Ops CI](https://github.com/Pseudo-Lab/DevFactory-Ops/actions/runs/43731509556)도 성공.
+- 구형 이미지 태그 게시는 종료했고, 기존 GHCR 패키지·태그는 복구용으로 보존했다. 수동 sync·중복 재배포·시크릿 변경은 수행하지 않았다.
+- 이 완료 기록은 docs-only 변경으로 게시하며 추가 앱 빌드·배포를 유발하지 않는다.
+
+## 담당과 완료 상태
+
+Codex가 구현·통합 검증, Gemini Hydrogen XHigh가 읽기 전용 독립 검토를 담당한다. 사용자 승인 후 Ops PR #35를 main에 반영했다. 새 이미지 운영 실행 확인 후 앱 PR #56을 main에 반영했다. GitOps 자동 배포까지 검증을 완료했다. 후속 작업은 없다.
