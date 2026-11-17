@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node --test src/assignmentSimulation.test.js",
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview"
