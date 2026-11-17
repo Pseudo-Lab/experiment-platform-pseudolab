@@ -9,10 +9,10 @@ const outcomes = ['outside', 'A', 'B'];
 const copy = {
   ko: {
     title: '쇼핑몰 방문자는 어떤 화면을 보게 될까요?',
-    intro: '같은 상품을 기본형과 강조형으로 보여줍니다. 방문자 수와 비율을 정하고 분배 결과를 비교해 보세요.',
+    intro: '같은 상품을 기본형과 강조형으로 보여줍니다. 매번 100~200명의 방문자가 찾아옵니다. 비율을 바꾸고 분배 결과를 비교해 보세요.',
     participation: '실험 참여율', ratio: '참여자 안의 A:B', presets: 'A:B 빠른 설정',
     start: '시작', pause: '일시정지', reset: '배정 초기화', restart: '다시 실행', resume: '계속하기',
-    visitorLimit: '방문자 수', complete: '배정 완료',
+    visitorLimit: '방문자 100~200명 랜덤', results: '배정 결과', shop: '데일리 스토어', productPage: '리빙 / 머그컵', ready: '시작 전', complete: '배정 완료',
     completed: count => `${count}명 모두 도착했습니다. 설정 비율과 아래 결과를 비교해 보세요.`,
     incoming: '입장하는 가상 사용자', gate: '참여', split: 'A:B',
     names: { outside: '비참여', A: 'A · 기본형', B: 'B · 강조형' },
@@ -30,10 +30,10 @@ const copy = {
   },
   en: {
     title: 'Which shop page will your visitors see?',
-    intro: 'The same product in a basic and an emphasized design. Choose a visitor count and ratios, then compare the assignments.',
+    intro: 'The same product in a basic and an emphasized design. Each run brings 100–200 visitors. Adjust the ratios and compare the assignments.',
     participation: 'Experiment participation', ratio: 'A:B within participants', presets: 'Quick A:B settings',
     start: 'Start', pause: 'Pause', reset: 'Reset assignments', restart: 'Run again', resume: 'Resume',
-    visitorLimit: 'Visitor count', complete: 'Assignments complete',
+    visitorLimit: '100–200 random visitors', results: 'Assignment results', shop: 'Daily Store', productPage: 'Living / Mugs', ready: 'Ready', complete: 'Assignments complete',
     completed: count => `All ${count} visitors have arrived. Compare the target ratios with the results below.`,
     incoming: 'Virtual visitors', gate: 'Join', split: 'A:B',
     names: { outside: 'Not enrolled', A: 'A · Basic', B: 'B · Emphasized' },
@@ -72,7 +72,7 @@ export default function ExperimentPreview({ lang, repo }) {
   const reduced = useMediaPreference('(prefers-reduced-motion: reduce)');
   const [participation, setParticipation] = useState(60);
   const [aShare, setAShare] = useState(50);
-  const [visitorLimit, setVisitorLimit] = useState(100);
+  const [visitorLimit, setVisitorLimit] = useState(() => 100 + Math.floor(Math.random() * 101));
   const settings = useRef({ participation, aShare, visitorLimit });
   settings.current = { participation, aShare, visitorLimit };
   const [running, setRunning] = useState(false);
@@ -156,6 +156,7 @@ export default function ExperimentPreview({ lang, repo }) {
     svg.current.setCurrentTime(0);
     model.current = { assignments: new Map(), tokens: [], sequence: 0, lastSpawn: -Infinity, counts: { outside: 0, A: 0, B: 0 }, latest: null };
     setView(emptyView());
+    setVisitorLimit(100 + Math.floor(Math.random() * 101));
     setPurchased({ outside: false, A: false, B: false });
   }
 
@@ -211,17 +212,14 @@ export default function ExperimentPreview({ lang, repo }) {
             {[50, 80].map(value => <Button key={value} variant="outline" aria-pressed={aShare === value} onClick={() => changeSetting('aShare', value)}>{value}:{100 - value}</Button>)}
           </div>
         </div>
-        <div className="sim-actions">
-          <label className="sim-limit" htmlFor={`${id}-limit`}>{t.visitorLimit}
-            <select id={`${id}-limit`} value={visitorLimit} onChange={event => { reset(); setVisitorLimit(Number(event.target.value)); }}>
-              {[100, 500, 1000].map(count => <option key={count} value={count}>{number(count)} {t.people}</option>)}
-            </select>
-          </label>
-          <Button onClick={togglePlayback}>{running ? <Pause aria-hidden="true"/> : <Play aria-hidden="true"/>}{running ? t.pause : completed ? t.restart : view.entered ? t.resume : t.start}</Button>
-          <Button variant="outline" onClick={reset}><RotateCcw aria-hidden="true"/>{t.reset}</Button>
-        </div>
       </div>
-      <div className="sim-playback"><span role="status" aria-label={t.status}>{completed ? t.complete : running ? t.playing : t.stopped}</span><span>{t.generated} {number(view.entered)} / {number(visitorLimit)} · {reduced ? t.pending : t.moving} {number(view.tokens.length)}</span></div>
+      <div className="sim-playback">
+        <div className="sim-playback-actions">
+          <Button onClick={togglePlayback}>{running ? <Pause aria-hidden="true"/> : <Play aria-hidden="true"/>}{running ? t.pause : completed ? t.restart : view.entered ? t.resume : t.start}</Button>
+          <span role="status" aria-label={t.status}>{completed ? t.complete : running ? t.playing : view.entered ? t.stopped : t.ready}</span>
+        </div>
+        <div className="sim-progress"><span>{t.visitorLimit}</span><span>{t.generated} {number(view.entered)} / {number(visitorLimit)} · {reduced ? t.pending : t.moving} {number(view.tokens.length)}</span></div>
+      </div>
       {reduced && <p className="sim-reduced">{t.reduced}</p>}
       <svg ref={svg} className="sim-flow" viewBox={`0 0 ${chartWidth} ${compact ? 292 : 210}`} role="img" aria-labelledby={`${id}-title ${id}-description`}>
         <title id={`${id}-title`}>{t.chartTitle}</title><desc id={`${id}-description`}>{t.chartDescription}</desc>
@@ -237,19 +235,25 @@ export default function ExperimentPreview({ lang, repo }) {
         </circle>)}
       </svg>
       {completed && <p className="sim-completed" role="status"><Check size={18} aria-hidden="true"/>{t.completed(number(total))}</p>}
+      <div className="sim-result-actions"><strong>{t.results}</strong><Button variant="outline" onClick={reset}><RotateCcw aria-hidden="true"/>{t.reset}</Button></div>
       <div className="sim-results">
         {outcomes.map(key => <article key={key} className={`sim-result sim-${key}`} data-outcome={key}>
-          <div className="sim-product-top">
-            <div><h3>{t.names[key]}</h3><p className="sim-target">{t.target} <b>{number(target[key])}%</b></p>
-              <p className="sim-count"><strong className={view.counts[key] >= 1000 ? 'sim-large-count' : undefined}>{number(view.counts[key])}</strong> {t.people}</p>
-              <p className="sim-observed">{total ? `${t.observed} ${number(view.counts[key] / total * 100)}%` : t.noData}</p>
-            </div>
-            <img className="sim-product-image" src={import.meta.env.BASE_URL + 'demo/everyday-mug.webp'} alt="" width="100" height="100"/>
+          <div className="sim-assignment-summary">
+            <div><h3>{t.names[key]}</h3><p className="sim-target">{t.target} <b>{number(target[key])}%</b></p></div>
+            <p className="sim-count"><strong>{number(view.counts[key])}</strong> {t.people}</p>
           </div>
-          <div className="sim-product-info"><h4>{t.productName}</h4><p>{t.price}</p></div>
-          <Button className="sim-buy" variant={key === 'B' ? 'default' : 'outline'} aria-disabled={purchased[key]} onClick={() => { if (!purchased[key]) setPurchased(current => ({ ...current, [key]: true })); }} aria-label={`${t.names[key]} ${purchased[key] ? t.purchased : t.buttons[key]}`}>
-            {purchased[key] ? <Check aria-hidden="true"/> : <ShoppingCart aria-hidden="true"/>}{purchased[key] ? t.purchased : t.buttons[key]}
-          </Button>
+          <p className="sim-observed">{total ? `${t.observed} ${number(view.counts[key] / total * 100)}%` : t.noData}</p>
+          <div className="sim-shop">
+            <div className="sim-shop-header"><strong>{t.shop}</strong><ShoppingCart size={17} aria-hidden="true"/></div>
+            <div className="sim-shop-content">
+              <p className="sim-breadcrumb">{t.productPage}</p>
+              <img className="sim-product-image" src={import.meta.env.BASE_URL + 'demo/everyday-mug.webp'} alt="" width="200" height="200"/>
+              <div className="sim-product-info"><h4>{t.productName}</h4><p>{t.price}</p></div>
+              <Button className="sim-buy" variant={key === 'B' ? 'default' : 'outline'} aria-disabled={purchased[key]} onClick={() => { if (!purchased[key]) setPurchased(current => ({ ...current, [key]: true })); }} aria-label={`${t.names[key]} ${purchased[key] ? t.purchased : t.buttons[key]}`}>
+                {purchased[key] ? <Check aria-hidden="true"/> : <ShoppingCart aria-hidden="true"/>}{purchased[key] ? t.purchased : t.buttons[key]}
+              </Button>
+            </div>
+          </div>
         </article>)}
       </div>
       <p className="sim-latest">{t.latest}: {view.latest ? `${view.latest.id} → ${t.names[view.latest.outcome]}` : '—'}</p>
