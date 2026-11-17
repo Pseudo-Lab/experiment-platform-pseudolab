@@ -20,7 +20,6 @@ const copy = {
     buttons: { A: '구매하기', B: '지금 구매하기' },
     people: '명', observed: '실제',
     noData: '배정 전', generated: '입장', moving: '이동 중',
-    history: '비율 변경은 다음 방문자부터 적용됩니다.',
     reduced: '모션 감소 설정: 이동 애니메이션 대신 배정 수만 갱신합니다.',
     support: 'GitHub Star로 Iterglow를 응원해 주세요.',
     github: 'GitHub Star로 응원하기', githubLabel: 'GitHub Star로 응원하기 (새 탭)',
@@ -39,7 +38,6 @@ const copy = {
     buttons: { A: 'Buy', B: 'Buy now' },
     people: 'visitors', observed: 'Actual',
     noData: 'No arrivals', generated: 'Entered', moving: 'In transit',
-    history: 'Ratio changes apply to the next visitors.',
     reduced: 'Reduced motion: counts update without traveling animations.',
     support: 'Support Iterglow with a GitHub Star.',
     github: 'Support us with a GitHub Star', githubLabel: 'Support us with a GitHub Star (new tab)',
@@ -231,7 +229,6 @@ export default function ExperimentPreview({ lang, repo }) {
           </div>
         </article>)}
       </div>
-      <p className="sim-explanation">{t.history}</p>
       <div className="sim-support"><p>{t.support}</p><Button asChild><a href={repo} target="_blank" rel="noreferrer" aria-label={t.githubLabel}><Star aria-hidden="true"/>{t.github}<ArrowUpRight aria-hidden="true"/></a></Button></div>
     </div>
   </section>;
