@@ -255,57 +255,25 @@ html[data-theme="dark"],
 [data-theme="dark"] .activity-card:nth-child(5) { --activity-ink: #dfa9c3; --activity-surface: #3d2936; }
 @media (min-width: 1001px) { [lang="en"] .activity-card h3 { min-height: 4.65em; } }
 
-/* The event experience inherits the team site's typography, theme and buttons. */
-.hero-actions { flex-wrap: wrap; gap: 16px; }
-.experience { max-width: 960px; padding-block: 36px 72px; }
-.experience-back { margin-bottom: 28px; color: var(--muted); min-height: 44px; }
-.experience h1 { max-width: 800px; font-size: clamp(30px, 3.3vw, 44px); line-height: 1.4; letter-spacing: -.03em; font-weight: 750; text-wrap: balance; }
-.experience-intro { margin-top: 18px; color: var(--muted); font-size: 17px; }
-.experience-notice { margin-top: 24px; padding: 16px 20px; background: var(--soft); border: 1px solid var(--line); border-radius: var(--radius); color: var(--muted); font-size: 14px; }
-.experience-steps { display: flex; flex-wrap: wrap; gap: 14px 28px; list-style: none; padding: 0 0 24px; margin: 30px 0 0; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--muted); }
-.experience-steps li { display: flex; align-items: center; gap: 8px; }
-.experience-steps li[aria-current] { color: var(--purple); font-weight: 650; }
-.experience-steps span { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 50%; font-variant-numeric: tabular-nums; }
-.experience-stage { padding-block: 32px; }
-.experience h2 { font-size: clamp(23px, 2.6vw, 29px); line-height: 1.5; letter-spacing: -.025em; font-weight: 650; scroll-margin-top: 104px; }
-.experience h2 + p { margin-top: 14px; color: var(--muted); }
-.experience-stage > button { margin-top: 24px; }
-.experience-hypothesis { margin-top: 20px; color: var(--muted); }
-.experience .experience-empty { margin-top: 20px; font-size: 14px; color: var(--muted); }
-.experience-variant { display: inline-grid; place-items: center; min-width: 40px; padding-inline: 8px; border-radius: var(--radius); background: hsl(var(--accent)); color: var(--purple); }
-.experience-sample { margin-block: 24px 0; padding: 32px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--soft); }
-.experience-sample h3 { font-size: 26px; line-height: 1.5; font-weight: 650; }
-.experience-sample > p { margin-top: 14px; color: var(--muted); max-width: 65ch; }
-.experience-sample > button { margin-top: 24px; }
-.experience .experience-small { font-size: 14px; line-height: 1.75; color: var(--muted); }
-.experience-table-wrap { margin-top: 24px; }
-.experience-table { width: 100%; border-collapse: collapse; font-size: 16px; font-variant-numeric: tabular-nums; }
-.experience-table caption { text-align: left; padding-bottom: 12px; font-size: 14px; color: var(--muted); }
-.experience-table th, .experience-table td { padding: 16px 12px; border-bottom: 1px solid var(--line); text-align: right; }
-.experience-table thead th { font-size: 14px; color: var(--muted); font-weight: 500; }
-.experience-table th:first-child { text-align: left; width: 45%; }
-.experience-table th small { display: block; margin-top: 6px; font-size: 14px; font-weight: 400; color: var(--muted); }
-.experience-table .is-assigned { background: var(--soft); }
-.experience-caution { margin-top: 24px; color: var(--muted); font-size: 14px; }
-.experience-aggregate { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
-.experience-aggregate h3 { font-size: 17px; font-weight: 600; }
-.experience-aggregate p { margin-top: 8px; color: var(--muted); font-size: 14px; }
-.experience-support { border-top: 1px solid var(--line); padding-block: 32px; }
-.experience-support > a { margin-top: 24px; }
-.experience-support .experience-small { margin-top: 14px; }
-.experience button, .experience-support > a { min-height: 44px; height: auto; white-space: normal; text-align: center; padding-block: 12px; }
-.experience-error { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; padding: 16px; border: 1px solid var(--ink); border-radius: var(--radius); font-weight: 600; }
-.experience-error svg { flex-shrink: 0; margin-top: 4px; }
+/* A small, browser-only experiment preview inside the existing team page. */
+.experiment-preview-section { border-top: 1px solid var(--line); padding-block: 42px; }
+.experiment-preview-layout { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 48px; }
+.experiment-preview-copy h2 { font-size: 26px; line-height: 1.5; font-weight: 650; letter-spacing: -.025em; }
+.experiment-preview-copy > p { margin-top: 14px; color: var(--muted); font-size: 15px; }
+.experiment-preview-settings { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.experiment-preview-settings button, .experiment-preview-sample > a { min-height: 44px; height: auto; white-space: normal; padding-block: 12px; }
+.experiment-preview-copy .experiment-preview-current { font-size: 14px; color: var(--purple); }
+.experiment-preview-copy .experiment-preview-note { font-size: 14px; }
+.experiment-preview-sample { padding: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--soft); }
+.experiment-preview-sample h3 { font-size: 22px; line-height: 1.5; font-weight: 650; }
+.experiment-preview-sample > p { margin-top: 14px; color: var(--muted); font-size: 15px; }
+.experiment-preview-sample > a { margin-top: 22px; text-align: center; }
+.experiment-preview-sample .experiment-preview-support { font-size: 14px; }
 @media (max-width: 700px) {
-  .experience { padding-block: 20px 48px; }
-  .experience-intro { font-size: 16px; }
-  .experience-notice { padding: 14px 16px; }
-  .experience-steps { gap: 12px 20px; }
-  .experience-sample { padding: 24px 20px; }
-  .experience-sample h3 { font-size: 23px; }
-  .experience-table { font-size: 15px; }
-  .experience-table th, .experience-table td { padding: 14px 6px; }
-  .experience-table th small, .experience-table thead th, .experience-table .experience-small { font-size: 12px; }
-  .experience-table th:first-child { width: 38%; }
-  .experience-support > a { width: 100%; padding-inline: 16px; }
+  .initiative-hero .hero-actions { flex-wrap: wrap; gap: 12px; }
+  .experiment-preview-section { padding-block: 32px; }
+  .experiment-preview-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .experiment-preview-copy h2 { font-size: 24px; }
+  .experiment-preview-sample { padding: 24px 20px; }
+  .experiment-preview-sample > a { max-width: 100%; padding-inline: 20px; }
 }

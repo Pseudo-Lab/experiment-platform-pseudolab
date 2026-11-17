@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowUpRight, ArrowRight, Github, Menu, X, Code2, BookOpen, Compass, Sun, Moon, Boxes, Database, FlaskConical, Cable, NotebookPen } from 'lucide-react';
 import { Button } from './components/ui/button';
-import EventExperience from './EventExperience';
+import ExperimentPreview from './ExperimentPreview';
 import './style.css';
 
 const urls = {
@@ -248,8 +248,6 @@ const copy = {
 
 function App() {
   const [lang, setLang] = useState('ko');
-  const [isExperience, setIsExperience] = useState(() => new URLSearchParams(window.location.search).get('view') === 'experience');
-  const previousView = useRef(isExperience);
   const [menu, setMenu] = useState(false);
   const menuToggle = useRef(null);
   useEffect(() => {
@@ -265,38 +263,12 @@ function App() {
   }, [menu]);
   const cancelScroll = useRef(() => {});
   useEffect(() => () => cancelScroll.current(), []);
-  useEffect(() => {
-    const updateView = () => {
-      cancelScroll.current();
-      setMenu(false);
-      setIsExperience(new URLSearchParams(window.location.search).get('view') === 'experience');
-    };
-    window.addEventListener('hashchange', updateView);
-    window.addEventListener('popstate', updateView);
-    return () => {
-      window.removeEventListener('hashchange', updateView);
-      window.removeEventListener('popstate', updateView);
-    };
-  }, []);
-  useEffect(() => {
-    if (previousView.current === isExperience) return;
-    previousView.current = isExperience;
-    const target = document.getElementById(isExperience ? 'main' : (window.location.hash.slice(1) || 'main'));
-    target?.scrollIntoView({ behavior: 'instant', block: 'start' });
-    target?.focus({ preventScroll: true });
-  }, [isExperience]);
 
   function navigateToSection(event) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     cancelScroll.current();
     setMenu(false);
     const hash = event.currentTarget.hash;
-    if (isExperience) {
-      event.preventDefault();
-      window.history.pushState(null, '', import.meta.env.BASE_URL + hash);
-      setIsExperience(false);
-      return;
-    }
     const target = document.getElementById(hash.slice(1));
     if (!target || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     event.preventDefault();
@@ -360,17 +332,15 @@ function App() {
   const ids = ['activities', 'team', 'resources', 'subscribe'];
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.title = isExperience
-      ? (lang === 'ko' ? 'Iterglow | A/B 체험 예시' : 'Iterglow | A/B experience preview')
-      : (lang === 'ko' ? 'Data Initiative | 팀 소개' : 'Data Initiative | About the team');
+    document.title = lang === 'ko' ? 'Data Initiative | 팀 소개' : 'Data Initiative | About the team';
     document.querySelector('meta[name="description"]').content = t.intro.join(' ');
-  }, [lang, t, isExperience]);
+  }, [lang, t]);
   return <>
     <a className="skip" href="#main">{t.skip}</a>
     <header><div className="nav wrap">
-      <a href={isExperience ? import.meta.env.BASE_URL : '#'} onClick={navigateToSection} className="brand" aria-label={lang === 'ko' ? '데이터 이니셔티브 홈' : 'Data Initiative home'}><span className="brand-text"><b className="wordmark">Data <span className="wordmark-lab">Initiative</span></b></span></a>
+      <a href="#" className="brand" aria-label={lang === 'ko' ? '데이터 이니셔티브 홈' : 'Data Initiative home'}><span className="brand-text"><b className="wordmark">Data <span className="wordmark-lab">Initiative</span></b></span></a>
       <nav id="team-navigation" aria-label={lang === 'ko' ? '주 메뉴' : 'Main navigation'} className={menu ? 'is-open' : ''}>
-        {ids.map((id, i) => <a key={id} href={(isExperience ? import.meta.env.BASE_URL : '') + '#' + id} onClick={navigateToSection}>{t.nav[i]}</a>)}
+        {ids.map((id, i) => <a key={id} href={'#' + id} onClick={navigateToSection}>{t.nav[i]}</a>)}
       </nav>
       <div className="nav-actions">
         <Button variant="ghost" size="icon" className="theme-toggle" aria-label={theme === 'dark' ? t.lightMode : t.darkMode} title={theme === 'dark' ? t.lightMode : t.darkMode} onClick={() => setThemePreference(theme === 'dark' ? 'light' : 'dark')}>
@@ -382,24 +352,17 @@ function App() {
       </div>
     </div></header>
     <main id="main" tabIndex={-1}>
-      {isExperience ? <EventExperience lang={lang} repo={urls.repo} onBack={navigateToSection}/> : <>
       <section className="hero wrap initiative-hero">
         <div className="hero-copy">
           <h1>{t.title[0]}<br/><span>{t.title[1]}</span></h1>
           <ul className="hero-intro">{t.intro.map(item => <li key={item}>{item}</li>)}</ul>
           <div className="hero-actions">
             <Button asChild size="lg"><a href="#activities" onClick={navigateToSection}>{t.explore}<ArrowRight size={17}/></a></Button>
-            <Button asChild size="lg" variant="outline"><a href={import.meta.env.BASE_URL + '?view=experience'} onClick={event => {
-              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-              event.preventDefault();
-              cancelScroll.current();
-              window.history.pushState(null, '', event.currentTarget.href);
-              setIsExperience(true);
-            }}>{lang === 'ko' ? 'A/B 테스트 직접 체험하기' : 'Try an A/B test'}<ArrowRight size={17} aria-hidden="true"/></a></Button>
             <Button asChild size="lg" variant="outline"><a href={urls.service} target="_blank" rel="noreferrer">{t.service}<ArrowUpRight size={17}/></a></Button>
           </div>
         </div>
       </section>
+      <ExperimentPreview lang={lang} repo={urls.repo}/>
       <section id="activities" tabIndex={-1} className="section activities-section"><div className="wrap">
         <h2>{t.activitiesTitle}</h2><p className="section-lead">{t.activitiesIntro}</p>
         <div className="activity-cards" role="region" aria-label={t.activitiesTitle} tabIndex={0}>{t.activities.map(([title, body], i) => {
@@ -427,9 +390,8 @@ function App() {
       <section id="subscribe" tabIndex={-1} className="stay wrap"><div className="stay-decor" aria-hidden="true">✳</div><div><h2>{t.stayTitle[0]}<br/>{t.stayTitle[1]}</h2><p>{t.stayText}</p></div>
         <div className="stay-action"><div className="stay-buttons"><Button asChild size="lg"><a href={urls.signup} target="_blank" rel="noreferrer">{t.stayCta}<ArrowUpRight size={17}/></a></Button></div><small>{t.stayNote}</small></div>
       </section>
-      </>}
     </main>
-    <footer className="wrap"><div><a className="footer-brand" href={isExperience ? import.meta.env.BASE_URL : '#'} onClick={navigateToSection}><b className="wordmark">Data <span className="wordmark-lab">Initiative</span></b></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">Iterglow ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
+    <footer className="wrap"><div><a className="footer-brand" href="#"><b className="wordmark">Data <span className="wordmark-lab">Initiative</span></b></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">Iterglow ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
   </>;
 }
 createRoot(document.getElementById('root')).render(<App/>);
