@@ -214,7 +214,7 @@ html[data-theme="dark"],
   background: color-mix(in srgb, var(--purple) 5%, hsl(var(--background)));
 }
 .hero-actions .hero-star:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
-.hero-actions .hero-star > svg:first-child { color: #f2c94c; fill: currentColor; }
+.hero-actions .hero-star > svg:first-child { color: #f2c94c; fill: currentColor; stroke: #a97816; stroke-width: 1.5; }
 .initiative-hero h1 { max-width: 1100px; margin-top: 0; font-size: clamp(32px, 3.7vw, 52px); line-height: 1.35; letter-spacing: -.03em; }
 .initiative-hero .hero-copy > .hero-intro { max-width: 760px; margin-top: 26px; font-size: 16px; }
 .section-lead { max-width: 760px; margin-top: 16px; font-size: 16px; color: var(--muted); }
