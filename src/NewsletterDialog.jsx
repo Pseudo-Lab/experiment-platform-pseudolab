@@ -156,6 +156,7 @@ export function NewsletterDialog({
     if (pending || !agreed) return;
     const form = formRef.current;
     const rawEmail = form ? new FormData(form).get('email') : '';
+    const website = form ? new FormData(form).get('website') || '' : '';
     const email = typeof rawEmail === 'string' ? rawEmail.trim() : '';
     if (!email) return;
     if (!NEWSLETTER_API_BASE) {
@@ -175,7 +176,7 @@ export function NewsletterDialog({
         method: 'POST',
         credentials: 'omit',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, consent: true, consent_version: CONSENT_VERSION }),
+        body: JSON.stringify({ email, consent: true, consent_version: CONSENT_VERSION, website }),
         signal: controller.signal,
       });
       const payload = await response.json().catch(() => null);
@@ -213,6 +214,10 @@ export function NewsletterDialog({
       <p className="newsletter-withdrawal">{t.withdrawal}: <a href="mailto:soohyun.dev@gmail.com">soohyun.dev@gmail.com</a></p>
       <Button type="button" onClick={() => dialogRef.current?.close()}>{t.close}</Button>
     </div> : <form ref={formRef} onSubmit={handleSubscribeSubmit}>
+      <div className="newsletter-trap" aria-hidden="true">
+        <label htmlFor="newsletter-website">Website</label>
+        <input id="newsletter-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+      </div>
       <label className="newsletter-email-label" htmlFor="newsletter-email">{t.email}</label>
       <input id="newsletter-email" name="email" type="email" autoComplete="email"
         placeholder="you@example.com" maxLength={254} required readOnly={pending} />

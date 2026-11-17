@@ -432,3 +432,12 @@ html[data-theme="dark"],
   .newsletter-consent dl > div { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; }
 }
 @media (max-width: 700px) { .stay-action .newsletter-contact { justify-content: flex-start; } }
+
+.newsletter-trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  pointer-events: none;
+}

@@ -24,6 +24,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_NEWSLETTER_API_BASE_URL: https://subscribe.pseudolab-devfactory.com/api/v1/newsletter
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

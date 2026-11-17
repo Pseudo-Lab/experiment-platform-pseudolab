@@ -126,11 +126,11 @@ GitHub Pages로 배포합니다. Pages의 게시 방식은 GitHub Actions이며,
 
 ## 소식받기 모달 · 이번 마무리 범위
 
-- 이번 범위는 개선한 팀 소개 화면과 A/B 체험·소식받기 모달의 동작 검증입니다. 운영 API·DB 연결과 메일 하단의 해지 링크는 후속입니다.
+- 팀 소개 화면·A/B 체험·신청 모달을 공개하며 저장은 독립 구독 API와 전용 PostgreSQL이 담당합니다. 운영 연결을 확인한 뒤 Pages에 반영합니다. 메일 하단의 개별 해지 링크 화면은 후속입니다.
 - 소개 하단에서 신청 전용 native dialog를 엽니다. 이메일·개인정보 안내·기본 미선택 동의·소식받기로 구성하며, 해지·철회·문의는 `soohyun.dev@gmail.com`으로 안내합니다. 페이지에는 해지 경로나 요청을 두지 않습니다.
 - 닫기/재열기 시 입력 초기화·요청 취소·포커스 복귀를 처리하고 한영·밝은/어두운 테마를 유지합니다. A/B 체험 코드는 변경하지 않습니다.
-- 후속 운영 연결 시 `VITE_NEWSLETTER_API_BASE_URL=https://subscribe.pseudolab-devfactory.com/api/v1/newsletter`로 빌드합니다. API 주소 미설정이면 외부 요청을 보내지 않고 오류를 표시합니다. 실제 202 accepted 응답 뒤에만 완료를 표시하며 가짜 저장을 만들지 않습니다.
-- 모의 API는 검증용으로만 사용합니다. 공개 Pages의 실제 수집이 연결됐다고 간주하지 않습니다. 별도 구독 API 초안은 개인 비공개 저장소 `soohyunme/data-initiative-newsletter`의 PR #1에 보존합니다.
+- Pages workflow는 `VITE_NEWSLETTER_API_BASE_URL=https://subscribe.pseudolab-devfactory.com/api/v1/newsletter`로 빌드합니다. API 주소 미설정이면 외부 요청을 보내지 않고 오류를 표시합니다. 실제 202 accepted 응답 뒤에만 완료를 표시하며 가짜 저장을 만들지 않습니다.
+- 모의 API는 검증용으로만 사용하며 운영 검증과 구분합니다. 독립 API는 개인 비공개 저장소 `soohyunme/data-initiative-newsletter`에서 관리합니다. 숨겨진 스팸 필터·요청 제한을 적용하며 단일 동의 방식이므로 이메일 소유권은 확인하지 않습니다.
 - 본문 커피챗은 사용자 지정 `https://m.site.naver.com/2lfGj`를 새 탭(`noopener noreferrer`)으로 유지합니다. 모달 안에는 반복 소개·커피챗이 없습니다.
 - 자동 확인 메일·자동 소식 발송은 없습니다. 브라우저에 비밀 API 키나 DB 인증정보를 넣지 않습니다.
 - UI 검증 결과와 캡처는 상위 워크스페이스 `evidence/team-page-final/`에 보존합니다. 운영 DB 변경·실수집·공개 Pages 배포는 이번 로컬 마무리에 포함하지 않습니다.
