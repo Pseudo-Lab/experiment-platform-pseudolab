@@ -66,7 +66,7 @@ export default function ExperimentPreview({ lang, repo }) {
   const id = useId();
   const compact = useMediaPreference('(max-width: 700px)');
   const reduced = useMediaPreference('(prefers-reduced-motion: reduce)');
-  const [aShare, setAShare] = useState(50);
+  const [aShare, setAShare] = useState(() => 20 + Math.floor(Math.random() * 61));
   const [visitorLimit, setVisitorLimit] = useState(() => 100 + Math.floor(Math.random() * 101));
   const settings = useRef({ aShare, visitorLimit });
   settings.current = { aShare, visitorLimit };
