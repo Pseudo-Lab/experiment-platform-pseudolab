@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowUpRight, ArrowRight, Github, Menu, X, Code2, BookOpen, Compass, Sun, Moon, Boxes, Database, FlaskConical, Cable, NotebookPen } from 'lucide-react';
+import { ArrowUpRight, ArrowRight, Menu, X, Code2, BookOpen, Compass, Sun, Moon, Boxes, Database, FlaskConical, Cable, NotebookPen, Star } from 'lucide-react';
 import { Button } from './components/ui/button';
 import ExperimentPreview from './ExperimentPreview';
 import { NewsletterDialog } from './NewsletterDialog';
@@ -64,6 +64,7 @@ const copy = {
   "ko": {
     "name": "데이터 이니셔티브",
     "nav": [
+      "A/B 테스트",
       "주요 활동",
       "함께하는 사람들",
       "프로젝트와 기록",
@@ -83,8 +84,9 @@ const copy = {
       "가짜연구소 Data Initiative는 데이터를 바탕으로 가설을 세우고, 실제 서비스에서 실험을 통해 검증합니다.",
       "연구와 실험을 이어갈 환경을 만들고, 이를 지원하는 오픈소스 실험 플랫폼 Iterglow를 구축합니다."
     ],
-    "explore": "주요 활동 살펴보기",
     "service": "플랫폼 바로가기",
+    "githubStar": "GitHub Star로 응원하기",
+    "githubStarLabel": "GitHub Star로 응원하기 (새 탭)",
     "guide": "SDK 연동 가이드 보기",
     "activitiesTitle": "주요 활동",
     "activitiesIntro": "플랫폼 개발부터 데이터 정리, 실험 설계와 서비스 연동까지 함께 진행합니다.",
@@ -158,6 +160,7 @@ const copy = {
   "en": {
     "name": "Data Initiative",
     "nav": [
+      "A/B test",
       "Activities",
       "People",
       "Project & resources",
@@ -177,8 +180,9 @@ const copy = {
       "At Pseudo Lab’s Data Initiative, we form hypotheses from data and test them through experiments in real services.",
       "We create an environment for ongoing research and experimentation, and build Iterglow, an open-source experiment platform, to support this work."
     ],
-    "explore": "Explore our activities",
     "service": "Open the platform",
+    "githubStar": "Support us with a GitHub Star",
+    "githubStarLabel": "Support us with a GitHub Star (new tab)",
     "guide": "Read the SDK integration guide",
     "activitiesTitle": "Our activities",
     "activitiesIntro": "Our work spans platform development, data preparation, experiment design, and service integration.",
@@ -336,7 +340,7 @@ function App() {
     }
   }, [theme, themePreference]);
   const t = copy[lang];
-  const ids = ['activities', 'team', 'resources', 'subscribe'];
+  const ids = ['experiment-preview', 'activities', 'team', 'resources', 'subscribe'];
   useEffect(() => {
     document.documentElement.lang = lang;
     document.title = lang === 'ko' ? 'Data Initiative | 팀 소개' : 'Data Initiative | About the team';
@@ -354,7 +358,6 @@ function App() {
           {theme === 'dark' ? <Sun size={18} aria-hidden="true"/> : <Moon size={18} aria-hidden="true"/>}
         </Button>
         <Button variant="ghost" size="sm" aria-label={t.language} onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')}>{lang === 'ko' ? 'EN' : 'KO'}</Button>
-        <Button asChild variant="outline" className="github-button"><a href={urls.repo} target="_blank" rel="noreferrer"><Github size={16}/>GitHub<ArrowUpRight size={14}/></a></Button>
         <Button variant="ghost" size="icon" className="menu-button" ref={menuToggle} aria-controls="team-navigation" aria-expanded={menu} aria-label={menu ? t.close : t.menu} onClick={() => setMenu(!menu)}>{menu ? <X/> : <Menu/>}</Button>
       </div>
     </div></header>
@@ -364,12 +367,12 @@ function App() {
           <h1>{t.title[0]}<br/><span>{t.title[1]}</span></h1>
           <ul className="hero-intro">{t.intro.map(item => <li key={item}>{item}</li>)}</ul>
           <div className="hero-actions">
-            <Button asChild size="lg"><a href="#activities" onClick={navigateToSection}>{t.explore}<ArrowRight size={17}/></a></Button>
-            <Button asChild size="lg" variant="outline"><a href={urls.service} target="_blank" rel="noreferrer">{t.service}<ArrowUpRight size={17}/></a></Button>
+            <Button asChild size="lg"><a href={urls.service} target="_blank" rel="noopener noreferrer">{t.service}<ArrowUpRight size={17} aria-hidden="true"/></a></Button>
+            <Button asChild size="lg" variant="outline"><a href={urls.repo} target="_blank" rel="noopener noreferrer" aria-label={t.githubStarLabel}><Star size={17} aria-hidden="true"/>{t.githubStar}<ArrowUpRight size={17} aria-hidden="true"/></a></Button>
           </div>
         </div>
       </section>
-      <ExperimentPreview lang={lang} repo={urls.repo}/>
+      <ExperimentPreview lang={lang}/>
       <section id="activities" tabIndex={-1} className="section activities-section"><div className="wrap">
         <h2>{t.activitiesTitle}</h2><p className="section-lead">{t.activitiesIntro}</p>
         <div className="activity-cards" role="region" aria-label={t.activitiesTitle} tabIndex={0}>{t.activities.map(([title, body], i) => {

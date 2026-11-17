@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { ArrowUpRight, Check, Pause, Play, RotateCcw, ShoppingCart, Star } from 'lucide-react';
+import { Check, Pause, Play, RotateCcw, ShoppingCart } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { assignVisitor } from './assignmentSimulation';
 
@@ -21,8 +21,6 @@ const copy = {
     people: '명', observed: '실제',
     noData: '배정 전', generated: '입장', moving: '이동 중',
     reduced: '모션 감소 설정: 이동 애니메이션 대신 배정 수만 갱신합니다.',
-    support: 'GitHub Star로 Iterglow를 응원해 주세요.',
-    github: 'GitHub Star로 응원하기', githubLabel: 'GitHub Star로 응원하기 (새 탭)',
     chartTitle: '사용자 배정 흐름', chartDescription: '가상 방문자가 설정 비율에 따라 A 또는 B 화면으로 이동합니다. 아래 수치는 각 화면에 도착한 누적 배정입니다.',
   },
   en: {
@@ -39,8 +37,6 @@ const copy = {
     people: 'visitors', observed: 'Actual',
     noData: 'No arrivals', generated: 'Entered', moving: 'In transit',
     reduced: 'Reduced motion: counts update without traveling animations.',
-    support: 'Support Iterglow with a GitHub Star.',
-    github: 'Support us with a GitHub Star', githubLabel: 'Support us with a GitHub Star (new tab)',
     chartTitle: 'Visitor assignment flow', chartDescription: 'Virtual visitors take the A or B path according to the selected ratio. Counts show cumulative arrivals on each page.',
   },
 };
@@ -59,7 +55,7 @@ function useMediaPreference(query) {
 
 const emptyView = () => ({ tokens: [], counts: { A: 0, B: 0 }, entered: 0 });
 
-export default function ExperimentPreview({ lang, repo }) {
+export default function ExperimentPreview({ lang }) {
   const t = copy[lang];
   const id = useId();
   const compact = useMediaPreference('(max-width: 700px)');
@@ -229,7 +225,6 @@ export default function ExperimentPreview({ lang, repo }) {
           </div>
         </article>)}
       </div>
-      <div className="sim-support"><p>{t.support}</p><Button asChild><a href={repo} target="_blank" rel="noreferrer" aria-label={t.githubLabel}><Star aria-hidden="true"/>{t.github}<ArrowUpRight aria-hidden="true"/></a></Button></div>
     </div>
   </section>;
 }
