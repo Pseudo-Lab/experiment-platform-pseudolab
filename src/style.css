@@ -205,17 +205,16 @@ html[data-theme="dark"],
 /* Initiative overview: purpose, activities, evidence, people, and next steps. */
 .initiative-hero { display: block; padding-block: 88px 80px; }
 .hero-actions .hero-star {
-  color: var(--purple);
+  color: var(--ink);
   background: transparent;
-  border-color: color-mix(in srgb, var(--purple) 24%, hsl(var(--background)));
+  border-color: var(--line);
   font-weight: 600;
 }
 .hero-actions .hero-star:hover {
   background: color-mix(in srgb, var(--purple) 5%, hsl(var(--background)));
 }
 .hero-actions .hero-star:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
-.hero-actions .hero-star > svg:first-child { color: #a97816; fill: currentColor; }
-[data-theme="dark"] .hero-actions .hero-star > svg:first-child { color: #e4bc61; }
+.hero-actions .hero-star > svg:first-child { color: #f2c94c; fill: currentColor; }
 .initiative-hero h1 { max-width: 1100px; margin-top: 0; font-size: clamp(32px, 3.7vw, 52px); line-height: 1.35; letter-spacing: -.03em; }
 .initiative-hero .hero-copy > .hero-intro { max-width: 760px; margin-top: 26px; font-size: 16px; }
 .section-lead { max-width: 760px; margin-top: 16px; font-size: 16px; color: var(--muted); }
