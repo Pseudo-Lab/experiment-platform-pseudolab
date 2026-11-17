@@ -3,8 +3,8 @@ import { ArrowUpRight, Pause, Play, RotateCcw } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { assignVisitor } from './assignmentSimulation';
 
-const DURATION = 2.4;
-const INTERVAL = 0.65;
+const DURATION = 1.2;
+const INTERVAL = 0.05;
 const outcomes = ['outside', 'A', 'B'];
 const copy = {
   ko: {
