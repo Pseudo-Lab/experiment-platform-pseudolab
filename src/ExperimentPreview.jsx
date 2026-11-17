@@ -25,8 +25,8 @@ const copy = {
     rulesTitle: '이 시뮬레이션과 Iterglow의 차이',
     rules: '이 모형은 참여 여부와 A/B를 별도 ID 버킷으로 정하고, 같은 실행 안의 동일 ID는 첫 경로(비참여 포함)를 유지합니다. 초기화하면 기록만 지우고 설정은 유지합니다. Iterglow의 기존 실험 배정 기록 재사용을 설명하기 위한 규칙입니다. 현재 SDK v1의 Feature Flag 응답은 비율 변경 후 같은 ID라도 바뀔 수 있고, 실제 노출은 화면 표시 뒤 expose()로 기록합니다. 독립된 참여율·A:B 조절은 제품 설정을 그대로 재현한 것이 아닙니다. 현재 제품의 표본 비율 검사(SRM)는 균등 배정을 기준으로 하므로, 이 80:20 시연은 제품 분석의 유효성을 보장하지 않습니다.',
     reduced: '모션 감소 설정: 이동 애니메이션 대신 배정 수만 갱신합니다.',
-    support: 'Iterglow 코드를 살펴보고, 유용하다면 GitHub Star로 응원해 주세요.',
-    github: 'GitHub 저장소 보기', star: '새 탭으로 열립니다. 이동 클릭을 실제 Star로 집계하지 않습니다.',
+    support: 'Iterglow가 유용하다면 GitHub Star로 응원해 주세요.',
+    github: 'GitHub 저장소 보기', githubLabel: 'GitHub 저장소 보기 (새 탭)',
     chartTitle: '사용자 배정 흐름', chartDescription: '가상 사용자가 참여율 관문을 지나 비참여 또는 A/B로 갈라집니다. 아래 수치는 각 경로에 도착한 누적 배정입니다.',
   },
   en: {
@@ -47,8 +47,8 @@ const copy = {
     rulesTitle: 'How this model differs from Iterglow',
     rules: 'This model uses separate ID buckets for participation and A/B and retains the first path for the same ID within a run, including non-participation. Reset clears assignments and keeps settings. It illustrates reuse of legacy experiment assignment records. Current SDK v1 Feature Flag responses can change for the same ID when rollout changes; real exposures are recorded with expose() after rendering. Independent participation and A:B controls do not reproduce product settings. Current product sample-ratio checks (SRM) assume equal allocation, so this 80:20 demonstration does not validate product analysis.',
     reduced: 'Reduced motion: counts update without traveling animations.',
-    support: 'Explore Iterglow’s code and support it with a GitHub Star if you find it useful.',
-    github: 'View the GitHub repository', star: 'Opens a new tab. A visit is not counted as an actual Star.',
+    support: 'If you find Iterglow useful, support it with a GitHub Star.',
+    github: 'View the GitHub repository', githubLabel: 'View the GitHub repository (new tab)',
     chartTitle: 'Visitor assignment flow', chartDescription: 'Synthetic visitors pass a participation gate, then take a non-participation, A, or B path. Counts below show cumulative arrivals on each path.',
   },
 };
@@ -216,7 +216,7 @@ export default function ExperimentPreview({ lang, repo }) {
       <p className="sim-latest">{t.latest}: {view.latest ? `${view.latest.id} → ${t.names[view.latest.outcome]}` : '—'}</p>
       <p className="sim-explanation">{t.sample}</p><p className="sim-explanation">{t.history}</p>
       <details className="sim-rules"><summary>{t.rulesTitle}</summary><p>{t.rules}</p></details>
-      <div className="sim-support"><div><p>{t.support}</p><small>{t.star}</small></div><Button asChild variant="outline"><a href={repo} target="_blank" rel="noreferrer">{t.github}<ArrowUpRight aria-hidden="true"/></a></Button></div>
+      <div className="sim-support"><p>{t.support}</p><Button asChild variant="outline"><a href={repo} target="_blank" rel="noreferrer" aria-label={t.githubLabel}>{t.github}<ArrowUpRight aria-hidden="true"/></a></Button></div>
     </div>
   </section>;
 }

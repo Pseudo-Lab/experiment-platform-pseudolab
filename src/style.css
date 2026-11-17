@@ -287,7 +287,7 @@ html[data-theme="dark"],
 .sim-result h3 { color: var(--sim-color); font-size: 19px; font-weight: 650; }
 .sim-target { color: var(--muted); font-size: 13px; margin-top: 7px; }
 .sim-count { margin-top: 10px; font-size: 14px; font-variant-numeric: tabular-nums; }
-.sim-count strong { font-size: 30px; line-height: 1.3; color: var(--sim-color); font-weight: 650; }
+.sim-count strong { font-size: 30px; line-height: 1.3; color: var(--sim-color); font-weight: 650; overflow-wrap: anywhere; }
 .sim-observed { color: var(--muted); font-size: 13px; min-height: 24px; }
 .sim-screen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; font-size: 13px; color: var(--muted); }
 .sim-example-button { display: inline-block; padding: 6px 10px; border: 1px solid var(--sim-color); border-radius: 5px; color: var(--sim-color); }
@@ -298,7 +298,6 @@ html[data-theme="dark"],
 .sim-rules p { max-width: 90ch; margin-top: 8px; }
 .sim-support { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
 .sim-support p { font-size: 14px; }
-.sim-support small { display: block; color: var(--muted); margin-top: 5px; font-size: 12px; }
 .sim-support a { flex-shrink: 0; }
 [data-theme="dark"] .assignment-demo { --sim-outside: #bac7dc; --sim-A: #c8bcff; --sim-B: #8dd1bf; }
 @media (max-width: 700px) {
