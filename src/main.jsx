@@ -14,14 +14,6 @@ const urls = {
   blog: 'https://www.pseudo-lab.com/projects/531b281c-32f8-4477-8e0e-ab5d3e51143c?tab=resources',
   org: 'https://www.pseudo-lab.com/',
 };
-const UNSUBSCRIBE_TOKEN_RE = /^[0-9a-f]{32}[.][0-9a-f]{64}$/i;
-
-function parseUnsubscribeHash(hash) {
-  if (!hash.startsWith('#unsubscribe=')) return null;
-  const raw = hash.slice('#unsubscribe='.length);
-  const valid = UNSUBSCRIBE_TOKEN_RE.test(raw);
-  return { valid, token: valid ? raw : null };
-}
 // Public profile photos/links with contribution descriptions confirmed by the user.
 const members = [
   {
@@ -262,7 +254,7 @@ const copy = {
 function App() {
   const [lang, setLang] = useState('ko');
   const [menu, setMenu] = useState(false);
-  const [dialogState, setDialogState] = useState({ open: false, mode: 'subscribe', token: null, invalidLink: false });
+  const [newsletterOpen, setNewsletterOpen] = useState(false);
   const menuToggle = useRef(null);
   const newsletterTrigger = useRef(null);
   useEffect(() => {
@@ -278,20 +270,6 @@ function App() {
   }, [menu]);
   const cancelScroll = useRef(() => {});
   useEffect(() => () => cancelScroll.current(), []);
-  useEffect(() => {
-    const handleUnsubscribeHash = () => {
-      const parsed = parseUnsubscribeHash(window.location.hash);
-      if (!parsed) return;
-      cancelScroll.current();
-      setMenu(false);
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#subscribe`);
-      document.getElementById('subscribe')?.scrollIntoView({ block: 'start', behavior: 'instant' });
-      setDialogState({ open: true, mode: 'unsubscribe', token: parsed.token, invalidLink: !parsed.valid });
-    };
-    handleUnsubscribeHash();
-    window.addEventListener('hashchange', handleUnsubscribeHash);
-    return () => window.removeEventListener('hashchange', handleUnsubscribeHash);
-  }, []);
 
   function navigateToSection(event) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -420,7 +398,7 @@ function App() {
         <div className="stay-action"><Button ref={newsletterTrigger} size="lg" className="newsletter-open" onClick={() => {
           cancelScroll.current();
           setMenu(false);
-          setDialogState({ open: true, mode: 'subscribe', token: null, invalidLink: false });
+          setNewsletterOpen(true);
         }}>{t.stayCta}<ArrowRight size={17} aria-hidden="true" /></Button>
           <small>{t.stayNote}<a className="newsletter-contact" href={urls.linkedin} target="_blank" rel="noopener noreferrer" title={t.stayContactHint} aria-describedby="newsletter-contact-hint">{t.stayContact}<ArrowUpRight size={14} aria-hidden="true" /></a><span id="newsletter-contact-hint" className="sr-only">{t.stayContactHint}</span></small></div>
       </section>
@@ -428,12 +406,9 @@ function App() {
     <footer className="wrap"><div><a className="footer-brand" href="#"><b className="wordmark">Data <span className="wordmark-lab">Initiative</span></b></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">Iterglow ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
     <NewsletterDialog
       lang={lang}
-      open={dialogState.open}
-      mode={dialogState.mode}
-      token={dialogState.token}
-      invalidLink={dialogState.invalidLink}
+      open={newsletterOpen}
       returnFocusRef={newsletterTrigger}
-      onClose={() => setDialogState({ open: false, mode: 'subscribe', token: null, invalidLink: false })}
+      onClose={() => setNewsletterOpen(false)}
     />
   </>;
 }

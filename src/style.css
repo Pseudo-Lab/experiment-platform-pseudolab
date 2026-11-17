@@ -414,13 +414,6 @@ html[data-theme="dark"],
 }
 .newsletter-withdrawal { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .newsletter-withdrawal a { overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 3px; }
-.newsletter-unsubscribe { margin-top: 20px; padding-block: 6px; }
-.newsletter-unsubscribe:focus { outline: 2px solid var(--purple); outline-offset: 4px; }
-.newsletter-unsubscribe h3 { margin: 0; font-size: 18px; }
-.newsletter-unsubscribe p { margin-top: 10px; color: var(--muted); font-size: 14px; line-height: 1.7; }
-.newsletter-unsubscribe .newsletter-error { margin-top: 14px; margin-bottom: 0; }
-.newsletter-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
-.newsletter-actions button { flex: 1 1 160px; min-height: 44px; }
 .newsletter-checked { margin-top: 24px; padding-block: 10px; }
 .newsletter-checked > svg { color: var(--purple); }
 .newsletter-checked h3 { margin-top: 10px; font-size: 18px; }

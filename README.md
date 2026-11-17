@@ -123,13 +123,13 @@ GitHub Pages로 배포합니다. Pages의 게시 방식은 GitHub Actions이며,
 로컬 실행: `npm ci && npm run dev -- --host 127.0.0.1 --port 4179` 후
 `http://127.0.0.1:4179/experiment-platform-pseudolab/#experiment-preview`로 이동합니다.
 
-## 소식받기 · 해지 (로컬 구현)
+## 소식받기 모달 · 이번 마무리 범위
 
-- GitHub Pages는 구독 화면만 제공하고, 별도 `newsletter-service`의 API가 전용 비공개 DB에 이메일·동의 시각·안내 버전을 저장합니다. Iterglow 제품 백엔드·SDK·회원과 연결하지 않습니다.
-- `VITE_NEWSLETTER_API_BASE_URL=https://<subscription-host>/api/v1/newsletter`로 빌드합니다. 미설정이면 요청을 보내지 않고 오류를 표시합니다. DB 인증정보·해지 secret은 프런트에 넣지 않습니다.
-- 서버가 신청을 수락한 경우에만 완료를 표시합니다. 중복 신청은 동일하게 접수하며 자동 확인 메일·자동 소식 메일은 발송하지 않습니다. 모든 발송은 운영자가 수동으로 합니다.
-- 수동 메일에 개인별 해지 링크를 넣습니다. 링크 진입 시 URL fragment를 지우고 확인 모달을 열며, 버튼 클릭 전에는 삭제하지 않습니다. 해지하면 이메일과 동의 기록을 삭제합니다.
-- native dialog·기본 미선택 동의·KO/EN·메일 문의를 유지하고, 닫기/재열기 시 입력 초기화·요청 중단·포커스 복귀를 처리합니다. 반복 소개·커피챗은 모달 안에 넣지 않습니다.
-- 본문 커피챗은 사용자 지정 `https://m.site.naver.com/2lfGj`를 새 탭(`noopener noreferrer`)으로 유지합니다. 동의 철회·문의 주소는 `soohyun.dev@gmail.com`입니다.
-- UI의 오류·요청 취소·KO/EN·밝음/어두움·모바일 검증과 실제 로컬 D1 저장·해지는 구분해 확인합니다. A/B 체험의 코드와 상태는 구독 기능과 독립입니다.
-- 운영 안내와 전용 DB 스키마·수동 CSV 내보내기는 상위 워크스페이스 `newsletter-service/README.md`에 있습니다. 원격 게시·운영 DB 변경·실수집·배포는 수행하지 않았습니다.
+- 이번 범위는 개선한 팀 소개 화면과 A/B 체험·소식받기 모달의 동작 검증입니다. 운영 API·DB 연결과 메일 하단의 해지 링크는 후속입니다.
+- 소개 하단에서 신청 전용 native dialog를 엽니다. 이메일·개인정보 안내·기본 미선택 동의·소식받기로 구성하며, 해지·철회·문의는 `soohyun.dev@gmail.com`으로 안내합니다. 페이지에는 해지 경로나 요청을 두지 않습니다.
+- 닫기/재열기 시 입력 초기화·요청 취소·포커스 복귀를 처리하고 한영·밝은/어두운 테마를 유지합니다. A/B 체험 코드는 변경하지 않습니다.
+- 후속 운영 연결 시 `VITE_NEWSLETTER_API_BASE_URL=https://subscribe.pseudolab-devfactory.com/api/v1/newsletter`로 빌드합니다. API 주소 미설정이면 외부 요청을 보내지 않고 오류를 표시합니다. 실제 202 accepted 응답 뒤에만 완료를 표시하며 가짜 저장을 만들지 않습니다.
+- 모의 API는 검증용으로만 사용합니다. 공개 Pages의 실제 수집이 연결됐다고 간주하지 않습니다. 별도 구독 API 초안은 개인 비공개 저장소 `soohyunme/data-initiative-newsletter`의 PR #1에 보존합니다.
+- 본문 커피챗은 사용자 지정 `https://m.site.naver.com/2lfGj`를 새 탭(`noopener noreferrer`)으로 유지합니다. 모달 안에는 반복 소개·커피챗이 없습니다.
+- 자동 확인 메일·자동 소식 발송은 없습니다. 브라우저에 비밀 API 키나 DB 인증정보를 넣지 않습니다.
+- UI 검증 결과와 캡처는 상위 워크스페이스 `evidence/team-page-final/`에 보존합니다. 운영 DB 변경·실수집·공개 Pages 배포는 이번 로컬 마무리에 포함하지 않습니다.
