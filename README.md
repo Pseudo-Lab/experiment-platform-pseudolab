@@ -4,7 +4,7 @@ Status: active
 Last-Validated: 2026-11-17
 
 Data Initiative의 목적, 주요 활동, 함께하는 사람들, 프로젝트와 기록을 소개합니다.
-Iterglow(이터글로)는 활동을 지원하는 대표 프로젝트이며, GitHub·팀 블로그·소식 신청으로 연결합니다.
+Iterglow(이터글로)는 활동을 지원하는 대표 프로젝트이며, GitHub·팀 블로그·소식받기 시안으로 연결합니다.
 Iterglow는 팀이 개발하는 오픈소스 A/B 테스트·실험 플랫폼입니다.
 한국어와 영어를 함께 제공합니다.
 다크모드는 기기 설정을 따르며, 상단 해·달 버튼으로 직접 선택한 모드는 다음 방문에도 유지됩니다.
@@ -122,3 +122,15 @@ GitHub Pages로 배포합니다. Pages의 게시 방식은 GitHub Actions이며,
 
 로컬 실행: `npm ci && npm run dev -- --host 127.0.0.1 --port 4179` 후
 `http://127.0.0.1:4179/experiment-platform-pseudolab/#experiment-preview`로 이동합니다.
+
+## 소식받기 모달 통합 (로컬 미리보기)
+
+- 확정 원본 `feat/newsletter-modal-preview-20261117`의 `9020965` 최종 diff만 최신 소개 페이지에 통합했습니다. A/B 체험·모바일 변경은 유지합니다.
+- 소개 하단 CTA가 native dialog를 열며 이메일·개인정보 안내·기본 미선택 동의·소식받기로 구성합니다. 모달에 반복 소개나 커피챗은 없습니다.
+- 본문의 관계는 “Data Initiative가 만들어가는 Iterglow”입니다. 기여 관심 안내와 김수현 커피챗은 CTA 아래에만 표시합니다.
+- 커피챗은 사용자 지정 `https://m.site.naver.com/2lfGj`를 새 탭(`noopener noreferrer`)으로 유지합니다. 동의 철회·문의 주소는 `soohyun.dev@gmail.com`입니다.
+- 미리보기 표시와 “저장·전송·구독되지 않음” 완료 안내를 유지합니다. 기존 Google Form 자체는 수정하지 않았으며 현재 CTA는 외부 폼 대신 이 시안을 엽니다.
+- 실제 구독 운영에는 이메일 저장 위치, 동의 여부·시각·문구 버전 기록, 발송 주체/서비스, 철회·삭제 처리가 남았습니다. 표시만 제거해 실제 구독 기능으로 운영 반영하지 않습니다.
+- KO/EN·밝음/어두움·320/390/768/1440px 및 844×390 작은 높이 8조건에서 모달 가시성·넘침·기본 미선택 동의·이메일 validation·재열기 초기화·Escape/닫기 후 포커스 복귀·A/B 상태 독립을 확인했습니다. axe 8회 위반 0·페이지 JS 오류 0·쓰기 요청 0입니다. A/B가 재생 중인 별도 사례에서도 모달 열고 닫는 동안 비율·재생 상태를 유지했습니다.
+- 재현 스크립트와 캡처는 상위 워크스페이스의 `validate-newsletter-integration.mjs`, `evidence/newsletter-integration/`에 보존합니다.
+- 사용자 최종 통합 화면 검토와 실제 운영 방식의 결정·허용 범위 확인 전이며, 원격 게시·배포·DB/API·실데이터 쓰기는 수행하지 않았습니다.

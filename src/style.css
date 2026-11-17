@@ -354,3 +354,59 @@ html[data-theme="dark"],
 @media (prefers-reduced-motion: reduce) {
   .assignment-demo *, .assignment-demo *::before, .assignment-demo *::after { transition: none !important; animation: none !important; }
 }
+/* Newsletter preview: reuse the team's surface and typography tokens. */
+.newsletter-open { min-width: 160px; min-height: 48px; font-size: 15px; }
+.stay-action .newsletter-contact { display: flex; align-items: center; justify-content: center; gap: 4px; height: auto; min-height: 0; margin-top: 5px; padding: 0; font-size: inherit; text-decoration: underline; text-underline-offset: 4px; }
+.newsletter-contact svg { flex-shrink: 0; }
+.newsletter-dialog {
+  width: min(560px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 36px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  color: var(--ink);
+  background: hsl(var(--background));
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgb(12 17 32 / 24%);
+}
+.newsletter-dialog::backdrop { background: rgb(12 17 32 / 48%); }
+[data-theme="dark"] .newsletter-dialog { background: #20283b; }
+[data-theme="dark"] .newsletter-dialog::backdrop { background: rgb(4 7 15 / 68%); }
+.stay .newsletter-open:focus-visible, .newsletter-dialog button:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
+.newsletter-close { position: absolute; top: 12px; right: 12px; min-width: 44px; min-height: 44px; color: var(--muted); }
+.newsletter-dialog h2 { padding-right: 24px; font-size: 26px; letter-spacing: -.03em; line-height: 1.45; }
+.newsletter-preview { margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.newsletter-email-label { display: block; margin-top: 24px; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+.newsletter-dialog input[type="email"] {
+  width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--line);
+  border-radius: 8px; color: var(--ink); background: hsl(var(--background));
+  font: inherit; font-size: 16px; caret-color: var(--purple);
+}
+.newsletter-dialog input::placeholder { color: var(--muted); opacity: 1; }
+.newsletter-dialog input:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.newsletter-consent { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.newsletter-consent h3 { margin-bottom: 12px; font-size: 14px; font-weight: 650; }
+.newsletter-consent dl { margin: 0; font-size: 13px; line-height: 1.65; }
+.newsletter-consent dl > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; margin-top: 7px; }
+.newsletter-consent dt { color: var(--muted); }
+.newsletter-consent dd { margin: 0; overflow-wrap: anywhere; }
+.newsletter-consent p { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.newsletter-consent a { overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 3px; }
+.newsletter-agree { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; margin-block: 20px; padding-block: 6px; font-size: 13px; line-height: 1.7; cursor: pointer; }
+.newsletter-agree input { flex: 0 0 18px; width: 18px; height: 18px; margin: 2px 0 0; accent-color: hsl(var(--primary)); }
+.newsletter-submit { width: 100%; min-height: 48px; font-size: 15px; }
+.newsletter-checked { margin-top: 24px; padding-block: 10px; }
+.newsletter-checked > svg { color: var(--purple); }
+.newsletter-checked h3 { margin-top: 10px; font-size: 18px; }
+.newsletter-checked p { margin-top: 8px; color: var(--muted); font-size: 14px; }
+.newsletter-checked button { margin-top: 20px; min-height: 44px; }
+.newsletter-checked:focus { outline: 2px solid var(--purple); outline-offset: 4px; }
+@media (max-width: 600px) {
+  .newsletter-dialog { padding: 30px 22px 24px; }
+  .newsletter-dialog h2 { padding-right: 40px; font-size: 23px; }
+  .newsletter-consent dl > div { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; }
+}
+@media (max-width: 700px) { .stay-action .newsletter-contact { justify-content: flex-start; } }

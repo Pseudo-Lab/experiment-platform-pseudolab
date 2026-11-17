@@ -3,15 +3,16 @@ import { createRoot } from 'react-dom/client';
 import { ArrowUpRight, ArrowRight, Github, Menu, X, Code2, BookOpen, Compass, Sun, Moon, Boxes, Database, FlaskConical, Cable, NotebookPen } from 'lucide-react';
 import { Button } from './components/ui/button';
 import ExperimentPreview from './ExperimentPreview';
+import { NewsletterDialog } from './NewsletterDialog';
 import './style.css';
 
 const urls = {
   repo: 'https://github.com/Pseudo-Lab/experiment-platform-pseudolab',
+  linkedin: 'https://m.site.naver.com/2lfGj',
   service: 'https://iterglow.pseudolab-devfactory.com',
   guide: 'https://iterglow.pseudolab-devfactory.com/docs/sdk',
   blog: 'https://www.pseudo-lab.com/projects/531b281c-32f8-4477-8e0e-ab5d3e51143c?tab=resources',
   org: 'https://www.pseudo-lab.com/',
-  signup: 'https://docs.google.com/forms/d/e/1FAIpQLSerR1rw8fyUqiVQHZkrugJN-iMh9a2AA1aT69imKq2yDqbPKw/viewform?usp=dialog',
 };
 // Public profile photos/links with contribution descriptions confirmed by the user.
 const members = [
@@ -142,12 +143,14 @@ const copy = {
       ]
     ],
     "stayTitle": [
-      "소식을 받아보고,",
-      "함께할 뜻도 남겨주세요."
+      "함께 만들어가는 이야기,",
+      "소식으로 만나보세요."
     ],
-    "stayText": "프로젝트 소식이 궁금하거나, 함께하고 싶다면 알려주세요.",
-    "stayCta": "참여 관심 남기기 / 소식받기",
-    "stayNote": "프로젝트 소식만 받아보거나, 앞으로 함께하고 싶은 분야를 남길 수 있습니다.",
+    "stayText": "Data Initiative가 만들어가는 Iterglow의 소식을 전해드려요.",
+    "stayCta": "소식받기",
+    "stayNote": "함께 기여하고 싶다면",
+    "stayContact": "리드 빌더 김수현과 커피챗",
+    "stayContactHint": "LinkedIn 프로필 · 새 탭에서 열림",
     "footer": "가짜연구소 데이터 이니셔티브",
     "org": "가짜연구소",
     "footerNote": "BUILD TOGETHER · LEARN TOGETHER"
@@ -234,12 +237,14 @@ const copy = {
       ]
     ],
     "stayTitle": [
-      "Follow our progress.",
-      "Let us know you’re interested."
+      "Follow what we’re building.",
+      "Stay in the loop."
     ],
-    "stayText": "Let us know if you’d like project updates or are interested in taking part.",
-    "stayCta": "Express interest / Get updates",
-    "stayNote": "Receive project updates, or tell us how you’d like to take part in the future.",
+    "stayText": "Hear what’s next for Iterglow, built by Data Initiative.",
+    "stayCta": "Get updates",
+    "stayNote": "Interested in contributing?",
+    "stayContact": "Coffee chat with Lead Builder Kim Soohyun",
+    "stayContactHint": "LinkedIn profile · opens in a new tab",
     "footer": "Pseudo Lab’s Data Initiative",
     "org": "Pseudo Lab",
     "footerNote": "BUILD TOGETHER · LEARN TOGETHER"
@@ -249,6 +254,7 @@ const copy = {
 function App() {
   const [lang, setLang] = useState('ko');
   const [menu, setMenu] = useState(false);
+  const [newsletterOpen, setNewsletterOpen] = useState(false);
   const menuToggle = useRef(null);
   useEffect(() => {
     if (!menu) return;
@@ -388,10 +394,16 @@ function App() {
         <div className="resource-grid">{t.resources.map(([title, label, text, action, key], i) => { const Icon = [Compass, Code2, BookOpen][i]; return <article key={key}><div className="resource-top"><Icon size={24}/><span>{label}</span></div><h3>{key === 'service' ? <img className="service-logo" src={import.meta.env.BASE_URL + 'brand/iterglow-logo' + (theme === 'dark' ? '-dark' : '') + '.svg'} alt={title}/> : title}</h3><p>{text}</p><a className="text-link" href={urls[key]} target="_blank" rel="noreferrer">{action}<ArrowUpRight size={17}/></a>{key === 'service' && <a className="text-link sdk-guide-link" href={urls.guide} target="_blank" rel="noreferrer">{t.guide}<ArrowUpRight size={15}/></a>}</article>; })}</div>
       </div></section>
       <section id="subscribe" tabIndex={-1} className="stay wrap"><div className="stay-decor" aria-hidden="true">✳</div><div><h2>{t.stayTitle[0]}<br/>{t.stayTitle[1]}</h2><p>{t.stayText}</p></div>
-        <div className="stay-action"><div className="stay-buttons"><Button asChild size="lg"><a href={urls.signup} target="_blank" rel="noreferrer">{t.stayCta}<ArrowUpRight size={17}/></a></Button></div><small>{t.stayNote}</small></div>
+        <div className="stay-action"><Button size="lg" className="newsletter-open" onClick={() => {
+          cancelScroll.current();
+          setMenu(false);
+          setNewsletterOpen(true);
+        }}>{t.stayCta}<ArrowRight size={17} aria-hidden="true" /></Button>
+          <small>{t.stayNote}<a className="newsletter-contact" href={urls.linkedin} target="_blank" rel="noopener noreferrer" title={t.stayContactHint} aria-describedby="newsletter-contact-hint">{t.stayContact}<ArrowUpRight size={14} aria-hidden="true" /></a><span id="newsletter-contact-hint" className="sr-only">{t.stayContactHint}</span></small></div>
       </section>
     </main>
     <footer className="wrap"><div><a className="footer-brand" href="#"><b className="wordmark">Data <span className="wordmark-lab">Initiative</span></b></a><p>{t.footer}</p></div><div className="footer-right"><div><a href={urls.service} target="_blank" rel="noreferrer">Iterglow ↗</a><a href={urls.repo} target="_blank" rel="noreferrer">GitHub ↗</a><a href={urls.blog} target="_blank" rel="noreferrer">{lang === 'ko' ? '팀 블로그' : 'Team Blog'} ↗</a><a href={urls.org} target="_blank" rel="noreferrer">{t.org} ↗</a></div><small>{t.footerNote}</small></div></footer>
+    <NewsletterDialog lang={lang} open={newsletterOpen} onClose={() => setNewsletterOpen(false)} />
   </>;
 }
 createRoot(document.getElementById('root')).render(<App/>);
