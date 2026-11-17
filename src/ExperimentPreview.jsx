@@ -12,7 +12,7 @@ const copy = {
     intro: '같은 상품을 기본형과 강조형으로 보여줍니다. 매번 100~200명의 방문자가 찾아옵니다. 비율을 바꾸고 분배 결과를 비교해 보세요.',
     participation: '실험 참여율', ratio: '참여자 안의 A:B', presets: 'A:B 빠른 설정',
     start: '시작', pause: '일시정지', reset: '배정 초기화', restart: '다시 실행', resume: '계속하기',
-    visitorLimit: '방문자 100~200명 랜덤', results: '배정 결과', shop: '데일리 스토어', productPage: '리빙 / 머그컵', ready: '시작 전', complete: '배정 완료',
+    visitorLimit: '방문자 100~200명 랜덤', results: '배정 결과', shop: '데일리 스토어', productPage: '리빙 / 머그컵', complete: '배정 완료',
     completed: count => `${count}명 모두 도착했습니다. 설정 비율과 아래 결과를 비교해 보세요.`,
     incoming: '입장하는 가상 사용자', gate: '참여', split: 'A:B',
     names: { outside: '비참여', A: 'A · 기본형', B: 'B · 강조형' },
@@ -20,7 +20,6 @@ const copy = {
     buttons: { outside: '구매하기', A: '구매하기', B: '지금 구매하기' },
     people: '명', target: '설정상 전체', observed: '누적 배정 비중',
     noData: '아직 도착한 사용자 없음', generated: '입장', moving: '이동 중', pending: '배정 대기', latest: '최근 도착',
-    status: '재생 상태', stopped: '일시정지 중', playing: '재생 중',
     history: '비율 변경은 다음 사용자부터 적용됩니다. 새로 비교하려면 배정 초기화를 눌러보세요.',
     sample: '점 하나는 가상 사용자 한 명입니다. 설정 비율과 누적 배정 비중을 비교해 보세요.',
     reduced: '모션 감소 설정: 이동 애니메이션 대신 배정 수만 갱신합니다.',
@@ -33,7 +32,7 @@ const copy = {
     intro: 'The same product in a basic and an emphasized design. Each run brings 100–200 visitors. Adjust the ratios and compare the assignments.',
     participation: 'Experiment participation', ratio: 'A:B within participants', presets: 'Quick A:B settings',
     start: 'Start', pause: 'Pause', reset: 'Reset assignments', restart: 'Run again', resume: 'Resume',
-    visitorLimit: '100–200 random visitors', results: 'Assignment results', shop: 'Daily Store', productPage: 'Living / Mugs', ready: 'Ready', complete: 'Assignments complete',
+    visitorLimit: '100–200 random visitors', results: 'Assignment results', shop: 'Daily Store', productPage: 'Living / Mugs', complete: 'Assignments complete',
     completed: count => `All ${count} visitors have arrived. Compare the target ratios with the results below.`,
     incoming: 'Virtual visitors', gate: 'Join', split: 'A:B',
     names: { outside: 'Not enrolled', A: 'A · Basic', B: 'B · Emphasized' },
@@ -41,7 +40,6 @@ const copy = {
     buttons: { outside: 'Buy', A: 'Buy', B: 'Buy now' },
     people: 'visitors', target: 'Target of all visitors', observed: 'Cumulative share of all',
     noData: 'No arrivals yet', generated: 'Entered', moving: 'In transit', pending: 'Pending', latest: 'Latest arrival',
-    status: 'Playback status', stopped: 'Paused', playing: 'Playing',
     history: 'Ratio changes apply to the next visitors. Reset assignments to start a fresh comparison.',
     sample: 'Each dot is one virtual visitor. Compare the target ratios with the cumulative assignments.',
     reduced: 'Reduced motion: counts update without traveling animations.',
@@ -216,7 +214,6 @@ export default function ExperimentPreview({ lang, repo }) {
       <div className="sim-playback">
         <div className="sim-playback-actions">
           <Button onClick={togglePlayback}>{running ? <Pause aria-hidden="true"/> : <Play aria-hidden="true"/>}{running ? t.pause : completed ? t.restart : view.entered ? t.resume : t.start}</Button>
-          <span role="status" aria-label={t.status}>{completed ? t.complete : running ? t.playing : view.entered ? t.stopped : t.ready}</span>
         </div>
         <div className="sim-progress"><span>{t.visitorLimit}</span><span>{t.generated} {number(view.entered)} / {number(visitorLimit)} · {reduced ? t.pending : t.moving} {number(view.tokens.length)}</span></div>
       </div>

@@ -274,7 +274,6 @@ html[data-theme="dark"],
 .sim-progress { display: flex; flex-direction: column; gap: 4px; text-align: right; }
 .sim-result-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 18px; }
 .sim-result-actions strong { font-size: 16px; }
-.sim-playback [role="status"] { color: var(--purple); }
 .sim-flow { display: block; width: 100%; height: auto; margin: 12px auto 0; overflow: visible; }
 .sim-outside { --sim-color: var(--sim-outside); }
 .sim-A { --sim-color: var(--sim-A); }
