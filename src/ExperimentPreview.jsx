@@ -14,15 +14,15 @@ const copy = {
     start: '재생', pause: '일시정지', reset: '배정 초기화',
     incoming: '입장하는 가상 사용자', gate: '참여', split: 'A:B',
     names: { outside: '비참여', A: 'A 화면', B: 'B 화면' },
-    screen: { outside: '기본 화면', A: '짧은 문구 예시', B: '구체적 문구 예시' },
+    screen: { outside: '기본 화면', A: '짧은 안내', B: '구체적인 안내' },
     buttons: { outside: '더 보기', A: '더 알아보기', B: '코드 살펴보기' },
-    people: '명', target: '설정상 전체', observed: '관측된 전체 비중',
+    people: '명', target: '설정상 전체', observed: '누적 배정 비중',
     noData: '아직 도착한 사용자 없음', generated: '입장', moving: '이동 중', pending: '배정 대기', latest: '최근 도착',
     status: '재생 상태', stopped: '일시정지 중', playing: '재생 중',
     notice: '가상 ID로만 동작하는 시뮬레이션입니다. 실제 사용자·SDK·운영 API와 연결하거나 이벤트를 저장하지 않습니다.',
-    history: '설정 변경은 새 ID부터. 기존·이동 중 배정과 누적은 유지됩니다. 새 비율만 보려면 배정 초기화하세요.',
-    sample: '점 1개 = 가상 ID 1개. 도착한 배정 수이며 전환율이 아닙니다. 소수 표본의 비중은 설정 비율과 다를 수 있습니다.',
-    rulesTitle: '이 시뮬레이션과 Iterglow의 차이',
+    history: '비율 변경은 다음 사용자부터 적용됩니다. 새로 비교하려면 배정 초기화를 눌러보세요.',
+    sample: '점 하나는 가상 사용자 한 명입니다. 설정 비율과 누적 배정 비중을 비교해 보세요.',
+    rulesTitle: '배정 방식 알아보기',
     rules: '이 모형은 참여 여부와 A/B를 별도 ID 버킷으로 정하고, 같은 실행 안의 동일 ID는 첫 경로(비참여 포함)를 유지합니다. 초기화하면 기록만 지우고 설정은 유지합니다. Iterglow의 기존 실험 배정 기록 재사용을 설명하기 위한 규칙입니다. 현재 SDK v1의 Feature Flag 응답은 비율 변경 후 같은 ID라도 바뀔 수 있고, 실제 노출은 화면 표시 뒤 expose()로 기록합니다. 독립된 참여율·A:B 조절은 제품 설정을 그대로 재현한 것이 아닙니다. 현재 제품의 표본 비율 검사(SRM)는 균등 배정을 기준으로 하므로, 이 80:20 시연은 제품 분석의 유효성을 보장하지 않습니다.',
     reduced: '모션 감소 설정: 이동 애니메이션 대신 배정 수만 갱신합니다.',
     support: 'Iterglow가 유용하다면 GitHub Star로 응원해 주세요.',
@@ -36,15 +36,15 @@ const copy = {
     start: 'Play', pause: 'Pause', reset: 'Reset assignments',
     incoming: 'Virtual visitors', gate: 'Join', split: 'A:B',
     names: { outside: 'Not enrolled', A: 'Screen A', B: 'Screen B' },
-    screen: { outside: 'Default screen', A: 'Short label example', B: 'Specific label example' },
+    screen: { outside: 'Default screen', A: 'Short label', B: 'Specific label' },
     buttons: { outside: 'View', A: 'Learn more', B: 'Explore code' },
-    people: 'visitors', target: 'Target of all visitors', observed: 'Observed share of all',
+    people: 'visitors', target: 'Target of all visitors', observed: 'Cumulative share of all',
     noData: 'No arrivals yet', generated: 'Entered', moving: 'In transit', pending: 'Pending', latest: 'Latest arrival',
     status: 'Playback status', stopped: 'Paused', playing: 'Playing',
     notice: 'A simulation with synthetic IDs only. No real visitors, SDK, production API, or event storage is connected.',
-    history: 'Changes apply to new IDs only. In-flight paths and cumulative counts stay intact. Reset assignments to compare a new ratio alone.',
-    sample: 'One dot = one synthetic ID. These are arrived assignments, not conversions. Small samples can differ from target ratios.',
-    rulesTitle: 'How this model differs from Iterglow',
+    history: 'Ratio changes apply to the next visitors. Reset assignments to start a fresh comparison.',
+    sample: 'Each dot is one virtual visitor. Compare the target ratios with the cumulative assignments.',
+    rulesTitle: 'Explore how assignment works',
     rules: 'This model uses separate ID buckets for participation and A/B and retains the first path for the same ID within a run, including non-participation. Reset clears assignments and keeps settings. It illustrates reuse of legacy experiment assignment records. Current SDK v1 Feature Flag responses can change for the same ID when rollout changes; real exposures are recorded with expose() after rendering. Independent participation and A:B controls do not reproduce product settings. Current product sample-ratio checks (SRM) assume equal allocation, so this 80:20 demonstration does not validate product analysis.',
     reduced: 'Reduced motion: counts update without traveling animations.',
     support: 'If you find Iterglow useful, support it with a GitHub Star.',
@@ -170,7 +170,6 @@ export default function ExperimentPreview({ lang, repo }) {
   return <section id="experiment-preview" tabIndex={-1} className="assignment-demo">
     <div className="wrap">
       <h2>{t.title}</h2><p className="sim-intro">{t.intro}</p>
-      <p className="sim-notice">{t.notice}</p>
       <div className="sim-controls">
         <div className="sim-slider">
           <label htmlFor={`${id}-participation`}>{t.participation}<output>{participation}%</output></label>
@@ -215,7 +214,7 @@ export default function ExperimentPreview({ lang, repo }) {
       </div>
       <p className="sim-latest">{t.latest}: {view.latest ? `${view.latest.id} → ${t.names[view.latest.outcome]}` : '—'}</p>
       <p className="sim-explanation">{t.sample}</p><p className="sim-explanation">{t.history}</p>
-      <details className="sim-rules"><summary>{t.rulesTitle}</summary><p>{t.rules}</p></details>
+      <details className="sim-rules"><summary>{t.rulesTitle}</summary><p>{t.notice}</p><p>{t.rules}</p></details>
       <div className="sim-support"><p>{t.support}</p><Button asChild variant="outline"><a href={repo} target="_blank" rel="noreferrer" aria-label={t.githubLabel}>{t.github}<ArrowUpRight aria-hidden="true"/></a></Button></div>
     </div>
   </section>;
