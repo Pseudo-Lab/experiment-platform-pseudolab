@@ -8,8 +8,8 @@ const INTERVAL = 0.05;
 const outcomes = ['A', 'B'];
 const copy = {
   ko: {
-    title: '같은 상품, 다른 화면',
-    intro: '100~200명의 방문자에게 A/B 화면을 나눠 보여주세요.',
+    title: 'A/B 테스트 체험하기',
+    intro: '방문자에게 서로 다른 화면을 보여주고 반응을 비교하는 방법이에요.',
     ratio: 'A/B 배정 비율', presets: 'A:B 빠른 설정',
     start: '시작', pause: '일시정지', reset: '배정 초기화', restart: '다시 실행', resume: '계속하기',
     results: '배정 결과', shop: '데일리 스토어', productPage: '리빙 / 머그컵',
@@ -26,8 +26,8 @@ const copy = {
     chartTitle: '사용자 배정 흐름', chartDescription: '가상 방문자가 설정 비율에 따라 A 또는 B 화면으로 이동합니다. 아래 수치는 각 화면에 도착한 누적 배정입니다.',
   },
   en: {
-    title: 'Same product, different pages',
-    intro: 'Split 100–200 visitors between two shop pages.',
+    title: 'Try A/B testing',
+    intro: 'A/B testing shows visitors different versions of a page to compare their responses.',
     ratio: 'A/B assignment ratio', presets: 'Quick A:B settings',
     start: 'Start', pause: 'Pause', reset: 'Reset assignments', restart: 'Run again', resume: 'Resume',
     results: 'Assignment results', shop: 'Daily Store', productPage: 'Living / Mugs',
