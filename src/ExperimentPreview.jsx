@@ -208,7 +208,7 @@ export default function ExperimentPreview({ lang, repo }) {
       <div className="sim-results">
         {outcomes.map(key => <article key={key} className={`sim-result sim-${key}`} data-outcome={key}>
           <h3>{t.names[key]}</h3><p className="sim-target">{t.target} <b>{number(target[key])}%</b></p>
-          <p className="sim-count"><strong>{number(view.counts[key])}</strong> {t.people}</p>
+          <p className="sim-count"><strong className={view.counts[key] >= 1000 ? 'sim-large-count' : undefined}>{number(view.counts[key])}</strong> {t.people}</p>
           <p className="sim-observed">{total ? `${t.observed} ${number(view.counts[key] / total * 100)}%` : t.noData}</p>
           <div className="sim-screen"><span>{t.screen[key]}</span><span className="sim-example-button">{t.buttons[key]}</span></div>
         </article>)}
