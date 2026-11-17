@@ -255,25 +255,68 @@ html[data-theme="dark"],
 [data-theme="dark"] .activity-card:nth-child(5) { --activity-ink: #dfa9c3; --activity-surface: #3d2936; }
 @media (min-width: 1001px) { [lang="en"] .activity-card h3 { min-height: 4.65em; } }
 
-/* A small, browser-only experiment preview inside the existing team page. */
-.experiment-preview-section { border-top: 1px solid var(--line); padding-block: 42px; }
-.experiment-preview-layout { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 48px; }
-.experiment-preview-copy h2 { font-size: 26px; line-height: 1.5; font-weight: 650; letter-spacing: -.025em; }
-.experiment-preview-copy > p { margin-top: 14px; color: var(--muted); font-size: 15px; }
-.experiment-preview-settings { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
-.experiment-preview-settings button, .experiment-preview-sample > a { min-height: 44px; height: auto; white-space: normal; padding-block: 12px; }
-.experiment-preview-copy .experiment-preview-current { font-size: 14px; color: var(--purple); }
-.experiment-preview-copy .experiment-preview-note { font-size: 14px; }
-.experiment-preview-sample { padding: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--soft); }
-.experiment-preview-sample h3 { font-size: 22px; line-height: 1.5; font-weight: 650; }
-.experiment-preview-sample > p { margin-top: 14px; color: var(--muted); font-size: 15px; }
-.experiment-preview-sample > a { margin-top: 22px; text-align: center; }
-.experiment-preview-sample .experiment-preview-support { font-size: 14px; }
+/* Interactive, synthetic assignment flow within the team introduction. */
+.assignment-demo { --sim-outside: #58677e; --sim-A: #5147c8; --sim-B: #177464; border-top: 1px solid var(--line); padding-block: 40px; }
+.assignment-demo h2 { font-size: clamp(26px, 2.5vw, 34px); line-height: 1.4; font-weight: 650; letter-spacing: -.025em; }
+.sim-intro { margin-top: 10px; color: var(--muted); font-size: 16px; }
+.sim-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 40px; margin-top: 26px; }
+.sim-slider { min-width: 0; }
+.sim-slider label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 15px; font-weight: 600; }
+.sim-slider output { color: var(--purple); font-variant-numeric: tabular-nums; }
+.sim-slider input { display: block; width: 100%; height: 44px; margin: 5px 0 0; accent-color: hsl(var(--primary)); cursor: pointer; }
+.sim-slider input:focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; border-radius: 4px; }
+.sim-range-ends { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
+.sim-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sim-presets { display: flex; gap: 8px; margin-right: 12px; }
+.sim-presets [aria-pressed="true"] { border-color: var(--purple); color: var(--purple); }
+.sim-actions button, .sim-support a { min-height: 44px; height: auto; white-space: normal; padding-block: 10px; }
+.sim-playback { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; margin-top: 20px; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.sim-playback [role="status"] { color: var(--purple); }
+.sim-flow { display: block; width: 100%; height: auto; margin: 12px auto 0; overflow: visible; }
+.sim-outside { --sim-color: var(--sim-outside); }
+.sim-A { --sim-color: var(--sim-A); }
+.sim-B { --sim-color: var(--sim-B); }
+.sim-path { fill: none; stroke: var(--sim-color); stroke-width: 2; opacity: .5; }
+.sim-gate { fill: hsl(var(--background)); stroke: var(--ink); stroke-width: 2; }
+.sim-flow text { font-family: inherit; fill: var(--muted); font-size: 15px; }
+.sim-flow .sim-gate-label { fill: var(--ink); font-weight: 600; }
+.sim-flow .sim-endpoint { fill: var(--sim-color); font-weight: 650; }
+.sim-dot { fill: var(--sim-color); stroke: hsl(var(--background)); stroke-width: 2; }
+.sim-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.sim-result { min-width: 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--radius); }
+.sim-result h3 { color: var(--sim-color); font-size: 19px; font-weight: 650; }
+.sim-target { color: var(--muted); font-size: 13px; margin-top: 7px; }
+.sim-count { margin-top: 10px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.sim-count strong { font-size: 30px; line-height: 1.3; color: var(--sim-color); font-weight: 650; }
+.sim-observed { color: var(--muted); font-size: 13px; min-height: 24px; }
+.sim-screen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; font-size: 13px; color: var(--muted); }
+.sim-example-button { display: inline-block; padding: 6px 10px; border: 1px solid var(--sim-color); border-radius: 5px; color: var(--sim-color); }
+.sim-latest { margin-top: 12px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sim-explanation, .sim-notice, .sim-reduced { font-size: 14px; color: var(--muted); margin-top: 10px; }
+.sim-rules { margin-top: 16px; font-size: 14px; color: var(--muted); }
+.sim-rules summary { cursor: pointer; min-height: 36px; line-height: 1.8; font-weight: 600; color: var(--ink); }
+.sim-rules p { max-width: 90ch; margin-top: 8px; }
+.sim-support { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.sim-support p { font-size: 14px; }
+.sim-support small { display: block; color: var(--muted); margin-top: 5px; font-size: 12px; }
+.sim-support a { flex-shrink: 0; }
+[data-theme="dark"] .assignment-demo { --sim-outside: #bac7dc; --sim-A: #c8bcff; --sim-B: #8dd1bf; }
 @media (max-width: 700px) {
   .initiative-hero .hero-actions { flex-wrap: wrap; gap: 12px; }
-  .experiment-preview-section { padding-block: 32px; }
-  .experiment-preview-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .experiment-preview-copy h2 { font-size: 24px; }
-  .experiment-preview-sample { padding: 24px 20px; }
-  .experiment-preview-sample > a { max-width: 100%; padding-inline: 20px; }
+  .assignment-demo { padding-block: 28px; }
+  .sim-controls { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .sim-actions { gap: 10px 8px; }
+  .sim-presets { margin-right: 0; }
+  .sim-results { gap: 8px; }
+  .sim-result { padding: 14px 10px; }
+  .sim-result h3 { font-size: 16px; }
+  .sim-count strong { font-size: 26px; }
+  .sim-target, .sim-observed, .sim-screen { font-size: 12px; }
+  .sim-screen { display: block; }
+  .sim-example-button { display: block; text-align: center; margin-top: 8px; padding: 6px 2px; }
+  .sim-support { flex-direction: column; align-items: flex-start; }
+  .sim-playback { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assignment-demo *, .assignment-demo *::before, .assignment-demo *::after { transition: none !important; animation: none !important; }
 }
