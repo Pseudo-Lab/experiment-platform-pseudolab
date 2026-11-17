@@ -9,13 +9,13 @@ const outcomes = ['outside', 'A', 'B'];
 const copy = {
   ko: {
     title: '쇼핑몰 방문자는 어떤 화면을 보게 될까요?',
-    intro: '같은 상품, 다른 구매 버튼. 방문자 수와 비율을 정하고 분배 결과를 비교해 보세요.',
+    intro: '같은 상품을 기본형과 강조형으로 보여줍니다. 방문자 수와 비율을 정하고 분배 결과를 비교해 보세요.',
     participation: '실험 참여율', ratio: '참여자 안의 A:B', presets: 'A:B 빠른 설정',
     start: '시작', pause: '일시정지', reset: '배정 초기화', restart: '다시 실행', resume: '계속하기',
     visitorLimit: '방문자 수', complete: '배정 완료',
     completed: count => `${count}명 모두 도착했습니다. 설정 비율과 아래 결과를 비교해 보세요.`,
     incoming: '입장하는 가상 사용자', gate: '참여', split: 'A:B',
-    names: { outside: '비참여', A: 'A 화면', B: 'B 화면' },
+    names: { outside: '비참여', A: 'A · 기본형', B: 'B · 강조형' },
     productName: '데일리 세라믹 머그', price: '19,900원', purchased: '구매 완료',
     buttons: { outside: '구매하기', A: '구매하기', B: '지금 구매하기' },
     people: '명', target: '설정상 전체', observed: '누적 배정 비중',
@@ -30,13 +30,13 @@ const copy = {
   },
   en: {
     title: 'Which shop page will your visitors see?',
-    intro: 'Same product, different purchase buttons. Choose a visitor count and ratios, then compare the assignments.',
+    intro: 'The same product in a basic and an emphasized design. Choose a visitor count and ratios, then compare the assignments.',
     participation: 'Experiment participation', ratio: 'A:B within participants', presets: 'Quick A:B settings',
     start: 'Start', pause: 'Pause', reset: 'Reset assignments', restart: 'Run again', resume: 'Resume',
     visitorLimit: 'Visitor count', complete: 'Assignments complete',
     completed: count => `All ${count} visitors have arrived. Compare the target ratios with the results below.`,
     incoming: 'Virtual visitors', gate: 'Join', split: 'A:B',
-    names: { outside: 'Not enrolled', A: 'Screen A', B: 'Screen B' },
+    names: { outside: 'Not enrolled', A: 'A · Basic', B: 'B · Emphasized' },
     productName: 'Everyday ceramic mug', price: '₩19,900', purchased: 'Purchase complete',
     buttons: { outside: 'Buy', A: 'Buy', B: 'Buy now' },
     people: 'visitors', target: 'Target of all visitors', observed: 'Cumulative share of all',
@@ -247,7 +247,7 @@ export default function ExperimentPreview({ lang, repo }) {
             <img className="sim-product-image" src={import.meta.env.BASE_URL + 'demo/everyday-mug.webp'} alt="" width="100" height="100"/>
           </div>
           <div className="sim-product-info"><h4>{t.productName}</h4><p>{t.price}</p></div>
-          <Button className="sim-buy" aria-disabled={purchased[key]} onClick={() => { if (!purchased[key]) setPurchased(current => ({ ...current, [key]: true })); }} aria-label={`${t.names[key]} ${purchased[key] ? t.purchased : t.buttons[key]}`}>
+          <Button className="sim-buy" variant={key === 'B' ? 'default' : 'outline'} aria-disabled={purchased[key]} onClick={() => { if (!purchased[key]) setPurchased(current => ({ ...current, [key]: true })); }} aria-label={`${t.names[key]} ${purchased[key] ? t.purchased : t.buttons[key]}`}>
             {purchased[key] ? <Check aria-hidden="true"/> : <ShoppingCart aria-hidden="true"/>}{purchased[key] ? t.purchased : t.buttons[key]}
           </Button>
         </article>)}
