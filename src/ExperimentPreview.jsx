@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { ArrowUpRight, Pause, Play, RotateCcw } from 'lucide-react';
+import { ArrowUpRight, Pause, Play, RotateCcw, Star } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { assignVisitor } from './assignmentSimulation';
 
@@ -22,8 +22,8 @@ const copy = {
     history: '비율 변경은 다음 사용자부터 적용됩니다. 새로 비교하려면 배정 초기화를 눌러보세요.',
     sample: '점 하나는 가상 사용자 한 명입니다. 설정 비율과 누적 배정 비중을 비교해 보세요.',
     reduced: '모션 감소 설정: 이동 애니메이션 대신 배정 수만 갱신합니다.',
-    support: 'Iterglow가 유용하다면 GitHub Star로 응원해 주세요.',
-    github: 'GitHub 저장소 보기', githubLabel: 'GitHub 저장소 보기 (새 탭)',
+    support: 'GitHub Star로 Iterglow를 응원해 주세요.',
+    github: 'GitHub Star로 응원하기', githubLabel: 'GitHub Star로 응원하기 (새 탭)',
     chartTitle: '사용자 배정 흐름', chartDescription: '가상 사용자가 참여율 관문을 지나 비참여 또는 A/B로 갈라집니다. 아래 수치는 각 경로에 도착한 누적 배정입니다.',
   },
   en: {
@@ -41,8 +41,8 @@ const copy = {
     history: 'Ratio changes apply to the next visitors. Reset assignments to start a fresh comparison.',
     sample: 'Each dot is one virtual visitor. Compare the target ratios with the cumulative assignments.',
     reduced: 'Reduced motion: counts update without traveling animations.',
-    support: 'If you find Iterglow useful, support it with a GitHub Star.',
-    github: 'View the GitHub repository', githubLabel: 'View the GitHub repository (new tab)',
+    support: 'Support Iterglow with a GitHub Star.',
+    github: 'Support us with a GitHub Star', githubLabel: 'Support us with a GitHub Star (new tab)',
     chartTitle: 'Visitor assignment flow', chartDescription: 'Synthetic visitors pass a participation gate, then take a non-participation, A, or B path. Counts below show cumulative arrivals on each path.',
   },
 };
@@ -208,7 +208,7 @@ export default function ExperimentPreview({ lang, repo }) {
       </div>
       <p className="sim-latest">{t.latest}: {view.latest ? `${view.latest.id} → ${t.names[view.latest.outcome]}` : '—'}</p>
       <p className="sim-explanation">{t.sample}</p><p className="sim-explanation">{t.history}</p>
-      <div className="sim-support"><p>{t.support}</p><Button asChild variant="outline"><a href={repo} target="_blank" rel="noreferrer" aria-label={t.githubLabel}>{t.github}<ArrowUpRight aria-hidden="true"/></a></Button></div>
+      <div className="sim-support"><p>{t.support}</p><Button asChild><a href={repo} target="_blank" rel="noreferrer" aria-label={t.githubLabel}><Star aria-hidden="true"/>{t.github}<ArrowUpRight aria-hidden="true"/></a></Button></div>
     </div>
   </section>;
 }
