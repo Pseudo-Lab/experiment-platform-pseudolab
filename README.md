@@ -91,6 +91,7 @@ GitHub Pages로 배포합니다. Pages의 게시 방식은 GitHub Actions이며,
 - `src/assignmentSimulation.js`는 설명용 ID 버킷 두 개를 사용하고 동일 ID의 첫 경로를 메모리에 유지합니다.
   실제 Iterglow 해시 알고리즘을 복제하지 않습니다. `npm test`로 0/100 경계·동일 ID·초기화·분포·입력 검증을 확인합니다.
 - 제품 대조 기준: `origin/main`의 `a64bdf6` (2026-11-17 확인).
+  아래는 작업자용 참고이며 관객 화면에는 조작·배정 비중 안내만 제공합니다.
   기존 `ExperimentService.assign` 기록 재사용과 현재 SDK v1의 Feature Flag 평가는 다릅니다.
   SDK v1은 비율 변경 뒤 같은 ID의 응답이 바뀔 수 있고, 실제 노출은 렌더 뒤 `expose()`로 기록합니다.
   독립된 참여율·A:B 두 조절기는 현재 제품 설정을 그대로 재현한 것이 아니며,
