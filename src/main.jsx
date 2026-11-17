@@ -368,7 +368,7 @@ function App() {
           <ul className="hero-intro">{t.intro.map(item => <li key={item}>{item}</li>)}</ul>
           <div className="hero-actions">
             <Button asChild size="lg"><a href={urls.service} target="_blank" rel="noopener noreferrer">{t.service}<ArrowUpRight size={17} aria-hidden="true"/></a></Button>
-            <Button asChild size="lg" variant="outline"><a href={urls.repo} target="_blank" rel="noopener noreferrer" aria-label={t.githubStarLabel}><Star size={17} aria-hidden="true"/>{t.githubStar}<ArrowUpRight size={17} aria-hidden="true"/></a></Button>
+            <Button asChild size="lg" variant="outline" className="hero-star"><a href={urls.repo} target="_blank" rel="noopener noreferrer" aria-label={t.githubStarLabel}><Star size={17} aria-hidden="true"/>{t.githubStar}<ArrowUpRight size={17} aria-hidden="true"/></a></Button>
           </div>
         </div>
       </section>
