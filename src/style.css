@@ -255,94 +255,101 @@ html[data-theme="dark"],
 [data-theme="dark"] .activity-card:nth-child(5) { --activity-ink: #dfa9c3; --activity-surface: #3d2936; }
 @media (min-width: 1001px) { [lang="en"] .activity-card h3 { min-height: 4.65em; } }
 
-/* Interactive, synthetic assignment flow within the team introduction. */
-.assignment-demo { --sim-outside: #58677e; --sim-A: #5147c8; --sim-B: #177464; border-top: 1px solid var(--line); padding-block: 32px; }
-.assignment-demo h2 { font-size: clamp(26px, 2.5vw, 34px); line-height: 1.4; font-weight: 650; letter-spacing: -.025em; }
-.sim-intro { margin-top: 10px; color: var(--muted); font-size: 16px; }
-.sim-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 40px; margin-top: 26px; }
+/* Interactive A/B example within the team introduction. */
+.assignment-demo { --sim-A: #5147c8; --sim-B: #177464; border-top: 1px solid var(--line); padding-block: 24px; }
+.assignment-demo h2 { font-size: clamp(22px, 2.2vw, 30px); line-height: 1.35; font-weight: 650; letter-spacing: -.025em; }
+.sim-intro { margin-top: 6px; color: var(--muted); font-size: 15px; }
+.sim-controls { max-width: 640px; margin-top: 16px; }
 .sim-slider { min-width: 0; }
-.sim-slider label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 15px; font-weight: 600; }
+.sim-slider label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 600; }
 .sim-slider output { color: var(--purple); font-variant-numeric: tabular-nums; }
-.sim-slider input { display: block; width: 100%; height: 44px; margin: 5px 0 0; accent-color: hsl(var(--primary)); cursor: pointer; }
+.sim-ratio-line { display: flex; align-items: center; gap: 12px; }
+.sim-slider input { display: block; min-width: 0; width: 100%; height: 44px; margin: 0; accent-color: hsl(var(--primary)); cursor: pointer; }
 .sim-slider input:focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; border-radius: 4px; }
-.sim-range-ends { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
-.sim-presets { display: flex; gap: 8px; margin-top: 12px; }
+.sim-presets { display: flex; gap: 6px; flex-shrink: 0; }
 .sim-presets [aria-pressed="true"] { border-color: var(--purple); color: var(--purple); }
 .sim-playback-actions button, .sim-result-actions button, .sim-presets button, .sim-support a { min-height: 44px; height: auto; white-space: normal; padding-block: 10px; }
-.sim-playback { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; align-items: center; margin-top: 20px; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
-.sim-playback-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
-.sim-progress { display: flex; flex-direction: column; gap: 4px; text-align: right; }
-.sim-result-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 18px; }
-.sim-result-actions strong { font-size: 16px; }
-.sim-flow { display: block; width: 100%; height: auto; margin: 12px auto 0; overflow: visible; }
-.sim-outside { --sim-color: var(--sim-outside); }
+.sim-playback { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; align-items: center; margin-top: 8px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.sim-playback-actions { display: flex; align-items: center; }
+.sim-progress span { display: flex; align-items: center; gap: 5px; }
+.sim-result-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; }
+.sim-result-actions strong { font-size: 14px; }
+.sim-flow { display: block; width: 100%; height: auto; margin: 0; overflow: visible; }
 .sim-A { --sim-color: var(--sim-A); }
 .sim-B { --sim-color: var(--sim-B); }
 .sim-path { fill: none; stroke: var(--sim-color); stroke-width: 2; opacity: .5; }
-.sim-gate { fill: hsl(var(--background)); stroke: var(--ink); stroke-width: 2; }
-.sim-flow text { font-family: inherit; fill: var(--muted); font-size: 15px; }
-.sim-flow .sim-gate-label { fill: var(--ink); font-weight: 600; }
+.sim-flow text { font-family: inherit; fill: var(--muted); font-size: 12px; }
 .sim-flow .sim-endpoint { fill: var(--sim-color); font-weight: 650; }
-.sim-dot { fill: var(--sim-color); stroke: hsl(var(--background)); stroke-width: 2; }
-.sim-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.sim-dot { fill: var(--sim-color); stroke: hsl(var(--background)); stroke-width: 1.5; }
+.sim-results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .sim-result { min-width: 0; }
-.sim-assignment-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.sim-result h3 { color: var(--sim-color); font-size: 19px; font-weight: 650; }
-.sim-target { color: var(--muted); font-size: 13px; margin-top: 7px; }
-.sim-count { margin-top: 10px; font-size: 14px; font-variant-numeric: tabular-nums; }
-.sim-count strong { font-size: 30px; line-height: 1.3; color: var(--sim-color); font-weight: 650; overflow-wrap: anywhere; }
-.sim-observed { color: var(--muted); font-size: 13px; min-height: 24px; }
-.sim-completed { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 16px; padding: 12px 16px; border-radius: var(--radius); background: var(--soft); color: var(--purple); font-size: 14px; }
-.sim-completed svg { flex-shrink: 0; margin-top: 4px; }
-.sim-shop { overflow: hidden; margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; background: hsl(var(--background)); }
-.sim-shop-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
-.sim-shop-header strong { font-size: 14px; letter-spacing: .03em; }
-.sim-shop-content { padding: 16px 18px 18px; }
-.sim-breadcrumb { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
-.sim-product-image { display: block; width: 100%; height: 164px; object-fit: contain; background: #e5dfd8; }
-.sim-product-info { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
-.sim-product-info h4 { margin: 0; font-size: 16px; font-weight: 600; }
-.sim-product-info p { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.sim-buy { width: 100%; min-height: 44px; height: auto; margin-top: 14px; padding-block: 10px; white-space: normal; }
+.sim-assignment-summary { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.sim-result h3 { color: var(--sim-color); font-size: 17px; font-weight: 650; }
+.sim-count { font-size: 13px; font-variant-numeric: tabular-nums; }
+.sim-count strong { font-size: 25px; line-height: 1.2; color: var(--sim-color); font-weight: 650; }
+.sim-observed { color: var(--muted); font-size: 12px; min-height: 18px; }
+.sim-shop { overflow: hidden; margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; background: hsl(var(--background)); }
+.sim-shop-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.sim-shop-header strong { font-size: 12px; }
+.sim-shop-content { padding: 10px 12px 12px; }
+.sim-breadcrumb { color: var(--muted); font-size: 11px; margin-bottom: 8px; }
+.sim-product-image { display: block; width: 100%; height: 112px; object-fit: contain; background: #e5dfd8; }
+.sim-product-info { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.sim-product-info h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.sim-product-info p { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.sim-buy { width: 100%; min-height: 44px; height: auto; margin-top: 10px; padding: 8px; white-space: normal; }
 .sim-buy[aria-disabled="true"] { cursor: default; opacity: .7; }
 .assignment-demo .sim-buy:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 .sim-result.sim-B { --buy-background: #146c55; --buy-foreground: #ffffff; --buy-hover: #0d5844; }
 .sim-B .sim-shop { border-color: #91bfa8; }
 .sim-B .sim-shop-content { display: grid; grid-template-columns: minmax(0, 1fr); background: #eef8f2; }
 .sim-B .sim-breadcrumb { grid-row: 1; }
-.sim-B .sim-product-info { grid-row: 2; margin: 0 0 16px; }
-.sim-B .sim-product-info h4 { font-size: 20px; }
-.sim-B .sim-product-image { grid-row: 3; }
-.sim-B .sim-buy { grid-row: 4; }
-.sim-B .sim-product-image { height: 200px; }
-.sim-B .sim-product-info p { color: #115b47; font-size: 24px; line-height: 1.3; }
-.sim-B .sim-buy { min-height: 48px; font-weight: 700; color: var(--buy-foreground); background: var(--buy-background); }
+.sim-B .sim-product-info { grid-row: 2; margin: 0 0 10px; }
+.sim-B .sim-product-info h4 { font-size: 16px; }
+.sim-B .sim-product-image { grid-row: 3; height: 136px; }
+.sim-B .sim-buy { grid-row: 4; font-weight: 700; color: var(--buy-foreground); background: var(--buy-background); }
+.sim-B .sim-product-info p { color: #115b47; font-size: 20px; line-height: 1.3; }
 .sim-B .sim-buy:hover:not([aria-disabled="true"]) { background: var(--buy-hover); }
-.sim-latest { margin-top: 12px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.sim-explanation, .sim-reduced { font-size: 14px; color: var(--muted); margin-top: 10px; }
-.sim-support { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
-.sim-support p { font-size: clamp(18px, 1.8vw, 22px); font-weight: 650; line-height: 1.55; }
+.sim-explanation, .sim-reduced { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.sim-support { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.sim-support p { font-size: clamp(16px, 1.8vw, 20px); font-weight: 650; line-height: 1.5; }
 .sim-support a { flex-shrink: 0; }
-[data-theme="dark"] .assignment-demo { --sim-outside: #bac7dc; --sim-A: #c8bcff; --sim-B: #8dd1bf; }
+[data-theme="dark"] .assignment-demo { --sim-A: #c8bcff; --sim-B: #8dd1bf; }
 [data-theme="dark"] .sim-result.sim-B { --buy-background: #96dfbf; --buy-foreground: #11372b; --buy-hover: #b1ebd1; }
 [data-theme="dark"] .sim-B .sim-shop-content { background: #17382e; }
 [data-theme="dark"] .sim-B .sim-shop { border-color: #4c8c72; }
 [data-theme="dark"] .sim-B .sim-product-info p { color: #b4ebd4; }
-@media (max-width: 900px) {
-  .sim-results { grid-template-columns: minmax(0, 1fr); }
-}
 @media (max-width: 700px) {
   .initiative-hero .hero-actions { flex-wrap: wrap; gap: 12px; }
-  .assignment-demo { padding-block: 28px; }
-  .sim-controls { grid-template-columns: minmax(0, 1fr); gap: 18px; }
-  .sim-results { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-  .sim-result h3 { font-size: 16px; }
-  .sim-count strong { font-size: 26px; }
-  .sim-count .sim-large-count { font-size: 16px; }
-  .sim-target, .sim-observed { font-size: 13px; }
-  .sim-support { flex-direction: column; align-items: flex-start; }
-  .sim-playback { font-size: 13px; }
-  .sim-progress { flex-basis: 100%; flex-direction: row; flex-wrap: wrap; justify-content: space-between; text-align: left; gap: 6px 16px; }
+  .assignment-demo { padding-block: 20px; }
+  .sim-intro { font-size: 13px; }
+  .sim-controls { margin-top: 12px; }
+  .sim-ratio-line { gap: 8px; }
+  .sim-presets button { padding-inline: 8px; font-size: 12px; }
+  .sim-playback { font-size: 12px; }
+  .sim-results { gap: 10px; }
+  .sim-assignment-summary { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .sim-result h3 { font-size: 14px; }
+  .sim-count { font-size: 12px; }
+  .sim-count strong { font-size: 22px; }
+  .sim-observed { font-size: 11px; }
+  .sim-shop-header { padding: 6px 8px; }
+  .sim-shop-header strong { font-size: 11px; }
+  .sim-shop-header svg { width: 14px; height: 14px; }
+  .sim-shop-content { padding: 8px; }
+  .sim-breadcrumb { display: none; }
+  .sim-product-image { height: 82px; }
+  .sim-product-info { margin-top: 8px; }
+  .sim-product-info h4 { font-size: 12px; line-height: 1.45; }
+  .sim-product-info p { font-size: 14px; }
+  .sim-B .sim-product-info { margin: 0 0 8px; }
+  .sim-B .sim-product-info h4 { font-size: 13px; }
+  .sim-B .sim-product-info p { font-size: 17px; }
+  .sim-B .sim-product-image { height: 100px; }
+  .sim-buy { gap: 4px; font-size: 12px; margin-top: 8px; padding-inline: 4px; }
+  .sim-buy svg { display: none; }
+  .sim-support { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .sim-support a { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .assignment-demo *, .assignment-demo *::before, .assignment-demo *::after { transition: none !important; animation: none !important; }
