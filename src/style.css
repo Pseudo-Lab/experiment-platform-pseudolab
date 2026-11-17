@@ -378,7 +378,6 @@ html[data-theme="dark"],
 .stay .newsletter-open:focus-visible, .newsletter-dialog button:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
 .newsletter-close { position: absolute; top: 12px; right: 12px; min-width: 44px; min-height: 44px; color: var(--muted); }
 .newsletter-dialog h2 { padding-right: 24px; font-size: 26px; letter-spacing: -.03em; line-height: 1.45; }
-.newsletter-preview { margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.65; }
 .newsletter-email-label { display: block; margin-top: 24px; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
 .newsletter-dialog input[type="email"] {
   width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--line);
@@ -398,6 +397,30 @@ html[data-theme="dark"],
 .newsletter-agree { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; margin-block: 20px; padding-block: 6px; font-size: 13px; line-height: 1.7; cursor: pointer; }
 .newsletter-agree input { flex: 0 0 18px; width: 18px; height: 18px; margin: 2px 0 0; accent-color: hsl(var(--primary)); }
 .newsletter-submit { width: 100%; min-height: 48px; font-size: 15px; }
+.newsletter-dialog .newsletter-error {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #f5c2c0;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+[data-theme="dark"] .newsletter-dialog .newsletter-error {
+  border-color: #7f2934;
+  background: #3b1820;
+  color: #fecaca;
+}
+.newsletter-withdrawal { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.newsletter-withdrawal a { overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 3px; }
+.newsletter-unsubscribe { margin-top: 20px; padding-block: 6px; }
+.newsletter-unsubscribe:focus { outline: 2px solid var(--purple); outline-offset: 4px; }
+.newsletter-unsubscribe h3 { margin: 0; font-size: 18px; }
+.newsletter-unsubscribe p { margin-top: 10px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.newsletter-unsubscribe .newsletter-error { margin-top: 14px; margin-bottom: 0; }
+.newsletter-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.newsletter-actions button { flex: 1 1 160px; min-height: 44px; }
 .newsletter-checked { margin-top: 24px; padding-block: 10px; }
 .newsletter-checked > svg { color: var(--purple); }
 .newsletter-checked h3 { margin-top: 10px; font-size: 18px; }
