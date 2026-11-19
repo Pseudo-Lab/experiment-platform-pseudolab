@@ -24,3 +24,19 @@ export function assignVisitor(assignments, id, participation, aShare) {
   assignments.set(id, outcome);
   return outcome;
 }
+
+// Spreads clicks evenly at the set rate (expected-value simulation, no sampling noise),
+// so the result screen always shows the configured A 8% / B 11% gap.
+export function isClickAt(exposureCount, ratePercent) {
+  return Math.floor(exposureCount * ratePercent / 100) > Math.floor((exposureCount - 1) * ratePercent / 100);
+}
+
+// Two-proportion z-test (normal approximation) used only to word the teaching verdict.
+export function compareRates(clicksA, exposuresA, clicksB, exposuresB) {
+  const rateA = exposuresA ? clicksA / exposuresA : 0;
+  const rateB = exposuresB ? clicksB / exposuresB : 0;
+  const pooled = (clicksA + clicksB) / ((exposuresA + exposuresB) || 1);
+  const se = Math.sqrt(pooled * (1 - pooled) * (1 / (exposuresA || 1) + 1 / (exposuresB || 1)));
+  const z = se ? (rateB - rateA) / se : 0;
+  return { rateA, rateB, diff: rateB - rateA, z, decisive: Math.abs(z) >= 1.96 };
+}
