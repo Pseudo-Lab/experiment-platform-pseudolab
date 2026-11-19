@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assignVisitor } from './assignmentSimulation.js';
+import { assignVisitor, compareRates, isClickAt } from './assignmentSimulation.js';
 
 test('participation and A:B endpoints have separate meanings', () => {
   for (const [participation, aShare, expected] of [[0, 0, 'outside'], [0, 100, 'outside'], [100, 0, 'B'], [100, 100, 'A']]) {
@@ -48,4 +48,20 @@ test('invalid settings do not create an assignment', () => {
   }
   assert.throws(() => assignVisitor(assignments, '', 50, 50), TypeError);
   assert.equal(assignments.size, 0);
+});
+
+test('compareRates: 8/100 vs 11/100 leans B but is not decisive; 10x the sample is', () => {
+  const small = compareRates(8, 100, 11, 100);
+  assert.ok(Math.abs(small.diff - 0.03) < 1e-9);
+  assert.equal(small.decisive, false);
+  assert.equal(compareRates(80, 1000, 110, 1000).decisive, true);
+  assert.equal(compareRates(0, 0, 0, 0).decisive, false);
+});
+
+test('isClickAt yields exactly floor(n * rate) clicks', () => {
+  for (const [n, rate] of [[97, 8], [103, 11], [100, 8], [1, 50]]) {
+    let clicks = 0;
+    for (let k = 1; k <= n; k++) clicks += isClickAt(k, rate) ? 1 : 0;
+    assert.equal(clicks, Math.floor(n * rate / 100));
+  }
 });

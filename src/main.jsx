@@ -372,7 +372,7 @@ function App() {
           </div>
         </div>
       </section>
-      <ExperimentPreview lang={lang}/>
+      <ExperimentPreview lang={lang} theme={theme}/>
       <section id="activities" tabIndex={-1} className="section activities-section"><div className="wrap">
         <h2>{t.activitiesTitle}</h2><p className="section-lead">{t.activitiesIntro}</p>
         <div className="activity-cards" role="region" aria-label={t.activitiesTitle} tabIndex={0}>{t.activities.map(([title, body], i) => {
