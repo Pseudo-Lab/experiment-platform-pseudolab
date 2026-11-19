@@ -1,0 +1,17 @@
+{
+  "name": "ab-video-20s",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.jsx --public-dir=../../public/demo",
+    "render": "remotion render src/index.jsx AbHold renders/ab-hold-20s.mp4 --public-dir=../../public/demo",
+    "render:reels": "remotion render src/index.jsx AbReels renders/ab-reels-15s.mp4 --public-dir=../../public/demo",
+    "test": "node src/stats.test.js"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.541",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "remotion": "4.0.541"
+  }
+}
