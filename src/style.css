@@ -270,11 +270,10 @@ html[data-theme="dark"],
 .assignment-demo { --sim-A: #5147c8; --sim-B: #177464; border-top: 1px solid var(--line); padding-block: 24px; }
 .assignment-demo h2 { font-size: clamp(22px, 2.2vw, 30px); line-height: 1.35; font-weight: 650; letter-spacing: -.025em; }
 .sim-intro { margin-top: 6px; color: var(--muted); font-size: 15px; }
-.sim-controls { max-width: 640px; margin-top: 16px; }
-.sim-slider { min-width: 0; }
-.sim-slider label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 600; }
+.sim-controls { display: flex; align-items: flex-end; gap: 16px; max-width: 640px; margin-top: 16px; }
+.sim-slider { flex: 1; min-width: 0; }
+.sim-ratio-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; font-size: 14px; font-weight: 600; }
 .sim-slider output { color: var(--purple); font-variant-numeric: tabular-nums; }
-.sim-ratio-line { display: flex; align-items: center; gap: 12px; }
 .sim-slider input { display: block; min-width: 0; width: 100%; height: 44px; margin: 0; accent-color: hsl(var(--primary)); cursor: pointer; }
 .sim-slider input:focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; border-radius: 4px; }
 .sim-presets { display: flex; gap: 6px; flex-shrink: 0; }
@@ -326,7 +325,6 @@ html[data-theme="dark"],
   .assignment-demo { padding-block: 20px; }
   .sim-intro { font-size: 13px; }
   .sim-controls { margin-top: 12px; }
-  .sim-ratio-line { gap: 8px; }
   .sim-presets button { padding-inline: 8px; font-size: 12px; }
   .sim-playback { font-size: 12px; }
   .sim-results { gap: 10px; }
@@ -431,4 +429,9 @@ html[data-theme="dark"],
   overflow: hidden;
   clip-path: inset(50%);
   pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .sim-controls { flex-wrap: wrap; gap: 4px; }
+  .sim-slider { flex-basis: 100%; }
 }
