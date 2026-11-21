@@ -9,15 +9,16 @@ const outcomes = ['A', 'B'];
 const copy = {
   ko: {
     title: 'A/B 테스트 체험하기',
-    intro: '방문자에게 서로 다른 화면을 보여주고 반응을 비교하는 방법이에요.',
+    intro: '같은 할인, 다른 표현. ‘20% 할인’과 ‘4,000원 할인’ 중 어떤 문구가 더 구매하고 싶게 하나요?',
     ratio: 'A/B 배정 비율', presets: 'A:B 빠른 설정',
     start: '시작', pause: '일시정지', reset: '배정 초기화', restart: '다시 실행', resume: '계속하기',
     results: '배정 결과', shop: '데일리 스토어', productPage: '리빙 / 머그컵',
     completed: count => `${count}명 배정 완료`,
     incoming: '가상 방문자',
-    names: { A: 'A · 기본형', B: 'B · 강조형' },
-    productName: '데일리 세라믹 머그', price: '19,900원', purchased: '구매 완료',
-    buttons: { A: '구매하기', B: '지금 구매하기' },
+    names: { A: 'A · 비율로 표현', B: 'B · 금액으로 표현' },
+    productName: '데일리 세라믹 머그', originalPrice: '20,000원', price: '16,000원',
+    originalPriceLabel: '정가', priceLabel: '할인가', discounts: { A: '20% 할인', B: '4,000원 할인' },
+    purchased: '구매 완료', buy: '구매하기',
     people: '명', observed: '실제',
     noData: '배정 전', generated: '입장', moving: '이동 중',
     reduced: '모션 감소 설정: 이동 애니메이션 대신 배정 수만 갱신합니다.',
@@ -25,15 +26,16 @@ const copy = {
   },
   en: {
     title: 'Try A/B testing',
-    intro: 'A/B testing shows visitors different versions of a page to compare their responses.',
+    intro: 'Same discount, different wording. Which makes you want to buy: “20% off” or “₩4,000 off”?',
     ratio: 'A/B assignment ratio', presets: 'Quick A:B settings',
     start: 'Start', pause: 'Pause', reset: 'Reset assignments', restart: 'Run again', resume: 'Resume',
     results: 'Assignment results', shop: 'Daily Store', productPage: 'Living / Mugs',
     completed: count => `${count} visitors assigned`,
     incoming: 'Virtual visitors',
-    names: { A: 'A · Basic', B: 'B · Emphasized' },
-    productName: 'Everyday ceramic mug', price: '₩19,900', purchased: 'Purchase complete',
-    buttons: { A: 'Buy', B: 'Buy now' },
+    names: { A: 'A · Percentage', B: 'B · Amount' },
+    productName: 'Everyday ceramic mug', originalPrice: '₩20,000', price: '₩16,000',
+    originalPriceLabel: 'Original price', priceLabel: 'Sale price', discounts: { A: '20% off', B: '₩4,000 off' },
+    purchased: 'Purchase complete', buy: 'Buy',
     people: 'visitors', observed: 'Actual',
     noData: 'No arrivals', generated: 'Entered', moving: 'In transit',
     reduced: 'Reduced motion: counts update without traveling animations.',
@@ -217,9 +219,13 @@ export default function ExperimentPreview({ lang }) {
             <div className="sim-shop-content">
               <p className="sim-breadcrumb">{t.productPage}</p>
               <img className="sim-product-image" src={import.meta.env.BASE_URL + 'demo/everyday-mug.webp'} alt="" width="200" height="200"/>
-              <div className="sim-product-info"><h4>{t.productName}</h4><p>{t.price}</p></div>
-              <Button className="sim-buy" variant={key === 'B' ? 'default' : 'outline'} aria-disabled={purchased[key]} onClick={() => { if (!purchased[key]) setPurchased(current => ({ ...current, [key]: true })); }} aria-label={`${t.names[key]} ${purchased[key] ? t.purchased : t.buttons[key]}`}>
-                {purchased[key] ? <Check aria-hidden="true"/> : <ShoppingCart aria-hidden="true"/>}{purchased[key] ? t.purchased : t.buttons[key]}
+              <div className="sim-product-info">
+                <h4>{t.productName}</h4>
+                <p className="sim-discount">{t.discounts[key]}</p>
+                <p className="sim-prices"><s><span className="sr-only">{t.originalPriceLabel} </span>{t.originalPrice}</s>{' '}<strong><span className="sr-only">{t.priceLabel} </span>{t.price}</strong></p>
+              </div>
+              <Button className="sim-buy" aria-disabled={purchased[key]} onClick={() => { if (!purchased[key]) setPurchased(current => ({ ...current, [key]: true })); }} aria-label={`${t.names[key]} ${purchased[key] ? t.purchased : t.buy}`}>
+                {purchased[key] ? <Check aria-hidden="true"/> : <ShoppingCart aria-hidden="true"/>}{purchased[key] ? t.purchased : t.buy}
               </Button>
             </div>
           </div>
