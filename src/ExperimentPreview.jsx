@@ -12,6 +12,7 @@ const copy = {
     intro: '같은 할인, 다른 표현. ‘20% 할인’과 ‘4,000원 할인’ 중 어떤 문구가 더 구매하고 싶게 하나요?',
     ratio: 'A/B 배정 비율', presets: 'A:B 빠른 설정',
     start: '시작', pause: '일시정지', reset: '배정 초기화', restart: '다시 실행', resume: '계속하기',
+    continuous: '계속 실행',
     results: '배정 결과', shop: '데일리 스토어', productPage: '리빙 / 머그컵',
     completed: count => `${count}명 배정 완료`,
     incoming: '가상 방문자',
@@ -29,6 +30,7 @@ const copy = {
     intro: 'Same discount, different wording. Which makes you want to buy: “20% off” or “₩4,000 off”?',
     ratio: 'A/B assignment ratio', presets: 'Quick A:B settings',
     start: 'Start', pause: 'Pause', reset: 'Reset assignments', restart: 'Run again', resume: 'Resume',
+    continuous: 'Keep running',
     results: 'Assignment results', shop: 'Daily Store', productPage: 'Living / Mugs',
     completed: count => `${count} visitors assigned`,
     incoming: 'Virtual visitors',
@@ -64,8 +66,9 @@ export default function ExperimentPreview({ lang }) {
   const reduced = useMediaPreference('(prefers-reduced-motion: reduce)');
   const [aShare, setAShare] = useState(() => 20 + Math.floor(Math.random() * 61));
   const [visitorLimit, setVisitorLimit] = useState(() => 100 + Math.floor(Math.random() * 101));
-  const settings = useRef({ aShare, visitorLimit });
-  settings.current = { aShare, visitorLimit };
+  const [continuous, setContinuous] = useState(false);
+  const settings = useRef({ aShare, visitorLimit, continuous });
+  settings.current = { aShare, visitorLimit, continuous };
   const [running, setRunning] = useState(false);
   const [view, setView] = useState(emptyView);
   const [purchased, setPurchased] = useState({ A: false, B: false });
@@ -99,6 +102,8 @@ export default function ExperimentPreview({ lang }) {
     const arrive = token => {
       const state = model.current;
       state.counts[token.outcome] += 1;
+      // Generated IDs never repeat; finished visitors need no assignment cache.
+      state.assignments.delete(token.id);
     };
     function tick() {
       if (disposed || !running || document.hidden || clock.animationsPaused()) return;
@@ -107,7 +112,7 @@ export default function ExperimentPreview({ lang }) {
       const arrived = state.tokens.filter(token => reduced || now - token.started >= DURATION);
       arrived.forEach(arrive);
       state.tokens = state.tokens.filter(token => !arrived.includes(token));
-      const spawn = state.sequence < settings.current.visitorLimit && now - state.lastSpawn >= INTERVAL;
+      const spawn = (settings.current.continuous || state.sequence < settings.current.visitorLimit) && now - state.lastSpawn >= INTERVAL;
       if (spawn) {
         const visitor = `U-${String(++state.sequence).padStart(4, '0')}`;
         const { aShare: share } = settings.current;
@@ -116,7 +121,7 @@ export default function ExperimentPreview({ lang }) {
         if (reduced) arrive(token); else state.tokens.push(token);
       }
       if (spawn || arrived.length) publish();
-      if (state.sequence === settings.current.visitorLimit && state.tokens.length === 0) {
+      if (!settings.current.continuous && state.sequence >= settings.current.visitorLimit && state.tokens.length === 0) {
         clock.pauseAnimations();
         setRunning(false);
         return;
@@ -156,6 +161,13 @@ export default function ExperimentPreview({ lang }) {
     setAShare(value);
   }
 
+  function changeContinuous(value) {
+    const nextLimit = value ? settings.current.visitorLimit : Math.max(settings.current.visitorLimit, model.current.sequence);
+    settings.current = { ...settings.current, continuous: value, visitorLimit: nextLimit };
+    setVisitorLimit(nextLimit);
+    setContinuous(value);
+  }
+
   function togglePlayback() {
     if (completed) {
       reset();
@@ -176,7 +188,7 @@ export default function ExperimentPreview({ lang }) {
   };
   const number = value => new Intl.NumberFormat(lang, { maximumFractionDigits: 2 }).format(value);
   const total = outcomes.reduce((sum, key) => sum + view.counts[key], 0);
-  const completed = view.entered === visitorLimit && view.tokens.length === 0;
+  const completed = !continuous && view.entered >= visitorLimit && view.tokens.length === 0;
 
   return <section id="experiment-preview" tabIndex={-1} className="assignment-demo">
     <div className="wrap">
@@ -193,8 +205,9 @@ export default function ExperimentPreview({ lang }) {
       <div className="sim-playback">
         <div className="sim-playback-actions">
           <Button onClick={togglePlayback}>{running ? <Pause aria-hidden="true"/> : <Play aria-hidden="true"/>}{running ? t.pause : completed ? t.restart : view.entered ? t.resume : t.start}</Button>
+          <label className="sim-continuous"><input type="checkbox" checked={continuous} onChange={event => changeContinuous(event.target.checked)}/>{t.continuous}</label>
         </div>
-        <div className="sim-progress">{completed ? <span role="status"><Check size={15} aria-hidden="true"/>{t.completed(number(total))}</span> : <span>{t.generated} {number(view.entered)} / {number(visitorLimit)} · {t.moving} {number(view.tokens.length)}</span>}</div>
+        <div className="sim-progress">{completed ? <span role="status"><Check size={15} aria-hidden="true"/>{t.completed(number(total))}</span> : <span>{t.generated} {number(view.entered)}{!continuous && ` / ${number(visitorLimit)}`} · {t.moving} {number(view.tokens.length)}</span>}</div>
       </div>
       {reduced && <p className="sim-reduced">{t.reduced}</p>}
       <svg ref={svg} className="sim-flow" viewBox={`0 0 ${chartWidth} ${bottom + 22}`} role="img" aria-labelledby={`${id}-title ${id}-description`}>
