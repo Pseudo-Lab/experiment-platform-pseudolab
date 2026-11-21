@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ExperimentDashboard } from '@/features/dashboard/components/ExperimentDashboard';
 import {
@@ -17,8 +17,8 @@ vi.mock('@/services/api', () => ({
 }));
 const experiment = { id: 'test', primary_metric: 'signup' } as Experiment;
 const emptyAnalytics = {
-  impressions: { total: 0, by_variant: {}, time_series: [] },
-  conversions: { rate: {} },
+  impressions: { total: 0, by_variant: {}, by_url: {}, time_series: [] },
+  conversions: { total: 0, by_variant: {}, rate: {} },
   statistical_significance: { p_value: null },
 };
 const emptyEvents = {
@@ -181,10 +181,13 @@ it('keeps a failed decision history distinct from an empty history', async () =>
 it('shows member project event results without calling administrator result or decisions APIs', async () => {
   vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({
     ...emptyAnalytics, impressions: { ...emptyAnalytics.impressions, total: 12 },
-    conversions: { total: 3, rate: { control: 0.25 } },
+    conversions: { total: 3, by_variant: {}, rate: { control: 0.25 } },
   } as any);
   render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang="en" view="results" isAdmin={false} /></MemoryRouter>);
-  expect(await screen.findByText('Impressions: 12 · Conversions: 3')).toBeInTheDocument();
+  expect(await screen.findByText('12')).toBeInTheDocument();
+  expect(screen.getByText('3')).toBeInTheDocument();
+  expect(within(screen.getByRole('figure', { name: 'Conversion rates by group' })).getByText('No group breakdown is available. Refer to the totals.')).toBeInTheDocument();
+  expect(screen.queryByText('No impressions or conversions have been counted yet.')).not.toBeInTheDocument();
   expect(experimentResultApi.getResult).not.toHaveBeenCalled();
   expect(decisionApi.list).not.toHaveBeenCalled();
 });
@@ -223,4 +226,140 @@ it('lets members retry a failed finalization or analytics request without showin
   await screen.findByText('Results finalized');
   expect(screen.getByRole('status')).toHaveTextContent('Results finalized');
   expect(experimentResultApi.getResult).not.toHaveBeenCalled();
+});
+
+
+it.each(['ko', 'en'] as const)('compares member event counts on one scale and keeps API rates and admin boundaries in %s', async (lang) => {
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({
+    ...emptyAnalytics,
+    impressions: { ...emptyAnalytics.impressions, total: 1000, by_variant: { control: 600, treatment: 400 } },
+    conversions: { total: 140, by_variant: { control: 60, treatment: 80 }, rate: { control: 0.25, treatment: 0.2 } },
+  } as any);
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={{ ...experiment, event_model: 'sdk_v1' }} lang={lang} view="results" isAdmin={false} /></MemoryRouter>);
+  const figure = await countFigure(lang);
+  const rows = within(figure).getAllByRole('listitem');
+  expect(rows).toHaveLength(2);
+  expect(within(rows[0]).getByText('control')).toBeInTheDocument();
+  expect(within(rows[0]).getByText('25.00%')).toBeInTheDocument();
+  expect(within(rows[0]).getByText('600')).toBeInTheDocument();
+  expect(within(rows[0]).getByText('60')).toBeInTheDocument();
+  expect(within(rows[1]).getByText('400')).toBeInTheDocument();
+  const bars = rows.map(row => [...row.querySelectorAll<HTMLElement>('[style]')].map(bar => Number.parseFloat(bar.style.width)));
+  expect(bars[0]).toEqual([100, 10]);
+  expect(bars[1][0]).toBeCloseTo(400 / 600 * 100);
+  expect(bars[1][1]).toBeCloseTo(80 / 600 * 100);
+  expect(screen.getByText('1,000')).toBeInTheDocument();
+  expect(screen.getByText('140')).toBeInTheDocument();
+  expect(screen.queryByText(lang === 'ko' ? '이벤트 집계 기준 전환율' : 'Event aggregate conversion rates')).not.toBeInTheDocument();
+  expect(screen.getByText(lang === 'ko'
+    ? '노출 횟수와 목표 행동이 연결된 노출 횟수입니다. 같은 노출에서 반복된 목표 행동은 한 번으로 집계합니다.'
+    : 'Counts exposures and exposures linked to the goal action. Repeated goal actions on the same exposure count once.')).toBeInTheDocument();
+  expect(experimentResultApi.getResult).not.toHaveBeenCalled();
+  expect(decisionApi.list).not.toHaveBeenCalled();
+});
+
+it('shows counted exposures with zero conversions as 0% rather than no data', async () => {
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({
+    ...emptyAnalytics,
+    impressions: { ...emptyAnalytics.impressions, total: 12, by_variant: { control: 12 } },
+    conversions: { total: 0, by_variant: {}, rate: { control: 0 } },
+  } as any);
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang="en" view="results" isAdmin={false} /></MemoryRouter>);
+  const figure = await countFigure();
+  expect(within(figure).getByText('0.00%')).toBeInTheDocument();
+  expect(within(figure).queryByText('No impressions or conversions have been counted yet.')).not.toBeInTheDocument();
+  expect([...figure.querySelectorAll<HTMLElement>('[style]')].map(bar => bar.style.width)).toEqual(['100%', '0%']);
+});
+
+it.each(['ko', 'en'] as const)('shows an honest empty count state without a fake rate or bars in %s', async (lang) => {
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang={lang} view="results" isAdmin={false} /></MemoryRouter>);
+  const figure = await screen.findByRole('figure', { name: lang === 'ko' ? '그룹별 전환율 비교' : 'Conversion rates by group' });
+  expect(within(figure).getByText(lang === 'ko' ? '아직 집계된 노출·전환이 없습니다.' : 'No impressions or conversions have been counted yet.')).toBeInTheDocument();
+  expect(within(figure).queryByRole('listitem')).not.toBeInTheDocument();
+  expect(within(figure).queryByText('0.00%')).not.toBeInTheDocument();
+});
+
+it('keeps conversion-only custom groups and safely handles object prototype names without inventing a denominator', async () => {
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({
+    ...emptyAnalytics,
+    conversions: { total: 3, by_variant: JSON.parse('{"constructor":2,"__proto__":1}'), rate: {} },
+  } as any);
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang="en" view="results" isAdmin={false} /></MemoryRouter>);
+  const figure = await countFigure();
+  expect(within(figure).getByText('constructor')).toBeInTheDocument();
+  expect(within(figure).getByText('__proto__')).toBeInTheDocument();
+  expect(within(figure).getAllByText('—')).toHaveLength(2);
+  expect(figure.textContent).not.toMatch(/NaN|Infinity|0.00%/);
+  expect([...figure.querySelectorAll<HTMLElement>('[style]')].map(bar => bar.style.width)).toEqual(['0%', '50%', '0%', '100%']);
+});
+
+
+async function countFigure(lang: 'ko' | 'en' = 'en') {
+  fireEvent.click(await screen.findByText(lang === 'ko' ? '노출·전환 건수 자세히 보기' : 'View impression and conversion counts'));
+  return screen.getByRole('figure', { name: lang === 'ko' ? '그룹별 노출·전환' : 'Impressions and conversions by group' });
+}
+
+it.each(['ko', 'en'] as const)('prioritizes rates over traffic volume and keeps each denominator visible in %s', async (lang) => {
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({
+    ...emptyAnalytics,
+    impressions: { ...emptyAnalytics.impressions, total: 1500, by_variant: { control: 1000, treatment: 500 } },
+    conversions: { total: 175, by_variant: { control: 100, treatment: 75 }, rate: { control: .1, treatment: .15 } },
+  } as any);
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang={lang} view="results" isAdmin={false} /></MemoryRouter>);
+  const figure = await screen.findByRole('figure', { name: lang === 'ko' ? '그룹별 전환율 비교' : 'Conversion rates by group' });
+  const table = within(figure).getByRole('table', { name: lang === 'ko' ? '그룹별 전환율 비교' : 'Conversion rates by group' });
+  expect(within(table).getAllByRole('columnheader').map(header => header.textContent)).toEqual(
+    lang === 'ko' ? ['그룹', '전환율', '전환 / 노출'] : ['Group', 'Conversion rate', 'Conversions / Impressions'],
+  );
+  const rows = within(table).getAllByRole('row').slice(1);
+  expect(within(rows[0]).getByRole('rowheader', { name: 'control' })).toHaveAttribute('scope', 'row');
+  expect(within(rows[0]).getByText('10.00%')).toBeInTheDocument();
+  expect(within(rows[1]).getByText('15.00%')).toBeInTheDocument();
+  expect(within(rows[0]).getByRole('cell', { name: '100 / 1,000' })).toBeInTheDocument();
+  expect(within(rows[1]).getByRole('cell', { name: '75 / 500' })).toBeInTheDocument();
+  const widths = [...figure.querySelectorAll<HTMLElement>('[style]')].map(e => Number.parseFloat(e.style.width));
+  expect(widths[0]).toBeCloseTo(50);
+  expect(widths[1]).toBeCloseTo(75);
+  expect(screen.getByText(lang === 'ko' ? '노출·전환 건수 자세히 보기' : 'View impression and conversion counts').closest('details')).not.toHaveAttribute('open');
+  expect(experimentResultApi.getResult).not.toHaveBeenCalled();
+  expect(decisionApi.list).not.toHaveBeenCalled();
+});
+
+it('displays legacy event rates above 100% without clipping their values or bars', async () => {
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({
+    ...emptyAnalytics, impressions: { ...emptyAnalytics.impressions, total: 4, by_variant: { control: 4 } },
+    conversions: { total: 5, by_variant: { control: 5 }, rate: { control: 1.25 } },
+  } as any);
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang="en" view="results" isAdmin={false} /></MemoryRouter>);
+  const f = await screen.findByRole('figure', { name: 'Conversion rates by group' });
+  expect(within(f).getByText('125.00%')).toBeInTheDocument();
+  expect(within(f).getByText('Shared conversion-rate scale · 0–200%')).toBeInTheDocument();
+  expect(f.querySelector<HTMLElement>('[style]')?.style.width).toBe('62.5%');
+});
+
+it('does not replace missing rates with zero even when exposure counts exist', async () => {
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({
+    ...emptyAnalytics, impressions: { ...emptyAnalytics.impressions, total: 10, by_variant: { control: 10 } },
+    conversions: { total: 1, by_variant: { control: 1 }, rate: {} },
+  } as any);
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang="en" view="results" isAdmin={false} /></MemoryRouter>);
+  const f = await screen.findByRole('figure', { name: 'Conversion rates by group' });
+  expect(within(f).getByText('—')).toBeInTheDocument();
+  expect(within(f).getByText('Not enough information to compare this rate.')).toBeVisible();
+  expect(within(f).queryByText('0.00%')).not.toBeInTheDocument();
+  expect(f.querySelector('[style]')).toBeNull();
+});
+
+
+it('makes low observed rates comparable without rounding a positive rate to zero', async () => {
+  vi.mocked(experimentAnalyticsApi.get).mockResolvedValue({
+    ...emptyAnalytics, impressions: { ...emptyAnalytics.impressions, total: 2000000, by_variant: { control: 1000000, treatment: 1000000 } },
+    conversions: { total: 3, by_variant: { control: 1, treatment: 2 }, rate: { control: .000001, treatment: .000002 } },
+  } as any);
+  render(<MemoryRouter><ExperimentDashboard experimentId="test" experiment={experiment} lang="en" view="results" isAdmin={false} /></MemoryRouter>);
+  const f = await screen.findByRole('figure', { name: 'Conversion rates by group' });
+  expect(within(f).getAllByText('<0.01%')).toHaveLength(2);
+  expect(within(f).getByText('Shared conversion-rate scale · 0–0.0002%')).toBeInTheDocument();
+  expect([...f.querySelectorAll<HTMLElement>('[style]')].map(e => e.style.width)).toEqual(['50%', '100%']);
+  expect(within(f).queryByText('0.00%')).not.toBeInTheDocument();
 });
