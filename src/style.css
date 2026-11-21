@@ -281,7 +281,10 @@ html[data-theme="dark"],
 .sim-presets [aria-pressed="true"] { border-color: var(--purple); color: var(--purple); }
 .sim-playback-actions button, .sim-result-actions button, .sim-presets button { min-height: 44px; height: auto; white-space: normal; padding-block: 10px; }
 .sim-playback { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; align-items: center; margin-top: 8px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
-.sim-playback-actions { display: flex; align-items: center; }
+.sim-playback-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.sim-continuous { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--muted); font-size: 12px; cursor: pointer; }
+.sim-continuous input { width: 14px; height: 14px; flex-shrink: 0; margin: 0; accent-color: var(--purple); }
+.sim-continuous input:focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; }
 .sim-progress span { display: flex; align-items: center; gap: 5px; }
 .sim-result-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; }
 .sim-result-actions strong { font-size: 14px; }
