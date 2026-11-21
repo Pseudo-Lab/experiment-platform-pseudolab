@@ -308,7 +308,7 @@ html[data-theme="dark"],
 .sim-product-info { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
 .sim-product-info h4 { margin: 0; font-size: 14px; font-weight: 600; }
 .sim-product-info p { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.sim-product-info .sim-discount { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-radius: 6px; color: var(--purple); background: hsl(var(--accent)); }
+.sim-product-info .sim-discount { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--purple) 35%, var(--line)); border-radius: 6px; color: var(--purple); background: color-mix(in srgb, var(--purple) 14%, hsl(var(--background))); }
 .sim-discount strong { font-size: 32px; line-height: 1.15; font-weight: 750; letter-spacing: -.03em; }
 .sim-discount span { font-size: 12px; line-height: 1.4; font-weight: 600; }
 .sim-prices { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
