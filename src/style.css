@@ -299,7 +299,7 @@ html[data-theme="dark"],
 .sim-count { font-size: 13px; font-variant-numeric: tabular-nums; }
 .sim-count strong { font-size: 25px; line-height: 1.2; color: var(--sim-color); font-weight: 650; }
 .sim-observed { color: var(--muted); font-size: 12px; min-height: 18px; }
-.sim-shop { overflow: hidden; margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; background: hsl(var(--background)); }
+.sim-shop { overflow: hidden; margin-top: 6px; border: 1px solid color-mix(in srgb, var(--purple) 35%, var(--line)); border-radius: 8px; background: color-mix(in srgb, var(--purple) 8%, hsl(var(--background))); }
 .sim-shop-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
 .sim-shop-header strong { font-size: 12px; }
 .sim-shop-content { padding: 10px 12px 12px; }
@@ -308,7 +308,7 @@ html[data-theme="dark"],
 .sim-product-info { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
 .sim-product-info h4 { margin: 0; font-size: 14px; font-weight: 600; }
 .sim-product-info p { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.sim-product-info .sim-discount { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--purple) 35%, var(--line)); border-radius: 6px; color: var(--purple); background: color-mix(in srgb, var(--purple) 14%, hsl(var(--background))); }
+.sim-product-info .sim-discount { display: flex; flex-direction: column; gap: 2px; color: var(--purple); }
 .sim-discount strong { font-size: 32px; line-height: 1.15; font-weight: 750; letter-spacing: -.03em; }
 .sim-discount span { font-size: 12px; line-height: 1.4; font-weight: 600; }
 .sim-prices { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
@@ -341,7 +341,6 @@ html[data-theme="dark"],
   .sim-product-info { margin-top: 8px; }
   .sim-product-info h4 { font-size: 12px; line-height: 1.45; }
   .sim-product-info p { font-size: 14px; }
-  .sim-product-info .sim-discount { padding-inline: 8px; }
   .sim-discount strong { font-size: 24px; }
   .sim-buy { gap: 4px; font-size: 12px; margin-top: 8px; padding-inline: 4px; }
   .sim-buy svg { display: none; }
