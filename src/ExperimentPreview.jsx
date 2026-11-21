@@ -195,11 +195,11 @@ export default function ExperimentPreview({ lang }) {
       <h2>{t.title}</h2><p className="sim-intro">{t.intro}</p>
       <div className="sim-controls">
         <div className="sim-slider">
-          <label htmlFor={`${id}-ratio`}>{t.ratio}<output>A {aShare} : B {100 - aShare}</output></label>
-          <div className="sim-ratio-line"><input id={`${id}-ratio`} type="range" min="0" max="100" step="1" value={aShare} aria-valuetext={`A ${aShare}%, B ${100 - aShare}%`} onChange={event => changeRatio(Number(event.target.value))}/>
-          <div role="group" aria-label={t.presets} className="sim-presets">
-            {[50, 80].map(value => <Button key={value} variant="outline" aria-pressed={aShare === value} onClick={() => changeRatio(value)}>{value}:{100 - value}</Button>)}
-          </div></div>
+          <div className="sim-ratio-heading"><label htmlFor={`${id}-ratio`}>{t.ratio}</label><output htmlFor={`${id}-ratio`} aria-live="off">A {aShare} : B {100 - aShare}</output></div>
+          <input id={`${id}-ratio`} type="range" min="0" max="100" step="1" value={aShare} aria-valuetext={`A ${aShare}%, B ${100 - aShare}%`} onChange={event => changeRatio(Number(event.target.value))}/>
+        </div>
+        <div role="group" aria-label={t.presets} className="sim-presets">
+          {[50, 80].map(value => <Button key={value} variant="outline" aria-pressed={aShare === value} onClick={() => changeRatio(value)}>{value}:{100 - value}</Button>)}
         </div>
       </div>
       <div className="sim-playback">
