@@ -17,7 +17,7 @@ const copy = {
     incoming: '가상 방문자',
     names: { A: 'A · 비율로 표현', B: 'B · 금액으로 표현' },
     productName: '데일리 세라믹 머그', originalPrice: '20,000원', price: '16,000원',
-    originalPriceLabel: '정가', priceLabel: '할인가', discounts: { A: '20% 할인', B: '4,000원 할인' },
+    originalPriceLabel: '정가', priceLabel: '할인가', discounts: { A: '20%', B: '4,000원' }, discount: '할인',
     purchased: '구매 완료', buy: '구매하기',
     people: '명', observed: '실제',
     noData: '배정 전', generated: '입장', moving: '이동 중',
@@ -34,7 +34,7 @@ const copy = {
     incoming: 'Virtual visitors',
     names: { A: 'A · Percentage', B: 'B · Amount' },
     productName: 'Everyday ceramic mug', originalPrice: '₩20,000', price: '₩16,000',
-    originalPriceLabel: 'Original price', priceLabel: 'Sale price', discounts: { A: '20% off', B: '₩4,000 off' },
+    originalPriceLabel: 'Original price', priceLabel: 'Sale price', discounts: { A: '20%', B: '₩4,000' }, discount: 'off',
     purchased: 'Purchase complete', buy: 'Buy',
     people: 'visitors', observed: 'Actual',
     noData: 'No arrivals', generated: 'Entered', moving: 'In transit',
@@ -221,7 +221,7 @@ export default function ExperimentPreview({ lang }) {
               <img className="sim-product-image" src={import.meta.env.BASE_URL + 'demo/everyday-mug.webp'} alt="" width="200" height="200"/>
               <div className="sim-product-info">
                 <h4>{t.productName}</h4>
-                <p className="sim-discount">{t.discounts[key]}</p>
+                <p className="sim-discount"><strong>{t.discounts[key]}</strong>{' '}<span>{t.discount}</span></p>
                 <p className="sim-prices"><s><span className="sr-only">{t.originalPriceLabel} </span>{t.originalPrice}</s>{' '}<strong><span className="sr-only">{t.priceLabel} </span>{t.price}</strong></p>
               </div>
               <Button className="sim-buy" aria-disabled={purchased[key]} onClick={() => { if (!purchased[key]) setPurchased(current => ({ ...current, [key]: true })); }} aria-label={`${t.names[key]} ${purchased[key] ? t.purchased : t.buy}`}>
