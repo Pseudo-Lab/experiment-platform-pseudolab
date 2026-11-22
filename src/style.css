@@ -319,7 +319,8 @@ html[data-theme="dark"],
 .sim-buy { width: 100%; min-height: 44px; height: auto; margin-top: 10px; padding: 8px; white-space: normal; }
 .sim-buy[aria-disabled="true"] { cursor: default; opacity: .7; }
 .assignment-demo .sim-buy:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
-.sim-reduced { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.sim-reduced { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.sim-reduced button { min-height: 44px; height: auto; white-space: normal; font-size: 12px; }
 [data-theme="dark"] .assignment-demo { --sim-A: #c8bcff; --sim-B: #8dd1bf; }
 @media (max-width: 700px) {
   .initiative-hero .hero-actions { flex-wrap: wrap; gap: 12px; }

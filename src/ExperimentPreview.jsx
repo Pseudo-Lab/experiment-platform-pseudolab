@@ -23,6 +23,7 @@ const copy = {
     people: '명', observed: '실제',
     noData: '배정 전', generated: '입장', moving: '이동 중',
     reduced: '모션 감소 설정: 이동 애니메이션 대신 배정 수만 갱신합니다.',
+    motionEnabled: '이동 애니메이션을 켰습니다.', enableMotion: '이동 애니메이션 켜기', disableMotion: '이동 애니메이션 끄기',
     chartTitle: '사용자 배정 흐름', chartDescription: '가상 방문자가 설정 비율에 따라 A 또는 B 화면으로 이동합니다. 아래 수치는 각 화면에 도착한 누적 배정입니다.',
   },
   en: {
@@ -41,6 +42,7 @@ const copy = {
     people: 'visitors', observed: 'Actual',
     noData: 'No arrivals', generated: 'Entered', moving: 'In transit',
     reduced: 'Reduced motion: counts update without traveling animations.',
+    motionEnabled: 'Traveling animations are on.', enableMotion: 'Turn on traveling animations', disableMotion: 'Turn off traveling animations',
     chartTitle: 'Visitor assignment flow', chartDescription: 'Virtual visitors take the A or B path according to the selected ratio. Counts show cumulative arrivals on each page.',
   },
 };
@@ -63,7 +65,9 @@ export default function ExperimentPreview({ lang }) {
   const t = copy[lang];
   const id = useId();
   const compact = useMediaPreference('(max-width: 700px)');
-  const reduced = useMediaPreference('(prefers-reduced-motion: reduce)');
+  const prefersReducedMotion = useMediaPreference('(prefers-reduced-motion: reduce)');
+  const [motionEnabled, setMotionEnabled] = useState(false);
+  const reduced = prefersReducedMotion && !motionEnabled;
   const [aShare, setAShare] = useState(() => 20 + Math.floor(Math.random() * 61));
   const [visitorLimit, setVisitorLimit] = useState(() => 100 + Math.floor(Math.random() * 101));
   const [continuous, setContinuous] = useState(false);
@@ -209,7 +213,7 @@ export default function ExperimentPreview({ lang }) {
         </div>
         <div className="sim-progress">{completed ? <span role="status"><Check size={15} aria-hidden="true"/>{t.completed(number(total))}</span> : <span>{t.generated} {number(view.entered)}{!continuous && ` / ${number(visitorLimit)}`} · {t.moving} {number(view.tokens.length)}</span>}</div>
       </div>
-      {reduced && <p className="sim-reduced">{t.reduced}</p>}
+      {prefersReducedMotion && <div className="sim-reduced"><span>{reduced ? t.reduced : t.motionEnabled}</span><Button variant="outline" onClick={() => setMotionEnabled(value => !value)}>{reduced ? t.enableMotion : t.disableMotion}</Button></div>}
       <svg ref={svg} className="sim-flow" viewBox={`0 0 ${chartWidth} ${bottom + 22}`} role="img" aria-labelledby={`${id}-title ${id}-description`}>
         <title id={`${id}-title`}>{t.chartTitle}</title><desc id={`${id}-description`}>{t.chartDescription}</desc>
         <text x={center - 12} y="16" textAnchor="end" className="sim-incoming">{t.incoming}</text>
