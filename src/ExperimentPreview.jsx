@@ -22,8 +22,6 @@ const copy = {
     purchased: '구매 완료', buy: '구매하기',
     people: '명', observed: '실제',
     noData: '배정 전', generated: '입장', moving: '이동 중',
-    reduced: '모션 감소 설정: 이동 애니메이션 대신 배정 수만 갱신합니다.',
-    motionEnabled: '이동 애니메이션을 켰습니다.', enableMotion: '이동 애니메이션 켜기', disableMotion: '이동 애니메이션 끄기',
     chartTitle: '사용자 배정 흐름', chartDescription: '가상 방문자가 설정 비율에 따라 A 또는 B 화면으로 이동합니다. 아래 수치는 각 화면에 도착한 누적 배정입니다.',
   },
   en: {
@@ -41,8 +39,6 @@ const copy = {
     purchased: 'Purchase complete', buy: 'Buy',
     people: 'visitors', observed: 'Actual',
     noData: 'No arrivals', generated: 'Entered', moving: 'In transit',
-    reduced: 'Reduced motion: counts update without traveling animations.',
-    motionEnabled: 'Traveling animations are on.', enableMotion: 'Turn on traveling animations', disableMotion: 'Turn off traveling animations',
     chartTitle: 'Visitor assignment flow', chartDescription: 'Virtual visitors take the A or B path according to the selected ratio. Counts show cumulative arrivals on each page.',
   },
 };
@@ -65,9 +61,6 @@ export default function ExperimentPreview({ lang }) {
   const t = copy[lang];
   const id = useId();
   const compact = useMediaPreference('(max-width: 700px)');
-  const prefersReducedMotion = useMediaPreference('(prefers-reduced-motion: reduce)');
-  const [motionEnabled, setMotionEnabled] = useState(false);
-  const reduced = prefersReducedMotion && !motionEnabled;
   const [aShare, setAShare] = useState(() => 20 + Math.floor(Math.random() * 61));
   const [visitorLimit, setVisitorLimit] = useState(() => 100 + Math.floor(Math.random() * 101));
   const [continuous, setContinuous] = useState(false);
@@ -113,7 +106,7 @@ export default function ExperimentPreview({ lang }) {
       if (disposed || !running || document.hidden || clock.animationsPaused()) return;
       const now = clock.getCurrentTime();
       const state = model.current;
-      const arrived = state.tokens.filter(token => reduced || now - token.started >= DURATION);
+      const arrived = state.tokens.filter(token => now - token.started >= DURATION);
       arrived.forEach(arrive);
       state.tokens = state.tokens.filter(token => !arrived.includes(token));
       const spawn = (settings.current.continuous || state.sequence < settings.current.visitorLimit) && now - state.lastSpawn >= INTERVAL;
@@ -122,7 +115,7 @@ export default function ExperimentPreview({ lang }) {
         const { aShare: share } = settings.current;
         const token = { id: visitor, outcome: assignVisitor(state.assignments, visitor, 100, share), started: now };
         state.lastSpawn = now;
-        if (reduced) arrive(token); else state.tokens.push(token);
+        state.tokens.push(token);
       }
       if (spawn || arrived.length) publish();
       if (!settings.current.continuous && state.sequence >= settings.current.visitorLimit && state.tokens.length === 0) {
@@ -147,7 +140,7 @@ export default function ExperimentPreview({ lang }) {
       clock.pauseAnimations();
       document.removeEventListener('visibilitychange', syncPlayback);
     };
-  }, [running, reduced]);
+  }, [running]);
 
   function reset() {
     setRunning(false);
@@ -213,14 +206,13 @@ export default function ExperimentPreview({ lang }) {
         </div>
         <div className="sim-progress">{completed ? <span role="status"><Check size={15} aria-hidden="true"/>{t.completed(number(total))}</span> : <span>{t.generated} {number(view.entered)}{!continuous && ` / ${number(visitorLimit)}`} · {t.moving} {number(view.tokens.length)}</span>}</div>
       </div>
-      {prefersReducedMotion && <div className="sim-reduced"><span>{reduced ? t.reduced : t.motionEnabled}</span><Button variant="outline" onClick={() => setMotionEnabled(value => !value)}>{reduced ? t.enableMotion : t.disableMotion}</Button></div>}
       <svg ref={svg} className="sim-flow" viewBox={`0 0 ${chartWidth} ${bottom + 22}`} role="img" aria-labelledby={`${id}-title ${id}-description`}>
         <title id={`${id}-title`}>{t.chartTitle}</title><desc id={`${id}-description`}>{t.chartDescription}</desc>
         <text x={center - 12} y="16" textAnchor="end" className="sim-incoming">{t.incoming}</text>
         {outcomes.map(key => <path key={key} d={paths[key]} className={`sim-path sim-${key}`}/>)}
         {outcomes.map((key, index) => <text key={key} x={[left, right][index]} y={bottom + 18} textAnchor="middle" className={`sim-endpoint sim-${key}`}>{key}</text>)}
-        {view.tokens.map(token => <circle key={token.id} r={compact ? 4 : 6} cx={reduced ? { A: left, B: right }[token.outcome] : undefined} cy={reduced ? bottom - 12 : undefined} className={`sim-dot sim-${token.outcome}`} data-visitor={token.id} data-outcome={token.outcome}>
-          {!reduced && <animateMotion path={paths[token.outcome]} begin={`${token.started}s`} dur={`${DURATION}s`} fill="freeze" calcMode="paced"/>}
+        {view.tokens.map(token => <circle key={token.id} r={compact ? 4 : 6} className={`sim-dot sim-${token.outcome}`} data-visitor={token.id} data-outcome={token.outcome}>
+          <animateMotion path={paths[token.outcome]} begin={`${token.started}s`} dur={`${DURATION}s`} fill="freeze" calcMode="paced"/>
         </circle>)}
       </svg>
       <div className="sim-result-actions"><strong>{t.results}</strong><Button variant="outline" onClick={reset}><RotateCcw aria-hidden="true"/>{t.reset}</Button></div>
